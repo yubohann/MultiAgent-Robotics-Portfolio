@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/capture_start_v1.schema.json",
+  "title": "Rivermark Isaac Capture Start Marker v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "attempt_id",
+    "started_wall_time_ns",
+    "source_revision",
+    "source_tree_sha256",
+    "source_worktree_dirty",
+    "task_kind",
+    "control_mode",
+    "agent_count_requested"
+  ],
+  "properties": {
+    "schema": {"const": "org.rivermark.isaac-capture-start.v1"},
+    "attempt_id": {"type": "string", "pattern": "^attempt-[a-f0-9]{32}$"},
+    "started_wall_time_ns": {"type": "integer", "exclusiveMinimum": 0},
+    "source_revision": {"type": "string", "pattern": "^[0-9a-f]{7,64}$"},
+    "source_tree_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_worktree_dirty": {"type": "boolean"},
+    "task_kind": {"type": "string", "minLength": 1},
+    "control_mode": {"type": "string", "minLength": 1},
+    "agent_count_requested": {"type": "integer", "minimum": 1},
+    "collection_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_id", "protocol_sha256", "cell_id", "split", "episode_index", "episode_seed"],
+      "properties": {
+        "protocol_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "cell_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "split": {"enum": ["train", "inner_dev", "validation", "blind_test", "ood_test"]},
+        "episode_index": {"type": "integer", "minimum": 0},
+        "episode_seed": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+      }
+    }
+  }
+}

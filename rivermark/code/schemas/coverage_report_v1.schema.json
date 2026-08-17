@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/coverage_report_v1.schema.json",
+  "title": "Rivermark Coverage Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "protocol_id",
+    "protocol_sha256",
+    "failure_ledger_schema",
+    "ledger_record_count",
+    "excluded_ledger_record_count",
+    "excluded_protocol_id_count",
+    "excluded_protocol_hash_count",
+    "attempts_sha256",
+    "attempt_count",
+    "admitted_count",
+    "quarantined_count",
+    "failed_count",
+    "exclusion_reasons",
+    "power_analysis",
+    "cells",
+    "complete"
+  ],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.coverage-report.v1"},
+    "protocol_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+    "protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "failure_ledger_schema": {"const": "org.rivermark.benchmark.failure-ledger.v1"},
+    "ledger_record_count": {"type": "integer", "minimum": 0},
+    "excluded_ledger_record_count": {"type": "integer", "minimum": 0},
+    "excluded_protocol_id_count": {"type": "integer", "minimum": 0},
+    "excluded_protocol_hash_count": {"type": "integer", "minimum": 0},
+    "attempts_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "attempt_count": {"type": "integer", "minimum": 0},
+    "admitted_count": {"type": "integer", "minimum": 0},
+    "quarantined_count": {"type": "integer", "minimum": 0},
+    "failed_count": {"type": "integer", "minimum": 0},
+    "exclusion_reasons": {"$ref": "#/$defs/reasonCounts"},
+    "power_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "primary_metric",
+        "evaluation_split",
+        "required_evaluation_episodes",
+        "admitted_evaluation_episodes",
+        "power_target_met"
+      ],
+      "properties": {
+        "method": {"const": "paired_normal_approximation_bonferroni"},
+        "primary_metric": {"const": "normalized_confirmed_auc"},
+        "evaluation_split": {"enum": ["validation", "blind_test", "ood_test"]},
+        "required_evaluation_episodes": {"type": "integer", "minimum": 2},
+        "admitted_evaluation_episodes": {"type": "integer", "minimum": 0},
+        "power_target_met": {"type": "boolean"}
+      }
+    },
+    "cells": {
+      "type": "array",
+      "minItems": 2,
+      "items": {"$ref": "#/$defs/cellReport"}
+    },
+    "complete": {"type": "boolean"}
+  },
+  "$defs": {
+    "reasonCounts": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"},
+      "additionalProperties": {"type": "integer", "minimum": 1}
+    },
+    "cellReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cell_id",
+        "split",
+        "conditions",
+        "attempt_count",
+        "admitted_count",
+        "quarantined_count",
+        "failed_count",
+        "exclusion_reasons",
+        "minimum_attempts",
+        "minimum_admitted",
+        "status"
+      ],
+      "properties": {
+        "cell_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "split": {"enum": ["train", "inner_dev", "validation", "blind_test", "ood_test"]},
+        "conditions": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 19,
+          "propertyNames": {
+            "enum": [
+              "layout",
+              "route",
+              "route_family",
+              "target_count",
+              "height",
+              "region",
+              "occlusion",
+              "density",
+              "appearance",
+              "dynamics",
+              "lighting",
+              "weather",
+              "initial_condition",
+              "start_anchor",
+              "target_region",
+              "visibility_bucket",
+              "communication",
+              "control_latency",
+              "agent_dropout"
+            ]
+          },
+          "additionalProperties": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"}
+        },
+        "attempt_count": {"type": "integer", "minimum": 0},
+        "admitted_count": {"type": "integer", "minimum": 0},
+        "quarantined_count": {"type": "integer", "minimum": 0},
+        "failed_count": {"type": "integer", "minimum": 0},
+        "exclusion_reasons": {"$ref": "#/$defs/reasonCounts"},
+        "minimum_attempts": {"type": "integer", "minimum": 1},
+        "minimum_admitted": {"type": "integer", "minimum": 1},
+        "status": {"enum": ["passed", "under_quota"]}
+      }
+    }
+  }
+}

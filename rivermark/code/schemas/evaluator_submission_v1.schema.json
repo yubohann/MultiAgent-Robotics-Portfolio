@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/evaluator_submission_v1.schema.json",
+  "title": "Rivermark Public Evaluator Submission v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "dataset_version",
+    "dataset_index_sha256",
+    "split",
+    "evaluator",
+    "policy",
+    "episodes"
+  ],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.evaluator-submission.v1"},
+    "dataset_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
+    "dataset_index_sha256": {"$ref": "#/$defs/sha256"},
+    "split": {"enum": ["train", "inner_dev", "validation", "blind_test", "ood_test"]},
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluator_id", "evaluator_version", "evaluator_sha256", "metric_schema"],
+      "properties": {
+        "evaluator_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "evaluator_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
+        "evaluator_sha256": {"$ref": "#/$defs/sha256"},
+        "metric_schema": {"const": "org.rivermark.benchmark.metrics.v1"}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method_id", "code_revision", "checkpoint_sha256", "seed"],
+      "properties": {
+        "method_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "code_revision": {"type": "string", "pattern": "^[0-9a-f]{7,64}$"},
+        "checkpoint_sha256": {"$ref": "#/$defs/sha256"},
+        "seed": {"type": "integer", "minimum": 0}
+      }
+    },
+    "episodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["episode_id", "split", "trace"],
+        "properties": {
+          "episode_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+          "split": {"enum": ["train", "inner_dev", "validation", "blind_test", "ood_test"]},
+          "trace": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["timestamps_s", "confirmed_counts", "target_count", "time_budget_s"],
+            "properties": {
+              "timestamps_s": {"type": "array", "minItems": 1, "maxItems": 100000, "items": {"type": "number"}},
+              "confirmed_counts": {"type": "array", "minItems": 1, "maxItems": 100000, "items": {"type": "integer", "minimum": 0}},
+              "target_count": {"type": "integer", "minimum": 1},
+              "time_budget_s": {"type": "number", "exclusiveMinimum": 0},
+              "false_confirmations": {"type": "integer", "minimum": 0},
+              "truncated": {"type": "boolean"}
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

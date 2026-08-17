@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/search3d_task_spec_v1.schema.json",
+  "title": "Rivermark Search3D TaskSpec v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "task_spec_id",
+    "version",
+    "track",
+    "task_id",
+    "task_variant_id",
+    "agent_count",
+    "reset",
+    "public_mission",
+    "hidden_task_generator",
+    "action_contract",
+    "sensor_profile",
+    "communication_profile",
+    "confirmation_contract",
+    "evaluator",
+    "termination",
+    "metrics"
+  ],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.search3d_task.v1"},
+    "task_spec_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
+    "track": {"enum": ["single_uav_search3d", "multi_uav_search3d"]},
+    "task_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$"},
+    "task_variant_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+    "agent_count": {"type": "integer", "minimum": 1, "maximum": 32},
+    "reset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spawn_set_id", "spawn_set_sha256", "paired_initial_conditions", "reset_deterministic"],
+      "properties": {
+        "spawn_set_id": {"type": "string", "minLength": 1},
+        "spawn_set_sha256": {"$ref": "#/$defs/sha256"},
+        "paired_initial_conditions": {"const": true},
+        "reset_deterministic": {"const": true}
+      }
+    },
+    "public_mission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["time_budget_ns", "target_count_disclosed", "difficulty_axes_disclosed"],
+      "properties": {
+        "time_budget_ns": {"type": "integer", "minimum": 1},
+        "target_count_disclosed": {"type": "boolean"},
+        "difficulty_axes_disclosed": {"type": "boolean"}
+      }
+    },
+    "hidden_task_generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generator_id",
+        "generator_sha256",
+        "target_count",
+        "difficulty_axes",
+        "sampled_before_policy_start",
+        "actual_manifest_partition"
+      ],
+      "properties": {
+        "generator_id": {"type": "string", "minLength": 1},
+        "generator_sha256": {"$ref": "#/$defs/sha256"},
+        "target_count": {"type": "integer", "minimum": 1},
+        "difficulty_axes": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {"enum": ["height", "region", "occlusion", "density", "appearance", "dynamics"]}
+        },
+        "sampled_before_policy_start": {"const": true},
+        "actual_manifest_partition": {"const": "evaluator_private"}
+      }
+    },
+    "action_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "space",
+        "modes",
+        "reference_frames",
+        "controller_profile_id",
+        "controller_profile_sha256",
+        "preemption_rule"
+      ],
+      "properties": {
+        "space": {"const": "high_level"},
+        "modes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["transit", "dwell", "hold", "return"]}
+        },
+        "reference_frames": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["world", "body"]}
+        },
+        "controller_profile_id": {"type": "string", "minLength": 1},
+        "controller_profile_sha256": {"$ref": "#/$defs/sha256"},
+        "preemption_rule": {"enum": ["next_control_tick", "non_preemptive"]}
+      }
+    },
+    "sensor_profile": {"$ref": "#/$defs/profileRef"},
+    "communication_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "profile_sha256", "observation_scope"],
+      "properties": {
+        "profile_id": {"type": "string", "minLength": 1},
+        "profile_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_scope": {
+          "enum": ["decentralized_explicit_comm", "centralized_team_state"]
+        }
+      }
+    },
+    "confirmation_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_source",
+        "evidence_modalities",
+        "minimum_valid_frames",
+        "maximum_inter_frame_gap_ns",
+        "transit_confirmation_allowed"
+      ],
+      "properties": {
+        "candidate_source": {"const": "online_runtime_sensors"},
+        "evidence_modalities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "minimum_valid_frames": {"type": "integer", "minimum": 1},
+        "maximum_inter_frame_gap_ns": {"type": "integer", "minimum": 1},
+        "transit_confirmation_allowed": {"const": false}
+      }
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evaluator_id",
+        "evaluator_sha256",
+        "truth_partition",
+        "match_radius_m",
+        "deduplication_radius_m",
+        "false_confirmation_counted"
+      ],
+      "properties": {
+        "evaluator_id": {"type": "string", "minLength": 1},
+        "evaluator_sha256": {"$ref": "#/$defs/sha256"},
+        "truth_partition": {"const": "evaluator_private"},
+        "match_radius_m": {"type": "number", "exclusiveMinimum": 0.0},
+        "deduplication_radius_m": {"type": "number", "exclusiveMinimum": 0.0},
+        "false_confirmation_counted": {"const": true}
+      }
+    },
+    "termination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["success_rule", "timeout_is_truncation", "safety_stop_is_truncation"],
+      "properties": {
+        "success_rule": {"enum": ["all_targets_confirmed", "target_quota_confirmed"]},
+        "timeout_is_truncation": {"const": true},
+        "safety_stop_is_truncation": {"const": true}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "secondary"],
+      "properties": {
+        "primary": {"const": "normalized_confirmed_auc"},
+        "secondary": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "profileRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "profile_sha256"],
+      "properties": {
+        "profile_id": {"type": "string", "minLength": 1},
+        "profile_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

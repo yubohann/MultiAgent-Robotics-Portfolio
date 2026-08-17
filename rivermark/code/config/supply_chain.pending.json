@@ -1,0 +1,89 @@
+{
+  "schema": "org.rivermark.benchmark.supply-chain.v1",
+  "manifest_version": "1.0.0-pending",
+  "release_id": "rivermark-public-pilot-pending",
+  "created_at": "2026-07-24T00:00:00Z",
+  "assets": [
+    {
+      "asset_id": "rivermark-benchmark-source-license",
+      "kind": "code",
+      "path": "LICENSE",
+      "source_uri": "https://github.com/yubohann/rivermark-benchmark",
+      "sha256": "524a38f948e33762e7659c504b4e609497d9c5dfcc43c1df939766ae9f943118",
+      "license_spdx": "Apache-2.0",
+      "license_status": "redistribution_cleared",
+      "redistributable": true,
+      "attribution": "Rivermark Benchmark maintainers; the repository NOTICE limits this grant to Rivermark-authored source, schemas, and documentation",
+      "decision_record": {
+        "record_id": "source-license-owner-authorization-20260725",
+        "approved_by": "Rivermark Benchmark repository owner",
+        "approved_at": "2026-07-25T00:00:00Z",
+        "evidence_sha256": "524a38f948e33762e7659c504b4e609497d9c5dfcc43c1df939766ae9f943118"
+      }
+    },
+    {
+      "asset_id": "nvidia-rivermark-composition-usd",
+      "kind": "scene_layer",
+      "sha256": "6ccd210233ace829002fdd4bbca98b88731a310e556ba964e2e7806aa99bf6fe",
+      "license_spdx": "NOASSERTION",
+      "license_status": "pending",
+      "redistributable": false,
+      "attribution": "Isaac Sim 5.1 Rivermark USDC wrapper; local provenance scan detects dsready content reference",
+      "source_uri": "https://developer.nvidia.com/isaac-sim"
+    },
+    {
+      "asset_id": "city-lite-scene-contract",
+      "kind": "scene_layer",
+      "sha256": "f7837d248b4797592c66d4b8b8bd48380de444eca305b8ef03d297dcf32051ea",
+      "license_spdx": "NOASSERTION",
+      "license_status": "pending",
+      "redistributable": false,
+      "attribution": "Derived City-Lite contract; underlying NVIDIA Rivermark asset terms require human review"
+    },
+    {
+      "asset_id": "city-lite-combined-layer",
+      "kind": "scene_layer",
+      "sha256": "c8ec943618322c07f1ce8799e366b5fb984d3b302566b4404892fb50bfa86567",
+      "license_spdx": "NOASSERTION",
+      "license_status": "pending",
+      "redistributable": false,
+      "attribution": "City-Lite derivative of NVIDIA Rivermark scene assets; redistribution undecided"
+    },
+    {
+      "asset_id": "cf2x-usd",
+      "kind": "robot_asset",
+      "sha256": "7372ac0786312c47a92603da3fcd412d560b21c3757a8f0d5e7c2bfb2233d2f4",
+      "license_spdx": "NOASSERTION",
+      "license_status": "pending",
+      "redistributable": false,
+      "attribution": "CF2X USD found in isaac_drone_racer; project BSD-3-Clause file does not by itself prove binary asset provenance"
+    },
+    {
+      "asset_id": "derived-recordings-and-labels",
+      "kind": "data",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "license_spdx": "NOASSERTION",
+      "license_status": "pending",
+      "redistributable": false,
+      "attribution": "Future public episode payload; no cleared payload exists and zero digest is an explicit unresolved placeholder"
+    },
+    {
+      "asset_id": "public-demo-video",
+      "kind": "video",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "license_spdx": "NOASSERTION",
+      "license_status": "pending",
+      "redistributable": false,
+      "attribution": "Future release video; current development evidence is not a redistribution decision"
+    }
+  ],
+  "runtime_dependencies": [],
+  "sbom": {
+    "format": "cyclonedx-json",
+    "status": "missing",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "signature": {
+    "status": "unsigned"
+  }
+}

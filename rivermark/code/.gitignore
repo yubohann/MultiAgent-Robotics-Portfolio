@@ -1,0 +1,64 @@
+# Source, configuration, schemas, tests, and compact demo manifests are versioned.
+# Assets, model weights, recordings, and private labels are always external.
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.isaac_app_launcher.lock
+.mypy_cache/
+.ruff_cache/
+.coverage
+*.egg-info/
+build/
+dist/
+
+# Simulation assets and captured benchmark payloads.
+assets/
+data/
+artifacts/
+private/
+checkpoints/
+models/
+*.usd
+*.usda
+*.usdc
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.npy
+*.npz
+*.zarr/
+*.parquet
+*.arrow
+
+# Demos are generated locally or published through release storage.
+demos/**/*.mp4
+/evidence/
+demos/**/*.mov
+demos/**/*.avi
+demos/**/*.png
+demos/**/*.jpg
+!demos/README.md
+!demos/manifest.json
+
+# Never commit secrets or evaluator truth.
+.env
+.env.*
+evaluator_private/
+
+# The local literature cache can be regenerated from its catalog and must not
+# become a multi-gigabyte source-tree commit.
+papers/pdfs/
+papers/extracted_texts/
+
+# Local execution prompts are operator instructions, not released project artifacts.
+docs/ISAAC_EXECUTION_PROMPT.md
+docs/Isaac执行提示词.md
+papers/PAPER_READING_PROMPT.md
+
+# Local CPU/host diagnostic reports are reproducible and are not evidence
+# artifacts or release inputs.
+debug/*.json
+debug/*.xml

@@ -1,0 +1,55 @@
+{
+  "schema": "org.rivermark.benchmark.baseline-suite.v1",
+  "suite_id": "cpu_pilot_baselines_v1",
+  "backend": "rivermark-kinematic-pilot-v1",
+  "formal_benchmark_admission": false,
+  "agent_count": 8,
+  "runtime": {
+    "dt_s": 0.2,
+    "world_size_xy_m": [32.0, 24.0],
+    "camera_width": 96,
+    "camera_height": 72,
+    "max_speed_mps": 2.8
+  },
+  "train": {
+    "enabled": false,
+    "seed": 20260720,
+    "episodes": 0
+  },
+  "tune": {
+    "enabled": false,
+    "seed": 20260721,
+    "max_trials": 0
+  },
+  "evaluate": {
+    "seeds": [20260722, 20260723],
+    "episodes_per_seed": 1
+  },
+  "methods": [
+    {
+      "method_id": "astar_mpc_pilot",
+      "family": "classical",
+      "information_profile": "geometry_state"
+    },
+    {
+      "method_id": "actor_critic_rl_pilot",
+      "family": "rl",
+      "information_profile": "state_only"
+    },
+    {
+      "method_id": "decentralized_marl_actor_critic_pilot",
+      "family": "marl",
+      "information_profile": "state_only"
+    },
+    {
+      "method_id": "action_chunk_vla_pilot",
+      "family": "vla",
+      "information_profile": "language_multisensor_rgbd_lidar_radar_state"
+    }
+  ],
+  "budget": {
+    "max_steps": 72,
+    "timeout_s": 60.0,
+    "max_failures": 0
+  }
+}

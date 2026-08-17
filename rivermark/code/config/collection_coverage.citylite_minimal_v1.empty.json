@@ -1,0 +1,83 @@
+{
+  "admitted_count": 0,
+  "attempt_count": 0,
+  "attempts_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+  "cells": [
+    {
+      "admitted_count": 0,
+      "attempt_count": 0,
+      "cell_id": "train-citylite-nominal",
+      "conditions": {
+        "agent_dropout": "no-agent-dropout-v1",
+        "communication": "synchronous-public-broadcast-v1",
+        "control_latency": "one-step-command-latency-v1",
+        "dynamics": "cf2x-nominal-v1",
+        "height": "citylite-command-altitude-v1",
+        "initial_condition": "public-route-anchor-v1",
+        "layout": "citylite-v1",
+        "region": "citylite-command-volume-v1",
+        "route": "fixed-public-route-v1",
+        "route_family": "citylite-route-family-a-v1",
+        "start_anchor": "citylite-start-anchor-a-v1",
+        "target_count": "object-count-4-v1",
+        "target_region": "citylite-target-region-b-v1",
+        "visibility_bucket": "direct-visible-v1"
+      },
+      "exclusion_reasons": {},
+      "failed_count": 0,
+      "minimum_admitted": 4,
+      "minimum_attempts": 4,
+      "quarantined_count": 0,
+      "split": "train",
+      "status": "under_quota"
+    },
+    {
+      "admitted_count": 0,
+      "attempt_count": 0,
+      "cell_id": "validation-citylite-nominal",
+      "conditions": {
+        "agent_dropout": "no-agent-dropout-v1",
+        "communication": "synchronous-public-broadcast-v1",
+        "control_latency": "one-step-command-latency-v1",
+        "dynamics": "cf2x-nominal-v1",
+        "height": "citylite-command-altitude-v1",
+        "initial_condition": "public-route-anchor-v1",
+        "layout": "citylite-v1",
+        "region": "citylite-command-volume-v1",
+        "route": "fixed-public-route-v1",
+        "route_family": "citylite-route-family-b-v1",
+        "start_anchor": "citylite-start-anchor-b-v1",
+        "target_count": "object-count-4-v1",
+        "target_region": "citylite-target-region-a-v1",
+        "visibility_bucket": "partial-visible-v1"
+      },
+      "exclusion_reasons": {},
+      "failed_count": 0,
+      "minimum_admitted": 4,
+      "minimum_attempts": 4,
+      "quarantined_count": 0,
+      "split": "validation",
+      "status": "under_quota"
+    }
+  ],
+  "complete": false,
+  "exclusion_reasons": {},
+  "failed_count": 0,
+  "failure_ledger_schema": "org.rivermark.benchmark.failure-ledger.v1",
+  "ledger_record_count": 0,
+  "excluded_ledger_record_count": 0,
+  "excluded_protocol_id_count": 0,
+  "excluded_protocol_hash_count": 0,
+  "power_analysis": {
+    "admitted_evaluation_episodes": 0,
+    "evaluation_split": "validation",
+    "method": "paired_normal_approximation_bonferroni",
+    "power_target_met": false,
+    "primary_metric": "normalized_confirmed_auc",
+    "required_evaluation_episodes": 86
+  },
+  "protocol_id": "citylite-minimal-pilot-v1",
+  "protocol_sha256": "a2d1a37b20210631d1e2a2b0df092f50c597faefbf4659033366236843863c16",
+  "quarantined_count": 0,
+  "schema": "org.rivermark.benchmark.coverage-report.v1"
+}

@@ -1,0 +1,17 @@
+{
+  "png": [
+    "docs/figures/paper/fig01_project_overview.png",
+    "docs/figures/paper/fig02_method_architecture.png",
+    "docs/figures/paper/fig03_training_and_results.png",
+    "docs/figures/paper/fig04_ablation_and_safety.png",
+    "docs/figures/paper/fig05_sim2real_replay_pipeline.png"
+  ],
+  "editable_pptx": "docs/figures/paper/world_model_sacflow_paper_figures_master.pptx",
+  "style": "publication-style, white background, thin borders, restrained Okabe-Ito-like palette",
+  "sources": [
+    "docs/rl_data/world_model_sacflow_final/training_curve.csv",
+    "docs/rl_data/world_model_sacflow_final/training_summary.json",
+    "docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.json",
+    "docs/rl_data/world_model_sacflow_final/strict_replay_summary.json"
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "schema": "org.rivermark.benchmark.collection-protocol.v1",
+  "protocol_id": "citylite-minimal-pilot-v1",
+  "version": "1.1.0",
+  "dataset_version": "0.1.0",
+  "scene_identity": "RIVERMARK_CITY_LITE_v1",
+  "track": "multi_uav_search3d",
+  "agent_count": 8,
+  "axes": [
+    {"axis_id": "layout", "values": ["citylite-v1"], "split_role": "scene"},
+    {"axis_id": "route", "values": ["fixed-public-route-v1"], "split_role": "condition"},
+    {"axis_id": "route_family", "values": ["citylite-route-family-a-v1", "citylite-route-family-b-v1"], "split_role": "holdout"},
+    {"axis_id": "target_count", "values": ["object-count-4-v1"], "split_role": "condition"},
+    {"axis_id": "height", "values": ["citylite-command-altitude-v1"], "split_role": "condition"},
+    {"axis_id": "region", "values": ["citylite-command-volume-v1"], "split_role": "condition"},
+    {"axis_id": "dynamics", "values": ["cf2x-nominal-v1"], "split_role": "condition"},
+    {"axis_id": "initial_condition", "values": ["public-route-anchor-v1"], "split_role": "episode"},
+    {"axis_id": "start_anchor", "values": ["citylite-start-anchor-a-v1", "citylite-start-anchor-b-v1"], "split_role": "holdout"},
+    {"axis_id": "target_region", "values": ["citylite-target-region-a-v1", "citylite-target-region-b-v1"], "split_role": "holdout"},
+    {"axis_id": "visibility_bucket", "values": ["direct-visible-v1", "partial-visible-v1"], "split_role": "holdout"},
+    {"axis_id": "communication", "values": ["synchronous-public-broadcast-v1"], "split_role": "condition"},
+    {"axis_id": "control_latency", "values": ["one-step-command-latency-v1"], "split_role": "condition"},
+    {"axis_id": "agent_dropout", "values": ["no-agent-dropout-v1"], "split_role": "condition"}
+  ],
+  "cells": [
+    {
+      "cell_id": "train-citylite-nominal",
+      "split": "train",
+      "conditions": {
+        "layout": "citylite-v1",
+        "route": "fixed-public-route-v1",
+        "route_family": "citylite-route-family-a-v1",
+        "target_count": "object-count-4-v1",
+        "height": "citylite-command-altitude-v1",
+        "region": "citylite-command-volume-v1",
+        "dynamics": "cf2x-nominal-v1",
+        "initial_condition": "public-route-anchor-v1",
+        "start_anchor": "citylite-start-anchor-a-v1",
+        "target_region": "citylite-target-region-b-v1",
+        "visibility_bucket": "direct-visible-v1",
+        "communication": "synchronous-public-broadcast-v1",
+        "control_latency": "one-step-command-latency-v1",
+        "agent_dropout": "no-agent-dropout-v1"
+      },
+      "minimum_attempts": 4,
+      "minimum_admitted": 4
+    },
+    {
+      "cell_id": "validation-citylite-nominal",
+      "split": "validation",
+      "conditions": {
+        "layout": "citylite-v1",
+        "route": "fixed-public-route-v1",
+        "route_family": "citylite-route-family-b-v1",
+        "target_count": "object-count-4-v1",
+        "height": "citylite-command-altitude-v1",
+        "region": "citylite-command-volume-v1",
+        "dynamics": "cf2x-nominal-v1",
+        "initial_condition": "public-route-anchor-v1",
+        "start_anchor": "citylite-start-anchor-b-v1",
+        "target_region": "citylite-target-region-a-v1",
+        "visibility_bucket": "partial-visible-v1",
+        "communication": "synchronous-public-broadcast-v1",
+        "control_latency": "one-step-command-latency-v1",
+        "agent_dropout": "no-agent-dropout-v1"
+      },
+      "minimum_attempts": 4,
+      "minimum_admitted": 4
+    }
+  ],
+  "randomization": {
+    "seed_derivation": "sha256_utf8_lines_uint32_v1",
+    "episode_seed_start": 20260724,
+    "paired_initial_conditions": true
+  },
+  "power_analysis": {
+    "method": "paired_normal_approximation_bonferroni",
+    "primary_metric": "normalized_confirmed_auc",
+    "familywise_alpha": 0.05,
+    "power": 0.8,
+    "minimum_effect_size": 0.05,
+    "difference_standard_deviation": 0.15,
+    "comparison_count": 2,
+    "evaluation_split": "validation",
+    "required_evaluation_episodes": 86
+  },
+  "exclusion_rules": [
+    "reject_missing_sensor_frame",
+    "reject_pose_closure_failure",
+    "reject_visual_intrusion",
+    "reject_condition_realization",
+    "retain_failed_attempt_in_ledger"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schema": "org.rivermark.local-assets.v1",
+  "asset_root": "D:/rivermark-assets/RivermarkSrc51",
+  "asset_package_id": "official_isaacsim_assets_5_1",
+  "asset_package_version": "Isaac Sim 5.1.x",
+  "asset_package_manifest": "C:/path/to/user-maintained/isaacsim-assets-install-inventory.json",
+  "asset_package_sha256": "record-the-installed-package-manifest-sha256",
+  "isaaclab_root": "C:/Users/Administrator/IsaacLab",
+  "isaac_python": "C:/Users/Administrator/IsaacLab/python/python.exe",
+  "city_lite_contract": "C:/path/to/md_qd_swarm/isaaclab_high_fidelity_scenes/hi_fi_search_rescue_rivermark_city_lite_v1_r2/rivermark_city_lite_scene_contract_v1.json",
+  "city_lite_contract_sha256": "f7837d248b4797592c66d4b8b8bd48380de444eca305b8ef03d297dcf32051ea",
+  "city_lite_layer": "C:/path/to/md_qd_swarm/isaaclab_high_fidelity_scenes/hi_fi_search_rescue_rivermark_city_lite_v1_r2/hi_fi_search_rescue_rivermark_city_lite_v1.usda",
+  "city_lite_layer_sha256": "record-the-local-layer-sha256",
+  "cf2x_usd": "C:/path/to/IsaacLab/isaac_drone_racer/assets/new/cf2x.usd",
+  "cf2x_usd_sha256": "7372ac0786312c47a92603da3fcd412d560b21c3757a8f0d5e7c2bfb2233d2f4",
+  "cf2x_source_provenance": "unresolved; inspect before redistribution",
+  "license_status": "internal_only",
+  "public_redistribution": {
+    "raw_nvidia_assets": false,
+    "cf2x_usd": false,
+    "city_lite_composed_layer": false,
+    "rendered_video": false,
+    "derived_sensor_payload": false
+  }
+}

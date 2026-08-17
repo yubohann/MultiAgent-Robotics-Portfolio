@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/t1_collection_protocol_v2.schema.json",
+  "title": "Rivermark T1 expert-coverage collection protocol v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "protocol_id",
+    "version",
+    "dataset_version",
+    "scene_identity",
+    "track",
+    "purpose",
+    "scoring_status",
+    "agent_count",
+    "statistical_unit",
+    "scope",
+    "axes",
+    "cells",
+    "randomization",
+    "analysis_plan",
+    "split_certificate",
+    "overview_retention",
+    "quality_acceptance",
+    "exclusion_rules"
+  ],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.t1-collection-protocol.v2"},
+    "protocol_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
+    "dataset_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
+    "scene_identity": {"const": "RIVERMARK_CITY_LITE_v1"},
+    "track": {"const": "t1-expert-coverage-multisensor-v1"},
+    "purpose": {"const": "expert_coverage_dataset"},
+    "scoring_status": {"const": "not_scored"},
+    "agent_count": {"const": 8},
+    "statistical_unit": {
+      "const": {
+        "unit": "episode",
+        "resampling_unit": "episode_id",
+        "frames_independent": false,
+        "agents_independent": false,
+        "repeated_placements_independent": false
+      }
+    },
+    "scope": {
+      "const": {
+        "layout_scope": "same_layout_route_condition_holdout",
+        "cross_scene_generalization": false,
+        "policy_ranking": false,
+        "closed_loop_search": false
+      }
+    },
+    "axes": {
+      "type": "array",
+      "minItems": 14,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/axis"}
+    },
+    "cells": {
+      "type": "array",
+      "minItems": 2,
+      "items": {"$ref": "#/$defs/cell"}
+    },
+    "randomization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seed_derivation", "episode_seed_start", "paired_initial_conditions"],
+      "properties": {
+        "seed_derivation": {"const": "sha256_utf8_lines_uint32_v1"},
+        "episode_seed_start": {"type": "integer", "minimum": 0},
+        "paired_initial_conditions": {"const": false}
+      }
+    },
+    "analysis_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quota_basis",
+        "initial_admitted_episode_target",
+        "sample_size_reestimate_after_admitted",
+        "policy_ranking",
+        "power_analysis_status",
+        "active_visibility_strata",
+        "unsupported_visibility_strata",
+        "primary_outputs"
+      ],
+      "properties": {
+        "quota_basis": {"const": "coverage_quality_cost_pilot"},
+        "initial_admitted_episode_target": {"type": "integer", "minimum": 8, "maximum": 12},
+        "sample_size_reestimate_after_admitted": {"type": "integer", "minimum": 8, "maximum": 12},
+        "policy_ranking": {"const": false},
+        "power_analysis_status": {"const": "not_applicable_to_t1_policy_ranking"},
+        "active_visibility_strata": {"const": ["direct-visible-v1"]},
+        "unsupported_visibility_strata": {"const": ["partial-visible-v1"]},
+        "primary_outputs": {
+          "const": [
+            "sensor_quality",
+            "route_coverage",
+            "visibility_stratum_realization",
+            "failure_rate",
+            "episode_bytes"
+          ]
+        }
+      }
+    },
+    "split_certificate": {"$ref": "#/$defs/splitCertificate"},
+    "overview_retention": {
+      "const": {
+        "selection_rule": "first_each_fixed_retained_frame_stride_and_final",
+        "frame_index_stride": 10,
+        "fixed_world_camera": true,
+        "outcome_independent": true,
+        "stored_modalities": ["rgb", "semantic", "world_pose"],
+        "runtime_only_modalities": ["depth"]
+      }
+    },
+    "quality_acceptance": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "independent_validation_passed",
+          "sensor_timestamps_synchronized",
+          "action_before_step_causality",
+          "camera_pose_closure",
+          "visual_intrusion_absent",
+          "physical_safety_passed",
+          "condition_realization_passed",
+          "artifact_hash_binding_passed"
+        ]
+      }
+    },
+    "exclusion_rules": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"}
+    }
+  },
+  "$defs": {
+    "axisId": {
+      "enum": [
+        "layout", "route", "route_family", "target_count", "height", "region",
+        "occlusion", "density", "appearance", "dynamics", "lighting", "weather",
+        "initial_condition", "start_anchor", "target_region", "visibility_bucket",
+        "communication", "control_latency", "agent_dropout"
+      ]
+    },
+    "axis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["axis_id", "values", "split_role"],
+      "properties": {
+        "axis_id": {"$ref": "#/$defs/axisId"},
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"}
+        },
+        "split_role": {"enum": ["scene", "condition", "episode", "holdout"]}
+      }
+    },
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cell_id", "split", "conditions", "minimum_attempts", "minimum_admitted"],
+      "properties": {
+        "cell_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "split": {"enum": ["train", "validation"]},
+        "conditions": {
+          "type": "object",
+          "minProperties": 14,
+          "propertyNames": {"$ref": "#/$defs/axisId"},
+          "additionalProperties": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"}
+        },
+        "minimum_attempts": {"type": "integer", "minimum": 1},
+        "minimum_admitted": {"type": "integer", "minimum": 1}
+      }
+    },
+    "splitEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_family_id", "route_geometry_sha256", "start_anchor_id",
+        "start_geometry_sha256", "target_region_id", "target_region",
+        "target_region_sha256"
+      ],
+      "properties": {
+        "route_family_id": {"type": "string"},
+        "route_geometry_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "start_anchor_id": {"type": "string"},
+        "start_geometry_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "target_region_id": {"type": "string"},
+        "target_region": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minimum_w_m", "maximum_w_m"],
+          "properties": {
+            "minimum_w_m": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+            "maximum_w_m": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}}
+          }
+        },
+        "target_region_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "splitCertificate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "scene_identity", "scene_contract_sha256", "claim", "train",
+        "validation", "geometry_checks"
+      ],
+      "properties": {
+        "schema": {"const": "org.rivermark.benchmark.citylite-t1-split-certificate.v1"},
+        "scene_identity": {"const": "RIVERMARK_CITY_LITE_v1"},
+        "scene_contract_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "claim": {"const": "same_layout_route_family_start_region_holdout"},
+        "train": {"$ref": "#/$defs/splitEntry"},
+        "validation": {"$ref": "#/$defs/splitEntry"},
+        "geometry_checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shared_route_waypoint_count", "shared_route_segment_count",
+            "route_segment_intersection_count", "minimum_cross_split_route_distance_m",
+            "route_geometry_disjoint",
+            "minimum_cross_split_start_distance_m", "target_region_overlap_volume_m3",
+            "minimum_cross_split_target_region_distance_m",
+            "route_family_start_region_holdout_passed"
+          ],
+          "properties": {
+            "shared_route_waypoint_count": {"const": 0},
+            "shared_route_segment_count": {"const": 0},
+            "route_segment_intersection_count": {"type": "integer", "minimum": 0},
+            "minimum_cross_split_route_distance_m": {"type": "number", "minimum": 0.0},
+            "route_geometry_disjoint": {"type": "boolean"},
+            "minimum_cross_split_start_distance_m": {"type": "number", "minimum": 4.0},
+            "target_region_overlap_volume_m3": {"const": 0.0},
+            "minimum_cross_split_target_region_distance_m": {"type": "number", "minimum": 4.0},
+            "route_family_start_region_holdout_passed": {"const": true}
+          }
+        }
+      }
+    }
+  }
+}

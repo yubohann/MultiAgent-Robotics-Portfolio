@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/isaac_runtime_lock_v2.schema.json",
+  "title": "Rivermark Isaac Runtime Lock v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile_id", "python", "host", "distributions", "isaaclab_source", "isaaclab_contrib_source", "environment_lock", "gpu", "launcher", "simulation", "assets"],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.isaac-runtime-lock.v2"},
+    "profile_id": {"type": "string", "minLength": 1},
+    "python": {"$ref": "#/$defs/python"},
+    "host": {"$ref": "#/$defs/host"},
+    "distributions": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string", "minLength": 1}},
+    "isaaclab_source": {"$ref": "#/$defs/source"},
+    "isaaclab_contrib_source": {"$ref": "#/$defs/source"},
+    "environment_lock": {"$ref": "#/$defs/environment_lock"},
+    "gpu": {"$ref": "#/$defs/gpu"},
+    "launcher": {"$ref": "#/$defs/launcher"},
+    "simulation": {"$ref": "#/$defs/simulation"},
+    "assets": {"$ref": "#/$defs/assets"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "python": {"type": "object", "additionalProperties": false, "required": ["implementation", "version"], "properties": {"implementation": {"type": "string", "minLength": 1}, "version": {"type": "string", "minLength": 1}}},
+    "host": {"type": "object", "additionalProperties": false, "required": ["system", "machine", "minimum_windows_build"], "properties": {"system": {"const": "Windows"}, "machine": {"type": "string", "minLength": 1}, "minimum_windows_build": {"type": "integer", "minimum": 1}}},
+    "source": {"type": "object", "additionalProperties": false, "required": ["relative_path", "tree_sha256", "file_count", "byte_count", "version_file", "extension_version"], "properties": {"relative_path": {"type": "string", "pattern": "^[^\\/]+(?:/[^\\/]+)*$"}, "tree_sha256": {"$ref": "#/$defs/sha256"}, "file_count": {"type": "integer", "minimum": 1}, "byte_count": {"type": "integer", "minimum": 1}, "version_file": {"type": "string", "minLength": 1}, "extension_version": {"type": "string", "minLength": 1}}},
+    "environment_lock": {"type": "object", "additionalProperties": false, "required": ["repository_relative_path", "sha256"], "properties": {"repository_relative_path": {"type": "string", "pattern": "^[^\\/]+(?:/[^\\/]+)*$"}, "sha256": {"$ref": "#/$defs/sha256"}}},
+    "gpu": {"type": "object", "additionalProperties": false, "required": ["vendor", "minimum_driver_version", "minimum_vram_bytes"], "properties": {"vendor": {"const": "NVIDIA"}, "minimum_driver_version": {"type": "string", "minLength": 1}, "minimum_vram_bytes": {"type": "integer", "minimum": 1}}},
+    "launcher": {"type": "object", "additionalProperties": false, "required": ["headless", "enable_cameras", "device", "rendering_mode", "livestream", "xr", "distributed", "kit_args", "experience"], "properties": {"headless": {"type": "boolean"}, "enable_cameras": {"const": true}, "device": {"enum": ["cpu", "cuda", "cuda:0"]}, "rendering_mode": {"enum": ["performance", "balanced", "quality"]}, "livestream": {"enum": [0, 1, 2]}, "xr": {"type": "boolean"}, "distributed": {"type": "boolean"}, "kit_args": {"type": "string"}, "experience": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^[^\\/]+(?:/[^\\/]+)*$"}, "sha256": {"$ref": "#/$defs/sha256"}}}}},
+    "digest": {"type": "object", "additionalProperties": false, "required": ["settings", "sha256"], "properties": {"settings": {"type": "object"}, "sha256": {"$ref": "#/$defs/sha256"}}},
+    "simulation": {"type": "object", "additionalProperties": false, "required": ["device", "dt_s", "gravity_w_mps2", "agent_count", "render_interval", "use_fabric", "config_digests"], "properties": {"device": {"enum": ["cpu", "cuda", "cuda:0"]}, "dt_s": {"type": "number", "exclusiveMinimum": 0}, "gravity_w_mps2": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}}, "agent_count": {"type": "integer", "minimum": 1}, "render_interval": {"type": "integer", "minimum": 1}, "use_fabric": {"type": "boolean"}, "config_digests": {"type": "object", "additionalProperties": false, "required": ["render", "fabric", "physx"], "properties": {"render": {"$ref": "#/$defs/digest"}, "fabric": {"$ref": "#/$defs/digest"}, "physx": {"$ref": "#/$defs/digest"}}}}},
+    "assets": {"type": "object", "additionalProperties": false, "required": ["city_lite_contract_sha256", "cf2x_usd_sha256"], "properties": {"city_lite_contract_sha256": {"$ref": "#/$defs/sha256"}, "cf2x_usd_sha256": {"$ref": "#/$defs/sha256"}}}
+  }
+}

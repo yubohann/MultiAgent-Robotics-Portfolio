@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/observation_abi_v1.schema.json",
+  "title": "Rivermark Observation ABI v1",
+  "type": "object",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "version": {"pattern": "^(?:[2-9]|[1-9][0-9])\\.[0-9]+\\.[0-9]+$|^1\\.[1-9][0-9]*\\.[0-9]+$"}
+        }
+      },
+      "then": {
+        "properties": {
+          "streams": {
+            "items": {
+              "required": ["fidelity", "fidelity_limitations"]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "required": ["schema", "version", "action_timing", "coordinate_frames", "calibration", "streams"],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.observation-abi.v1"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "action_timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command_write", "simulation_step", "state_update", "sensor_read", "storage"],
+      "properties": {
+        "command_write": {"const": "before_simulation_step"},
+        "simulation_step": {"const": "after_command_write"},
+        "state_update": {"const": "after_simulation_step"},
+        "sensor_read": {"const": "after_state_update"},
+        "storage": {"const": "after_sensor_read"}
+      }
+    },
+    "coordinate_frames": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["handedness", "world_up_axis", "world_frame_convention", "body_frame_convention", "camera_optical_frame_convention", "length_unit", "angle_unit", "quaternion_order", "transform_notation"],
+      "properties": {
+        "handedness": {"const": "right"},
+        "world_up_axis": {"const": "+z"},
+        "world_frame_convention": {"const": "x_east_y_north_z_up"},
+        "body_frame_convention": {"const": "flu"},
+        "camera_optical_frame_convention": {"const": "opencv_x_right_y_down_z_forward"},
+        "length_unit": {"const": "m"},
+        "angle_unit": {"const": "rad"},
+        "quaternion_order": {"const": "wxyz"},
+        "transform_notation": {"const": "T_parent_child"}
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["camera", "lidar", "imu"],
+      "properties": {
+        "camera": {"$ref": "#/$defs/calibration"},
+        "lidar": {"$ref": "#/$defs/calibration"},
+        "imu": {"$ref": "#/$defs/calibration"}
+      }
+    },
+    "streams": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/stream"}
+    }
+  },
+  "$defs": {
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "source"],
+      "properties": {
+        "status": {"enum": ["recorded", "unavailable"]},
+        "source": {"type": "string", "minLength": 1, "maxLength": 256},
+        "frame_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "intrinsics": {"$ref": "#/$defs/intrinsics"},
+        "extrinsics": {"$ref": "#/$defs/extrinsics"},
+        "distortion_model": {"enum": ["none", "brown_conrady", "fisheye"]},
+        "distortion_coefficients": {"type": "array", "items": {"type": "number"}},
+        "max_range_m": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "intrinsics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "width_px", "height_px", "fx_px", "fy_px", "cx_px", "cy_px"],
+      "properties": {
+        "model": {"enum": ["pinhole", "fisheye"]},
+        "width_px": {"type": "integer", "minimum": 1},
+        "height_px": {"type": "integer", "minimum": 1},
+        "fx_px": {"type": "number"},
+        "fy_px": {"type": "number"},
+        "cx_px": {"type": "number"},
+        "cy_px": {"type": "number"}
+      }
+    },
+    "extrinsics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formula", "quaternion_order"],
+      "properties": {
+        "formula": {"const": "T_world_camera = T_world_body * T_body_camera"},
+        "quaternion_order": {"const": "wxyz"}
+      }
+    },
+    "stream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stream_id", "modality", "partition", "encoding", "fields"],
+      "properties": {
+        "stream_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$"},
+        "modality": {"type": "string", "minLength": 1, "maxLength": 128},
+        "partition": {"enum": ["policy_visible", "learning_labels"]},
+        "encoding": {"type": "string", "minLength": 1, "maxLength": 128},
+        "fidelity": {"enum": ["simulator_consistent", "noise_modeled", "hardware_calibrated"]},
+        "fidelity_limitations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 256}
+        },
+        "fields": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/field"}}
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "dtype", "shape", "units", "frame_id", "agent_id_field", "timestamp_field", "missing", "valid_range", "compression", "time_semantics"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$"},
+        "dtype": {"enum": ["bool", "int8", "uint8", "uint16", "int16", "int32", "int64", "float16", "float32", "float64", "string"]},
+        "shape": {"type": "array", "minItems": 1, "items": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "string", "pattern": "^(?:[0-9]+|[a-z][a-z0-9_{}-]{0,63})$"}]}},
+        "units": {"type": "string", "minLength": 1, "maxLength": 64},
+        "frame_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "agent_id_field": {"type": ["string", "null"], "maxLength": 128},
+        "timestamp_field": {"type": "string", "minLength": 1, "maxLength": 128},
+        "missing": {"$ref": "#/$defs/missing"},
+        "valid_range": {"$ref": "#/$defs/range"},
+        "compression": {"enum": ["none", "npz_deflate", "gzip", "zstd", "parquet", "zarr", "mp4_h264"]},
+        "time_semantics": {"enum": ["sensor_sample", "command_before_step", "state_after_step", "event_time"]}
+      }
+    },
+    "missing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "sentinel", "mask_field"],
+      "properties": {
+        "policy": {"enum": ["not_applicable", "drop_sample", "nan", "sentinel", "mask_field"]},
+        "sentinel": {},
+        "mask_field": {"type": ["string", "null"]}
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max", "inclusive"],
+      "properties": {
+        "min": {"type": ["number", "null"]},
+        "max": {"type": ["number", "null"]},
+        "inclusive": {"type": "boolean"}
+      }
+    }
+  }
+}

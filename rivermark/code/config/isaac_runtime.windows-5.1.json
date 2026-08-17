@@ -1,0 +1,121 @@
+{
+  "schema": "org.rivermark.benchmark.isaac-runtime-lock.v2",
+  "profile_id": "citylite-windows-isaacsim-5.1.0.0-local-isaaclab-2.3.2",
+  "python": {
+    "implementation": "CPython",
+    "version": "3.11.14"
+  },
+  "host": {
+    "system": "Windows",
+    "machine": "AMD64",
+    "minimum_windows_build": 26100
+  },
+  "distributions": {
+    "isaacsim": "5.1.0.0",
+    "isaaclab": "2.3.0",
+    "isaaclab-contrib": "0.0.2",
+    "numpy": "1.26.0",
+    "opencv-python": "4.11.0.86",
+    "torch": "2.7.0+cu128",
+    "warp-lang": "1.11.1"
+  },
+  "isaaclab_source": {
+    "relative_path": "isaaclab",
+    "tree_sha256": "88f3f4a9a0d3c7e5ee7f2b455e8112579e78ec4dc914cb36e6338d0b0db8dd19",
+    "file_count": 438,
+    "byte_count": 4587292,
+    "version_file": "2.3.2",
+    "extension_version": "0.54.3"
+  },
+  "isaaclab_contrib_source": {
+    "relative_path": "isaaclab_contrib",
+    "tree_sha256": "840bd876a8c106dd95d4ce0e4d7b1f8390fe7e7054423478ba265dc0cd141fef",
+    "file_count": 27,
+    "byte_count": 196665,
+    "version_file": "2.3.2",
+    "extension_version": "0.0.2"
+  },
+  "environment_lock": {
+    "repository_relative_path": "requirements-isaac-capture.lock",
+    "sha256": "ceb1dc7e159c9205bf6fae06bd6afe50e2cfea3da2cc35f7fd7e5da6974d1f7e"
+  },
+  "gpu": {
+    "vendor": "NVIDIA",
+    "minimum_driver_version": "576.80",
+    "minimum_vram_bytes": 8589934592
+  },
+  "launcher": {
+    "headless": true,
+    "enable_cameras": true,
+    "device": "cuda:0",
+    "rendering_mode": "balanced",
+    "livestream": 0,
+    "xr": false,
+    "distributed": false,
+    "kit_args": "",
+    "experience": {
+      "path": "apps/isaaclab.python.headless.rendering.kit",
+      "sha256": "423d5cccc0438bb87c278cbc2ddcff1e1ddae61337499c011348236e5e0a9ba5"
+    }
+  },
+  "simulation": {
+    "device": "cuda:0",
+    "dt_s": 0.005,
+    "gravity_w_mps2": [
+      0.0,
+      0.0,
+      -9.81
+    ],
+    "agent_count": 8,
+    "render_interval": 1,
+    "use_fabric": true,
+    "config_digests": {
+      "render": {
+        "settings": {
+          "rendering_mode": "balanced"
+        },
+        "sha256": "8214cec177d141bd7cc95a06be1a7eb860d42a17c23049b34dc47b25aea7f118"
+      },
+      "fabric": {
+        "settings": {
+          "enable_scene_query_support": false,
+          "use_fabric": true
+        },
+        "sha256": "4b31eac4129d9f7d436921387bf67cd7871a340dd72ca9d499cab853ccd406f1"
+      },
+      "physx": {
+        "settings": {
+          "solver_type": 1,
+          "solve_articulation_contact_last": false,
+          "min_position_iteration_count": 1,
+          "max_position_iteration_count": 255,
+          "min_velocity_iteration_count": 0,
+          "max_velocity_iteration_count": 255,
+          "enable_ccd": false,
+          "enable_stabilization": false,
+          "enable_external_forces_every_iteration": false,
+          "enable_enhanced_determinism": false,
+          "bounce_threshold_velocity": 0.5,
+          "friction_offset_threshold": 0.04,
+          "friction_correlation_distance": 0.025,
+          "gpu_max_rigid_contact_count": 8388608,
+          "gpu_max_rigid_patch_count": 163840,
+          "gpu_found_lost_pairs_capacity": 2097152,
+          "gpu_found_lost_aggregate_pairs_capacity": 33554432,
+          "gpu_total_aggregate_pairs_capacity": 2097152,
+          "gpu_collision_stack_size": 67108864,
+          "gpu_heap_capacity": 67108864,
+          "gpu_temp_buffer_capacity": 16777216,
+          "gpu_max_num_partitions": 8,
+          "gpu_max_soft_body_contacts": 1048576,
+          "gpu_max_particle_contacts": 1048576
+        },
+        "sha256": "a35787dab250a4a296dcd69525d0e73c6c9d7be38d25755d59076c72f8732ad5"
+      }
+    }
+  },
+  "assets": {
+    "city_lite_contract_sha256": "f7837d248b4797592c66d4b8b8bd48380de444eca305b8ef03d297dcf32051ea",
+    "cf2x_usd_sha256": "7372ac0786312c47a92603da3fcd412d560b21c3757a8f0d5e7c2bfb2233d2f4"
+  }
+}

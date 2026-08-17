@@ -1,0 +1,92 @@
+{
+  "schema": "org.rivermark.benchmark.native-t2-canary-protocol.v1",
+  "protocol_id": "citylite-native-t2-canary-v1",
+  "version": "1.0.0",
+  "scene_identity": "RIVERMARK_CITY_LITE_v1",
+  "track": "native-t2-closed-loop-development-v1",
+  "purpose": "calibrated_native_closed_loop_canary",
+  "scoring_status": "not_scored",
+  "agent_count": 8,
+  "claim_boundary": {
+    "development_only": true,
+    "formal_episode": false,
+    "benchmark_score": false,
+    "policy_ranking": false
+  },
+  "execution_contract": {
+    "control_mode": "native_t2_canary",
+    "task_variant_id": "isaac-eight-agent-native-t2-search-canary-v1",
+    "requires_cf2x_runtime_calibration": true,
+    "requires_full_sensor_smoke": true,
+    "required_independent_passes": 2
+  },
+  "axes": [
+    {"axis_id": "layout", "values": ["citylite-v1"], "split_role": "scene"},
+    {"axis_id": "route", "values": ["fixed-public-route-v1"], "split_role": "condition"},
+    {"axis_id": "route_family", "values": ["citylite-route-family-a-v1"], "split_role": "condition"},
+    {"axis_id": "target_count", "values": ["object-count-4-v1"], "split_role": "condition"},
+    {"axis_id": "height", "values": ["citylite-command-altitude-v1"], "split_role": "condition"},
+    {"axis_id": "region", "values": ["citylite-command-volume-v1"], "split_role": "condition"},
+    {"axis_id": "dynamics", "values": ["cf2x-nominal-v1"], "split_role": "condition"},
+    {"axis_id": "initial_condition", "values": ["public-route-anchor-v1"], "split_role": "episode"},
+    {"axis_id": "start_anchor", "values": ["citylite-start-anchor-a-v1"], "split_role": "condition"},
+    {"axis_id": "target_region", "values": ["citylite-target-region-b-v1"], "split_role": "condition"},
+    {"axis_id": "visibility_bucket", "values": ["direct-visible-v1"], "split_role": "condition"},
+    {"axis_id": "communication", "values": ["synchronous-public-broadcast-v1"], "split_role": "condition"},
+    {"axis_id": "control_latency", "values": ["one-step-command-latency-v1"], "split_role": "condition"},
+    {"axis_id": "agent_dropout", "values": ["no-agent-dropout-v1"], "split_role": "condition"}
+  ],
+  "cells": [
+    {
+      "cell_id": "native-t2-canary-inner-dev-v1",
+      "split": "inner_dev",
+      "conditions": {
+        "layout": "citylite-v1",
+        "route": "fixed-public-route-v1",
+        "route_family": "citylite-route-family-a-v1",
+        "target_count": "object-count-4-v1",
+        "height": "citylite-command-altitude-v1",
+        "region": "citylite-command-volume-v1",
+        "dynamics": "cf2x-nominal-v1",
+        "initial_condition": "public-route-anchor-v1",
+        "start_anchor": "citylite-start-anchor-a-v1",
+        "target_region": "citylite-target-region-b-v1",
+        "visibility_bucket": "direct-visible-v1",
+        "communication": "synchronous-public-broadcast-v1",
+        "control_latency": "one-step-command-latency-v1",
+        "agent_dropout": "no-agent-dropout-v1"
+      },
+      "planned_independent_attempts": 2
+    }
+  ],
+  "randomization": {
+    "seed_derivation": "sha256_utf8_lines_uint32_v1",
+    "episode_seed_start": 20260728,
+    "paired_initial_conditions": false
+  },
+  "overview_retention": {
+    "selection_rule": "first_each_fixed_retained_frame_stride_and_final",
+    "frame_index_stride": 10,
+    "fixed_world_camera": true,
+    "outcome_independent": true,
+    "stored_modalities": ["rgb", "semantic", "world_pose"],
+    "runtime_only_modalities": ["depth"]
+  },
+  "quality_acceptance": [
+    "cf2x_runtime_calibration_passed",
+    "full_sensor_smoke_bound",
+    "action_causality_passed",
+    "sensor_sync_passed",
+    "camera_pose_closure_passed",
+    "visual_intrusion_absent",
+    "fixed_world_witness_passed",
+    "private_event_evaluation_passed",
+    "native_t2_replay_passed"
+  ],
+  "exclusion_rules": [
+    "retain_failed_attempt_in_ledger",
+    "reject_missing_external_prerequisite",
+    "reject_private_manifest_binding_mismatch",
+    "reject_native_t2_validation_failure"
+  ]
+}

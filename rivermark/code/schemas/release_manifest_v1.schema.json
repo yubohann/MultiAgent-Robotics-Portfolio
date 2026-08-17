@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/release_manifest_v1.schema.json",
+  "title": "Rivermark Public Release Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "dataset_version", "release_id", "license_status", "shards"],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.release-manifest.v1"},
+    "dataset_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
+    "release_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+    "license_status": {"const": "redistribution_cleared"},
+    "created_at": {"type": "string", "minLength": 1},
+    "source_revision": {"type": "string", "pattern": "^[0-9a-f]{7,64}$"},
+    "supply_chain_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "metadata_uri": {"type": "string", "format": "uri"},
+    "accounting": {"$ref": "#/$defs/accounting"},
+    "defects": {"type": "array", "items": {"$ref": "#/$defs/defect"}},
+    "shards": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/shard"}}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "safeRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?!.*(?:^|[/\\\\])\\.{1,2}(?:[/\\\\]|$))(?!.*[/\\\\]{2})(?!.*[/\\\\]$).+$"
+    },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["failure_ledger", "failure_summary"],
+      "properties": {
+        "failure_ledger": {"$ref": "#/$defs/accountingLedger"},
+        "failure_summary": {"$ref": "#/$defs/accountingSummary"}
+      }
+    },
+    "accountingLedger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "url", "size_bytes", "sha256", "schema", "media_type"],
+      "properties": {
+        "path": {"$ref": "#/$defs/safeRelativePath"},
+        "url": {"type": "string", "format": "uri"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "schema": {"const": "org.rivermark.benchmark.failure-ledger.v1"},
+        "media_type": {"type": "string", "minLength": 1},
+        "compression": {"type": "string", "minLength": 1},
+        "license_status": {"const": "redistribution_cleared"}
+      }
+    },
+    "accountingSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "attempt_count", "admitted_count", "quarantined_count", "failed_count", "failure_categories", "attempt_ids_sha256"],
+      "properties": {
+        "schema": {"const": "org.rivermark.benchmark.failure-ledger.v1"},
+        "attempt_count": {"type": "integer", "minimum": 0},
+        "admitted_count": {"type": "integer", "minimum": 0},
+        "quarantined_count": {"type": "integer", "minimum": 0},
+        "failed_count": {"type": "integer", "minimum": 0},
+        "failure_categories": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "attempt_ids_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "defect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issue_id", "status", "severity", "summary", "affected_shards", "version_bump_policy", "deprecation_window"],
+      "properties": {
+        "issue_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9._-]{2,63}$"},
+        "status": {"enum": ["open", "resolved", "withdrawn"]},
+        "severity": {"enum": ["low", "medium", "high", "critical"]},
+        "summary": {"type": "string", "minLength": 1},
+        "affected_shards": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/defectShard"}},
+        "correction_mapping": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/correctionMapping"}},
+        "version_bump_policy": {"enum": ["patch", "minor", "major"]},
+        "deprecation_window": {"$ref": "#/$defs/deprecationWindow"},
+        "tombstone": {"$ref": "#/$defs/tombstone"}
+      }
+    },
+    "defectShard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shard_id", "episode_id", "path", "original_sha256"],
+      "properties": {
+        "shard_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "episode_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "path": {"$ref": "#/$defs/safeRelativePath"},
+        "frame_start": {"type": "integer", "minimum": 0},
+        "frame_end": {"type": "integer", "minimum": 1},
+        "original_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "correctionMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["old_shard_id", "new_release_id", "new_dataset_version", "new_sha256"],
+      "properties": {
+        "old_shard_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "new_shard_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "new_release_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "new_dataset_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
+        "new_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "deprecationWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grace_releases", "replacement_required"],
+      "properties": {
+        "grace_releases": {"type": "integer", "minimum": 0},
+        "replacement_required": {"type": "boolean"}
+      }
+    },
+    "tombstone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reason"],
+      "properties": {
+        "kind": {"enum": ["withdrawn", "superseded", "invalid"]},
+        "reason": {"type": "string", "minLength": 1},
+        "replacement_release_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "replacement_shard_ids": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"}}
+      }
+    },
+    "shard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shard_id", "episode_id", "split", "modality", "media_type", "schema", "path", "url", "size_bytes", "sha256", "source_capture_sha256"],
+      "properties": {
+        "shard_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "episode_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "split": {"enum": ["pilot", "train", "inner_dev", "validation", "blind_test", "ood_test"]},
+        "modality": {"type": "string", "minLength": 1},
+        "agent_id": {"type": "integer", "minimum": 0},
+        "frame_start": {"type": "integer", "minimum": 0},
+        "frame_end": {"type": "integer", "minimum": 1},
+        "media_type": {"type": "string", "minLength": 1},
+        "compression": {"type": "string", "minLength": 1},
+        "schema": {"type": "string", "minLength": 1},
+        "path": {"$ref": "#/$defs/safeRelativePath"},
+        "url": {"type": "string", "format": "uri"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "source_capture_sha256": {"$ref": "#/$defs/sha256"},
+        "license_status": {"const": "redistribution_cleared"}
+      }
+    }
+  }
+}

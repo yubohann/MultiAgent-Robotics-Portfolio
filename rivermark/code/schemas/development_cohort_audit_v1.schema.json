@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/development_cohort_audit_v1.schema.json",
+  "title": "Rivermark Development Cohort Audit v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "formal",
+    "policy_ranking",
+    "audit_provenance",
+    "protocol",
+    "source",
+    "accounting",
+    "candidates",
+    "aggregate",
+    "admission_readiness",
+    "report_payload_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.development-cohort-audit.v1"},
+    "status": {"const": "passed"},
+    "formal": {"const": false},
+    "policy_ranking": {"const": false},
+    "audit_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["analyzer_module", "analyzer_source_sha256", "construction_scope", "offline_verification_scope"],
+      "properties": {
+        "analyzer_module": {"const": "rivermark_benchmark.cohort_audit"},
+        "analyzer_source_sha256": {"$ref": "#/$defs/sha256"},
+        "construction_scope": {"const": "source_protocol_ledger_and_capture_artifacts"},
+        "offline_verification_scope": {"const": "internal_structure_and_unkeyed_digest_only"}
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_id", "protocol_sha256", "candidate_index_start", "expected_candidate_count", "target_quota_by_cell"],
+      "properties": {
+        "protocol_id": {"$ref": "#/$defs/id"},
+        "protocol_sha256": {"$ref": "#/$defs/sha256"},
+        "candidate_index_start": {"type": "integer", "minimum": 0},
+        "expected_candidate_count": {"type": "integer", "minimum": 1},
+        "target_quota_by_cell": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"$ref": "#/$defs/id"},
+          "additionalProperties": {"$ref": "#/$defs/targetQuota"}
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "all_worktrees_clean", "source_tree_sha256_values"],
+      "properties": {
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "all_worktrees_clean": {"const": true},
+        "source_tree_sha256_values": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failure_ledger_sha256",
+        "ledger_record_count",
+        "protocol_attempt_count",
+        "candidate_attempt_count",
+        "noncandidate_protocol_attempt_count",
+        "candidate_outcomes",
+        "candidate_reason_codes",
+        "candidate_selection_sha256",
+        "coverage"
+      ],
+      "properties": {
+        "failure_ledger_sha256": {"$ref": "#/$defs/sha256"},
+        "ledger_record_count": {"type": "integer", "minimum": 0},
+        "protocol_attempt_count": {"type": "integer", "minimum": 1},
+        "candidate_attempt_count": {"type": "integer", "minimum": 1},
+        "noncandidate_protocol_attempt_count": {"type": "integer", "minimum": 0},
+        "candidate_outcomes": {"$ref": "#/$defs/counts"},
+        "candidate_reason_codes": {"$ref": "#/$defs/counts"},
+        "candidate_selection_sha256": {"$ref": "#/$defs/sha256"},
+        "coverage": {"type": "object"}
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/candidate"}
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_count",
+        "candidate_count_by_split",
+        "quality_gate_pass_count",
+        "contact_free_count",
+        "target_count",
+        "targets_meeting_visibility",
+        "target_visibility_rate",
+        "capture_failure_rate",
+        "quarantine_rate",
+        "formal_admission_rate",
+        "capture_bytes",
+        "duration_s",
+        "peak_system_commit_percent",
+        "peak_process_private_commit_bytes",
+        "minimum_agent_max_displacement_m",
+        "route_witness_displacement_m"
+      ],
+      "properties": {
+        "candidate_count": {"type": "integer", "minimum": 1},
+        "candidate_count_by_split": {"$ref": "#/$defs/counts"},
+        "quality_gate_pass_count": {"type": "integer", "minimum": 0},
+        "contact_free_count": {"type": "integer", "minimum": 0},
+        "target_count": {"type": "integer", "minimum": 1},
+        "targets_meeting_visibility": {"type": "integer", "minimum": 0},
+        "target_visibility_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "capture_failure_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "quarantine_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "formal_admission_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "capture_bytes": {
+          "description": "Distribution of receipt-bound capture artifact bytes; excludes post-validation reports and video files.",
+          "$ref": "#/$defs/distribution"
+        },
+        "duration_s": {"$ref": "#/$defs/distribution"},
+        "peak_system_commit_percent": {"$ref": "#/$defs/distribution"},
+        "peak_process_private_commit_bytes": {"$ref": "#/$defs/distribution"},
+        "minimum_agent_max_displacement_m": {"$ref": "#/$defs/distribution"},
+        "route_witness_displacement_m": {"$ref": "#/$defs/distribution"}
+      }
+    },
+    "admission_readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "native_evidence_ready_for_review",
+        "formal_admission_complete",
+        "release_ready",
+        "blocking_reason_codes",
+        "not_evaluated_by_this_audit"
+      ],
+      "properties": {
+        "native_evidence_ready_for_review": {"const": true},
+        "formal_admission_complete": {"type": "boolean"},
+        "release_ready": {"const": false},
+        "blocking_reason_codes": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "not_evaluated_by_this_audit": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}
+      }
+    },
+    "report_payload_sha256": {
+      "description": "Unkeyed integrity digest of canonical JSON with this field empty. It is not a signature or source-authenticity proof.",
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"},
+    "counts": {
+      "type": "object",
+      "propertyNames": {"$ref": "#/$defs/id"},
+      "additionalProperties": {"type": "integer", "minimum": 1}
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "minimum", "median", "mean", "maximum"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 1},
+        "minimum": {"type": "number"},
+        "median": {"type": "number"},
+        "mean": {"type": "number"},
+        "maximum": {"type": "number"}
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_id", "protocol_sha256", "cell_id", "split", "episode_index", "episode_seed"],
+      "properties": {
+        "protocol_id": {"$ref": "#/$defs/id"},
+        "protocol_sha256": {"$ref": "#/$defs/sha256"},
+        "cell_id": {"$ref": "#/$defs/id"},
+        "split": {"enum": ["train", "inner_dev", "validation", "blind_test", "ood_test"]},
+        "episode_index": {"type": "integer", "minimum": 0},
+        "episode_seed": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+      }
+    },
+    "targetQuota": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["condition_id", "target_count"],
+      "properties": {
+        "condition_id": {"const": "object-count-4-v1"},
+        "target_count": {"const": 4}
+      }
+    },
+    "qualityGates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "independent_validation_passed",
+        "sensor_timestamps_synchronized",
+        "action_before_step_causality",
+        "camera_pose_closure",
+        "visual_intrusion_absent",
+        "physical_safety_passed",
+        "condition_realization_passed",
+        "artifact_hash_binding_passed"
+      ],
+      "properties": {
+        "independent_validation_passed": {"const": true},
+        "sensor_timestamps_synchronized": {"const": true},
+        "action_before_step_causality": {"const": true},
+        "camera_pose_closure": {"const": true},
+        "visual_intrusion_absent": {"const": true},
+        "physical_safety_passed": {"const": true},
+        "condition_realization_passed": {"const": true},
+        "artifact_hash_binding_passed": {"const": true}
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capture_attempt_id",
+        "binding",
+        "source_revision",
+        "source_tree_sha256",
+        "capture_receipt_sha256",
+        "independent_validation_sha256",
+        "task_outcome_sha256",
+        "quality_gates",
+        "target_visibility",
+        "contact_free",
+        "minimum_agent_max_displacement_m",
+        "route_witness_displacement_m",
+        "resources",
+        "ledger"
+      ],
+      "properties": {
+        "capture_attempt_id": {"$ref": "#/$defs/id"},
+        "binding": {"$ref": "#/$defs/binding"},
+        "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "source_tree_sha256": {"$ref": "#/$defs/sha256"},
+        "capture_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "independent_validation_sha256": {"$ref": "#/$defs/sha256"},
+        "task_outcome_sha256": {"$ref": "#/$defs/sha256"},
+        "quality_gates": {"$ref": "#/$defs/qualityGates"},
+        "target_visibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target_count", "targets_meeting_visibility", "failed_target_count", "minimum_visible_frames", "maximum_visible_frames", "minimum_max_pixels", "maximum_max_pixels"],
+          "properties": {
+            "target_count": {"type": "integer", "minimum": 1},
+            "targets_meeting_visibility": {"type": "integer", "minimum": 1},
+            "failed_target_count": {"const": 0},
+            "minimum_visible_frames": {"type": "integer", "minimum": 1},
+            "maximum_visible_frames": {"type": "integer", "minimum": 1},
+            "minimum_max_pixels": {"type": "integer", "minimum": 1},
+            "maximum_max_pixels": {"type": "integer", "minimum": 1}
+          }
+        },
+        "contact_free": {"const": true},
+        "minimum_agent_max_displacement_m": {"type": "number", "minimum": 0},
+        "route_witness_displacement_m": {"type": "number", "minimum": 3.0},
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["capture_bytes", "duration_s", "peak_system_commit_percent", "peak_process_private_commit_bytes"],
+          "properties": {
+            "capture_bytes": {
+              "description": "Sum of byte counts for artifacts frozen by capture_receipt.json.artifact_hashes.",
+              "type": "integer",
+              "minimum": 1
+            },
+            "duration_s": {"type": "number", "minimum": 0},
+            "peak_system_commit_percent": {"type": "number", "minimum": 0, "maximum": 100},
+            "peak_process_private_commit_bytes": {"type": "integer", "minimum": 0}
+          }
+        },
+        "ledger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["outcome", "category", "stage", "reason_code"],
+          "properties": {
+            "outcome": {"enum": ["admitted", "quarantined", "failed"]},
+            "category": {"$ref": "#/$defs/id"},
+            "stage": {"type": "string", "minLength": 1},
+            "reason_code": {"type": ["string", "null"]}
+          }
+        }
+      }
+    }
+  }
+}
