@@ -1,0 +1,15 @@
+# Windows Isaac capture environment observed on 2026-07-22.
+# Isaac Sim itself is installed by the local NVIDIA distribution; these lines
+# document the Python packages, not a redistributable Isaac installation.
+numpy==1.26.0
+pyarrow==25.0.0
+opencv-python==4.11.0.86
+imageio-ffmpeg==0.6.0
+torch==2.7.0
+isaacsim==5.1.0.0
+skrl==1.4.3
+ray==2.52.1
+transformers==4.57.6
+stable-baselines3==2.7.1
+ribs==0.8.3
+pettingzoo==1.26.1

@@ -1,0 +1,110 @@
+{
+  "schema": "org.rivermark.benchmark.episode.v1",
+  "dataset_version": "0.1.0-dev",
+  "episode_id": "test-fixture-only-0001",
+  "split": "pilot",
+  "layout": {
+    "layout_id": "test-layout",
+    "layout_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "layout_lineage_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "scene_manifest_ref": "scenes/test-layout/scene_manifest.json",
+    "scene_manifest_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "task": {
+    "task_id": "multi_uav_search3d",
+    "task_variant_id": "test-public-search",
+    "task_spec_ref": "tasks/test-public-search.json",
+    "task_spec_sha256": "34fba14bbbc64da08dbfbd83feedb6f920f5b4db53cad74ab72a04ed0a5aad97",
+    "information_profile": "egocentric_rgbd_state",
+    "observation_scope": "decentralized_explicit_comm",
+    "agent_count": 8
+  },
+  "timebase": {
+    "unit": "ns",
+    "physics_dt_ns": 5000000,
+    "proprioception_period_ns": 20000000,
+    "camera_period_ns": 100000000
+  },
+  "coordinate_frames": {
+    "handedness": "right",
+    "world_up_axis": "+z",
+    "world_frame_convention": "x_east_y_north_z_up",
+    "body_frame_convention": "flu",
+    "camera_optical_frame_convention": "opencv_x_right_y_down_z_forward",
+    "length_unit": "m",
+    "angle_unit": "rad",
+    "quaternion_order": "wxyz",
+    "transform_notation": "T_parent_child"
+  },
+  "streams": [
+    {
+      "stream_id": "proprioception",
+      "partition": "policy_visible",
+      "modality": "proprioception",
+      "media_type": "application/vnd.apache.parquet",
+      "sample_count": 0,
+      "timestamp_field": "sim_time_ns",
+      "path": "streams/state.parquet",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stream_id": "egocentric-rgb",
+      "partition": "policy_visible",
+      "modality": "rgb",
+      "media_type": "video/mp4",
+      "sample_count": 0,
+      "timestamp_field": "sensor_time_ns",
+      "path_template": "cameras/{agent_id}/rgb.mp4",
+      "content_hash_index_path": "cameras/rgb_content_hashes.json",
+      "content_hash_index_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stream_id": "egocentric-distance",
+      "partition": "policy_visible",
+      "modality": "distance_to_image_plane",
+      "media_type": "application/vnd+zarr",
+      "sample_count": 0,
+      "timestamp_field": "sensor_time_ns",
+      "path_template": "cameras/{agent_id}/distance_to_image_plane.zarr",
+      "content_hash_index_path": "cameras/distance_content_hashes.json",
+      "content_hash_index_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "policy_visible": {
+    "information_profile": "egocentric_rgbd_state",
+    "modalities": [
+      "rgb",
+      "distance_to_image_plane",
+      "proprioception",
+      "public_task_state",
+      "public_team_messages",
+      "high_level_action_history"
+    ]
+  },
+  "learning_labels": {
+    "distributed": true,
+    "modalities": ["high_level_action", "reward_components"]
+  },
+  "evaluator_private": {
+    "distributed": false,
+    "server_only": true,
+    "manifest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "provenance": {
+    "route_conditioning": "public_only",
+    "observation_generation": "online_runtime",
+    "collector_type": "scripted",
+    "policy_id": "test-fixture-only",
+    "code_commit": "0123456789abcdef",
+    "simulator_build": "not-captured",
+    "scene_asset_license_status": "pending"
+  },
+  "quality": {
+    "recording_valid": false,
+    "task_success": false,
+    "invalid_reasons": ["test_fixture_without_stream_payloads"],
+    "frame_completeness_ratio": 0.0,
+    "timestamp_monotonic": true,
+    "pose_closure_max_error_m": 0.0
+  }
+}

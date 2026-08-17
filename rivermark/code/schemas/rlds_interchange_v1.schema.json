@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/rlds_interchange_v1.schema.json",
+  "title": "Rivermark development RLDS JSONL interchange",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "format", "status", "episode_id", "step_count", "agent_count", "dropped_initial_command_count", "source_provenance", "mapping", "claim_boundary", "files"],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.rlds-jsonl.v1"},
+    "format": {"const": "jsonl"},
+    "status": {"const": "projected"},
+    "episode_id": {"type": "string", "minLength": 1},
+    "step_count": {"type": "integer", "minimum": 2},
+    "agent_count": {"type": "integer", "minimum": 1},
+    "dropped_initial_command_count": {"const": 1},
+    "source_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_capture_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_revision": {"type": "string", "minLength": 1},
+        "observation_abi_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "collection_protocol_id": {"type": "string", "minLength": 1},
+        "collection_protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "collection_cell_id": {"type": "string", "minLength": 1},
+        "split": {"type": "string", "minLength": 1},
+        "episode_index": {"type": "integer", "minimum": 0},
+        "episode_seed": {"type": "integer", "minimum": 0}
+      }
+    },
+    "mapping": {"type": "object", "additionalProperties": {"type": "string"}},
+    "claim_boundary": {"const": "development-only RLDS-shaped interchange; no TFDS or formal-episode claim"},
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "bytes", "sha256"],
+        "properties": {
+          "path": {"const": "episode.jsonl"},
+          "bytes": {"type": "integer", "minimum": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

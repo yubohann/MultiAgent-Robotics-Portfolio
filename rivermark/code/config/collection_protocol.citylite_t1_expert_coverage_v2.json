@@ -1,0 +1,167 @@
+{
+  "schema": "org.rivermark.benchmark.t1-collection-protocol.v2",
+  "protocol_id": "citylite-t1-expert-coverage-v2",
+  "version": "2.0.0",
+  "dataset_version": "0.1.0",
+  "scene_identity": "RIVERMARK_CITY_LITE_v1",
+  "track": "t1-expert-coverage-multisensor-v1",
+  "purpose": "expert_coverage_dataset",
+  "scoring_status": "not_scored",
+  "agent_count": 8,
+  "statistical_unit": {
+    "unit": "episode",
+    "resampling_unit": "episode_id",
+    "frames_independent": false,
+    "agents_independent": false,
+    "repeated_placements_independent": false
+  },
+  "scope": {
+    "layout_scope": "same_layout_route_condition_holdout",
+    "cross_scene_generalization": false,
+    "policy_ranking": false,
+    "closed_loop_search": false
+  },
+  "axes": [
+    {"axis_id": "layout", "values": ["citylite-v1"], "split_role": "scene"},
+    {"axis_id": "route", "values": ["fixed-public-route-v1"], "split_role": "condition"},
+    {"axis_id": "route_family", "values": ["citylite-route-family-a-v1", "citylite-route-family-b-v1"], "split_role": "holdout"},
+    {"axis_id": "target_count", "values": ["object-count-4-v1"], "split_role": "condition"},
+    {"axis_id": "height", "values": ["citylite-command-altitude-v1"], "split_role": "condition"},
+    {"axis_id": "region", "values": ["citylite-command-volume-v1"], "split_role": "condition"},
+    {"axis_id": "dynamics", "values": ["cf2x-nominal-v1"], "split_role": "condition"},
+    {"axis_id": "initial_condition", "values": ["public-route-anchor-v1"], "split_role": "episode"},
+    {"axis_id": "start_anchor", "values": ["citylite-start-anchor-a-v1", "citylite-start-anchor-b-v1"], "split_role": "holdout"},
+    {"axis_id": "target_region", "values": ["citylite-target-region-a-v1", "citylite-target-region-b-v1"], "split_role": "holdout"},
+    {"axis_id": "visibility_bucket", "values": ["direct-visible-v1"], "split_role": "condition"},
+    {"axis_id": "communication", "values": ["synchronous-public-broadcast-v1"], "split_role": "condition"},
+    {"axis_id": "control_latency", "values": ["one-step-command-latency-v1"], "split_role": "condition"},
+    {"axis_id": "agent_dropout", "values": ["no-agent-dropout-v1"], "split_role": "condition"}
+  ],
+  "cells": [
+    {
+      "cell_id": "train-citylite-direct-v2",
+      "split": "train",
+      "conditions": {
+        "layout": "citylite-v1",
+        "route": "fixed-public-route-v1",
+        "route_family": "citylite-route-family-a-v1",
+        "target_count": "object-count-4-v1",
+        "height": "citylite-command-altitude-v1",
+        "region": "citylite-command-volume-v1",
+        "dynamics": "cf2x-nominal-v1",
+        "initial_condition": "public-route-anchor-v1",
+        "start_anchor": "citylite-start-anchor-a-v1",
+        "target_region": "citylite-target-region-b-v1",
+        "visibility_bucket": "direct-visible-v1",
+        "communication": "synchronous-public-broadcast-v1",
+        "control_latency": "one-step-command-latency-v1",
+        "agent_dropout": "no-agent-dropout-v1"
+      },
+      "minimum_attempts": 4,
+      "minimum_admitted": 4
+    },
+    {
+      "cell_id": "validation-citylite-direct-v2",
+      "split": "validation",
+      "conditions": {
+        "layout": "citylite-v1",
+        "route": "fixed-public-route-v1",
+        "route_family": "citylite-route-family-b-v1",
+        "target_count": "object-count-4-v1",
+        "height": "citylite-command-altitude-v1",
+        "region": "citylite-command-volume-v1",
+        "dynamics": "cf2x-nominal-v1",
+        "initial_condition": "public-route-anchor-v1",
+        "start_anchor": "citylite-start-anchor-b-v1",
+        "target_region": "citylite-target-region-a-v1",
+        "visibility_bucket": "direct-visible-v1",
+        "communication": "synchronous-public-broadcast-v1",
+        "control_latency": "one-step-command-latency-v1",
+        "agent_dropout": "no-agent-dropout-v1"
+      },
+      "minimum_attempts": 4,
+      "minimum_admitted": 4
+    }
+  ],
+  "randomization": {
+    "seed_derivation": "sha256_utf8_lines_uint32_v1",
+    "episode_seed_start": 20260727,
+    "paired_initial_conditions": false
+  },
+  "analysis_plan": {
+    "quota_basis": "coverage_quality_cost_pilot",
+    "initial_admitted_episode_target": 8,
+    "sample_size_reestimate_after_admitted": 8,
+    "policy_ranking": false,
+    "power_analysis_status": "not_applicable_to_t1_policy_ranking",
+    "active_visibility_strata": ["direct-visible-v1"],
+    "unsupported_visibility_strata": ["partial-visible-v1"],
+    "primary_outputs": [
+      "sensor_quality",
+      "route_coverage",
+      "visibility_stratum_realization",
+      "failure_rate",
+      "episode_bytes"
+    ]
+  },
+  "split_certificate": {
+    "schema": "org.rivermark.benchmark.citylite-t1-split-certificate.v1",
+    "scene_identity": "RIVERMARK_CITY_LITE_v1",
+    "scene_contract_sha256": "f7837d248b4797592c66d4b8b8bd48380de444eca305b8ef03d297dcf32051ea",
+    "claim": "same_layout_route_family_start_region_holdout",
+    "train": {
+      "route_family_id": "citylite-route-family-a-v1",
+      "route_geometry_sha256": "2b4f709fc1662f846f054dce2b39974cf4d292757830e79dadb184e057ee085d",
+      "start_anchor_id": "citylite-start-anchor-a-v1",
+      "start_geometry_sha256": "d53002df785956f96f0d9086623adb820e7ea43749c527ec6f4725f940d409cc",
+      "target_region_id": "citylite-target-region-b-v1",
+      "target_region": {"minimum_w_m": [2.0, -48.0, 9.0], "maximum_w_m": [46.0, 44.0, 14.25]},
+      "target_region_sha256": "40613da5c68606f7b30e58dde149a022eb3c9585cdc3461b0b18849a6ba35c68"
+    },
+    "validation": {
+      "route_family_id": "citylite-route-family-b-v1",
+      "route_geometry_sha256": "3e8e17769927eed720ae8ce4446d408a2cc7ddc6abc65cdb8351f89d0353c1a6",
+      "start_anchor_id": "citylite-start-anchor-b-v1",
+      "start_geometry_sha256": "a5e71e766627bdf6f98e40e6f4796d2845399f90ef474d30e7ca54efcbcd2614",
+      "target_region_id": "citylite-target-region-a-v1",
+      "target_region": {"minimum_w_m": [-46.0, -48.0, 9.0], "maximum_w_m": [-2.0, 44.0, 14.25]},
+      "target_region_sha256": "8deea5e103f026a1bf4671af238471d33b654882feb5925279d54b3a98e4423f"
+    },
+    "geometry_checks": {
+      "shared_route_waypoint_count": 0,
+      "shared_route_segment_count": 0,
+      "route_segment_intersection_count": 5,
+      "minimum_cross_split_route_distance_m": 0.0,
+      "route_geometry_disjoint": false,
+      "minimum_cross_split_start_distance_m": 4.115226482,
+      "target_region_overlap_volume_m3": 0.0,
+      "minimum_cross_split_target_region_distance_m": 4.0,
+      "route_family_start_region_holdout_passed": true
+    }
+  },
+  "overview_retention": {
+    "selection_rule": "first_each_fixed_retained_frame_stride_and_final",
+    "frame_index_stride": 10,
+    "fixed_world_camera": true,
+    "outcome_independent": true,
+    "stored_modalities": ["rgb", "semantic", "world_pose"],
+    "runtime_only_modalities": ["depth"]
+  },
+  "quality_acceptance": [
+    "independent_validation_passed",
+    "sensor_timestamps_synchronized",
+    "action_before_step_causality",
+    "camera_pose_closure",
+    "visual_intrusion_absent",
+    "physical_safety_passed",
+    "condition_realization_passed",
+    "artifact_hash_binding_passed"
+  ],
+  "exclusion_rules": [
+    "reject_missing_sensor_frame",
+    "reject_pose_closure_failure",
+    "reject_visual_intrusion",
+    "reject_condition_realization",
+    "retain_failed_attempt_in_ledger"
+  ]
+}

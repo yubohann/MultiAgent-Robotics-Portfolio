@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/isaac_repeatability_report_v2.schema.json",
+  "title": "Rivermark native Isaac repeatability report v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "formal",
+    "t2_score_permitted",
+    "claim",
+    "analyzer",
+    "profile",
+    "binding",
+    "reference",
+    "candidate",
+    "metrics",
+    "failed_metric_count",
+    "report_payload_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "org.rivermark.isaac-repeatability-report.v2"},
+    "status": {"enum": ["passed", "failed"]},
+    "formal": {"const": false},
+    "t2_score_permitted": {"const": false},
+    "claim": {"const": "bounded_same_seed_variation_with_canonical_semantics_not_bitwise_determinism"},
+    "analyzer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["implementation", "implementation_sha256", "semantic_comparison"],
+      "properties": {
+        "implementation": {"const": "rivermark_benchmark.repeatability"},
+        "implementation_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "semantic_comparison": {"const": "camera_local_frame_aligned_class_and_public_agent_id"}
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "sha256", "semantic_identity", "thresholds"],
+      "properties": {
+        "profile_id": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "semantic_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "key_fields", "camera_local", "unmapped_id_policy"],
+          "properties": {
+            "source": {"const": "frame_aligned_public_id_to_labels"},
+            "key_fields": {"const": ["class", "agent_id"]},
+            "camera_local": {"const": true},
+            "unmapped_id_policy": {"const": "fail_closed"}
+          }
+        },
+        "thresholds": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"type": "number", "minimum": 0}
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collection_binding",
+        "source_revision",
+        "source_tree_sha256",
+        "evaluator_manifest_sha256",
+        "runtime_lock",
+        "capture_configuration_sha256"
+      ],
+      "properties": {
+        "collection_binding": {"$ref": "#/$defs/collection_binding"},
+        "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "source_tree_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "evaluator_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "runtime_lock": {"type": "object", "minProperties": 1},
+        "capture_configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "reference": {"$ref": "#/$defs/capture"},
+    "candidate": {"$ref": "#/$defs/capture"},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state_action", "imu", "lidar", "frame_archives", "target_visibility"],
+      "properties": {
+        "state_action": {"type": "object", "minProperties": 1},
+        "imu": {"type": "object", "minProperties": 1},
+        "lidar": {"type": "object", "minProperties": 1},
+        "frame_archives": {"type": "object", "minProperties": 1},
+        "target_visibility": {"type": "object", "minProperties": 1}
+      }
+    },
+    "failed_metric_count": {"type": "integer", "minimum": 0},
+    "report_payload_sha256": {
+      "description": "SHA-256 of canonical JSON with this field present and set to the empty string.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "collection_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_id",
+        "protocol_sha256",
+        "cell_id",
+        "split",
+        "episode_index",
+        "episode_seed"
+      ],
+      "properties": {
+        "protocol_id": {"type": "string", "minLength": 1},
+        "protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "cell_id": {"type": "string", "minLength": 1},
+        "split": {"enum": ["train", "validation", "test"]},
+        "episode_index": {"type": "integer", "minimum": 0},
+        "episode_seed": {"type": "integer", "minimum": 0}
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capture_attempt_id",
+        "capture_receipt_sha256",
+        "independent_validation_sha256",
+        "resources"
+      ],
+      "properties": {
+        "capture_attempt_id": {"type": "string", "minLength": 1},
+        "capture_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "independent_validation_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "capture_bytes",
+            "duration_s",
+            "peak_system_commit_percent",
+            "peak_process_private_commit_bytes",
+            "declared_required_storage_bytes"
+          ],
+          "properties": {
+            "capture_bytes": {"type": "integer", "minimum": 0},
+            "duration_s": {"type": ["number", "null"], "minimum": 0},
+            "peak_system_commit_percent": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+            "peak_process_private_commit_bytes": {"type": ["integer", "null"], "minimum": 0},
+            "declared_required_storage_bytes": {"type": ["integer", "null"], "minimum": 0}
+          }
+        }
+      }
+    }
+  }
+}

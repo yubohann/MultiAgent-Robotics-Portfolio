@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use Rivermark Benchmark, please cite the release recorded in this repository."
+title: "Rivermark Benchmark"
+type: software
+authors:
+  - family-names: "Han"
+    given-names: "Yubo"
+repository-code: "https://github.com/yubohann/rivermark-benchmark"
+license: "Apache-2.0"
+version: "0.1.0-dev"
+date-released: "2026-07-22"

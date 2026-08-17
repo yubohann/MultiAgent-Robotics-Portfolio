@@ -1,0 +1,283 @@
+{
+  "analyzer": {
+    "implementation": "rivermark_benchmark.repeatability",
+    "implementation_sha256": "b080df22e522f31116d8766c12d0df733bb5504796ed1d9f58e60e7ee1178e69",
+    "semantic_comparison": "camera_local_frame_aligned_class_and_public_agent_id"
+  },
+  "binding": {
+    "capture_configuration_sha256": "68a4976b1421e34616a7e1d78732e75ce72551075cec8125157fa0f1b7c4812b",
+    "collection_binding": {
+      "cell_id": "train-citylite-direct-v2",
+      "episode_index": 0,
+      "episode_seed": 1751072442,
+      "protocol_id": "citylite-t1-expert-coverage-v2",
+      "protocol_sha256": "5a543beb7952eb210d97be3c365212583a88d9f5d32f38d715b8462e98be038d",
+      "split": "train"
+    },
+    "evaluator_manifest_sha256": "0b87dc191a43d54885537cc1bf3bfa891f4b1b962cb45f411b0979f4781a8f90",
+    "runtime_lock": {
+      "path": "~\\rivermark-benchmark\\config\\isaac_runtime.windows-5.1.json",
+      "profile_id": "citylite-windows-isaacsim-5.1.0.0-local-isaaclab-2.3.2",
+      "sha256": "8b471a2985a1d8a9da975a92a358c70c0ea5ecd1b101a2f9dfc566c6c5e30fcb"
+    },
+    "source_revision": "aadbb7bf97ebc521cf932c93adfd1d3813c221af",
+    "source_tree_sha256": "8f3dc6ec691c8e01b85aaa9615c7714ba33de20e24e9d730218e54bbf6efb913"
+  },
+  "candidate": {
+    "capture_attempt_id": "attempt-aeb6dcdfb8ef8832b6c5ec010c6b1506",
+    "capture_receipt_sha256": "ba21557c3908aaf6b3a66cffec3a08d5763601536a1b1b8f82850ef0ec2f2068",
+    "independent_validation_sha256": "582c60c9491e10d10f23141923559ab8f06758272cbee0a20d875d842a4b9978",
+    "resources": {
+      "capture_bytes": 535407961,
+      "declared_required_storage_bytes": 2108028576,
+      "duration_s": 412.7796046,
+      "peak_process_private_commit_bytes": 29783592960,
+      "peak_system_commit_percent": 50.86577645194227
+    }
+  },
+  "claim": "bounded_same_seed_variation_with_canonical_semantics_not_bitwise_determinism",
+  "failed_metric_count": 0,
+  "formal": false,
+  "metrics": {
+    "frame_archives": {
+      "onboard_depth_finite_mask_agreement": {
+        "comparison": "greater_than_or_equal",
+        "passed": true,
+        "threshold": 0.999,
+        "value": 1.0
+      },
+      "onboard_depth_frame_mean_abs_error": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "threshold": 0.1,
+        "value": 0.0
+      },
+      "onboard_depth_frame_p95_abs_error": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "threshold": 0.5,
+        "value": 0.0
+      },
+      "onboard_rgb_frame_mean_abs_error": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "threshold": 8.0,
+        "value": 2.237224392361111
+      },
+      "onboard_rgb_frame_p95_abs_error": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "threshold": 32.0,
+        "value": 8.0
+      },
+      "onboard_semantic_label_frame_agreement": {
+        "comparison": "greater_than_or_equal",
+        "passed": true,
+        "threshold": 0.98,
+        "value": 1.0
+      },
+      "overview_rgb_frame_mean_abs_error": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "threshold": 8.0,
+        "value": 0.40627957818930044
+      },
+      "overview_rgb_frame_p95_abs_error": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "threshold": 32.0,
+        "value": 2.0
+      },
+      "overview_semantic_label_frame_agreement": {
+        "comparison": "greater_than_or_equal",
+        "passed": true,
+        "threshold": 0.98,
+        "value": 1.0
+      }
+    },
+    "imu": {
+      "angular_velocity": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 0.3,
+        "value": 0.0
+      },
+      "linear_acceleration": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 1.0,
+        "value": 0.0
+      },
+      "orientation": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 1.692173223307546e-08,
+        "threshold": 0.02,
+        "value": 5.960464477539063e-08
+      },
+      "position": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 0.05,
+        "value": 0.0
+      }
+    },
+    "lidar": {
+      "finite_mask_agreement": {
+        "comparison": "greater_than_or_equal",
+        "passed": true,
+        "threshold": 0.999,
+        "value": 1.0
+      },
+      "orientation": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 1.692173223307546e-08,
+        "threshold": 0.02,
+        "value": 5.960464477539063e-08
+      },
+      "position": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 0.05,
+        "value": 0.0
+      },
+      "range_mean_abs_error": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "threshold": 0.05,
+        "value": 0.0
+      },
+      "range_p95_abs_error": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "threshold": 0.25,
+        "value": 0.0
+      }
+    },
+    "state_action": {
+      "applied_thrust": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 0.005,
+        "value": 0.0
+      },
+      "desired_position": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 1e-06,
+        "value": 0.0
+      },
+      "desired_velocity": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 1e-06,
+        "value": 0.0
+      },
+      "root_angular_velocity": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 0.3,
+        "value": 0.0
+      },
+      "root_linear_velocity": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 0.15,
+        "value": 0.0
+      },
+      "root_orientation": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 1.6929931409313542e-08,
+        "threshold": 0.02,
+        "value": 5.960464477539063e-08
+      },
+      "root_position": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 0.05,
+        "value": 0.0
+      },
+      "target_thrust": {
+        "comparison": "less_than_or_equal",
+        "passed": true,
+        "rmse": 0.0,
+        "threshold": 0.005,
+        "value": 0.0
+      }
+    },
+    "target_visibility": {
+      "comparison": "less_than_or_equal",
+      "passed": true,
+      "per_target_slot_absolute_delta": {
+        "search_target_slot_000": 0,
+        "search_target_slot_001": 0,
+        "search_target_slot_002": 0,
+        "search_target_slot_003": 0
+      },
+      "threshold": 12.0,
+      "value": 0.0
+    }
+  },
+  "profile": {
+    "profile_id": "citylite-t1-same-seed-v2",
+    "semantic_identity": {
+      "camera_local": true,
+      "key_fields": [
+        "class",
+        "agent_id"
+      ],
+      "source": "frame_aligned_public_id_to_labels",
+      "unmapped_id_policy": "fail_closed"
+    },
+    "sha256": "d30c94399446910103e8575a91c55fe893da3e19dd85709d6057002e181019df",
+    "thresholds": {
+      "command_position_max_error_m": 1e-06,
+      "command_velocity_max_error_mps": 1e-06,
+      "depth_finite_mask_agreement_min": 0.999,
+      "depth_frame_mean_abs_error_m": 0.1,
+      "depth_frame_p95_abs_error_m": 0.5,
+      "imu_angular_velocity_max_error_radps": 0.3,
+      "imu_linear_acceleration_max_error_mps2": 1.0,
+      "lidar_finite_mask_agreement_min": 0.999,
+      "lidar_frame_p95_abs_error_m": 0.25,
+      "lidar_mean_abs_error_m": 0.05,
+      "rgb_frame_mean_abs_error_uint8": 8.0,
+      "rgb_frame_p95_abs_error_uint8": 32.0,
+      "root_angular_velocity_max_error_radps": 0.3,
+      "root_linear_velocity_max_error_mps": 0.15,
+      "root_orientation_max_error_rad": 0.02,
+      "root_position_max_error_m": 0.05,
+      "semantic_frame_agreement_min": 0.98,
+      "target_visible_frame_delta_max": 12,
+      "thrust_max_abs_error_n": 0.005
+    }
+  },
+  "reference": {
+    "capture_attempt_id": "attempt-847a16e9c6fce851a115f0a78fa97c0b",
+    "capture_receipt_sha256": "41a0ca4154c400d3289aa2632bcc478f9984672aaa8b79f0b20ae4511f708080",
+    "independent_validation_sha256": "75697046c3b26ac7386b32718bb3abb82f33bf1d1e6db34f7f7c62845d46bda0",
+    "resources": {
+      "capture_bytes": 535341116,
+      "declared_required_storage_bytes": 2108028576,
+      "duration_s": 401.8681206,
+      "peak_process_private_commit_bytes": 29538897920,
+      "peak_system_commit_percent": 45.22998931943204
+    }
+  },
+  "report_payload_sha256": "0e967f32b0f615b22850711228e93194a39444c966929e1b3ae77aacadcd3bd6",
+  "schema": "org.rivermark.isaac-repeatability-report.v2",
+  "status": "passed",
+  "t2_score_permitted": false
+}

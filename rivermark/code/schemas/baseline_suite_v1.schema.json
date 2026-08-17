@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark.invalid/schemas/baseline_suite_v1.schema.json",
+  "title": "Rivermark bounded baseline suite",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "suite_id", "backend", "formal_benchmark_admission", "agent_count", "runtime", "train", "tune", "evaluate", "methods", "budget"],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.baseline-suite.v1"},
+    "suite_id": {"type": "string", "minLength": 1, "maxLength": 80},
+    "backend": {"const": "rivermark-kinematic-pilot-v1"},
+    "formal_benchmark_admission": {"const": false},
+    "agent_count": {"type": "integer", "minimum": 2, "maximum": 32},
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dt_s": {"type": "number", "exclusiveMinimum": 0},
+        "world_size_xy_m": {"type": "array", "prefixItems": [{"type": "number", "exclusiveMinimum": 6}, {"type": "number", "exclusiveMinimum": 6}], "minItems": 2, "maxItems": 2},
+        "camera_width": {"type": "integer", "minimum": 32},
+        "camera_height": {"type": "integer", "minimum": 24},
+        "max_speed_mps": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "train": {"$ref": "#/$defs/phase"},
+    "tune": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "seed", "max_trials"],
+      "properties": {"enabled": {"const": false}, "seed": {"type": "integer", "minimum": 0}, "max_trials": {"const": 0}}
+    },
+    "evaluate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seeds", "episodes_per_seed"],
+      "properties": {
+        "seeds": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}},
+        "episodes_per_seed": {"type": "integer", "minimum": 1, "maximum": 64}
+      }
+    },
+    "methods": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["method_id", "family", "information_profile"],
+        "properties": {"method_id": {"type": "string"}, "family": {"type": "string"}, "information_profile": {"type": "string"}}
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_steps", "timeout_s", "max_failures"],
+      "properties": {"max_steps": {"type": "integer", "minimum": 1}, "timeout_s": {"type": "number", "exclusiveMinimum": 0}, "max_failures": {"type": "integer", "minimum": 0}}
+    }
+  },
+  "$defs": {
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "seed", "episodes"],
+      "properties": {"enabled": {"const": false}, "seed": {"type": "integer", "minimum": 0}, "episodes": {"const": 0}}
+    }
+  }
+}

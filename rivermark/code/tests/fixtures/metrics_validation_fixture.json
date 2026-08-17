@@ -1,0 +1,48 @@
+{
+  "schema": "org.rivermark.benchmark.metrics-fixture.v1",
+  "metric_version": "org.rivermark.benchmark.metrics.v1",
+  "cases": [
+    {
+      "case_id": "uniform_completion",
+      "timestamps_s": [0.0, 1.0, 2.0],
+      "confirmed_counts": [0, 1, 2],
+      "target_count": 2,
+      "time_budget_s": 2.0,
+      "false_confirmations": 1,
+      "truncated": false,
+      "expected": {
+        "normalized_confirmed_auc": 0.5,
+        "final_recall": 1.0,
+        "time_to_all_targets_s": 2.0
+      }
+    },
+    {
+      "case_id": "late_partial_trace",
+      "timestamps_s": [0.5, 1.5],
+      "confirmed_counts": [0, 1],
+      "target_count": 2,
+      "time_budget_s": 2.0,
+      "false_confirmations": 0,
+      "truncated": true,
+      "expected": {
+        "normalized_confirmed_auc": 0.25,
+        "final_recall": 0.5,
+        "time_to_all_targets_s": null
+      }
+    },
+    {
+      "case_id": "zero_confirmation",
+      "timestamps_s": [0.0, 1.0],
+      "confirmed_counts": [0, 0],
+      "target_count": 1,
+      "time_budget_s": 1.0,
+      "false_confirmations": 0,
+      "truncated": false,
+      "expected": {
+        "normalized_confirmed_auc": 0.0,
+        "final_recall": 0.0,
+        "time_to_all_targets_s": null
+      }
+    }
+  ]
+}

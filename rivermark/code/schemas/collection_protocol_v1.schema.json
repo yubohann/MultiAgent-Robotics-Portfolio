@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/collection_protocol_v1.schema.json",
+  "title": "Rivermark Collection Protocol v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "protocol_id",
+    "version",
+    "dataset_version",
+    "scene_identity",
+    "track",
+    "agent_count",
+    "axes",
+    "cells",
+    "randomization",
+    "power_analysis",
+    "exclusion_rules"
+  ],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.collection-protocol.v1"},
+    "protocol_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
+    "dataset_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
+    "scene_identity": {"const": "RIVERMARK_CITY_LITE_v1"},
+    "track": {"const": "multi_uav_search3d"},
+    "agent_count": {"const": 8},
+    "axes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 19,
+      "items": {"$ref": "#/$defs/axis"}
+    },
+    "cells": {
+      "type": "array",
+      "minItems": 2,
+      "items": {"$ref": "#/$defs/cell"}
+    },
+    "randomization": {"$ref": "#/$defs/randomization"},
+    "power_analysis": {"$ref": "#/$defs/powerAnalysis"},
+    "exclusion_rules": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"}
+    }
+  },
+  "$defs": {
+    "axis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["axis_id", "values", "split_role"],
+      "properties": {
+        "axis_id": {"$ref": "#/$defs/axisId"},
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"}
+        },
+        "split_role": {"enum": ["scene", "condition", "episode", "holdout"]}
+      }
+    },
+    "axisId": {
+      "type": "string",
+      "enum": [
+        "layout",
+        "route",
+        "route_family",
+        "target_count",
+        "height",
+        "region",
+        "occlusion",
+        "density",
+        "appearance",
+        "dynamics",
+        "lighting",
+        "weather",
+        "initial_condition",
+        "start_anchor",
+        "target_region",
+        "visibility_bucket",
+        "communication",
+        "control_latency",
+        "agent_dropout"
+      ]
+    },
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cell_id", "split", "conditions", "minimum_attempts", "minimum_admitted"],
+      "properties": {
+        "cell_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+        "split": {"enum": ["train", "inner_dev", "validation", "blind_test", "ood_test"]},
+        "conditions": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 19,
+          "propertyNames": {"$ref": "#/$defs/axisId"},
+          "additionalProperties": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"}
+        },
+        "minimum_attempts": {"type": "integer", "minimum": 1},
+        "minimum_admitted": {"type": "integer", "minimum": 1}
+      }
+    },
+    "randomization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seed_derivation", "episode_seed_start", "paired_initial_conditions"],
+      "properties": {
+        "seed_derivation": {"const": "sha256_utf8_lines_uint32_v1"},
+        "episode_seed_start": {"type": "integer", "minimum": 0},
+        "paired_initial_conditions": {"const": true}
+      }
+    },
+    "powerAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "primary_metric",
+        "familywise_alpha",
+        "power",
+        "minimum_effect_size",
+        "difference_standard_deviation",
+        "comparison_count",
+        "evaluation_split",
+        "required_evaluation_episodes"
+      ],
+      "properties": {
+        "method": {"const": "paired_normal_approximation_bonferroni"},
+        "primary_metric": {"const": "normalized_confirmed_auc"},
+        "familywise_alpha": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "power": {"type": "number", "exclusiveMinimum": 0.5, "exclusiveMaximum": 1},
+        "minimum_effect_size": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "difference_standard_deviation": {"type": "number", "exclusiveMinimum": 0},
+        "comparison_count": {"type": "integer", "minimum": 1},
+        "evaluation_split": {"enum": ["validation", "blind_test", "ood_test"]},
+        "required_evaluation_episodes": {"type": "integer", "minimum": 2}
+      }
+    }
+  }
+}

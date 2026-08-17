@@ -1,0 +1,14 @@
+{
+  "generated": [
+    "docs/figures/rl/rl_training_curve_gpu.svg",
+    "docs/figures/rl/rl_strategy_event_metrics.svg",
+    "docs/figures/rl/rl_target_base_metrics.svg",
+    "docs/figures/rl/rl_box_push_metrics.svg"
+  ],
+  "sources": [
+    "docs\\rl_data\\world_model_sacflow_final\\training_curve.csv",
+    "docs\\rl_data\\world_model_sacflow_final\\training_summary.json",
+    "docs\\rl_data\\world_model_sacflow_final\\contract_eval_multiseed.json",
+    "docs\\rl_data\\world_model_sacflow_final\\strict_replay_summary.json"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "org.rivermark.isaac-repeatability-profile.v2",
+  "profile_id": "citylite-t1-same-seed-v2",
+  "claim": "bounded_same_seed_variation_with_canonical_semantics_not_bitwise_determinism",
+  "semantic_identity": {
+    "source": "frame_aligned_public_id_to_labels",
+    "key_fields": ["class", "agent_id"],
+    "camera_local": true,
+    "unmapped_id_policy": "fail_closed"
+  },
+  "thresholds": {
+    "root_position_max_error_m": 0.05,
+    "root_orientation_max_error_rad": 0.02,
+    "root_linear_velocity_max_error_mps": 0.15,
+    "root_angular_velocity_max_error_radps": 0.3,
+    "command_position_max_error_m": 0.000001,
+    "command_velocity_max_error_mps": 0.000001,
+    "thrust_max_abs_error_n": 0.005,
+    "imu_linear_acceleration_max_error_mps2": 1.0,
+    "imu_angular_velocity_max_error_radps": 0.3,
+    "lidar_mean_abs_error_m": 0.05,
+    "lidar_frame_p95_abs_error_m": 0.25,
+    "lidar_finite_mask_agreement_min": 0.999,
+    "rgb_frame_mean_abs_error_uint8": 8.0,
+    "rgb_frame_p95_abs_error_uint8": 32.0,
+    "depth_frame_mean_abs_error_m": 0.1,
+    "depth_frame_p95_abs_error_m": 0.5,
+    "depth_finite_mask_agreement_min": 0.999,
+    "semantic_frame_agreement_min": 0.98,
+    "target_visible_frame_delta_max": 12
+  }
+}

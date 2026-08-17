@@ -1,0 +1,29 @@
+{
+  "schema": "org.rivermark.benchmark.label-ontology.v1",
+  "ontology_id": "citylite-search3d-v1",
+  "version": "1.0.0",
+  "coordinate_frame": "world_rivermark_v1",
+  "instance_policy": {
+    "identity_key": "instance_id",
+    "scope": "episode",
+    "class_immutable": true
+  },
+  "distribution": "development_only",
+  "classes": [
+    {
+      "class_id": "search_target",
+      "category": "object",
+      "geometry_types": ["point3d", "bbox3d", "bbox2d"]
+    },
+    {
+      "class_id": "city_obstacle",
+      "category": "obstacle",
+      "geometry_types": ["bbox3d", "mask2d"]
+    },
+    {
+      "class_id": "city_landmark",
+      "category": "landmark",
+      "geometry_types": ["point3d", "bbox3d", "bbox2d"]
+    }
+  ]
+}

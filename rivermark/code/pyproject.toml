@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rivermark-benchmark"
+version = "0.1.0.dev0"
+description = "Auditable native Isaac Sim multi-UAV embodied-search capture tooling"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+demo = ["opencv-python>=4.8", "imageio-ffmpeg>=0.6"]
+sb3 = ["gymnasium>=1.0", "stable-baselines3>=2.7"]
+torch = ["torch>=2.0"]
+qd = ["ribs==0.8.3"]
+zarr = ["zarr>=2.17,<3"]
+parquet = ["pyarrow==25.0.0"]
+cpu-ci = [
+  "build>=1.2,<2",
+  "cryptography>=42,<47",
+  "jsonschema>=4.20",
+  "pyarrow==25.0.0",
+  "pytest>=8.0",
+  "ruff==0.16.0",
+  "setuptools>=68",
+  "zarr>=2.17,<3",
+]
+marl = ["gymnasium>=1.0", "pettingzoo>=1.26", "torch>=2.0"]
+supply-chain = ["cryptography>=42,<47", "cyclonedx-bom>=7.3.1,<8"]
+pilot-all = [
+  "opencv-python>=4.8",
+  "imageio-ffmpeg>=0.6",
+  "pytest>=8.0",
+  "gymnasium>=1.0",
+  "stable-baselines3>=2.7",
+  "torch>=2.0",
+  "ribs==0.8.3",
+  "pettingzoo>=1.26",
+  "cryptography>=42,<47",
+  "jsonschema>=4.20",
+]
+
+[project.scripts]
+rivermark-validate = "rivermark_benchmark.validate:main"
+rivermark-methods = "rivermark_benchmark.methods:main"
+rivermark-train = "rivermark_benchmark.train:main"
+rivermark-collect = "rivermark_benchmark.dataset:main"
+rivermark-dataset = "rivermark_benchmark.formal_dataset:main"
+rivermark-torch-train = "rivermark_benchmark.torch_train:main"
+rivermark-qd-train = "rivermark_benchmark.qd_train:main"
+rivermark-marl-train = "rivermark_benchmark.marl:main"
+rivermark-video = "rivermark_benchmark.video:main"
+rivermark-isaac-capture = "rivermark_benchmark.isaac_capture:main"
+rivermark-isaac-validate = "rivermark_benchmark.isaac_validate:main"
+rivermark-isaac-pack = "rivermark_benchmark.isaac_pack:main"
+rivermark-isaac-pack-readiness = "rivermark_benchmark.isaac_pack_readiness:main"
+rivermark-isaac-pack-descriptor = "rivermark_benchmark.isaac_pack_descriptor:main"
+rivermark-isaac-pack-spec = "rivermark_benchmark.isaac_pack_spec:main"
+rivermark-isaac-evidence = "rivermark_benchmark.isaac_evidence:main"
+rivermark-release-gate = "rivermark_benchmark.release_gate:main"
+rivermark-release-data = "rivermark_benchmark.release_manifest:main"
+rivermark-metrics = "rivermark_benchmark.metrics:main"
+rivermark-evaluate = "rivermark_benchmark.evaluator:main"
+rivermark-fixture = "rivermark_benchmark.fixture:main"
+rivermark-researcher-smoke = "rivermark_benchmark.researcher_entry:main"
+rivermark-failure-ledger = "rivermark_benchmark.failure_ledger:main"
+rivermark-recover-captures = "rivermark_benchmark.failure_ledger:recovery_main"
+rivermark-supply-chain = "rivermark_benchmark.supply_chain:main"
+rivermark-coverage = "rivermark_benchmark.collection_protocol:main"
+rivermark-preflight = "rivermark_benchmark.preflight:main"
+rivermark-cleanup = "rivermark_benchmark.cleanup_history:main"
+rivermark-audit-repository = "rivermark_benchmark.repository_audit:main"
+rivermark-zarr = "rivermark_benchmark.research_projection:main"
+rivermark-parquet = "rivermark_benchmark.parquet_projection:main"
+rivermark-rlds = "rivermark_benchmark.rlds_projection:main"
+rivermark-runtime-lock = "rivermark_benchmark.runtime_lock:main"
+rivermark-isaac-smoke = "rivermark_benchmark.isaac_smoke:main"
+rivermark-isaac-geometry-scan = "rivermark_benchmark.isaac_geometry_scan:main"
+rivermark-asset-provenance = "rivermark_benchmark.asset_provenance:main"
+rivermark-baseline = "rivermark_benchmark.baseline_harness:main"
+rivermark-release-readiness = "rivermark_benchmark.release_readiness:main"
+rivermark-labels = "rivermark_benchmark.labels:main"
+rivermark-target-visibility-diagnosis = "rivermark_benchmark.target_visibility_diagnosis:main"
+rivermark-policy-projection = "rivermark_benchmark.policy_projection:main"
+rivermark-repeatability = "rivermark_benchmark.repeatability:main"
+rivermark-cohort-audit = "rivermark_benchmark.cohort_audit:main"
+rivermark-open-aoe = "rivermark_benchmark.open_aoe:main"
+rivermark-lerobot = "rivermark_benchmark.lerobot_projection:main"
+rivermark-cf2x-calibrate = "rivermark_benchmark.cf2x_runtime_calibration:main"
+rivermark-cpu-tests = "rivermark_benchmark.cpu_test_runner:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

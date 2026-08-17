@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rivermark-benchmark.org/schemas/evaluator_result_v1.schema.json",
+  "title": "Rivermark Public Evaluator Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "dataset_version", "dataset_index_sha256", "split", "evaluator_id", "evaluator_version", "evaluator_sha256", "metric_version", "method_id", "code_revision", "checkpoint_sha256", "seed", "episode_count", "scores", "issues"],
+  "properties": {
+    "schema": {"const": "org.rivermark.benchmark.evaluator-result.v1"},
+    "status": {"enum": ["valid", "invalid"]},
+    "dataset_version": {"type": ["string", "null"]},
+    "dataset_index_sha256": {"$ref": "#/$defs/sha256OrNull"},
+    "split": {"type": ["string", "null"]},
+    "evaluator_id": {"type": ["string", "null"]},
+    "evaluator_version": {"type": ["string", "null"]},
+    "evaluator_sha256": {"$ref": "#/$defs/sha256OrNull"},
+    "metric_version": {"type": ["string", "null"]},
+    "method_id": {"type": ["string", "null"]},
+    "code_revision": {"type": ["string", "null"]},
+    "checkpoint_sha256": {"$ref": "#/$defs/sha256OrNull"},
+    "seed": {"type": ["integer", "null"], "minimum": 0},
+    "episode_count": {"type": "integer", "minimum": 0},
+    "submission_sha256": {"$ref": "#/$defs/sha256OrNull"},
+    "scores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["episode_id", "normalized_confirmed_auc", "final_recall", "false_confirmations", "time_to_all_targets_s", "truncated"],
+        "properties": {
+          "episode_id": {"type": "string"},
+          "normalized_confirmed_auc": {"type": "number"},
+          "final_recall": {"type": "number"},
+          "false_confirmations": {"type": "integer", "minimum": 0},
+          "time_to_all_targets_s": {"type": ["number", "null"]},
+          "truncated": {"type": "boolean"}
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "message"],
+        "properties": {
+          "code": {"type": "string"},
+          "path": {"type": "string"},
+          "message": {"type": "string"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256OrNull": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+  }
+}

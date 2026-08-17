@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1740" height="860" viewBox="0 0 1740 860">
+  <defs>
+    <style>
+      .title{font:700 32px Arial,Inter,sans-serif;fill:#111827}
+      .subtitle{font:400 16px Arial,Inter,sans-serif;fill:#64748B}
+      .h{font:700 19px Arial,Inter,sans-serif;fill:#111827}
+      .txt{font:400 15px Arial,Inter,sans-serif;fill:#334155}
+      .small{font:400 12px Arial,Inter,sans-serif;fill:#475569}
+      .tiny{font:400 10px Arial,Inter,sans-serif;fill:#64748B}
+      .panel{fill:#F8FAFC;stroke:#CBD5E1;stroke-width:1.2;rx:8}
+      .card{fill:#FFFFFF;stroke:#CBD5E1;stroke-width:1.0;rx:7}
+      .grid{stroke:#E2E8F0;stroke-width:1}
+      .axis{stroke:#475569;stroke-width:1.2}
+    </style>
+  </defs>
+  <rect width="1740" height="860" fill="#FFFFFF"/>
+
+  <text class="title" x="70" y="60">Self-Play Strategy Contract Evaluation</text>
+  <text class="subtitle" x="72" y="92">128 stochastic games plus 8 strict replay audits</text>
+  <rect class="panel" x="70" y="130" width="760" height="650"/>
+  <text class="h" x="105" y="175">Match outcome</text>
+  <line class="axis" x1="130" y1="650" x2="690" y2="650"/>
+
+      <rect x="180.0" y="443.3" width="78.0" height="206.7" rx="4" fill="#E5B82E"/>
+      <text class="tiny" x="219.0" y="435.3" text-anchor="middle">49.2%</text>
+      <text class="tiny" x="219.0" y="668.0" text-anchor="middle">yellow</text>
+    
+      <rect x="330.0" y="436.7" width="78.0" height="213.3" rx="4" fill="#2563EB"/>
+      <text class="tiny" x="369.0" y="428.7" text-anchor="middle">50.8%</text>
+      <text class="tiny" x="369.0" y="668.0" text-anchor="middle">blue</text>
+    
+      <rect x="480.0" y="650.0" width="78.0" height="0.0" rx="4" fill="#64748B"/>
+      <text class="tiny" x="519.0" y="642.0" text-anchor="middle">0.0%</text>
+      <text class="tiny" x="519.0" y="668.0" text-anchor="middle">draw</text>
+    
+  <rect class="card" x="120" y="700" width="610" height="48"/>
+  <text class="txt" x="145" y="731">mean score: yellow 40.90, blue 41.72; mean time 30.81s</text>
+  <rect class="panel" x="880" y="130" width="790" height="650"/>
+  <text class="h" x="915" y="175">Safety and behavior checks</text>
+  <line class="axis" x1="930" y1="650" x2="1580" y2="650"/>
+
+      <rect x="965.0" y="650.0" width="58.0" height="0.0" rx="4" fill="#DC2626"/>
+      <text class="tiny" x="994.0" y="642.0" text-anchor="middle">0</text>
+      <text class="tiny" x="994.0" y="668.0" text-anchor="middle">static pen</text>
+    
+      <rect x="1083.0" y="650.0" width="58.0" height="0.0" rx="4" fill="#F97316"/>
+      <text class="tiny" x="1112.0" y="642.0" text-anchor="middle">0</text>
+      <text class="tiny" x="1112.0" y="668.0" text-anchor="middle">box pen</text>
+    
+      <rect x="1201.0" y="650.0" width="58.0" height="0.0" rx="4" fill="#7C3AED"/>
+      <text class="tiny" x="1230.0" y="642.0" text-anchor="middle">0</text>
+      <text class="tiny" x="1230.0" y="668.0" text-anchor="middle">contacts</text>
+    
+      <rect x="1319.0" y="650.0" width="58.0" height="0.0" rx="4" fill="#E5B82E"/>
+      <text class="tiny" x="1348.0" y="642.0" text-anchor="middle">0</text>
+      <text class="tiny" x="1348.0" y="668.0" text-anchor="middle">spin Y</text>
+    
+      <rect x="1437.0" y="638.1" width="58.0" height="11.9" rx="4" fill="#2563EB"/>
+      <text class="tiny" x="1466.0" y="630.1" text-anchor="middle">0.031</text>
+      <text class="tiny" x="1466.0" y="668.0" text-anchor="middle">spin B</text>
+    
+  <rect class="card" x="930" y="700" width="610" height="48"/>
+  <text class="txt" x="955" y="731">strict replay: 0 hard violations, 0 warnings, 1.00 base wins/game</text>
+
+</svg>
