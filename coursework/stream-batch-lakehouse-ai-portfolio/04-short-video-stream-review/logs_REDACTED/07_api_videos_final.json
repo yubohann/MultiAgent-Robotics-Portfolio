@@ -1,0 +1,88 @@
+{
+  "videos": [
+    {
+      "id": "9921414f969d",
+      "title": "[REDACTED]_Bohan Yu_自选上传_无人机巡检短视频",
+      "source": "browser-upload",
+      "original_path": "~\\Desktop\\作品集\\YuBohan-StreamBatch-Portfolio-[REDACTED]\\4. 实时短视频流智能审核与发布 综合实验\\code\\short-video-stream-lab\\data\\incoming\\1779597799-upload_[REDACTED]_yubohan_drone_review.mp4",
+      "media_file": "9921414f969d-1779597799-upload_[REDACTED]_yubohan_drone_review.mp4",
+      "thumbnail_file": "9921414f969d-thumb.jpg",
+      "status": "published",
+      "risk_score": 0.0,
+      "caption": "无人机拍摄的居民区巡检视频，内容为空旷道路和住宅区的俯瞰图像，未发现明显异常或紧急事件。视频主要展示了居民区的整体布局、道路和建筑物情况。",
+      "tags": [
+        "居民区巡检",
+        "无人机俯拍",
+        "道路检查",
+        "住宅区布局",
+        "常规巡视",
+        "短视频",
+        "横屏",
+        "自然光",
+        "运动明显"
+      ],
+      "reasons": [
+        {
+          "code": "policy_passed",
+          "level": "pass",
+          "message": "未命中本实验策略中的高风险信号，可自动发布。",
+          "evidence": 0.0
+        }
+      ],
+      "metrics": {
+        "width": 1280,
+        "height": 720,
+        "fps": 25.0,
+        "duration_sec": 20.0,
+        "frame_count": 500,
+        "sampled_frames": 42,
+        "brightness": {
+          "avg": 118.74,
+          "max": 121.92,
+          "min": 114.38
+        },
+        "colorfulness": {
+          "avg": 21.77,
+          "max": 22.71,
+          "min": 20.31
+        },
+        "motion": {
+          "avg": 20.28,
+          "max": 26.56,
+          "min": 6.59
+        },
+        "red_ratio_avg": 0.0378,
+        "green_ratio_avg": 0.0316,
+        "blue_ratio_avg": 0.0141,
+        "flash_count": 0,
+        "flash_ratio": 0.0,
+        "preprocess": {
+          "keyframes": 7,
+          "has_audio": false,
+          "sampling_strategy": {
+            "max_keyframes": 12,
+            "scene_change_threshold": 42.0,
+            "motion_peak_threshold": 18.0
+          }
+        },
+        "model": {
+          "selected_id": "ministral-3-8b-ollama",
+          "selected_name": "Ministral 3 8B Vision (Ollama)",
+          "backend": "local_ollama_vlm",
+          "serving_model": "ollama:ministral-3:8b",
+          "ollama_model": "ministral-3:8b",
+          "fallback_reason": ""
+        }
+      },
+      "created_at": "2026-05-24T04:43:19+00:00",
+      "updated_at": "2026-05-24T04:43:27+00:00"
+    }
+  ],
+  "stats": {
+    "total": 1,
+    "published": 1,
+    "review": 0,
+    "rejected": 0,
+    "processing": 0
+  }
+}

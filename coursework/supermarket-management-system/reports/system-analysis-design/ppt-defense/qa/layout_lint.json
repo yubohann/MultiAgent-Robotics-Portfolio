@@ -1,0 +1,185 @@
+{
+  "input": "~\\supermarket-management-system\\supermarket-management-system\\reports\\system-analysis-design\\\u8d85\u5e02\u7ba1\u7406\u7cfb\u7edf_\u7b54\u8fa9PPT_20260602.pptx",
+  "style_preset": "data-heavy-boardroom",
+  "renderer_detected": "pptxgenjs",
+  "summary": {
+    "slide_count": 10,
+    "violation_count": 6,
+    "error_count": 0,
+    "warning_count": 6,
+    "density_score_by_slide": [
+      {
+        "slide_index": 0,
+        "density_score": 0.5739
+      },
+      {
+        "slide_index": 1,
+        "density_score": 0.5951
+      },
+      {
+        "slide_index": 2,
+        "density_score": 1.0
+      },
+      {
+        "slide_index": 3,
+        "density_score": 1.0
+      },
+      {
+        "slide_index": 4,
+        "density_score": 1.0
+      },
+      {
+        "slide_index": 5,
+        "density_score": 1.0
+      },
+      {
+        "slide_index": 6,
+        "density_score": 0.5552
+      },
+      {
+        "slide_index": 7,
+        "density_score": 1.0
+      },
+      {
+        "slide_index": 8,
+        "density_score": 1.0
+      },
+      {
+        "slide_index": 9,
+        "density_score": 0.5027
+      }
+    ]
+  },
+  "slides": [
+    {
+      "slide_index": 0,
+      "slide_type": "content",
+      "violations": [],
+      "density_score": 0.5739,
+      "empty_ratio": 0.4261
+    },
+    {
+      "slide_index": 1,
+      "slide_type": "content",
+      "violations": [],
+      "density_score": 0.5951,
+      "empty_ratio": 0.4049
+    },
+    {
+      "slide_index": 2,
+      "slide_type": "content",
+      "violations": [
+        {
+          "type": "density_too_high",
+          "shape_ids": [],
+          "severity": "warning",
+          "delta_inches": 0.14,
+          "suggested_fix": "Reduce number/size of blocks or split content across slides.",
+          "slide_type": "content",
+          "visual_density_score": 1.0
+        }
+      ],
+      "density_score": 1.0,
+      "empty_ratio": 0.0
+    },
+    {
+      "slide_index": 3,
+      "slide_type": "content",
+      "violations": [
+        {
+          "type": "density_too_high",
+          "shape_ids": [],
+          "severity": "warning",
+          "delta_inches": 0.14,
+          "suggested_fix": "Reduce number/size of blocks or split content across slides.",
+          "slide_type": "content",
+          "visual_density_score": 1.0
+        }
+      ],
+      "density_score": 1.0,
+      "empty_ratio": 0.0
+    },
+    {
+      "slide_index": 4,
+      "slide_type": "content",
+      "violations": [
+        {
+          "type": "density_too_high",
+          "shape_ids": [],
+          "severity": "warning",
+          "delta_inches": 0.14,
+          "suggested_fix": "Reduce number/size of blocks or split content across slides.",
+          "slide_type": "content",
+          "visual_density_score": 1.0
+        }
+      ],
+      "density_score": 1.0,
+      "empty_ratio": 0.0
+    },
+    {
+      "slide_index": 5,
+      "slide_type": "content",
+      "violations": [
+        {
+          "type": "density_too_high",
+          "shape_ids": [],
+          "severity": "warning",
+          "delta_inches": 0.14,
+          "suggested_fix": "Reduce number/size of blocks or split content across slides.",
+          "slide_type": "content",
+          "visual_density_score": 1.0
+        }
+      ],
+      "density_score": 1.0,
+      "empty_ratio": 0.0
+    },
+    {
+      "slide_index": 6,
+      "slide_type": "content",
+      "violations": [],
+      "density_score": 0.5552,
+      "empty_ratio": 0.4448
+    },
+    {
+      "slide_index": 7,
+      "slide_type": "content",
+      "violations": [
+        {
+          "type": "density_too_high",
+          "shape_ids": [],
+          "severity": "warning",
+          "delta_inches": 0.14,
+          "suggested_fix": "Reduce number/size of blocks or split content across slides.",
+          "slide_type": "content",
+          "visual_density_score": 1.0
+        }
+      ],
+      "density_score": 1.0,
+      "empty_ratio": 0.0
+    },
+    {
+      "slide_index": 8,
+      "slide_type": "content",
+      "violations": [
+        {
+          "type": "density_too_high",
+          "shape_ids": [],
+          "severity": "warning",
+          "delta_inches": 0.14,
+          "suggested_fix": "Reduce number/size of blocks or split content across slides.",
+          "slide_type": "content",
+          "visual_density_score": 1.0
+        }
+      ],
+      "density_score": 1.0,
+      "empty_ratio": 0.0
+    },
+    {
+      "slide_index": 9,
+      "slide_type": "content",
+      "violations": [],
+      "density_score": 0.5027,
+      "empty_ratio": 0.4973
+    }
+  ]
+}

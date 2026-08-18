@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% from 'macros/icons.html' import icon_wallet, icon_trend, icon_warning_large, icon_order with context %}
+
+{% block title %}财务管理 - 超市管理系统{% endblock %}
+
+{% block header_title %}财务管理{% endblock %}
+
+{% set active_page = 'finance' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+        <div class="flex flex-wrap items-end gap-4 justify-between">
+            <div>
+                <h3 class="text-2xl font-bold text-slate-800">资金与核算中心</h3>
+                <p class="text-sm text-slate-500 mt-1">覆盖资金流水、日结对账、应付款、月度关账</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <select id="overviewPeriod" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                    <option value="today">今日</option>
+                    <option value="week">近7天</option>
+                    <option value="month" selected>本月</option>
+                </select>
+                <button id="refreshOverviewBtn" class="px-4 py-2.5 bg-primary text-white rounded-xl text-sm hover:bg-blue-700 transition-colors">刷新概览</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mt-6">
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p class="text-xs text-slate-500">现金流入</p>
+                <p id="cardCashInflow" class="text-2xl font-bold text-slate-800 mt-1">¥0.00</p>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p class="text-xs text-slate-500">现金流出</p>
+                <p id="cardCashOutflow" class="text-2xl font-bold text-slate-800 mt-1">¥0.00</p>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p class="text-xs text-slate-500">净利润</p>
+                <p id="cardNetProfit" class="text-2xl font-bold text-slate-800 mt-1">¥0.00</p>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p class="text-xs text-slate-500">待支付应付款</p>
+                <p id="cardPendingPayables" class="text-2xl font-bold text-slate-800 mt-1">¥0.00</p>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p class="text-xs text-slate-500">待对账支付方式</p>
+                <p id="cardUnreconciled" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-lg font-semibold text-slate-800">资金流水</h4>
+            <span class="text-xs text-slate-500">收入与支出均可手工登记</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 mb-4">
+            <select id="txType" class="px-3 py-2.5 border border-slate-200 rounded-xl bg-white text-sm">
+                <option value="expense">支出</option>
+                <option value="income">收入</option>
+            </select>
+            <input id="txCategory" type="text" placeholder="科目，如房租/水电" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <input id="txAmount" type="number" min="0" step="0.01" placeholder="金额" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <select id="txPaymentMethod" class="px-3 py-2.5 border border-slate-200 rounded-xl bg-white text-sm">
+                <option value="">支付方式(可选)</option>
+                <option value="cash">现金</option>
+                <option value="wechat">微信</option>
+                <option value="alipay">支付宝</option>
+                <option value="card">银行卡</option>
+                <option value="bank_transfer">银行转账</option>
+            </select>
+            <input id="txOccurredAt" type="datetime-local" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <button id="txCreateBtn" class="px-4 py-2.5 bg-primary text-white rounded-xl text-sm hover:bg-blue-700 transition-colors">新增流水</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+            <input id="txSearch" type="text" placeholder="搜索流水号/科目/备注" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm md:col-span-2">
+            <select id="txFilterType" class="px-3 py-2.5 border border-slate-200 rounded-xl bg-white text-sm">
+                <option value="">全部类型</option>
+                <option value="income">收入</option>
+                <option value="expense">支出</option>
+            </select>
+            <input id="txStartDate" type="date" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <input id="txEndDate" type="date" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+        </div>
+
+        <div class="overflow-x-auto border border-slate-100 rounded-2xl">
+            <table class="min-w-full">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-sm text-slate-600">
+                        <th class="px-4 py-3 font-medium">流水号</th>
+                        <th class="px-4 py-3 font-medium">类型</th>
+                        <th class="px-4 py-3 font-medium">科目</th>
+                        <th class="px-4 py-3 font-medium">金额</th>
+                        <th class="px-4 py-3 font-medium">支付方式</th>
+                        <th class="px-4 py-3 font-medium">经办人</th>
+                        <th class="px-4 py-3 font-medium">时间</th>
+                        <th class="px-4 py-3 font-medium">备注</th>
+                    </tr>
+                </thead>
+                <tbody id="txTableBody" class="divide-y divide-slate-100">
+                    <tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="flex items-center justify-between mt-3 text-sm">
+            <span id="txPageInfo" class="text-slate-500">共 0 条</span>
+            <div class="flex gap-2">
+                <button id="txPrevBtn" class="px-3 py-1.5 border border-slate-200 rounded-lg text-slate-700">上一页</button>
+                <button id="txNextBtn" class="px-3 py-1.5 border border-slate-200 rounded-lg text-slate-700">下一页</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+            <h4 class="text-lg font-semibold text-slate-800">日结对账</h4>
+            <div class="flex items-center gap-3">
+                <input id="reconDate" type="date" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+                <button id="loadReconBtn" class="px-4 py-2.5 bg-slate-800 text-white rounded-xl text-sm hover:bg-slate-700 transition-colors">加载对账</button>
+            </div>
+        </div>
+
+        <div id="reconSummary" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4"></div>
+
+        <div class="overflow-x-auto border border-slate-100 rounded-2xl">
+            <table class="min-w-full">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-sm text-slate-600">
+                        <th class="px-4 py-3 font-medium">支付方式</th>
+                        <th class="px-4 py-3 font-medium">订单数</th>
+                        <th class="px-4 py-3 font-medium">应收</th>
+                        <th class="px-4 py-3 font-medium">实收</th>
+                        <th class="px-4 py-3 font-medium">差额</th>
+                        <th class="px-4 py-3 font-medium">备注</th>
+                        <th class="px-4 py-3 font-medium">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="reconTableBody" class="divide-y divide-slate-100">
+                    <tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">请选择日期并加载</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-lg font-semibold text-slate-800">应付款管理</h4>
+            <span class="text-xs text-slate-500">支持部分支付与逾期识别</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 mb-4">
+            <input id="payableSupplier" type="text" placeholder="供应商" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <input id="payableBillNo" type="text" placeholder="账单号(可选)" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <input id="payableAmount" type="number" min="0" step="0.01" placeholder="应付金额" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <input id="payableDueDate" type="date" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <input id="payableNote" type="text" placeholder="备注" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <button id="createPayableBtn" class="px-4 py-2.5 bg-primary text-white rounded-xl text-sm hover:bg-blue-700 transition-colors">新增应付款</button>
+        </div>
+
+        <div class="flex flex-wrap gap-3 mb-4">
+            <input id="payableSearch" type="text" placeholder="搜索供应商/账单号" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <select id="payableStatus" class="px-3 py-2.5 border border-slate-200 rounded-xl bg-white text-sm">
+                <option value="">全部状态</option>
+                <option value="unpaid">未支付</option>
+                <option value="partial">部分支付</option>
+                <option value="paid">已支付</option>
+                <option value="overdue">已逾期</option>
+            </select>
+            <button id="payableQueryBtn" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm hover:bg-slate-200 transition-colors">查询</button>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-100 rounded-2xl">
+            <table class="min-w-full">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-sm text-slate-600">
+                        <th class="px-4 py-3 font-medium">供应商</th>
+                        <th class="px-4 py-3 font-medium">账单号</th>
+                        <th class="px-4 py-3 font-medium">应付</th>
+                        <th class="px-4 py-3 font-medium">已付</th>
+                        <th class="px-4 py-3 font-medium">剩余</th>
+                        <th class="px-4 py-3 font-medium">到期日</th>
+                        <th class="px-4 py-3 font-medium">状态</th>
+                        <th class="px-4 py-3 font-medium">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="payableTableBody" class="divide-y divide-slate-100">
+                    <tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-lg font-semibold text-slate-800">月度关账</h4>
+            <span class="text-xs text-slate-500">按月固化财务快照，避免历史数据被误改</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <input id="closeMonth" type="month" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <input id="closeNote" type="text" placeholder="关账备注(可选)" class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <button id="closeMonthBtn" class="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 transition-colors">执行关账</button>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-100 rounded-2xl">
+            <table class="min-w-full">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-sm text-slate-600">
+                        <th class="px-4 py-3 font-medium">月份</th>
+                        <th class="px-4 py-3 font-medium">销售收入</th>
+                        <th class="px-4 py-3 font-medium">其他收入</th>
+                        <th class="px-4 py-3 font-medium">费用支出</th>
+                        <th class="px-4 py-3 font-medium">净利润</th>
+                        <th class="px-4 py-3 font-medium">关账时间</th>
+                    </tr>
+                </thead>
+                <tbody id="closingTableBody" class="divide-y divide-slate-100">
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script src="{{ url_for('static', filename='js/finance.js') }}"></script>
+{% endblock %}

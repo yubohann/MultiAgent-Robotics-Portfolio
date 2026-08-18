@@ -1,0 +1,19 @@
+{
+  "active": {
+    "id": "ministral-3-8b-ollama",
+    "name": "Ministral 3 8B Vision (Ollama)",
+    "family": "Mistral",
+    "serving_model": "ollama:ministral-3:8b",
+    "ollama_model": "ministral-3:8b",
+    "mode": "local_ollama_vlm",
+    "memory_tier": "32GB",
+    "recommended_for": "本机已下载的 8B vision 模型；用于最高分路线的本地多模态短视频审核证据",
+    "hardware": "建议 32GB 内存或更高；当前机器已通过 ollama show 验证具备 vision capability",
+    "supports_audio": false,
+    "supports_video": true,
+    "estimated_disk_gb": 6.0,
+    "estimated_memory_gb": "约 10-16GB",
+    "pull_command": "ollama pull ministral-3:8b",
+    "notes": "Ollama 本地模型显示 capabilities 包含 completion、vision、tools，可接收关键帧图片完成结构化理解。"
+  }
+}

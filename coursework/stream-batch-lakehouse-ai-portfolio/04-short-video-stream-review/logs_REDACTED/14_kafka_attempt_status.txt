@@ -1,0 +1,22 @@
+Student ID: [REDACTED]
+Name: Yu Bohan / Bohan Yu
+
+Kafka optional bonus status:
+
+1. Existing WSL Docker container `bigdata-kafka` was found.
+2. Windows localhost:9092 was verified as reachable while WSL was kept alive.
+3. The following student-specific topics were created successfully:
+   - short_video_ingest_[REDACTED]
+   - short_video_result_[REDACTED]
+4. Topic evidence is saved in:
+   logs_[REDACTED]/10_kafka_topics.log
+5. Producer evidence is saved in:
+   logs_[REDACTED]/12_kafka_producer.log
+6. Consumer evidence is saved in:
+   logs_[REDACTED]/11_kafka_consumer.log
+7. Result topic evidence is saved in:
+   logs_[REDACTED]/13_kafka_result.log
+
+Conclusion:
+The base Lab 4 short-video review workflow is complete through FastAPI + SQLite jobs/events + Ollama VLM.
+The Kafka bonus path is also completed with one drone-video ingest event and one processed result message.

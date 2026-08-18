@@ -1,0 +1,36 @@
+.DS_Store
+target/
+**/target/
+dependency-reduced-pom.xml
+__pycache__/
+*.pyc
+*.log
+runtime/
+
+# Local IDE and Python environments
+.idea/
+.vscode/
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Runtime caches and generated state
+logs/
+checkpoints/
+savepoints/
+.pytest_cache/
+.mypy_cache/
+
+# Docker and local build downloads
+*.tgz
+*.tar.gz
+*.zip
+
+# Lab 04 evidence logs are intentional submission artifacts.
+!04-short-video-stream-review/logs_[REDACTED]/
+!04-short-video-stream-review/logs_[REDACTED]/**
+
+# Runtime Flink/Paimon connector jars (download via Maven; see lib/README.md)
+01-modern-lakehouse/lib/

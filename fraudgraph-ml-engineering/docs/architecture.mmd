@@ -1,0 +1,13 @@
+flowchart LR
+  A["External benchmark assets"] --> B["Dataset adapters"]
+  B --> C["Graph and sequence construction"]
+  C --> D["Local data/graphs cache"]
+  C --> E["SplitGNN graph encoder"]
+  C --> F["Transformer sequence encoder"]
+  E --> G["Fusion classifier"]
+  F --> G
+  G --> H["Training and evaluation"]
+  H --> I["Local artifacts/ outputs"]
+  J["Experiment scripts and configs"] --> H
+  K["Inference and analysis tools"] --> D
+  K --> I

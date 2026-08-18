@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Training / inference outputs (regenerable)
+runs/
+results/
+predict/
+
+# Dataset large files / exported artifacts
+*.onnx
+*.engine
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

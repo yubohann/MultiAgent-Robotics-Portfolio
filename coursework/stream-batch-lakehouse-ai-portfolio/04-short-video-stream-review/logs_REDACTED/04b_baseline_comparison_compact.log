@@ -1,0 +1,1 @@
+﻿STUDENT_ID=[REDACTED] | models=ministral-3-8b-ollama,qwen3-vl-4b-ollama,gemma3-4b-ollama,local-baseline | normal_drone=published/risk_score=0.0 | low_light_review=review/risk_score=42.0 | flash_risk_review=review/risk_score=52.0 | backend=local_ollama_vlm+local_baseline | active_model_restored=ministral-3-8b-ollama

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{# 导入图标宏 #}
+{% from 'macros/icons.html' import icon_sales_large, icon_order, icon_wallet, icon_trend, icon_warning with context %}
+
+{% block title %}数据分析 - 超市管理系统{% endblock %}
+
+{% block header_title %}数据分析{% endblock %}
+
+{% set active_page = 'analytics' %}
+
+{% block content %}
+                <!-- 时间筛选器 -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">数据概览</h2>
+                    <select id="periodFilter" class="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white">
+                        <option value="today">今日</option>
+                        <option value="week">本周</option>
+                        <option value="month" selected>本月</option>
+                    </select>
+                </div>
+
+                <!-- 数据统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-card border border-slate-100 hover-lift">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-500 text-sm mb-1.5">销售额</p>
+                                <p class="text-3xl font-bold text-slate-800" id="totalSales">¥0</p>
+                                <p class="text-xs mt-1" id="salesGrowth">-- 较上期</p>
+                            </div>
+                            <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
+                                {{ icon_sales_large() }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-card border border-slate-100 hover-lift">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-500 text-sm mb-1.5">订单数量</p>
+                                <p class="text-3xl font-bold text-slate-800" id="orderCount">0</p>
+                                <p class="text-xs text-slate-500 mt-1">已完成订单</p>
+                            </div>
+                            <div class="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center">
+                                {{ icon_order() }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-card border border-slate-100 hover-lift">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-500 text-sm mb-1.5">客单价</p>
+                                <p class="text-3xl font-bold text-slate-800" id="avgOrderValue">¥0</p>
+                                <p class="text-xs text-slate-500 mt-1">平均每单</p>
+                            </div>
+                            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+                                {{ icon_wallet() }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-card border border-slate-100 hover-lift">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-500 text-sm mb-1.5">毛利润</p>
+                                <p class="text-3xl font-bold text-slate-800" id="grossProfit">¥0</p>
+                                <p class="text-xs text-slate-500 mt-1" id="profitRate">利润率 0%</p>
+                            </div>
+                            <div class="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center">
+                                {{ icon_trend() }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表区域 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- 销售趋势图 -->
+                    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-5">销售趋势</h3>
+                        <div class="h-64">
+                            <canvas id="salesTrendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 商品分类占比 -->
+                    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-5">商品分类占比</h3>
+                        <div class="h-64">
+                            <canvas id="categoryPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 热销/滞销商品排行 -->
+                <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="text-xl font-semibold text-slate-800" id="productRankTitle">热销商品 TOP 10</h3>
+                        <div class="flex gap-3">
+                            <select id="sortBySelect" class="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white">
+                                <option value="quantity">按销量</option>
+                                <option value="sales">按销售额</option>
+                            </select>
+                            <button id="toggleSortBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors">
+                                查看滞销
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-slate-200">
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">排名</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">商品名称</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">销量</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">销售额</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-600">占比</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productRankTable">
+                                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                    <td colspan="5" class="py-8 text-center text-slate-400">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+{% endblock %}
+
+{% block extra_script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+{% endblock %}

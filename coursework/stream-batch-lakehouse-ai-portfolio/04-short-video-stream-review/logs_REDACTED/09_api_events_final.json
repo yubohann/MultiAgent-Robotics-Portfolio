@@ -1,0 +1,342 @@
+{
+  "events": [
+    {
+      "id": 1518,
+      "video_id": "9921414f969d",
+      "stage": "worker",
+      "message": "本地审核 worker 完成队列任务",
+      "payload": {
+        "job_id": "complete-9921414f969d"
+      },
+      "created_at": "2026-05-24T04:43:27+00:00"
+    },
+    {
+      "id": 1517,
+      "video_id": "9921414f969d",
+      "stage": "publish",
+      "message": "审核通过，视频已发布到 Demo 信息流",
+      "payload": {
+        "status": "published"
+      },
+      "created_at": "2026-05-24T04:43:27+00:00"
+    },
+    {
+      "id": 1516,
+      "video_id": "9921414f969d",
+      "stage": "moderation",
+      "message": "完成自动审核策略判定",
+      "payload": {
+        "status": "published",
+        "risk_score": 0.0,
+        "reasons": [
+          {
+            "code": "policy_passed",
+            "level": "pass",
+            "message": "未命中本实验策略中的高风险信号，可自动发布。",
+            "evidence": 0.0
+          }
+        ]
+      },
+      "created_at": "2026-05-24T04:43:27+00:00"
+    },
+    {
+      "id": 1515,
+      "video_id": "9921414f969d",
+      "stage": "understanding",
+      "message": "完成视频理解，生成摘要、指标和候选标签",
+      "payload": {
+        "caption": "无人机拍摄的居民区巡检视频，内容为空旷道路和住宅区的俯瞰图像，未发现明显异常或紧急事件。视频主要展示了居民区的整体布局、道路和建筑物情况。",
+        "tags": [
+          "居民区巡检",
+          "无人机俯拍",
+          "道路检查",
+          "住宅区布局",
+          "常规巡视",
+          "短视频",
+          "横屏",
+          "自然光",
+          "运动明显"
+        ],
+        "sampled_frames": 42,
+        "model": {
+          "selected_id": "ministral-3-8b-ollama",
+          "selected_name": "Ministral 3 8B Vision (Ollama)",
+          "backend": "local_ollama_vlm",
+          "serving_model": "ollama:ministral-3:8b",
+          "ollama_model": "ministral-3:8b",
+          "fallback_reason": ""
+        }
+      },
+      "created_at": "2026-05-24T04:43:27+00:00"
+    },
+    {
+      "id": 1514,
+      "video_id": "9921414f969d",
+      "stage": "vlm_understanding",
+      "message": "本地多模态模型完成结构化视频理解",
+      "payload": {
+        "model": "Ministral 3 8B Vision (Ollama)",
+        "summary": "无人机拍摄的居民区巡检视频，内容为空旷道路和住宅区的俯瞰图像，未发现明显异常或紧急事件。视频主要展示了居民区的整体布局、道路和建筑物情况。",
+        "risk": {
+          "level": "pass",
+          "score": 0,
+          "categories": [
+            "安全风险",
+            "紧急事件",
+            "违规行为"
+          ],
+          "evidence": "视频内容为常规巡检，未发现安全隐患、紧急事件或违规行为。"
+        }
+      },
+      "created_at": "2026-05-24T04:43:27+00:00"
+    },
+    {
+      "id": 1513,
+      "video_id": "9921414f969d",
+      "stage": "preprocess",
+      "message": "完成关键帧、场景切分和音频轨预处理",
+      "payload": {
+        "keyframes": 7,
+        "has_audio": false,
+        "duration_sec": 20.0
+      },
+      "created_at": "2026-05-24T04:43:23+00:00"
+    },
+    {
+      "id": 1512,
+      "video_id": "9921414f969d",
+      "stage": "frame_sample",
+      "message": "已抽样分析第 40 帧",
+      "payload": {
+        "frame_index": 40,
+        "source_frame_index": 469,
+        "brightness": 121.62,
+        "motion": 20.7,
+        "colorfulness": 22.33
+      },
+      "created_at": "2026-05-24T04:43:22+00:00"
+    },
+    {
+      "id": 1511,
+      "video_id": "9921414f969d",
+      "stage": "frame_sample",
+      "message": "已抽样分析第 35 帧",
+      "payload": {
+        "frame_index": 35,
+        "source_frame_index": 409,
+        "brightness": 120.98,
+        "motion": 20.43,
+        "colorfulness": 22.14
+      },
+      "created_at": "2026-05-24T04:43:21+00:00"
+    },
+    {
+      "id": 1510,
+      "video_id": "9921414f969d",
+      "stage": "frame_sample",
+      "message": "已抽样分析第 30 帧",
+      "payload": {
+        "frame_index": 30,
+        "source_frame_index": 349,
+        "brightness": 119.38,
+        "motion": 19.18,
+        "colorfulness": 21.52
+      },
+      "created_at": "2026-05-24T04:43:21+00:00"
+    },
+    {
+      "id": 1509,
+      "video_id": "9921414f969d",
+      "stage": "frame_sample",
+      "message": "已抽样分析第 25 帧",
+      "payload": {
+        "frame_index": 25,
+        "source_frame_index": 289,
+        "brightness": 118.94,
+        "motion": 19.24,
+        "colorfulness": 22.26
+      },
+      "created_at": "2026-05-24T04:43:21+00:00"
+    },
+    {
+      "id": 1508,
+      "video_id": "9921414f969d",
+      "stage": "frame_sample",
+      "message": "已抽样分析第 20 帧",
+      "payload": {
+        "frame_index": 20,
+        "source_frame_index": 229,
+        "brightness": 118.55,
+        "motion": 19.46,
+        "colorfulness": 21.95
+      },
+      "created_at": "2026-05-24T04:43:21+00:00"
+    },
+    {
+      "id": 1507,
+      "video_id": "9921414f969d",
+      "stage": "frame_sample",
+      "message": "已抽样分析第 15 帧",
+      "payload": {
+        "frame_index": 15,
+        "source_frame_index": 169,
+        "brightness": 118.55,
+        "motion": 19.5,
+        "colorfulness": 22.41
+      },
+      "created_at": "2026-05-24T04:43:20+00:00"
+    },
+    {
+      "id": 1506,
+      "video_id": "9921414f969d",
+      "stage": "frame_sample",
+      "message": "已抽样分析第 10 帧",
+      "payload": {
+        "frame_index": 10,
+        "source_frame_index": 109,
+        "brightness": 117.43,
+        "motion": 20.79,
+        "colorfulness": 21.13
+      },
+      "created_at": "2026-05-24T04:43:20+00:00"
+    },
+    {
+      "id": 1505,
+      "video_id": "9921414f969d",
+      "stage": "frame_sample",
+      "message": "已抽样分析第 5 帧",
+      "payload": {
+        "frame_index": 5,
+        "source_frame_index": 49,
+        "brightness": 116.89,
+        "motion": 26.56,
+        "colorfulness": 21.05
+      },
+      "created_at": "2026-05-24T04:43:20+00:00"
+    },
+    {
+      "id": 1504,
+      "video_id": "9921414f969d",
+      "stage": "frame_sample",
+      "message": "已抽样分析第 1 帧",
+      "payload": {
+        "frame_index": 1,
+        "source_frame_index": 1,
+        "brightness": 114.38,
+        "motion": 0.0,
+        "colorfulness": 20.31
+      },
+      "created_at": "2026-05-24T04:43:20+00:00"
+    },
+    {
+      "id": 1503,
+      "video_id": "9921414f969d",
+      "stage": "model_select",
+      "message": "当前理解模型：Ministral 3 8B Vision (Ollama)",
+      "payload": {
+        "id": "ministral-3-8b-ollama",
+        "name": "Ministral 3 8B Vision (Ollama)",
+        "family": "Mistral",
+        "serving_model": "ollama:ministral-3:8b",
+        "ollama_model": "ministral-3:8b",
+        "mode": "local_ollama_vlm",
+        "memory_tier": "32GB",
+        "recommended_for": "本机已下载的 8B vision 模型；用于最高分路线的本地多模态短视频审核证据",
+        "hardware": "建议 32GB 内存或更高；当前机器已通过 ollama show 验证具备 vision capability",
+        "supports_audio": false,
+        "supports_video": true,
+        "estimated_disk_gb": 6.0,
+        "estimated_memory_gb": "约 10-16GB",
+        "pull_command": "ollama pull ministral-3:8b",
+        "notes": "Ollama 本地模型显示 capabilities 包含 completion、vision、tools，可接收关键帧图片完成结构化理解。"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1502,
+      "video_id": "9921414f969d",
+      "stage": "worker",
+      "message": "本地审核 worker 开始处理队列任务",
+      "payload": {
+        "job_id": "complete-9921414f969d",
+        "kind": "complete_video"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1501,
+      "video_id": "9921414f969d",
+      "stage": "queued",
+      "message": "审核任务已写入本地耐久队列",
+      "payload": {
+        "job_id": "complete-9921414f969d",
+        "queue": "sqlite-local"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1500,
+      "video_id": "9921414f969d",
+      "stage": "queued",
+      "message": "视频已进入页面，等待后台理解和打标签",
+      "payload": {
+        "status": "processing"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1499,
+      "video_id": "9921414f969d",
+      "stage": "stream",
+      "message": "开始按帧抽样，模拟视频流进入实时处理链路",
+      "payload": {
+        "media_file": "9921414f969d-1779597799-upload_[REDACTED]_yubohan_drone_review.mp4"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1498,
+      "video_id": "9921414f969d",
+      "stage": "ingest",
+      "message": "收到短视频，开始写入媒体区",
+      "payload": {
+        "title": "[REDACTED]_Bohan Yu_自选上传_无人机巡检短视频",
+        "source": "browser-upload",
+        "path": "~\\Desktop\\作品集\\YuBohan-StreamBatch-Portfolio-[REDACTED]\\4. 实时短视频流智能审核与发布 综合实验\\code\\short-video-stream-lab\\data\\incoming\\1779597799-upload_[REDACTED]_yubohan_drone_review.mp4"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1497,
+      "video_id": null,
+      "stage": "model_config",
+      "message": "后台模型已切换为 Ministral 3 8B Vision (Ollama)",
+      "payload": {
+        "id": "ministral-3-8b-ollama",
+        "name": "Ministral 3 8B Vision (Ollama)",
+        "family": "Mistral",
+        "serving_model": "ollama:ministral-3:8b",
+        "ollama_model": "ministral-3:8b",
+        "mode": "local_ollama_vlm",
+        "memory_tier": "32GB",
+        "recommended_for": "本机已下载的 8B vision 模型；用于最高分路线的本地多模态短视频审核证据",
+        "hardware": "建议 32GB 内存或更高；当前机器已通过 ollama show 验证具备 vision capability",
+        "supports_audio": false,
+        "supports_video": true,
+        "estimated_disk_gb": 6.0,
+        "estimated_memory_gb": "约 10-16GB",
+        "pull_command": "ollama pull ministral-3:8b",
+        "notes": "Ollama 本地模型显示 capabilities 包含 completion、vision、tools，可接收关键帧图片完成结构化理解。"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1496,
+      "video_id": null,
+      "stage": "system",
+      "message": "演示数据库已清空",
+      "payload": {},
+      "created_at": "2026-05-24T04:43:19+00:00"
+    }
+  ]
+}

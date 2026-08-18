@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% from 'macros/icons.html' import icon_sales with context %}
+
+{% block title %}收银台 - 超市管理系统{% endblock %}
+
+{% block header_title %}收银台{% endblock %}
+
+{% set active_page = 'cashier' %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+    <div class="xl:col-span-3 space-y-6">
+        <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-800">商品检索</h3>
+                    <p class="text-sm text-slate-500">支持商品名称、编码、条码检索，点击加入购物车</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-blue-50 text-primary flex items-center justify-center">
+                    {{ icon_sales() }}
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <input id="keywordInput" type="text" class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="输入商品名称/编码/条码">
+                <button id="searchBtn" class="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">查询</button>
+            </div>
+
+            <div class="mt-4 overflow-x-auto border border-slate-100 rounded-2xl">
+                <table class="min-w-full">
+                    <thead class="bg-slate-50">
+                        <tr class="text-left text-sm text-slate-600">
+                            <th class="px-4 py-3 font-medium">商品</th>
+                            <th class="px-4 py-3 font-medium">编码/条码</th>
+                            <th class="px-4 py-3 font-medium">单价</th>
+                            <th class="px-4 py-3 font-medium">库存</th>
+                            <th class="px-4 py-3 font-medium">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody" class="divide-y divide-slate-100">
+                        <tr>
+                            <td colspan="5" class="px-4 py-10 text-center text-slate-400">请输入关键词后查询商品</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="xl:col-span-2 space-y-6">
+        <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-slate-800">购物车</h3>
+                <button id="clearCartBtn" class="text-sm text-danger hover:text-danger/80">清空</button>
+            </div>
+
+            <div id="cartContainer" class="space-y-3 max-h-[380px] overflow-y-auto">
+                <p id="emptyCartText" class="text-sm text-slate-400 text-center py-8">购物车为空</p>
+            </div>
+
+            <div class="mt-5 pt-5 border-t border-slate-100 space-y-3">
+                <div class="flex items-center justify-between text-sm text-slate-600">
+                    <span>商品总数</span>
+                    <span id="totalQuantity">0</span>
+                </div>
+                <div class="flex items-center justify-between text-sm text-slate-600">
+                    <span>应收金额</span>
+                    <span id="totalAmount">¥0.00</span>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-600 mb-2">优惠金额</label>
+                    <input id="discountInput" type="number" min="0" step="0.01" value="0" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-600 mb-2">支付方式</label>
+                    <select id="paymentMethod" class="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <option value="cash">现金</option>
+                        <option value="wechat">微信</option>
+                        <option value="alipay">支付宝</option>
+                        <option value="card">银行卡</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-between text-base font-semibold text-slate-800">
+                    <span>实收金额</span>
+                    <span id="actualAmount">¥0.00</span>
+                </div>
+                <button id="checkoutBtn" class="w-full py-3 bg-success text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    结算
+                </button>
+                <button id="printBtn" class="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    打印小票
+                </button>
+                <p id="messageBox" class="text-sm text-slate-500 min-h-[20px]"></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script src="{{ url_for('static', filename='js/cashier.js') }}"></script>
+{% endblock %}

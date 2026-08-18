@@ -1,0 +1,5 @@
+Copyright (c) 2026 Yu Bo Han
+
+All rights reserved. This repository is made available for review, research, and portfolio evaluation. No permission is granted to reproduce, redistribute, sublicense, or use the code or accompanying materials in production without prior written permission from the copyright holder.
+
+The files under `src/fraud_ml_engineering/vendor/splitgnn/` are retained from the SplitGNN research implementation and remain subject to the terms of their original authors. See `THIRD_PARTY_NOTICES.md`.

@@ -1,0 +1,2 @@
+﻿NAMES           STATUS          PORTS
+bigdata-kafka   Up 31 seconds   0.0.0.0:9092->9092/tcp, [::]:9092->9092/tcp, 0.0.0.0:19092->19092/tcp, [::]:19092->19092/tcp

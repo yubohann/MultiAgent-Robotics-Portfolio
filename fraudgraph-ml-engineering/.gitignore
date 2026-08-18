@@ -1,0 +1,50 @@
+# Python environments and tooling
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Dataset assets and generated graph caches
+data/**
+!data/.gitkeep
+!data/README.md
+
+# Model checkpoints, TensorBoard logs, reports, and temporary files
+artifacts/**
+!artifacts/.gitkeep
+*.pt
+*.pth
+*.ckpt
+*.mdl
+*.dgl
+*.npy
+*.npz
+events.out.tfevents.*
+*.log
+tmp_*/
+
+# Local secrets and downloaded archives
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.7z
+*.zip
+*.tar
+*.tgz

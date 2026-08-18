@@ -1,0 +1,28 @@
+﻿Real public video sources for Lab 4, student_id=[REDACTED]
+License: https://www.pexels.com/license/
+Pexels public videos are free to use under the Pexels License; attribution is not required but source is retained for traceability.
+
+1. normal_drone_review
+Page/source: Pexels public video
+Direct media: https://videos.pexels.com/video-files/7457249/7457249-uhd_3840_2160_25fps.mp4
+Local raw: data/incoming/upload_[REDACTED]_yubohan_drone.mp4
+Local review clip: data/incoming/upload_[REDACTED]_yubohan_drone_review.mp4
+
+2. real_low_light_review
+Page: https://www.pexels.com/video/a-quiet-street-at-night-6481982/
+Direct media: https://videos.pexels.com/video-files/6481982/6481982-uhd_3840_2160_24fps.mp4
+Local raw: data/incoming/pexels_real_night_street_raw.mp4
+Local review clip: data/incoming/real_low_light_review_[REDACTED].mp4
+Note: the review clip is a 6s darkened/720p excerpt of the real Pexels street footage, used to trigger low-light review without using synthetic video.
+
+3. real_flash_risk_review
+Page: https://www.pexels.com/video/a-concert-stage-with-smoke-and-lights-3792293/
+Direct media: https://videos.pexels.com/video-files/3792293/3792293-hd_1920_1080_24fps.mp4
+Local raw: data/incoming/pexels_real_stage_lights_raw.mp4
+Local review clip: data/incoming/real_flash_risk_review_[REDACTED].mp4
+
+4. real_campus_sports
+Page/source: Pexels public running-track video, media id 8533475
+Direct media: https://videos.pexels.com/video-files/8533475/8533475-hd_1920_1080_25fps.mp4
+Local raw: data/incoming/pexels_candidate_sports_8533475.mp4
+Local review clip: data/incoming/real_campus_sports_[REDACTED].mp4

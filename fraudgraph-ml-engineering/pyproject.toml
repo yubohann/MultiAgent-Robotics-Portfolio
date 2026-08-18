@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fraudgraph-ml-engineering"
+version = "0.1.0"
+description = "Method framework for graph-and-sequence fraud detection engineering (core implementation withheld until publication)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Bohan Yu" }]
+keywords = ["fraud-detection", "graph-neural-networks", "sequence-modeling", "machine-learning-engineering", "financial-transactions"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+fraudgraph = "fraud_ml_engineering.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["fraud_ml_engineering*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"

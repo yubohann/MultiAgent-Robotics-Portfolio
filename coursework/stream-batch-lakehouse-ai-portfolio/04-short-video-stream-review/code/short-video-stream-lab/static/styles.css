@@ -1,0 +1,529 @@
+/*
+ * Styles for the short-video review demo.
+ *
+ * 设计目标是“教学可读 + 工具型界面”：让同学清楚看到上传、审核状态、模型选择、
+ * 视频卡片和事件流。样式尽量克制，避免营销页式装饰干扰实验观察。
+ */
+
+/* 全局设计 token：颜色集中在 :root，便于调整主题和状态色。 */
+:root {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --ink: #17202a;
+  --muted: #667085;
+  --line: #d7dde5;
+  --accent: #0969da;
+  --processing: #475467;
+  --published: #16794c;
+  --review: #a15c00;
+  --rejected: #b42318;
+}
+
+/* 使用 border-box 可以让固定宽度元素在加 padding/border 后仍保持布局稳定。 */
+* {
+  box-sizing: border-box;
+}
+
+/* 页面基础排版，优先使用系统字体，保证 Windows/Linux/macOS 都有稳定显示效果。 */
+body {
+  margin: 0;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* 表单控件继承页面字体，避免浏览器默认样式造成字体跳变。 */
+button,
+input,
+select {
+  font: inherit;
+}
+
+/* 主按钮样式用于明确动作，例如上传、运行样本流。 */
+button {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* secondary 和 tab 是弱动作，视觉上低于主按钮。 */
+button.secondary,
+.tab {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+/* 顶部栏固定展示实验名称和主要控制按钮。 */
+.topbar {
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.topbar h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.topbar p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* 页面主体使用最大宽度约束，大屏不无限拉伸，小屏保持 100%。 */
+.layout {
+  width: min(1360px, 100%);
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* panel 是本实验的通用分组容器，用于统计、上传、模型、事件面板。 */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* 状态统计区用四列网格，便于一眼看出发布/复核/拒绝数量。 */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.metrics div {
+  padding: 18px;
+  border-right: 1px solid var(--line);
+}
+
+.metrics div:last-child {
+  border-right: 0;
+}
+
+.label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.metrics strong {
+  font-size: 28px;
+}
+
+/* 上传面板把文件、标题和状态文本放在同一行，节省课堂演示空间。 */
+.upload-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+/* 表单三列分别是文件、标题和提交按钮；移动端会改成一列。 */
+form {
+  display: grid;
+  grid-template-columns: minmax(160px, 260px) minmax(220px, 1fr) auto;
+  gap: 10px;
+  flex: 1;
+}
+
+input[type="text"],
+input[type="file"],
+select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.status-text {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 模型面板左侧选择模型，右侧显示硬件建议、下载状态和 pull 命令。 */
+.model-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: 16px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.model-panel label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.model-details {
+  display: grid;
+  gap: 5px;
+  color: #344054;
+  line-height: 1.45;
+}
+
+.model-details strong {
+  font-size: 14px;
+}
+
+.model-details small {
+  color: var(--muted);
+}
+
+.model-gallery-wrap {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.model-gallery-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #344054;
+}
+
+.model-gallery-title span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.model-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.model-chip {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fafafa;
+  min-height: 118px;
+}
+
+.model-chip.active {
+  border-color: var(--accent);
+  background: #eef6ff;
+}
+
+.model-chip strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.model-chip small,
+.model-chip span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* tab 用于按发布状态筛选视频卡片，不触发后端状态改变。 */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 视频网格自适应列数，保证普通笔记本和大屏都能看清卡片。 */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+/* 每张视频卡片只使用顶部彩条表达状态，避免大面积状态色干扰观看视频。 */
+.video-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 这些状态色与后端 published/review/rejected/processing 枚举一一对应。 */
+.video-card.processing {
+  border-top-color: var(--processing);
+}
+
+.video-card.published {
+  border-top-color: var(--published);
+}
+
+.video-card.review {
+  border-top-color: var(--review);
+}
+
+.video-card.rejected {
+  border-top-color: var(--rejected);
+}
+
+/* 视频播放器使用稳定 aspect-ratio；即使封面或 metadata 还没加载，布局也不会跳动。 */
+video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 14;
+  background: #111;
+  object-fit: cover;
+}
+
+/* 卡片正文只承载标题、摘要、标签、指标和原因；不会重建 video 元素。 */
+.video-body {
+  padding: 12px;
+}
+
+/* 标题和状态标签同排，便于在截图中对照视频状态。 */
+.video-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.video-title-row h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.video-title-row b {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 摘要和审核原因使用更弱颜色，突出视频标题和状态。 */
+.caption,
+.reason {
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.muted-empty {
+  color: var(--muted);
+}
+
+/* 标签区域可换行，避免长标签撑破卡片。 */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.tags span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: #344054;
+  background: #fafafa;
+}
+
+/* muted-pill 用于没有标签的最终态，比 loading 骨架更明确。 */
+.muted-pill {
+  border-style: dashed !important;
+  color: var(--muted) !important;
+}
+
+/* loading 只用于摘要与标签文字区域，不能遮挡未播放的视频本体。 */
+.loading-copy {
+  display: grid;
+  gap: 7px;
+  min-height: 42px;
+  align-content: center;
+}
+
+/* 骨架屏元素固定尺寸，避免后台理解完成前后卡片高度大幅跳动。 */
+.skeleton-line,
+.skeleton-pill {
+  display: inline-block;
+  overflow: hidden;
+  position: relative;
+  background: #e7ebf0;
+}
+
+/* shimmer 动画提示“文字结果还在生成”，而不是视频本身加载失败。 */
+.skeleton-line::after,
+.skeleton-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  animation: shimmer 1.25s infinite;
+}
+
+.skeleton-line {
+  width: 72%;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.skeleton-line.wide {
+  width: 94%;
+}
+
+.skeleton-pill {
+  width: 72px;
+  height: 24px;
+  border-radius: 999px;
+}
+
+.skeleton-pill.short {
+  width: 52px;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* 关键指标行允许换行，适配模型名称较长的情况。 */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #344054;
+  font-size: 13px;
+}
+
+/* 事件面板展示后端事件日志，是观察流处理阶段的主要入口。 */
+.event-panel {
+  margin-top: 18px;
+  padding: 14px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.section-title h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+/* running badge 由 /api/health 中 jobs.queued/running 推导。 */
+.badge {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.badge.running {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* 事件列表使用三列：时间、阶段和消息；移动端会变成单列。 */
+.event-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.event-list li {
+  display: grid;
+  grid-template-columns: 92px 130px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  color: #344054;
+}
+
+.event-list time,
+.event-list strong {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* 空状态也使用 panel 背景，避免页面空白让同学误以为加载失败。 */
+.empty,
+.empty-event {
+  color: var(--muted);
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* 移动端布局：控制区纵向排列，表单和事件列表改成单列。 */
+@media (max-width: 820px) {
+  .topbar,
+  .upload-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .model-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .actions,
+  form {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metrics div {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .event-list li {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
