@@ -1,0 +1,15 @@
+# Private template. Replace TBD values only after the official rulebook and hardware are verified.
+profile_id: "robocon2025_flying_layup_TBD"
+rule_revision: "TBD"
+field:
+  length_m: TBD
+  width_m: TBD
+  restricted_zones: []
+tasks:
+  shot_pose_candidates: []
+  pass_timeout_sec: TBD
+  shot_timeout_sec: TBD
+safety:
+  pose_age_limit_sec: 0.30
+  target_age_limit_sec: 0.30
+  require_map_locked: true

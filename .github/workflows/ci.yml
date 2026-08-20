@@ -1,0 +1,50 @@
+name: ros2-workspace
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  python-contracts:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Run dependency-light contract tests
+        shell: bash
+        run: python3 -m unittest discover -s src -p 'test_*.py' -v
+      - name: Validate project metadata
+        shell: bash
+        run: python3 tools/validate_project.py
+
+  ros2-build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: humble
+      - name: Install ROS dependencies
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          rosdep update
+          rosdep install --from-paths src --ignore-src -r -y
+      - name: Build interface and control packages
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --symlink-install \
+            --packages-up-to mid360_localization_contract mid360_map_localizer \
+            robocon_perception_adapter robocon_pose_command_bridge robocon_game_supervisor
+      - name: Run ROS tests
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          colcon test --event-handlers console_direct+
+          colcon test-result --verbose
+
