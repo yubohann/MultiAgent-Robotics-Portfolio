@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="basketball">
+    <link name="link">
+      <pose>0 0 0 0 0 0</pose> <!-- 设置模型的初始位置和方向 -->
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://basketball/model.dae</uri> <!-- 相对于.sdf文件的路径 -->
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="collision">
+        <geometry>
+          <sphere> <!-- 使用球体作为碰撞体 -->
+            <radius>0.12</radius> <!-- 篮球的半径 -->
+          </sphere>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

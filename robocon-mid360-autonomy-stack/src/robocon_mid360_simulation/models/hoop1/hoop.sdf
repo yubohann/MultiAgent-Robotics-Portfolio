@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="basketball_hoop">
+    <static>true</static> <!-- 设置模型为静止 -->
+    <link name="link">
+      <pose>0 0 0 0 0 0</pose> <!-- 设置模型的初始位置和方向 -->
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://hoop1/model.dae</uri> <!-- 相对于.sdf文件的路径 -->
+          </mesh>
+        </geometry>
+      </visual>
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>model://hoop1/model.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

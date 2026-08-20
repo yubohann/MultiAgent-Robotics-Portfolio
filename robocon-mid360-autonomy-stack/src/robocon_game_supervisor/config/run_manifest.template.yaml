@@ -1,0 +1,50 @@
+# Private run manifest template. Do not replace TBD values with guesses.
+run_id: "TBD"
+started_at_utc: "TBD"
+evidence_level: "synthetic"  # synthetic | gazebo_simulation | bag_replay | host_hardware
+software:
+  workspace_path: "TBD"
+  workspace_commit: "TBD"
+  sources:
+    livox_driver:
+      path: "TBD"
+      git_revision: "TBD"
+    fast_lio:
+      path: "TBD"
+      git_revision: "TBD"
+  lio_frontend: "FAST-LIO2"
+profiles:
+  localization: "competition"
+  game_profile: "TBD"
+  rule_revision: "TBD"
+hardware:
+  target_computer_product: "TBD"
+  target_computer_kernel: "TBD"
+  lidar_model: "Livox MID-360"
+  lidar_firmware: "TBD"
+  lidar_serial: "TBD"
+network:
+  target_computer_interface: "TBD"
+  target_computer_ip: "TBD"
+  lidar_ip: "TBD"
+calibration:
+  base_to_imu_version: "TBD"
+  imu_to_lidar_version: "TBD"
+  time_offset_version: "TBD"
+  calibration_evidence: "TBD"
+map:
+  map_id: "TBD"
+  map_version: "TBD"
+  frame: "map"
+  source_bag: "TBD"
+metrics:
+  pose_rate_hz: "unknown"
+  pose_age_p95_ms: "unknown"
+  position_error_m: "unknown"
+  yaw_error_deg: "unknown"
+  relative_drift_m: "unknown"
+  relative_drift_deg: "unknown"
+artifacts:
+  bag_path: "TBD"
+  diagnostics_path: "TBD"
+  plot_directory: "TBD"
