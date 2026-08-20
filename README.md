@@ -51,15 +51,10 @@ My work sits at the intersection of multi-agent decision-making, RL, and embodie
 
 
 | Award | Level | Role |
-
 |---|---|---|
-
 | 2025 China Robot Competition & RoboCup China Open — **3rd Place, National First Prize** | National | Team Leader |
-
 | 24th ROBOCON — Robot Basketball Competition, **National Second Prize** | National | LiDAR & Perception Lead |
-
 | 24th ROBOCON — Robot Basketball Shooting Competition, **National Second Prize** | National | LiDAR & Perception Lead |
-
 | 24th ROBOCON — Bionic Legged Robot Obstacle Challenge, **National First Prize** | National | — |
 
 
@@ -81,24 +76,15 @@ My work sits at the intersection of multi-agent decision-making, RL, and embodie
 
 
 | Folder | Area | Stack |
-
 |---|---|---|
-
 | [Rivermark](rivermark/) | Leakage-controlled 3D stealth search benchmark for multi-agent teams | Python, RL/MARL, offline RL, VLN/VLA, world models |
-
 | [RoboCup CBG-WM](robocup-cbg-wm/) | Uncertainty-aware belief-graph world model + CVaR risk MPC for adversarial multi-agent RoboCup-style visual navigation | ROS2, IsaacLab, PyTorch, SAC Flow self-play |
-
 | [AeroGate Graph](aerogate-graph/) | Method framework for graph-based RL in dense, dynamic drone gate traversal (single-agent + 8-drone formation) | Python, RL, graph learning, multi-agent |
-
 | [FraudGraph ML Engineering](fraudgraph-ml-engineering/) | Method framework for graph-and-sequence fraud detection engineering (research pipeline withheld) | Python, graph learning, sequence modeling |
-| [Robocon MID-360 Autonomy Stack](robocon-mid360-autonomy-stack/) | Simulation-first ROS2 autonomy for competition robots: Livox MID-360 simulation, FAST-LIO2 mapping, scan-to-map localization, perception gating, action arbitration, safety-aware control | ROS2 Humble, FAST-LIO2, Livox MID-360, Gazebo |
-
+| [Robocon MID-360 Autonomy Stack](projects/robocon-mid360-autonomy-stack/) | Simulation-first ROS2 autonomy for competition robots: Livox MID-360 simulation, FAST-LIO2 mapping, scan-to-map localization, perception gating, action arbitration, safety-aware control | ROS2 Humble, FAST-LIO2, Livox MID-360, Gazebo |
 | [AeroCityBench](aerocitybench/) | Open, procedural, physics-based benchmark for multi-agent urban search under partial observability | Python |
-
 | [ECRTA-C2](ecrta-c2/) | Semantically valid, execution-aware task reallocation for robust decentralized multi-agent exploration | C++ |
-
 | [MD-QD-Swarm](md-qd-swarm/) | Quality-diversity search with descriptor calibration for multi-agent task design | Python |
-
 | [ROS2 Learning Notes](ros2-systematic-learning-notes/) | Systematic handbook: ROS2, DDS/QoS, TF2, Nav2, MoveIt2, multi-robot, embedded & cloud robotics | Handbook + PDF |
 
 
@@ -127,17 +113,11 @@ Independent projects kept as evidence of hands-on engineering across web develop
 
 
 | Folder | Area | Stack |
-
 |---|---|---|
-
 | [Supermarket Management System](coursework/supermarket-management-system/) | Full-featured store management system (products, inventory, checkout, finance, members, suppliers) | Flask, SQLAlchemy, SQLite, pytest (100% coverage) |
-
 | [Stream-Batch Lakehouse AI Portfolio](coursework/stream-batch-lakehouse-ai-portfolio/) | Four stream-batch big-data labs: lakehouse, streaming, AI recommender, short-video review | Kafka, Flink, MinIO, Paimon, Spark |
-
 | [Classic ML Algorithms](coursework/classic-ml-algorithms/) | Ten classic algorithms implemented from scratch | Python, NumPy, UCI datasets |
-
 | [ML Assignment 3](coursework/ml-assignment-3/) | PCA/LDA dimensionality reduction + from-scratch kNN & ID3 on Iris/Wine | Python, NumPy, scikit-learn, matplotlib |
-
 | [YOLO26 + VisDrone Detection](coursework/yolo26-visdrone-detection/) | Drone object detection: VisDrone subset, YOLO26 training, validation, ONNX export | YOLO26 (Ultralytics), VisDrone |
 
 
@@ -172,4 +152,3 @@ Independent projects kept as evidence of hands-on engineering across web develop
 
 
 *Portfolio maintained in English. Last updated: 2026-08.*
-

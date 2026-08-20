@@ -1,0 +1,13 @@
+/**:
+  ros__parameters:
+    target_x: 4.0
+    target_y: 15.0
+    pose_topic: /mid360/localization_odometry
+    pose_valid_topic: /mid360/pose_valid
+    map_locked_topic: /mid360/map_locked
+    command_topic: /robocon/control/pose_target
+    max_pose_age_sec: 0.30
+    publish_hz: 10.0
+    serial_enabled: false
+    serial_port: /dev/ttyESP
+    serial_baudrate: 115200

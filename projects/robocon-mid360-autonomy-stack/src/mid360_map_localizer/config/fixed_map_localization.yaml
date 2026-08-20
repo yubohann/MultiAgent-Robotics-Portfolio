@@ -1,0 +1,27 @@
+/**:
+  ros__parameters:
+    map_file: ""
+    min_map_points: 500
+    map_frame: map
+    odom_frame: odom
+    base_frame: base_link
+    scan_topic: /mid360/cloud_registered_reliable
+    odom_topic: /mid360/local_odometry
+    initialpose_topic: /initialpose
+    correction_topic: /mid360/map_to_odom_correction
+    diagnostic_topic: /mid360/map_localization_diagnostics
+    expected_scan_frame: ""
+    require_scan_frame: false
+    min_scan_points: 80
+    max_scan_points: 30000
+    voxel_leaf_size: 0.12
+    map_voxel_leaf_size: 0.12
+    max_correspondence_distance: 1.5
+    max_iterations: 30
+    transformation_epsilon: 0.0001
+    euclidean_fitness_epsilon: 0.001
+    max_fitness_score: 0.40
+    max_translation_jump_m: 0.80
+    max_yaw_jump_deg: 25.0
+    min_odom_freshness_sec: 0.30
+    publish_correction_hz: 10.0
