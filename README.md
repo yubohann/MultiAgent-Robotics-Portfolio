@@ -82,9 +82,9 @@ My work sits at the intersection of multi-agent decision-making, RL, and embodie
 | [AeroGate Graph](aerogate-graph/) | Method framework for graph-based RL in dense, dynamic drone gate traversal (single-agent + 8-drone formation) | Python, RL, graph learning, multi-agent |
 | [FraudGraph ML Engineering](fraudgraph-ml-engineering/) | Method framework for graph-and-sequence fraud detection engineering (research pipeline withheld) | Python, graph learning, sequence modeling |
 | [Robocon MID-360 Autonomy Stack](robocon-mid360-autonomy-stack/) | Simulation-first ROS2 autonomy for competition robots: Livox MID-360 simulation, FAST-LIO2 mapping, scan-to-map localization, perception gating, action arbitration, safety-aware control | ROS2 Humble, FAST-LIO2, Livox MID-360, Gazebo |
-| [AeroCityBench](aerocitybench/) | Open, procedural, physics-based benchmark for multi-agent urban search under partial observability | Python |
-| [ECRTA-C2](ecrta-c2/) | Semantically valid, execution-aware task reallocation for robust decentralized multi-agent exploration | C++ |
-| [MD-QD-Swarm](md-qd-swarm/) | Quality-diversity search with descriptor calibration for multi-agent task design | Python |
+| AeroCityBench | Open, procedural, physics-based benchmark for multi-agent urban search under partial observability | Python |
+| ECRTA-C2 | Semantically valid, execution-aware task reallocation for robust decentralized multi-agent exploration | C++ |
+| MD-QD-Swarm | Quality-diversity search with descriptor calibration for multi-agent task design | Python |
 | [ROS2 Learning Notes](ros2-systematic-learning-notes/) | Systematic handbook: ROS2, DDS/QoS, TF2, Nav2, MoveIt2, multi-robot, embedded & cloud robotics | Handbook + PDF |
 
 
