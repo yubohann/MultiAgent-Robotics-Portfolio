@@ -116,8 +116,7 @@ Independent projects kept as evidence of hands-on engineering across web develop
 |---|---|---|
 | [Supermarket Management System](coursework/supermarket-management-system/) | Full-featured store management system (products, inventory, checkout, finance, members, suppliers) | Flask, SQLAlchemy, SQLite, pytest (100% coverage) |
 | [Stream-Batch Lakehouse AI Portfolio](coursework/stream-batch-lakehouse-ai-portfolio/) | Four stream-batch big-data labs: lakehouse, streaming, AI recommender, short-video review | Kafka, Flink, MinIO, Paimon, Spark |
-| [Classic ML Algorithms](coursework/classic-ml-algorithms/) | Ten classic algorithms implemented from scratch | Python, NumPy, UCI datasets |
-| [ML Assignment 3](coursework/ml-assignment-3/) | PCA/LDA dimensionality reduction + from-scratch kNN & ID3 on Iris/Wine | Python, NumPy, scikit-learn, matplotlib |
+| [Machine Learning Coursework](coursework/machine-learning/) | Consolidated classic algorithms and Assignment 3 projects | Python, NumPy, scikit-learn, matplotlib, UCI datasets |
 | [YOLO26 + VisDrone Detection](coursework/yolo26-visdrone-detection/) | Drone object detection: VisDrone subset, YOLO26 training, validation, ONNX export | YOLO26 (Ultralytics), VisDrone |
 
 
