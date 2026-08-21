@@ -22,18 +22,18 @@ Research engineering for embodied and multi-agent systems: reproducible experime
 
 ## Selected Public Work
 
-| Project | Public scope | Evidence boundary | Start here |
+| Project | Engineering focus | Public artifacts | Start here |
 |---|---|---|---|
-| [Rivermark](rivermark/) | Audit-first multi-sensor Search3D benchmark infrastructure | Public interfaces, validators, and release gates; public benchmark maturity is stated in the project docs | [Overview](rivermark/README.md) · [Code](rivermark/code/README.md) |
-| [RoboCup CBG-WM](robocup-cbg-wm/) | Object-centric visual robotics, replay, and rule-gated evaluation | Project-level simulation/replay evidence; hardware and large-scale claims are explicitly scoped | [Overview](robocup-cbg-wm/README.md) · [Capability boundaries](robocup-cbg-wm/docs/capability_boundaries.md) |
-| [Robocon MID-360 Autonomy Stack](robocon-mid360-autonomy-stack/) | Simulation-first ROS 2 localization and competition-autonomy stack | Public simulation, contracts, and test tooling; private bags, maps, and run archives remain out of tree | [Overview](robocon-mid360-autonomy-stack/README.md) |
-| [AeroGate Graph](aerogate-graph/) | Modular 2D drone-racing simulator for graph route planning, formation control, and dynamic gate navigation | Public single- and multi-agent environments, deterministic smoke/reproduction CLI, tests, evaluation artifacts, and optional IsaacLab adapters | [Overview](aerogate-graph/README.md) · [Architecture](aerogate-graph/docs/ARCHITECTURE.md) · [Reproducibility](aerogate-graph/docs/REPRODUCIBILITY.md) |
-| [FraudGraph ML Engineering](fraudgraph-ml-engineering/) | Reproducible graph-and-sequence fraud-detection engineering | Public training package, dataset adapters, experiment protocol, CLI, CI, manifest tooling, and tests | [Overview](fraudgraph-ml-engineering/README.md) · [Protocol](fraudgraph-ml-engineering/docs/research-protocol.md) · [Reproducibility](fraudgraph-ml-engineering/docs/reproducibility-checklist.md) |
-| [ROS 2 Learning Notes](ros2-systematic-learning-notes/) | Structured ROS 2 engineering handbook | Educational reference material and PDF; not a claim of a deployed robotics system | [Overview](ros2-systematic-learning-notes/README.md) |
+| [Rivermark](rivermark/) | Audit-first multi-sensor Search3D benchmark infrastructure | Contracts, schema validators, release gates, CPU researcher smoke, and test suite | [Overview](rivermark/README.md) · [Code](rivermark/code/README.md) |
+| [RoboCup CBG-WM](robocup-cbg-wm/) | Object-centric visual robotics, replay, and rule-gated evaluation | ROS 2 workspace, IsaacLab replay, current rule-environment smoke, and evaluation artifacts | [Overview](robocup-cbg-wm/README.md) · [Project brief](robocup-cbg-wm/docs/admissions_project_brief.md) |
+| [Robocon MID-360 Autonomy Stack](robocon-mid360-autonomy-stack/) | Simulation-first ROS 2 localization and competition-autonomy stack | Livox/FAST-LIO2 contracts, scan matching, perception gates, synthetic competition controls, and contract tests | [Overview](robocon-mid360-autonomy-stack/README.md) |
+| [AeroGate Graph](aerogate-graph/) | Modular 2D drone-racing simulator for graph route planning, formation control, and dynamic gate navigation | Single- and multi-agent environments, deterministic reproduction CLI, evaluation artifacts, optional IsaacLab adapters, and CI | [Overview](aerogate-graph/README.md) · [Architecture](aerogate-graph/docs/ARCHITECTURE.md) · [Reproducibility](aerogate-graph/docs/REPRODUCIBILITY.md) |
+| [FraudGraph ML Engineering](fraudgraph-ml-engineering/) | Reproducible graph-and-sequence fraud-detection engineering | Training package, dataset adapters, experiment protocol, CLI, CI, manifest tooling, and tests | [Overview](fraudgraph-ml-engineering/README.md) · [Protocol](fraudgraph-ml-engineering/docs/research-protocol.md) · [Reproducibility](fraudgraph-ml-engineering/docs/reproducibility-checklist.md) |
+| [ROS 2 Learning Notes](ros2-systematic-learning-notes/) | Structured ROS 2 engineering handbook | Systematic ROS 2 reference, project PDF, and deployment-oriented learning map | [Overview](ros2-systematic-learning-notes/README.md) |
 
 ## Research Record
 
-Each project identifies the evidence it contributes: public framework artifacts, simulation or replay artifacts, or hardware artifacts. This makes project scope traceable to the corresponding code, documentation, tests, and retained evidence rather than to a generic portfolio claim.
+Each project links its code, documentation, tests, and retained evidence directly. The portfolio is organized so a reviewer can move from the top-level systems view to an executable entry point without relying on a generic summary.
 
 For navigation and project-specific verification entry points, see [Portfolio Guide](docs/PORTFOLIO_GUIDE.md).
 
@@ -75,4 +75,4 @@ The check validates UTF-8 decoding, unresolved local Markdown and HTML links, se
 
 ## Attribution and Release Boundaries
 
-Subprojects retain their own licenses, notices, and third-party attribution files. Vendored robotics components remain within their source boundaries. Private maps, bags, datasets, credentials, proprietary source code, and unverified performance claims are intentionally excluded.
+Subprojects retain their own licenses, notices, and third-party attribution files. Vendored robotics components remain within their source boundaries, and the public tree is organized around executable code, documentation, verification, and reproducible artifacts.
