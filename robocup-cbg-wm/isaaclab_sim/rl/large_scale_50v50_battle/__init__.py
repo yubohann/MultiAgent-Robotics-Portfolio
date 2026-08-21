@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib import import_module
+
 from .config import (
     BattleConfig,
     DATA_DIR,
@@ -14,28 +16,31 @@ from .config import (
 from .sim import (
     LargeScaleBattle50v50
 )
-from .train import (
-    evaluate,
-    load_checkpoint,
-    side_fitness,
-    summarize_episodes,
-    train
-)
-from .render import (
-    _font,
-    render_frame,
-    render_video,
-    world_to_px
-)
-from .report import (
-    make_figures,
-    write_report
-)
-from .cli import (
-    build_parser,
-    main,
-    run_all
-)
+
+_LAZY_EXPORTS = {
+    "evaluate": ("train", "evaluate"),
+    "load_checkpoint": ("train", "load_checkpoint"),
+    "side_fitness": ("train", "side_fitness"),
+    "summarize_episodes": ("train", "summarize_episodes"),
+    "train": ("train", "train"),
+    "_font": ("render", "_font"),
+    "render_frame": ("render", "render_frame"),
+    "render_video": ("render", "render_video"),
+    "world_to_px": ("render", "world_to_px"),
+    "make_figures": ("report", "make_figures"),
+    "write_report": ("report", "write_report"),
+    "build_parser": ("cli", "build_parser"),
+    "main": ("cli", "main"),
+    "run_all": ("cli", "run_all"),
+}
+
+
+def __getattr__(name: str):
+    try:
+        module_name, attribute = _LAZY_EXPORTS[name]
+    except KeyError as error:
+        raise AttributeError(name) from error
+    return getattr(import_module(f".{module_name}", __name__), attribute)
 
 __all__ = [
     'BattleConfig',

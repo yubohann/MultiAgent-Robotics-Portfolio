@@ -103,6 +103,8 @@ cd isaaclab_sim/rl
 python evaluate_selfplay.py --episodes 8
 ```
 
+The public rule environment includes its own arena geometry and synthetic target configuration. No external dataset is required for rule-environment tests, self-play smoke runs, or the 50v50 rule simulator.
+
 IsaacLab preview on Windows should be launched through the project wrapper so
 Kit writes user config, logs, pip envs and extension cache under
 `.isaaclab_runtime/` instead of sharing the global Isaac Sim runtime directory:

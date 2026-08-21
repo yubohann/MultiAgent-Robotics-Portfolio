@@ -103,6 +103,18 @@ python scripts/run_ieee_acceptance_matrix.py --help
 python scripts/run_ieee_splitgnn_tuning.py --help
 ```
 
+## Reproduction Workflow
+
+Use the following sequence after placing an authorized source dataset in the documented `data/` layout:
+
+```powershell
+python scripts/validate_repository.py
+python -m pytest
+python scripts/run_splitgnn_smoke_suite.py --dataset comp --device cpu
+```
+
+The smoke workflow verifies the training and evaluation path on its configured lightweight dataset route. Mainline, ablation, tuning, and report commands remain in `scripts/` and use their explicit configuration files.
+
 ## Record run provenance
 
 Create a dependency-light manifest before a long experiment to preserve the Git revision, runtime, dataset, seed, configuration reference, and exact command:

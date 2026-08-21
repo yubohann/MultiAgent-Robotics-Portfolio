@@ -6,6 +6,10 @@ try:
     import gymnasium as gym
     from gymnasium import spaces
 except ModuleNotFoundError:  # pragma: no cover - mirrors the single-agent fallback.
+    class _Env:
+        def reset(self, seed: int | None = None):
+            self.np_random = np.random.default_rng(seed)
+
     class _Box:
         def __init__(self, low, high, dtype=None):
             self.low = np.asarray(low, dtype=dtype)
@@ -20,7 +24,7 @@ except ModuleNotFoundError:  # pragma: no cover - mirrors the single-agent fallb
         Box = _Box
 
     class _Gym:
-        pass
+        Env = _Env
 
     gym = _Gym()
     spaces = _Spaces()

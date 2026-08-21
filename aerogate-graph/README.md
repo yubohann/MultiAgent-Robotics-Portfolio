@@ -19,7 +19,7 @@ checkpoints, and evaluation artifacts.
 - Variable-team graph observations, formation slots, safety shielding, and A* route planning.
 - Graph-SAC and Graph-MASAC implementation paths, with behavior-cloning and DAgger utilities.
 - Standalone NumPy environment tests plus optional PyTorch training and Isaac Lab replay adapters.
-- Git LFS tracking for USD assets and released model checkpoints.
+- Optional local asset and checkpoint packs for IsaacLab replay and checkpoint-driven evaluation.
 
 ## Quick Start
 
@@ -28,8 +28,6 @@ checkpoints, and evaluation artifacts.
 Install [uv](https://docs.astral.sh/uv/) and use the committed lockfile:
 
 ~~~powershell
-git lfs install
-git lfs pull
 uv sync --extra dev
 uv run python -m aerogate info
 uv run python -m aerogate smoke --scenario single-static --steps 8
@@ -42,6 +40,8 @@ Create a portable, deterministic core-environment evidence report:
 ~~~powershell
 uv run python -m aerogate reproduce --scenario multi-static --agents 4 --seeds 3 7 11 --steps 8 --output artifacts/reproducibility/multi-static.json
 ~~~
+
+The included core environments generate their own gate layouts and require no external dataset for smoke tests or deterministic reproduction checks.
 
 The report records exact rollout diagnostics and core runtime versions. See
 [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the protocol, expected scope, and
