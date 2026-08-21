@@ -28,9 +28,10 @@ Run the root portfolio check after editing entry documents:
 
 ```bash
 python tools/verify_portfolio.py
+python tools/run_portfolio_checks.py
 ```
 
-It intentionally checks only the curated entry documents. Each project owns its own build, dependency, simulation, and test commands; this avoids claiming that a single root command validates unrelated runtimes.
+The first command checks curated entry documents. The second runs the dependency-light verification path for each core project while keeping training, ROS, Isaac, and external-data workflows separate.
 
 ## Change Discipline
 

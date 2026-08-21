@@ -71,7 +71,13 @@ The repository includes a dependency-free check for its curated portfolio docume
 python tools/verify_portfolio.py
 ```
 
-The check validates UTF-8 decoding, unresolved local Markdown and HTML links, selected image paths, and unresolved conflict markers in the portfolio entry documents. Project-specific tests and build commands remain documented inside each project.
+Run the project-wide lightweight suite with:
+
+```bash
+python tools/run_portfolio_checks.py
+```
+
+The first command validates UTF-8 decoding, unresolved local Markdown and HTML links, selected image paths, and unresolved conflict markers in the portfolio entry documents. The second command runs the lightweight validation paths for AeroGate, FraudGraph, MID-360, RoboCup, and Rivermark without starting training, ROS, Isaac, or external-data workflows.
 
 ## Attribution and Release Boundaries
 
