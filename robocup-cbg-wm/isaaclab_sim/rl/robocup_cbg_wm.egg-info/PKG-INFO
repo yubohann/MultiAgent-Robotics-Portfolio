@@ -1,3 +1,24 @@
+Metadata-Version: 2.4
+Name: robocup-cbg-wm
+Version: 0.1.0
+Summary: Rule-constrained multi-robot visual-navigation environments and replay tooling.
+License: MIT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.24
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Provides-Extra: training
+Requires-Dist: gymnasium>=0.29; extra == "training"
+Requires-Dist: imageio>=2.37; extra == "training"
+Requires-Dist: imageio-ffmpeg>=0.6; extra == "training"
+Requires-Dist: matplotlib>=3.8; extra == "training"
+Requires-Dist: PyYAML>=6.0; extra == "training"
+Requires-Dist: stable-baselines3>=2.3; extra == "training"
+Requires-Dist: torch>=2.2; extra == "training"
+Dynamic: license-file
+
 # Uncertainty-Aware Counterfactual Belief-Graph World Model for Rule-Constrained Multi-Robot Tactics
 
 [![ROS2 Jazzy](https://img.shields.io/badge/ROS2-Jazzy-2563EB)](https://docs.ros.org/en/jazzy/)

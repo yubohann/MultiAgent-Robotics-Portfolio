@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robocup-cbg-wm"
+version = "0.1.0"
+description = "Rule-constrained multi-robot visual-navigation environments and replay tooling."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+training = [
+  "gymnasium>=0.29",
+  "imageio>=2.37",
+  "imageio-ffmpeg>=0.6",
+  "matplotlib>=3.8",
+  "PyYAML>=6.0",
+  "stable-baselines3>=2.3",
+  "torch>=2.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["isaaclab_sim/rl"]
+include = [
+  "experiments*",
+  "large_scale_50v50_battle*",
+  "planning*",
+  "policies*",
+  "replay*",
+  "robocup_visionrl_gym_env*",
+  "robocup_visionrl_selfplay_env*",
+  "world_model*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
