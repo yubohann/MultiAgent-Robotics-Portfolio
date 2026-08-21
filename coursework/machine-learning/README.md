@@ -1,19 +1,33 @@
 # Machine Learning Coursework
 
-This directory consolidates two self-contained machine-learning coursework projects that were previously maintained as standalone repositories. Each project keeps its own source code, datasets, results, and project-level README.
+[English](README.md) | [简体中文](README.zh-CN.md)
+
+This directory consolidates two self-contained machine-learning coursework projects. The original project folders, source code, datasets, reports, generated figures, and result tables are retained under one stable portfolio path.
+
+## Projects
 
 | Project | Scope | Stack |
 |---|---|---|
-| [Classic ML Algorithms](classic-ml-algorithms/) | Ten algorithms implemented from scratch: AdaBoost, Apriori, C4.5, CART, EM, K-means, kNN, Naive Bayes, PageRank, and SVM | Python, NumPy, UCI datasets |
-| [ML Assignment 3](ml-assignment-3/) | PCA and LDA dimensionality reduction plus from-scratch kNN and ID3 on Iris and Wine | Python, NumPy, scikit-learn, matplotlib |
+| [Classic ML Algorithms](classic-ml-algorithms/) | Ten from-scratch implementations spanning ensembles, trees, clustering, association rules, and PageRank | Python, NumPy, public datasets |
+| [ML Assignment 3](ml-assignment-3/) | PCA/LDA, an Iris kNN sweep, and a Wine kNN-versus-ID3 comparison | Python, NumPy, pandas, scikit-learn, matplotlib |
+
+## Assignment 3 Preview
+
+<p align="center">
+  <a href="ml-assignment-3/results/pca_visualization.png"><img src="ml-assignment-3/results/pca_visualization.png" alt="PCA projection" width="49%" /></a>
+  <a href="ml-assignment-3/results/knn_accuracy_vs_k.png"><img src="ml-assignment-3/results/knn_accuracy_vs_k.png" alt="kNN accuracy sweep" width="49%" /></a>
+</p>
+
+The figures remain in `ml-assignment-3/results/` and are linked from the assignment README. They were moved with the project; they were not removed.
 
 ## Layout
 
 ```text
 machine-learning/
   README.md
+  README.zh-CN.md
   classic-ml-algorithms/
   ml-assignment-3/
 ```
 
-Run instructions, dependencies, generated results, and project-specific limitations are documented in each child project's README.
+Use each child README for setup, run commands, generated artifacts, and scope limits.

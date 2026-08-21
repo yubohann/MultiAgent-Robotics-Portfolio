@@ -1,139 +1,65 @@
-# Classic Machine Learning Algorithms — From Scratch
+# Classic Machine Learning Algorithms
 
+[English](README.md) | [简体中文](README.zh-CN.md)
 
+Ten classical machine-learning algorithms implemented from scratch for coursework. The implementations use NumPy or the Python standard library for the algorithm logic; they do not wrap equivalent estimator implementations from an ML library.
 
-**Ten classic machine learning algorithms implemented from scratch** with NumPy / the Python standard library: AdaBoost, Apriori, C4.5, CART, EM, K-means, KNN, Naive Bayes, PageRank, and SVM.
+## Scope
 
+| Item | Detail |
+|---|---|
+| Author | Bohan Yu |
+| Course | Machine Learning |
+| Focus | Supervised learning, clustering, association-rule mining, and graph algorithms |
+| Runtime | Python 3.8+ and NumPy |
+| Evidence | Per-algorithm source code, public datasets, lab reports, and runnable scripts |
 
-
-This is my coursework for the *Machine Learning* course at [REDACTED]. Each algorithm was written by me — not wrapped from a library — and comes with its own lab report (in the per-algorithm `README.md`), a public dataset, and a runnable script.
-
-
-
-## About this work
-
-
-
-- **Author**: Bohan Yu (Bohan Yu)
-
-- **Course**: Machine Learning — ten classic algorithms (机器学习十大算法)
-
-- **What it is**: ten independent implementations, one per folder, each with source code, dataset, and a detailed lab report covering the math, the implementation, the experiments, and the analysis.
-
-- **Why from scratch**: writing entropy, information gain, gradient updates, and EM iterations by hand is the fastest way to actually understand when an algorithm works and when it breaks.
-
-
-
-## Algorithm list
-
-
+## Algorithms
 
 | # | Algorithm | Category | Dataset | Core idea |
+|---:|---|---|---|---|
+| 1 | [AdaBoost](AdaBoost/) | Ensemble learning | Magic Gamma | Decision stumps with adaptive sample weighting |
+| 2 | [Apriori](Apriori/) | Association rules | Groceries | Frequent-itemset mining and confidence-based rules |
+| 3 | [C4.5](C4.5/) | Decision tree | WDBC | Gain-ratio splitting, continuous-feature handling, and pruning |
+| 4 | [CART](CART/) | Decision tree | Wine Quality | Gini-impurity splitting for classification and regression trees |
+| 5 | [EM](EM/) | Clustering | Congressional Voting | Expectation-maximization for Gaussian mixtures |
+| 6 | [K-means](K-means/) | Clustering | Iris | k-means++ initialization and iterative convergence |
+| 7 | [kNN](KNN/) | Classification | Iris | Distance metrics and majority voting |
+| 8 | [Naive Bayes](Naive_Bayes/) | Classification | 20 Newsgroups | Multinomial model with Laplace smoothing |
+| 9 | [PageRank](PageRank/) | Graph algorithm | Sample web graph | Power iteration with damping |
+| 10 | [SVM](SVM/) | Classification | Iris | Multiclass margin-based optimization |
 
-| --- | --- | --- | --- | --- |
-
-| 1 | [AdaBoost](./AdaBoost) | Ensemble learning | Magic Gamma | Decision-stump weak learners + adaptive sample weighting |
-
-| 2 | [Apriori](./Apriori) | Association rules | Groceries | Frequent itemset mining + confidence-based rule generation |
-
-| 3 | [C4.5](./C4.5) | Decision tree | WDBC | Gain-ratio splitting + continuous-feature discretization + pruning |
-
-| 4 | [CART](./CART) | Decision tree | Wine Quality | Gini-impurity splitting (classification & regression trees) |
-
-| 5 | [EM](./EM) | Clustering | Congressional voting | Expectation-maximization for Gaussian mixtures |
-
-| 6 | [K-means](./K-means) | Clustering | Iris | kmeans++ initialization + iterative convergence |
-
-| 7 | [KNN](./KNN) | Classification | Iris | Euclidean / Manhattan / Chebyshev distance + majority vote |
-
-| 8 | [Naive_Bayes](./Naive_Bayes) | Classification | 20 Newsgroups | Multinomial naive Bayes + Laplace smoothing |
-
-| 9 | [PageRank](./PageRank) | Graph algorithm | Web link graph | Power iteration + damping factor |
-
-| 10 | [SVM](./SVM) | Classification | Iris | Perceptron-style loss + gradient descent + multiclass |
-
-
-
-## Layout
-
-
+## Repository Layout
 
 ```text
-
-<Algorithm>/
-
-├── src/          # from-scratch implementation (CLI included)
-
-├── data/         # public dataset (UCI, etc.)
-
-├── README.md     # lab report: theory, implementation, experiments, analysis
-
-└── *.pdf         # course lab report
-
+classic-ml-algorithms/
+  <algorithm>/
+    src/        # Implementation and CLI entry point
+    data/       # Public dataset or metadata
+    README.md   # Algorithm-specific lab report
+    *.pdf       # Original course report, where available
 ```
 
+## Run Examples
 
-
-Each algorithm runs independently, e.g.:
-
-
+Run commands from this directory:
 
 ```bash
-
 python AdaBoost/src/AdaBoost.py -f AdaBoost/data/magic04.data
-
 python Apriori/src/Apriori.py -f Apriori/data/archive/Groceries_dataset.csv
-
 python C4.5/src/C4.5.py -f C4.5/data/wdbc.data
-
 python CART/src/CART.py -f CART/data/winequality-red.csv
-
 python EM/src/EM.py -f EM/data/house-votes-84.data
-
 python K-means/src/K-means.py -f K-means/data/iris.data
-
 python KNN/src/KNN.py -f KNN/data/iris.data
-
-python Naive_Bayes/src/Naive_Bayes.py -f Naive_Bayes/data/20news-18828
-
 python PageRank/src/PageRank.py --sample
-
 python SVM/src/SVM.py -f SVM/data/iris.data
-
 ```
 
+The 20 Newsgroups corpus used by Naive Bayes is not committed in full. Supply a local dataset path or use the project's documented data-loading route.
 
+## Notes
 
-> Note: the 20 Newsgroups dataset (~18k documents) for Naive_Bayes is not
-
-> committed; point `-f` at a local copy or let the script fetch it via
-
-> scikit-learn.
-
-
-
-Requires Python 3.8+ and `numpy` (a few algorithms use only the standard
-
-library).
-
-
-
----
-
-
-
-## 中文说明
-
-
-
-十个经典机器学习算法的从零实现（AdaBoost / Apriori / C4.5 / CART / EM /
-
-K-means / KNN / 朴素贝叶斯 / PageRank / SVM），仅依赖 NumPy 或标准库。
-
-每个算法目录内含源码、数据集和完整实验报告。课程：机器学习十大算法，
-
-，Bohan Yu。
-
-
-
-*Bohan Yu — Machine Learning course.*
+- Each algorithm is independently runnable and documented in its own directory.
+- The reports and datasets are coursework artifacts, not claims of production-ready or state-of-the-art implementations.
+- See the parent [Machine Learning Coursework index](../README.md) for the related PCA/LDA and classifier assignment.
