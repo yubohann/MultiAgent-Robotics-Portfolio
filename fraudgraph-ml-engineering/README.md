@@ -1,61 +1,24 @@
 # FraudGraph ML Engineering
 
-**A method framework for graph-and-sequence fraud detection engineering across financial transaction datasets.**
+**A reproducible engineering portfolio for graph-and-sequence fraud detection across financial transaction datasets.**
 
-> **Notice**: this is the *method-framework* repository. The core research
-> implementation (graph/sequence encoders, fusion classifier, federated
-> controller, dataset scheduler, and dataset feature engineering) is part of
-> an in-preparation paper and is withheld until publication. See
-> [NOTICE.md](NOTICE.md) and [core/](core/).
+FraudGraph ML Engineering packages the complete research code behind a hybrid `SplitGNN + Transformer` fraud-detection workflow. It constructs graph, relation-sequence, and event-sequence views; trains a multimodal classifier; records experiment artifacts; and provides repeatable protocol scripts for smoke tests, ablations, tuning, and report generation.
 
-> **Publication status**: the associated paper is under review and has **not
-> been published yet**. Quantitative results and the core implementation are
-> therefore **not shown** in this repository; they will be released publicly
-> together with the paper once it is out.
-
-> **Open-source plan**: full open-source (complete implementation + results)
-> is planned for the **end of October 2026**.
-
-FraudGraph ML Engineering frames fraud detection as a **multi-view** problem:
-the same transaction record can be read as a node in a relational graph, as
-ordered behavioural sequences, and as an event stream. The framework
-constructs graph, relation-sequence, and event-sequence views; fuses them into
-a classifier; and orchestrates training with a federated-style controller and
-a dataset scheduler — all under a strict reproducibility protocol.
-
-The repository distributes the **method framework**: the research questions,
-the protocol, the architecture, dependency-light engineering utilities, and
-the public API surface of each research component. Implementations ship with
-the paper.
-
-This is a source-available engineering repository, not a redistributed dataset
-or pretrained-model release. Dataset files, generated graphs, checkpoints,
-TensorBoard logs, and experimental outputs remain local by design.
+This is a source-available engineering repository, not a redistributed dataset or pretrained-model release. Dataset files, generated graphs, checkpoints, TensorBoard logs, and experimental outputs remain local by design.
 
 [View the architecture diagram source](docs/architecture.mmd)
 
-Research framing, executable protocol mapping, evaluation rules, and
-replication boundaries are documented in
-[docs/research-protocol.md](docs/research-protocol.md),
-[docs/experiment-catalog.md](docs/experiment-catalog.md), and
-[docs/reproducibility-checklist.md](docs/reproducibility-checklist.md).
-The method framework is described in [docs/methodology.md](docs/methodology.md).
-Citation metadata is provided in [CITATION.cff](CITATION.cff).
+Research framing, executable protocol mapping, evaluation rules, and replication boundaries are documented in [docs/research-protocol.md](docs/research-protocol.md), [docs/experiment-catalog.md](docs/experiment-catalog.md), and [docs/reproducibility-checklist.md](docs/reproducibility-checklist.md). Citation metadata is provided in [CITATION.cff](CITATION.cff).
 
 ## What is included
 
-- The **method framework** — research questions, protocol, architecture, and
-  engineering discipline.
-- Dependency-light engineering utilities — repository paths, run artifacts,
-  experiment protocol helpers, and a framework validator.
-- The **withheld API surface** — `core/` declares the role and interface of
-  each research component; implementations ship with the paper.
-- A lightweight CI quality gate that runs on every push and pull request
-  across Python 3.10 and 3.12.
-
-The framework is described in [docs/methodology.md](docs/methodology.md) and
-[docs/architecture.mmd](docs/architecture.mmd); the research protocol lives in
-[docs/research-protocol.md](docs/research-protocol.md).
+- A deterministic hybrid training pipeline with graph, sequence, and fusion branches.
+- Dataset adapters for IEEE-CIS, Elliptic, AMLSim, credit-card fraud, DeFi, Ethereum phishing, Ethereum Ponzi, and DeFi rug-pull data.
+- A vendored SplitGNN encoder integration, with attribution in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- Dataset registry, run artifacts, checkpoint compatibility, evaluation, inference, embedding analysis, and TensorBoard auditing utilities.
+- Focused experiment scripts for smoke tests, mainline runs, fusion/low-label ablations, IEEE-CIS acceptance checks, tuning, and paper-package reporting.
+- Pinned CPU and CUDA 12.1 environment definitions.
+- A lightweight CI quality gate that runs on every push and pull request across Python 3.10 and 3.12.
 
 ## Research profile
 
@@ -82,48 +45,75 @@ python scripts/validate_repository.py
 ## Repository layout
 
 ```text
-src/fraud_ml_engineering/     Installable package: paths, run artifacts, protocol helpers, CLI surface
-core/                         Withheld research components (API surface + role documentation)
-scripts/                      Framework validation command
-docs/                         Architecture, research protocol, and engineering notes
-tests/                        Dependency-light structural and utility tests
+src/fraud_ml_engineering/     Installable package and training CLI
+src/.../vendor/splitgnn/      SplitGNN research encoder integration
+configs/                      Dataset and experiment configurations
+scripts/                      Reproducible experiment and reporting commands
+data/                         Local-only datasets and generated DGL graphs
+artifacts/                    Local-only checkpoints, logs, reports, and outputs
+docs/                         Architecture, data contract, and engineering notes
+tests/                        Fast structural and path-contract tests
 ```
 
 ## Environment
 
-Use Python 3.10 through 3.12. The framework repository itself has **no ML
-runtime dependency** — the included utilities, validator, and tests run on a
-plain interpreter. The full graph-learning runtime is only required by the
-withheld core, which ships with the paper.
+Use Python 3.10 through 3.12. The CPU profile is suitable for code checks and small previews. Training realistic graph workloads benefits from the CUDA 12.1 profile.
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e .[dev]
+python -m pip install -r requirements/requirements-cpu.txt
 ```
 
-Verify the framework:
+For CUDA 12.1, create the environment appropriate to the target GPU, then install the pinned profile:
 
 ```powershell
-python scripts/validate_repository.py
-python -m pytest
+python -m pip install -r requirements/requirements-cu121.txt
+python -m pip install -e .[dev] --no-deps
 ```
 
-## Using the framework
+## Data setup
 
-The framework package exposes the engineering surface: repository-local path
-resolution, run-artifact creation, and experiment-protocol helpers. The CLI
-documents the public command surface; invoking a withheld pipeline reports
-the redaction notice.
+Place externally obtained source data beneath `data/`, following the dataset-specific layout in [docs/data-and-reproduction.md](docs/data-and-reproduction.md). Graph cache files are created under `data/graphs/`; experiment outputs go to `artifacts/`. These locations are intentionally ignored by Git.
+
+## Run the pipeline
+
+After preparing a dataset, use the package CLI. The exact flags available for every dataset are documented by the command itself.
 
 ```powershell
 python -m fraud_ml_engineering --help
-python -m fraud_ml_engineering --dry-run
+
+# Elliptic example
+python -m fraud_ml_engineering --dataset elliptic --rounds 1 --local_epochs 1 --disable_tb
+
+# IEEE-CIS cache construction example
+python -m fraud_ml_engineering --dataset ieee --ieee_build_cache_only --ieee_data_root data/ieee_cis
 ```
 
-The withheld core ships with the paper and plugs into this surface unchanged:
-`core/` declares each component's role and interface.
+The focused engineering workflows are available as scripts:
+
+```powershell
+python scripts/run_splitgnn_smoke_suite.py --dataset comp --device cpu
+python scripts/run_hybrid_mainline_protocol.py --help
+python scripts/run_hybrid_fusion_ablation.py --help
+python scripts/run_hybrid_low_label_mechanism_ablation.py --help
+python scripts/run_ieee_acceptance_matrix.py --help
+python scripts/run_ieee_splitgnn_tuning.py --help
+```
+
+## Record run provenance
+
+Create a dependency-light manifest before a long experiment to preserve the Git revision, runtime, dataset, seed, configuration reference, and exact command:
+
+```powershell
+python scripts/record_run_manifest.py --output artifacts/elliptic/manifest.json --dataset elliptic --seed 42 --config configs/experiments/onchain_main_selection.yaml -- python -m fraud_ml_engineering --dataset elliptic --rounds 20 --local_epochs 2 --disable_tb
+```
+
+The command records metadata only; it does not start training. See [docs/experiment-manifest.md](docs/experiment-manifest.md) for the schema and handling guidance.
+
+Use [docs/comparison-report-schema.md](docs/comparison-report-schema.md) when consolidating completed results. Its report generator accepts only explicit, validation-selected records with a stated data revision and split policy; it never searches for or promotes historical best runs.
 
 ## Verification
 
@@ -131,6 +121,9 @@ The withheld core ships with the paper and plugs into this surface unchanged:
 python scripts/validate_repository.py
 python -m pytest
 python -m compileall -q src scripts tests
+python -m build
+python -m pip install --force-reinstall --no-deps dist/*.whl
+python -m fraud_ml_engineering --help
 ```
 
 The test suite is deliberately dependency-light: it validates the package layout, path contract, configuration files, and absence of legacy bare internal imports. Full training requires the optional PyTorch and DGL dependencies plus source datasets.
@@ -148,7 +141,3 @@ For contribution and review expectations, see [CONTRIBUTING.md](CONTRIBUTING.md)
 ## License and attribution
 
 The repository is source-available under the terms in [LICENSE](LICENSE). The included SplitGNN integration and external data sources have separate provenance and usage considerations documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
----
-
-*Bohan Yu — research project. Core implementation released with the associated paper.*

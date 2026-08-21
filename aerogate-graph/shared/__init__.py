@@ -1,7 +1,1 @@
-"""AeroGate Graph.
-
-The core algorithmic content is withheld until the associated paper is
-published; see NOTICE.md and core/.
-"""
-
-__version__ = "0.1.0"
+"""Shared utilities and config namespace for aerogate_graph."""

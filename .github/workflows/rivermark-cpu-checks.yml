@@ -1,0 +1,27 @@
+name: Rivermark CPU checks
+
+on:
+  push:
+    paths:
+      - "rivermark/**"
+      - ".github/workflows/rivermark-cpu-checks.yml"
+  pull_request:
+    paths:
+      - "rivermark/**"
+      - ".github/workflows/rivermark-cpu-checks.yml"
+
+jobs:
+  cpu:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rivermark/code
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[cpu-ci]"
+      - run: python -m rivermark_benchmark.researcher_entry "$RUNNER_TEMP/rivermark-researcher-smoke"
+      - run: python -m unittest discover -s tests -v

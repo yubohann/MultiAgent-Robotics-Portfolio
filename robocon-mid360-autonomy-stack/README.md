@@ -88,7 +88,7 @@ Inspect launch arguments and run the dependency-light validation suite:
 ```bash
 ros2 launch robocon_mid360_simulation gazebo_mid360_lio.launch.py --show-args
 python3 tools/validate_project.py
-python3 -m unittest discover -s src -p 'test_*.py' -v
+python3 tools/run_python_contract_tests.py
 ```
 
 Run the bounded experiment groups from one command:

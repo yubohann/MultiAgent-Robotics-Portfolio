@@ -1,21 +1,30 @@
-# Python
+# Python bytecode, tooling caches, and local environments
 __pycache__/
 *.py[cod]
-*.egg-info/
-.eggs/
-build/
-dist/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-.ipynb_checkpoints/
-
-# Environments
+*.egg-info/
+.coverage
+htmlcov/
+build/
+dist/
 .venv/
 venv/
-env/
+ship-log.md
 
-# OS
+# Generated training and evaluation outputs
+outputs/
+runs/
+artifacts/
+checkpoints/
+tensorboard/
+*.npz
+*.npy
+*.csv.tmp
+
+# Local editor and operating-system files
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
-desktop.ini

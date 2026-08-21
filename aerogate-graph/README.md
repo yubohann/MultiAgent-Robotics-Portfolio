@@ -1,115 +1,109 @@
 # AeroGate Graph
 
-**A method framework for graph-based reinforcement learning in dense, dynamic drone gate traversal.**
+**A modular 2D drone-racing simulator for graph-based route planning, formation control, and dynamic gate navigation.**
 
-Quadrotors that must fly through dense, moving gate layouts face a decision problem that is fundamentally *structural*: which gates can be reached next, in what order, and how the current motion interacts with the surrounding gate field. This project frames that problem as a **graph** — gates become graph nodes, and feasible traversal transitions become edges — and learns policies directly over that structure.
+AeroGate Graph is an English, runnable research codebase for fixed-height drone racing.
+It provides single-agent and variable-size multi-agent environments, deterministic gate
+layouts, dynamic gate-density curricula, graph observations, virtual-structure formation
+control, global route planning, safety shields, evaluation scripts, and optional Isaac Lab
+visualization adapters.
 
-This repository documents the **method framework**: the problem formulation, the system architecture, the learning pipeline, and the engineering principles. The concrete implementation of the research contributions is intentionally withheld until the associated paper is published.
+The repository consolidates the original gate-graph research workspace into one coherent
+project root, including the complete working codebase, retained assets, release
+checkpoints, and evaluation artifacts.
 
-> **Status**: research-stage. Core algorithm implementation released with the paper. See [NOTICE.md](NOTICE.md).
+## Highlights
 
-> **Publication status**: the associated paper is under review and has **not
-> been published yet**. To protect the work, quantitative results and the core
-> implementation are **not shown** in this repository. They will be released
-> publicly together with the paper once it is out.
+- Fixed-height 2D kinematics with velocity, acceleration, and collision limits.
+- Static slalom and dynamic moving-gate scenarios with a shared geometry model.
+- Variable-team graph observations, formation slots, safety shielding, and A* route planning.
+- Graph-SAC and Graph-MASAC implementation paths, with behavior-cloning and DAgger utilities.
+- Standalone NumPy environment tests plus optional PyTorch training and Isaac Lab replay adapters.
+- Git LFS tracking for USD assets and released model checkpoints.
 
-> **Open-source plan**: full open-source (complete implementation + results)
-> is planned for the **end of October 2026**.
+## Quick Start
 
----
+### Locked core setup (recommended)
 
-## Problem framework
+Install [uv](https://docs.astral.sh/uv/) and use the committed lockfile:
 
-| Layer | Question the framework addresses |
-| --- | --- |
-| **Perception of structure** | How should a dense, moving gate field be represented so a policy can reason over traversal order, not just react locally? |
-| **Single-agent decision** | How should one drone learn a policy that generalizes across gate count, density, and motion patterns? |
-| **Expert guidance** | How can a global route hint accelerate and stabilize learning in high-density layouts? |
-| **Multi-agent coordination** | How do multiple drones traverse the same field without conflict, with or without a formation constraint? |
-| **Transfer** | How does a policy learned in a planar abstraction transfer to a 3D physical simulation? |
+~~~powershell
+git lfs install
+git lfs pull
+uv sync --extra dev
+uv run python -m aerogate info
+uv run python -m aerogate smoke --scenario single-static --steps 8
+uv run python -m aerogate smoke --scenario multi-static --agents 4 --steps 8
+uv run python -m pytest
+~~~
 
-## Method framework
+Create a portable, deterministic core-environment evidence report:
 
-```text
-  Gate field (dense / dynamic)
-              │
-              ▼
-  ┌───────────────────────────┐
-  │  Structural encoding      │   gates → nodes, feasible transitions → edges
-  └───────────────────────────┘
-              │
-              ▼
-  ┌───────────────────────────┐
-  │  Graph-structured policy  │   action distribution conditioned on the graph
-  └───────────────────────────┘
-              │
-              ├───────────────►  Expert guidance (global route hint)
-              │                              │
-              ▼                              ▼
-  ┌───────────────────────────┐   ┌───────────────────────────┐
-  │  Learning pipeline        │◄──│  Imitation bootstrap       │
-  │  (reward, replay,         │   │  (expert-guided rollout)   │
-  │   curriculum, selection)  │   └───────────────────────────┘
-  └───────────────────────────┘
-              │
-              ├───────────────►  Multi-agent extension (formation + coordination)
-              ▼
-  ┌───────────────────────────┐
-  │  Evaluation & transfer    │   2D evaluation → 3D physical replay
-  └───────────────────────────┘
-```
+~~~powershell
+uv run python -m aerogate reproduce --scenario multi-static --agents 4 --seeds 3 7 11 --steps 8 --output artifacts/reproducibility/multi-static.json
+~~~
 
-## What is included in this repository
+The report records exact rollout diagnostics and core runtime versions. See
+[docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the protocol, expected scope, and
+interpretation limits.
 
-- **The framework documentation** — problem formulation, architecture, pipeline design, and evaluation methodology.
-- **Neutral engineering primitives** — planar math, kinematics, and collision utilities under `shared/core/`.
-- **The withheld API surface** — `core/` declares the role and interface of each research component; implementations ship with the paper.
+### pip fallback
 
-## What is intentionally withheld
+`pip` remains supported when uv is unavailable. Its version ranges are less exact than the
+lockfile, so use it for local exploration rather than a reference environment:
 
-Per [NOTICE.md](NOTICE.md), the following are **not** distributed in this public repository:
+~~~powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+python -m aerogate info
+python -m aerogate smoke --scenario single-static --steps 8
+python -m aerogate smoke --scenario multi-static --agents 4 --steps 8
+python -m pytest
+~~~
 
-- The graph encoder / message-passing scheme and policy architecture.
-- Reward design and shaping terms.
-- Training schedule, curriculum rules, and checkpoint-selection logic.
-- The expert-guidance mechanism and route-planning internals.
-- Experimental configuration values and all quantitative results.
+Install the training dependencies only when needed:
 
-These details stay out of the public repository until the paper is out, so the
-repo is safe to share with anyone who wants to understand the framework.
+~~~powershell
+python -m pip install -e ".[rl,dev]"
+~~~
 
----
+Isaac Lab integration is intentionally optional. Install Isaac Lab in its supported Python
+environment first, then add this repository to PYTHONPATH or install it editable there.
 
-## Repository layout
+## Project Layout
 
-```text
-core/                     Withheld research components (API surface + role documentation)
-shared/
-  core/                   Neutral planar primitives: math, kinematics, collision
-tests/                    Test suite for the included neutral primitives
-docs/
-  methodology.md          Research framework: questions, approach, evaluation
-  architecture.md         Component architecture and design rationale
-NOTICE.md                 Redaction notice
-```
+~~~text
+AeroGateGraph/
+├── aerogate/                 Public API, CLI, and scenario adapters
+├── shared/                   Geometry, dynamics, common configuration, runtime helpers
+├── single_gate/              Single-drone environment, policy, training, and replay
+├── multi_gate/               Multi-drone environment, formation, planner, safety, and RL
+├── gate_density_single/      Single-drone gate-density benchmark tooling
+├── gate_density_multi_8/     Eight-drone dynamic-density curriculum tooling
+├── single_internal_gate/     Planner baselines, policy arbitration, and safety methods
+├── assets/                   Gate and drone scene assets
+├── release_bundle/           Reproducible release commands and selected checkpoints
+├── evaluation_artifacts/     Retained reports, manifests, and tabular results
+├── tests/                    Deterministic regression and smoke tests
+└── docs/                     Architecture, setup, and contribution documentation
+~~~
 
-## Quick start
+See [Architecture](docs/ARCHITECTURE.md), the [research overview](docs/RESEARCH_OVERVIEW.md),
+[Quick Start](docs/QUICKSTART.md), and [Contributing](CONTRIBUTING.md) for supported
+boundaries and workflows.
 
-```bash
-pip install -e ".[dev]"
-pytest
-```
+## Scope and Safety
 
-The test suite covers the neutral planar primitives and needs no ML runtime.
+The primary environments are 2D, fixed-height research abstractions. Passing their tests
+does not validate perception, flight dynamics, actuator behavior, or physical flight safety.
+Use the Isaac Lab adapters and an appropriate simulation/flight-validation workflow before
+making claims about a physical vehicle.
 
-## Engineering principles
+## License
 
-- **Structural first** — encode the environment's structure explicitly instead of flattening it.
-- **Guidance over brute force** — use global structure to shape exploration rather than searching blindly.
-- **Single to multi** — build the coordination layer on the same structural representation.
-- **Validation discipline** — evaluation is a first-class pipeline stage, not an afterthought.
-- **Reproducibility** — deterministic seeding and configuration-driven experiments throughout.
+Copyright (c) 2026 Bohan Yu. All rights reserved. See LICENSE.
 
----
-
-*Bohan Yu — research-stage project. Core implementation released with the associated paper.*
+The gate and drone assets are distributed under the BSD 3-Clause License from their
+upstream project. See THIRD_PARTY_NOTICES.md for the complete attribution and terms.

@@ -1,27 +1,34 @@
-import json
-import sys
-from pathlib import Path
+from __future__ import annotations
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+import json
 
 from fraud_ml_engineering.run_artifacts import build_run_manifest, create_run_artifacts, write_json
 
 
-def test_build_run_manifest_is_serializable(tmp_path):
-    manifest = build_run_manifest(dataset="dummy", seed=42, repo_root=tmp_path)
-    dumped = json.dumps(manifest)
-    assert "dataset" in dumped
-    assert "recorded_at" in dumped
+def test_create_run_artifacts_creates_a_unique_run_directory(tmp_path) -> None:
+    artifacts = create_run_artifacts(tmp_path, prefix="smoke")
+
+    assert artifacts.run_root.is_dir()
+    assert artifacts.run_root.name.startswith("smoke_")
+    assert artifacts.manifest_path.parent == artifacts.run_root
 
 
-def test_create_and_round_trip(tmp_path):
-    artifacts = create_run_artifacts(tmp_path)
-    assert artifacts.run_root.exists()
-    assert artifacts.manifest_path.name == "manifest.json"
-    assert artifacts.summary_path.name == "summary.json"
+def test_manifest_captures_reproducibility_context_without_training_dependencies(tmp_path) -> None:
+    manifest = build_run_manifest(
+        dataset="elliptic",
+        seed=42,
+        command=["python", "-m", "fraud_ml_engineering", "--dataset", "elliptic"],
+        config_path="configs/experiments/onchain_main_selection.yaml",
+        notes="dataset revision: provider snapshot 2026-07-31",
+        extra={"label_fraction": 0.1},
+    )
+    destination = tmp_path / "manifest.json"
+    write_json(destination, manifest)
 
-
-def test_write_json_round_trip(tmp_path):
-    target = tmp_path / "nested" / "payload.json"
-    write_json(target, {"a": 1, "b": [1, 2, 3]})
-    assert json.loads(target.read_text(encoding="utf-8")) == {"a": 1, "b": [1, 2, 3]}
+    loaded = json.loads(destination.read_text(encoding="utf-8"))
+    assert loaded["schema_version"] == 1
+    assert loaded["experiment"]["dataset"] == "elliptic"
+    assert loaded["experiment"]["seed"] == 42
+    assert loaded["experiment"]["extra"]["label_fraction"] == 0.1
+    assert loaded["runtime"]["python_version"]
+    assert not destination.with_suffix(".json.tmp").exists()

@@ -1,29 +1,40 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "aerogate-graph"
-version = "0.1.0"
-description = "Framework for graph-based reinforcement learning in dense, dynamic drone gate traversal."
+version = "0.2.0"
+description = "A modular 2D drone-racing simulator for graph-based route planning, formation control, and dynamic gate navigation."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "Bohan Yu" }]
-keywords = ["reinforcement-learning", "graph-neural-networks", "multi-agent-rl", "quadrotor", "robotics"]
+keywords = ["drone racing", "multi-agent systems", "path planning", "reinforcement learning", "simulation"]
 classifiers = [
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-dependencies = []
+dependencies = ["numpy>=1.24,<3"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+rl = ["torch>=2.2"]
+dev = ["pytest>=7", "ruff>=0.6"]
+
+[project.scripts]
+aerogate = "aerogate.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["shared*", "core*"]
+include = ["aerogate*", "assets*", "shared*", "single_gate*", "multi_gate*", "single_internal_gate*"]
+exclude = ["tests*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -33,3 +44,14 @@ addopts = "-q"
 [tool.ruff]
 line-length = 120
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.uv]
+index-url = "https://pypi.org/simple"

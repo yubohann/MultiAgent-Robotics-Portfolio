@@ -1,0 +1,29 @@
+name: AeroGate core checks
+
+on:
+  push:
+    paths:
+      - "aerogate-graph/**"
+      - ".github/workflows/aerogate-checks.yml"
+  pull_request:
+    paths:
+      - "aerogate-graph/**"
+      - ".github/workflows/aerogate-checks.yml"
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aerogate-graph
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m aerogate info
+      - run: python -m aerogate smoke --scenario single-static --steps 8
+      - run: python -m aerogate smoke --scenario multi-static --agents 4 --steps 8
+      - run: python -m pytest
