@@ -1,0 +1,29 @@
+﻿{
+    "ok":  true,
+    "processing":  false,
+    "active_model":  {
+                         "id":  "local-baseline",
+                         "name":  "OpenCV Local Baseline",
+                         "family":  "Local",
+                         "serving_model":  "local-opencv-rules",
+                         "ollama_model":  "",
+                         "mode":  "local_baseline",
+                         "memory_tier":  "any",
+                         "recommended_for":  "æ  Ollamaãæ æ¨¡åæéæ¶çæå­¦å\u0085åº",
+                         "hardware":  "CPU",
+                         "supports_audio":  false,
+                         "supports_video":  false,
+                         "estimated_disk_gb":  0.0,
+                         "estimated_memory_gb":  "\u003c 1GB",
+                         "pull_command":  "",
+                         "notes":  "åªåºäºäº®åº¦ãè¿å¨ãè²å½©åéªçè§åï¼ä¸ä»£è¡¨ SOTA è½åã",
+                         "downloaded":  true
+                     },
+    "ollama_ready":  true,
+    "jobs":  {
+                 "queued":  0,
+                 "running":  0,
+                 "done":  0,
+                 "failed":  0
+             }
+}

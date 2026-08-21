@@ -1,0 +1,118 @@
+from importlib import import_module
+
+__all__ = [
+	'get_category_distribution',
+	'get_dashboard_overview',
+	'get_sales_overview',
+	'get_sales_trend',
+	'get_top_products',
+	'login_user',
+	'register_user',
+	'create_product',
+	'delete_product',
+	'get_categories',
+	'get_products',
+	'import_products_from_csv',
+	'import_products_from_excel',
+	'offline_product',
+	'online_product',
+	'update_product',
+	'get_sales_order_detail',
+	'get_sales_orders',
+	'get_inventory_alerts',
+	'get_inventory_list',
+	'get_inventory_logs',
+	'get_inventory_summary',
+	'set_inventory_quantity',
+	'generate_assistant_reply',
+	'checkout_cashier_order',
+	'search_cashier_products',
+	'create_announcement',
+	'get_admin_announcements',
+	'get_announcements_for_user',
+	'get_unread_announcement_count',
+	'mark_all_announcements_read',
+	'mark_announcement_read',
+	'set_announcement_publish_status',
+	'adjust_member_points',
+	'create_employee',
+	'create_member',
+	'create_supplier',
+	'get_employees',
+	'get_members',
+	'get_suppliers',
+	'get_system_settings',
+	'set_employee_status',
+	'set_member_status',
+	'set_supplier_status',
+	'update_employee',
+	'update_member',
+	'update_supplier',
+	'upsert_system_setting',
+]
+
+_EXPORTS = {
+	'get_category_distribution': ('app.services.analytics', 'get_category_distribution'),
+	'get_dashboard_overview': ('app.services.analytics', 'get_dashboard_overview'),
+	'get_sales_overview': ('app.services.analytics', 'get_sales_overview'),
+	'get_sales_trend': ('app.services.analytics', 'get_sales_trend'),
+	'get_top_products': ('app.services.analytics', 'get_top_products'),
+	'login_user': ('app.services.auth', 'login_user'),
+	'register_user': ('app.services.auth', 'register_user'),
+	'create_product': ('app.services.products', 'create_product'),
+	'delete_product': ('app.services.products', 'delete_product'),
+	'get_categories': ('app.services.products', 'get_categories'),
+	'get_products': ('app.services.products', 'get_products'),
+	'import_products_from_csv': ('app.services.products', 'import_products_from_csv'),
+	'import_products_from_excel': ('app.services.products', 'import_products_from_excel'),
+	'offline_product': ('app.services.products', 'offline_product'),
+	'online_product': ('app.services.products', 'online_product'),
+	'update_product': ('app.services.products', 'update_product'),
+	'get_sales_order_detail': ('app.services.sales', 'get_sales_order_detail'),
+	'get_sales_orders': ('app.services.sales', 'get_sales_orders'),
+	'get_inventory_alerts': ('app.services.inventory', 'get_inventory_alerts'),
+	'get_inventory_list': ('app.services.inventory', 'get_inventory_list'),
+	'get_inventory_logs': ('app.services.inventory', 'get_inventory_logs'),
+	'get_inventory_summary': ('app.services.inventory', 'get_inventory_summary'),
+	'set_inventory_quantity': ('app.services.inventory', 'set_inventory_quantity'),
+	'generate_assistant_reply': ('app.services.assistant', 'generate_assistant_reply'),
+	'checkout_cashier_order': ('app.services.cashier', 'checkout_cashier_order'),
+	'search_cashier_products': ('app.services.cashier', 'search_cashier_products'),
+	'create_announcement': ('app.services.announcements', 'create_announcement'),
+	'get_admin_announcements': ('app.services.announcements', 'get_admin_announcements'),
+	'get_announcements_for_user': ('app.services.announcements', 'get_announcements_for_user'),
+	'get_unread_announcement_count': ('app.services.announcements', 'get_unread_announcement_count'),
+	'mark_all_announcements_read': ('app.services.announcements', 'mark_all_announcements_read'),
+	'mark_announcement_read': ('app.services.announcements', 'mark_announcement_read'),
+	'set_announcement_publish_status': ('app.services.announcements', 'set_announcement_publish_status'),
+	'adjust_member_points': ('app.services.second_phase', 'adjust_member_points'),
+	'create_employee': ('app.services.second_phase', 'create_employee'),
+	'create_member': ('app.services.second_phase', 'create_member'),
+	'create_supplier': ('app.services.second_phase', 'create_supplier'),
+	'get_employees': ('app.services.second_phase', 'get_employees'),
+	'get_members': ('app.services.second_phase', 'get_members'),
+	'get_suppliers': ('app.services.second_phase', 'get_suppliers'),
+	'get_system_settings': ('app.services.second_phase', 'get_system_settings'),
+	'set_employee_status': ('app.services.second_phase', 'set_employee_status'),
+	'set_member_status': ('app.services.second_phase', 'set_member_status'),
+	'set_supplier_status': ('app.services.second_phase', 'set_supplier_status'),
+	'update_employee': ('app.services.second_phase', 'update_employee'),
+	'update_member': ('app.services.second_phase', 'update_member'),
+	'update_supplier': ('app.services.second_phase', 'update_supplier'),
+	'upsert_system_setting': ('app.services.second_phase', 'upsert_system_setting'),
+}
+
+
+def __getattr__(name):
+	if name not in _EXPORTS:
+		raise AttributeError(f"module 'app.services' has no attribute '{name}'")
+
+	module_name, attribute_name = _EXPORTS[name]
+	module = import_module(module_name)
+	value = getattr(module, attribute_name)
+	globals()[name] = value
+	return value
+
+
+def __dir__():
+	return sorted(set(globals().keys()) | set(__all__))

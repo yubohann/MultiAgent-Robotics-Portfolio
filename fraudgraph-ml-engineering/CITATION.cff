@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: "FraudGraph ML Engineering"
+message: "If this repository supports your research or engineering work, please cite it."
+type: software
+version: 0.1.0
+date-released: 2026-07-31
+authors:
+  - family-names: Han
+    given-names: Yu Bo
+repository-code: "https://github.com/yubohann/fraudgraph-ml-engineering"
+url: "https://github.com/yubohann/fraudgraph-ml-engineering"
+abstract: >-
+  A reproducible engineering repository for graph-and-sequence fraud detection
+  experiments across financial transaction datasets.
+keywords:
+  - fraud detection
+  - graph neural networks
+  - SplitGNN
+  - transformers
+  - financial machine learning
+  - reproducibility
+license: "LicenseRef-Proprietary"

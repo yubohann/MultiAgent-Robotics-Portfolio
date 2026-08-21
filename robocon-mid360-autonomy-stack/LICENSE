@@ -1,0 +1,10 @@
+Copyright (c) 2026 ROBOCON2025 team.
+
+All rights reserved. No permission is granted to use, copy, modify, distribute,
+or publish the team-owned files in this repository without prior written
+permission from the copyright holder.
+
+This notice applies only to team-owned files. Vendored components retain their
+own licenses and notices, including `src/vendor_fast_lio/LICENSE`,
+`src/vendor_livox_ros_driver2/LICENSE.txt`, and the asset notices under
+`src/robocon_mid360_simulation/`.

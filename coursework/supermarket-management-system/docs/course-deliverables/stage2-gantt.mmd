@@ -1,0 +1,30 @@
+gantt
+    title 超市管理系统课程项目甘特图
+    dateFormat  YYYY-MM-DD
+    axisFormat  %m-%d
+
+    section 启动管理
+    团队角色与计划确认      :crit, a1, 2026-03-10, 1d
+    初步调查与会议记录      :crit, a2, after a1, 2d
+    SWOT 与可行性报告      :a3, after a2, 1d
+
+    section 技术方案
+    功能模块拆分            :crit, b1, after a2, 2d
+    技术方案与架构图        :b2, after b1, 2d
+    商品录入原型            :b3, after b2, 2d
+
+    section 需求与建模
+    泳道图与业务流程        :c1, after b1, 4d
+    UML 用例图              :crit, c2, after b1, 3d
+    ER 与 ORM 建模          :crit, d1, after c2, 3d
+
+    section 设计与实施
+    界面设计文档            :e1, after c1, 3d
+    系统代码补齐            :crit, f1, after d1, 5d
+    测试用例设计            :g1, after e1, 2d
+    自动化测试编写          :crit, g2, after f1, 3d
+
+    section 验收归档
+    代码审查与截图留存      :crit, h1, after g2, 2d
+    最终报告归档            :crit, h2, after h1, 1d
+

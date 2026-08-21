@@ -1,0 +1,45 @@
+﻿{
+  "name": "Modern Lakehouse Java11 Dev Env",
+  "image": "mcr.microsoft.com/devcontainers/java:11",
+  "features": {
+    "ghcr.io/devcontainers/features/maven:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "version": "latest",
+      "enableNonRootDocker": "true"
+    }
+  },
+  "containerEnv": {
+    "STUDENT_ID": "demo000000",
+    "CLASS_NO": "32",
+    "STUDENT_NAME": "\u4f59\u535a\u6db5",
+    "KAFKA_BOOTSTRAP_SERVERS": "host.docker.internal:19092",
+    "S3_ENDPOINT": "http://host.docker.internal:9000"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "ms-python.python",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "forwardPorts": [
+    8080,
+    8081,
+    8888,
+    9001,
+    9092,
+    19092
+  ],
+  "postCreateCommand": "python -m pip install --user kafka-python"
+}

@@ -1,0 +1,166 @@
+﻿services:
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: bigdata-kafka
+    ports:
+      - "9092:9092"
+      - "19092:19092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,HOST://0.0.0.0:9092,DEVCONTAINER://0.0.0.0:19092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,HOST://localhost:9092,DEVCONTAINER://host.docker.internal:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DEVCONTAINER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - bigdata-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: bigdata-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - bigdata-network
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: bigdata-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 admin password123; do
+        echo 'waiting for minio...';
+        sleep 2;
+      done;
+      mc mb --ignore-existing local/paimon-data-demo000000;
+      mc anonymous set none local/paimon-data-demo000000;
+      "
+    networks:
+      - bigdata-network
+
+  jobmanager:
+    image: flink:1.18.0-scala_2.12-java11
+    container_name: bigdata-flink-jm
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password123
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 1
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        s3.endpoint: http://minio:9000
+        s3.path.style.access: true
+        s3.access-key: admin
+        s3.secret-key: password123
+    volumes:
+      - ./lib/flink-connectors/flink-sql-connector-kafka-3.0.1-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.0.1-1.18.jar:ro
+      - ./lib/flink-connectors/paimon-flink-1.18-0.8.0.jar:/opt/flink/lib/paimon-flink-1.18-0.8.0.jar:ro
+      - ./lib/flink-connectors/flink-s3-fs-hadoop-1.18.0.jar:/opt/flink/lib/flink-s3-fs-hadoop-1.18.0.jar:ro
+      - ./lib/flink-connectors/hadoop-hdfs-client-3.3.4.jar:/opt/flink/lib/hadoop-hdfs-client-3.3.4.jar:ro
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_started
+    networks:
+      - bigdata-network
+
+  taskmanager:
+    image: flink:1.18.0-scala_2.12-java11
+    container_name: bigdata-flink-tm
+    command: taskmanager
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password123
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 1
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        s3.endpoint: http://minio:9000
+        s3.path.style.access: true
+        s3.access-key: admin
+        s3.secret-key: password123
+    volumes:
+      - ./lib/flink-connectors/flink-sql-connector-kafka-3.0.1-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.0.1-1.18.jar:ro
+      - ./lib/flink-connectors/paimon-flink-1.18-0.8.0.jar:/opt/flink/lib/paimon-flink-1.18-0.8.0.jar:ro
+      - ./lib/flink-connectors/flink-s3-fs-hadoop-1.18.0.jar:/opt/flink/lib/flink-s3-fs-hadoop-1.18.0.jar:ro
+      - ./lib/flink-connectors/hadoop-hdfs-client-3.3.4.jar:/opt/flink/lib/hadoop-hdfs-client-3.3.4.jar:ro
+    depends_on:
+      jobmanager:
+        condition: service_started
+    networks:
+      - bigdata-network
+
+  dinky:
+    image: dinkydocker/dinky-standalone-server:1.0.3-flink1.17
+    container_name: bigdata-dinky
+    ports:
+      - "8888:8888"
+    depends_on:
+      jobmanager:
+        condition: service_started
+    volumes:
+      - ./lib/flink-connectors:/opt/dinky/custom_jars:ro
+    networks:
+      - bigdata-network
+
+  spark-master:
+    image: bdp-spark:3.3.2-local
+    build:
+      context: ./docker/spark-local
+    container_name: bigdata-spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark-master --port 7077 --webui-port 8080
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - ./:/opt/spark-apps
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    networks:
+      - bigdata-network
+
+  spark-worker:
+    image: bdp-spark:3.3.2-local
+    build:
+      context: ./docker/spark-local
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2G
+    depends_on:
+      spark-master:
+        condition: service_started
+    networks:
+      - bigdata-network
+
+volumes:
+  minio-data:
+
+networks:
+  bigdata-network:
+    name: bigdata-network-demo000000
+    driver: bridge

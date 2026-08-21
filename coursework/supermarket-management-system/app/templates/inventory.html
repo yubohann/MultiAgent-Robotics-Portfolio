@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% from 'macros/icons.html' import icon_inventory_large, icon_search, icon_refresh, icon_warning_large, icon_document, icon_empty_state with context %}
+
+{% block title %}库存管理 - 超市管理系统{% endblock %}
+
+{% block header_title %}库存管理{% endblock %}
+
+{% set active_page = 'inventory' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-5 hover-lift">
+            <p class="text-sm text-slate-500 mb-2">商品总数</p>
+            <div class="flex items-end justify-between gap-3">
+                <div class="text-3xl font-bold text-slate-800" id="summaryTotalProducts">0</div>
+                <div class="w-12 h-12 rounded-2xl bg-blue-50 text-primary flex items-center justify-center">{{ icon_document() }}</div>
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-5 hover-lift">
+            <p class="text-sm text-slate-500 mb-2">库存总量</p>
+            <div class="flex items-end justify-between gap-3">
+                <div class="text-3xl font-bold text-slate-800" id="summaryTotalQuantity">0</div>
+                <div class="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center">{{ icon_inventory_large() }}</div>
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-5 hover-lift">
+            <p class="text-sm text-slate-500 mb-2">低库存商品</p>
+            <div class="flex items-end justify-between gap-3">
+                <div class="text-3xl font-bold text-amber-600" id="summaryLowStockCount">0</div>
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">{{ icon_warning_large() }}</div>
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-5 hover-lift">
+            <p class="text-sm text-slate-500 mb-2">缺货商品</p>
+            <div class="flex items-end justify-between gap-3">
+                <div class="text-3xl font-bold text-red-600" id="summaryOutStockCount">0</div>
+                <div class="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">{{ icon_warning_large() }}</div>
+            </div>
+        </div>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-semibold text-slate-800">库存列表</h2>
+                <p class="text-sm text-slate-500 mt-1">查看当前库存、预警线和状态。</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full xl:max-w-4xl">
+                <div class="relative md:col-span-1 xl:col-span-1">
+                    <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none">{{ icon_search() }}</span>
+                    <input id="inventorySearch" type="text" placeholder="搜索商品编码、名称、条码、分类" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+                </div>
+                <select id="inventoryCategoryFilter" class="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white">
+                    <option value="">全部分类</option>
+                </select>
+                <select id="stockStateFilter" class="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white">
+                    <option value="">全部状态</option>
+                    <option value="normal">正常</option>
+                    <option value="low">低库存</option>
+                    <option value="out">缺货</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-slate-50 text-left text-sm text-slate-600">
+                    <tr>
+                        <th class="px-6 py-3 font-medium">商品编码</th>
+                        <th class="px-6 py-3 font-medium">商品名称</th>
+                        <th class="px-6 py-3 font-medium">分类</th>
+                        <th class="px-6 py-3 font-medium">当前库存</th>
+                        <th class="px-6 py-3 font-medium">预警线</th>
+                        <th class="px-6 py-3 font-medium">状态</th>
+                        <th class="px-6 py-3 font-medium">更新时间</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody" class="divide-y divide-slate-100">
+                    <tr><td colspan="7" class="px-6 py-12 text-center text-slate-400">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100">
+            <div class="text-sm text-slate-500" id="inventoryPaginationInfo">共 0 条记录</div>
+            <div class="flex items-center gap-2 flex-wrap" id="inventoryPaginationControls"></div>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-semibold text-slate-800">流水查询</h2>
+                <p class="text-sm text-slate-500 mt-1">追踪每次库存变动的来源、前后数量和操作人。</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full xl:max-w-5xl">
+                <div class="relative md:col-span-1 xl:col-span-2">
+                    <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none">{{ icon_search() }}</span>
+                    <input id="logSearch" type="text" placeholder="搜索商品、流水原因、操作人" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+                </div>
+                <select id="changeTypeFilter" class="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white">
+                    <option value="">全部类型</option>
+                    <option value="in">入库</option>
+                    <option value="out">出库</option>
+                    <option value="adjust">盘点调整</option>
+                    <option value="sale">销售出库</option>
+                    <option value="return">退货入库</option>
+                </select>
+                <input id="startDateFilter" type="date" class="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+                <input id="endDateFilter" type="date" class="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-slate-50 text-left text-sm text-slate-600">
+                    <tr>
+                        <th class="px-6 py-3 font-medium">时间</th>
+                        <th class="px-6 py-3 font-medium">商品</th>
+                        <th class="px-6 py-3 font-medium">类型</th>
+                        <th class="px-6 py-3 font-medium">变动</th>
+                        <th class="px-6 py-3 font-medium">变动前</th>
+                        <th class="px-6 py-3 font-medium">变动后</th>
+                        <th class="px-6 py-3 font-medium">原因</th>
+                        <th class="px-6 py-3 font-medium">操作人</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody" class="divide-y divide-slate-100">
+                    <tr><td colspan="8" class="px-6 py-12 text-center text-slate-400">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100">
+            <div class="text-sm text-slate-500" id="logPaginationInfo">共 0 条记录</div>
+            <div class="flex items-center gap-2 flex-wrap" id="logPaginationControls"></div>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-semibold text-slate-800">库存预警</h2>
+                <p class="text-sm text-slate-500 mt-1">展示当前低库存和缺货商品，便于及时补货。</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm text-amber-700">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    低库存 <span id="alertLowCount">0</span>
+                </span>
+                <span class="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-sm text-red-700">
+                    <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                    缺货 <span id="alertOutCount">0</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div id="alertList" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="col-span-full text-center text-slate-400 py-12">
+                    {{ icon_empty_state() }}
+                    <div class="text-lg font-medium text-slate-500">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script src="{{ url_for('static', filename='js/inventory.js') }}"></script>
+{% endblock %}

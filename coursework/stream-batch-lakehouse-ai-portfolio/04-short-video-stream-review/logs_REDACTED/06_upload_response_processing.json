@@ -1,0 +1,77 @@
+{
+  "started": true,
+  "processing": true,
+  "path": "~\\Desktop\\作品集\\YuBohan-StreamBatch-Portfolio-[REDACTED]\\4. 实时短视频流智能审核与发布 综合实验\\code\\short-video-stream-lab\\data\\incoming\\1779597799-upload_[REDACTED]_yubohan_drone_review.mp4",
+  "video": {
+    "id": "9921414f969d",
+    "title": "[REDACTED]_Bohan Yu_自选上传_无人机巡检短视频",
+    "source": "browser-upload",
+    "original_path": "~\\Desktop\\作品集\\YuBohan-StreamBatch-Portfolio-[REDACTED]\\4. 实时短视频流智能审核与发布 综合实验\\code\\short-video-stream-lab\\data\\incoming\\1779597799-upload_[REDACTED]_yubohan_drone_review.mp4",
+    "media_file": "9921414f969d-1779597799-upload_[REDACTED]_yubohan_drone_review.mp4",
+    "thumbnail_file": "",
+    "status": "processing",
+    "risk_score": 0,
+    "caption": "",
+    "tags": [],
+    "reasons": [],
+    "metrics": {
+      "duration_sec": 0,
+      "sampled_frames": 0,
+      "brightness": {
+        "avg": 0
+      },
+      "motion": {
+        "avg": 0
+      },
+      "model": {
+        "selected_id": "",
+        "selected_name": "等待后台理解",
+        "backend": "pending",
+        "fallback_reason": ""
+      }
+    }
+  },
+  "job": {
+    "id": "complete-9921414f969d",
+    "kind": "complete_video",
+    "payload": {
+      "record": {
+        "id": "9921414f969d",
+        "title": "[REDACTED]_Bohan Yu_自选上传_无人机巡检短视频",
+        "source": "browser-upload",
+        "original_path": "~\\Desktop\\作品集\\YuBohan-StreamBatch-Portfolio-[REDACTED]\\4. 实时短视频流智能审核与发布 综合实验\\code\\short-video-stream-lab\\data\\incoming\\1779597799-upload_[REDACTED]_yubohan_drone_review.mp4",
+        "media_file": "9921414f969d-1779597799-upload_[REDACTED]_yubohan_drone_review.mp4",
+        "thumbnail_file": "",
+        "status": "processing",
+        "risk_score": 0,
+        "caption": "",
+        "tags": [],
+        "reasons": [],
+        "metrics": {
+          "duration_sec": 0,
+          "sampled_frames": 0,
+          "brightness": {
+            "avg": 0
+          },
+          "motion": {
+            "avg": 0
+          },
+          "model": {
+            "selected_id": "",
+            "selected_name": "等待后台理解",
+            "backend": "pending",
+            "fallback_reason": ""
+          }
+        }
+      },
+      "simulate_stream": true
+    },
+    "status": "queued",
+    "attempts": 0,
+    "max_attempts": 1,
+    "worker_id": null,
+    "last_error": "",
+    "created_at": "2026-05-24T04:43:19+00:00",
+    "updated_at": "2026-05-24T04:43:19+00:00"
+  }
+}

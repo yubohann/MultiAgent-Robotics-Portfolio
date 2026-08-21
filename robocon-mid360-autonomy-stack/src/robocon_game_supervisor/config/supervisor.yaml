@@ -1,0 +1,32 @@
+# Checked-in transport template. Rule, hardware, and timing values remain private/TBD.
+robocon_game_supervisor:
+  ros__parameters:
+    command_topic: /robocon/operator_command
+    state_topic: /robocon/game/state
+    decision_topic: /robocon/game/action_decision
+    failure_topic: /robocon/game/failure
+    action_request_topic: /robocon/action/request
+    action_feedback_topic: /robocon/action/feedback
+    action_sender_id: target_computer_game_supervisor
+    action_ttl_sec: 1.0
+    task_id: TBD
+    team_message_topic: /robocon/team/message
+    team_ack_topic: /robocon/team/ack
+    team_robot_id: shooter
+    team_ack_ttl_sec: 1.0
+    require_teammate_heartbeat: true
+    teammate_heartbeat_timeout_sec: 0.50
+    preflight_ready_topic: /mid360/preflight_ready
+    pose_valid_topic: /mid360/pose_valid
+    map_locked_topic: /mid360/map_locked
+    pose_diagnostic_topic: /mid360/pose_diagnostics
+    target_valid_topic: /robocon/perception/target_valid
+    ball_present_topic: /robocon/mechanism/ball_present
+    mechanism_healthy_topic: /robocon/mechanism/healthy
+    teammate_safe_topic: /robocon/team/teammate_safe
+    pose_age_limit_sec: 0.30
+    target_age_limit_sec: 0.30
+    signal_silence_limit_sec: 0.50
+    auto_recovery_on_signal_loss: true
+    safety_monitor_hz: 10.0
+    publish_hz: 10.0

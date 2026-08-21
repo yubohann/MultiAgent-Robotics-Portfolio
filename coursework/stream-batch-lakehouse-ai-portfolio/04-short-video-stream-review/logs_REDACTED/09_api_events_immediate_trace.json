@@ -1,0 +1,79 @@
+{
+  "events": [
+    {
+      "id": 1501,
+      "video_id": "9921414f969d",
+      "stage": "queued",
+      "message": "审核任务已写入本地耐久队列",
+      "payload": {
+        "job_id": "complete-9921414f969d",
+        "queue": "sqlite-local"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1500,
+      "video_id": "9921414f969d",
+      "stage": "queued",
+      "message": "视频已进入页面，等待后台理解和打标签",
+      "payload": {
+        "status": "processing"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1499,
+      "video_id": "9921414f969d",
+      "stage": "stream",
+      "message": "开始按帧抽样，模拟视频流进入实时处理链路",
+      "payload": {
+        "media_file": "9921414f969d-1779597799-upload_[REDACTED]_yubohan_drone_review.mp4"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1498,
+      "video_id": "9921414f969d",
+      "stage": "ingest",
+      "message": "收到短视频，开始写入媒体区",
+      "payload": {
+        "title": "[REDACTED]_Bohan Yu_自选上传_无人机巡检短视频",
+        "source": "browser-upload",
+        "path": "~\\Desktop\\作品集\\YuBohan-StreamBatch-Portfolio-[REDACTED]\\4. 实时短视频流智能审核与发布 综合实验\\code\\short-video-stream-lab\\data\\incoming\\1779597799-upload_[REDACTED]_yubohan_drone_review.mp4"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1497,
+      "video_id": null,
+      "stage": "model_config",
+      "message": "后台模型已切换为 Ministral 3 8B Vision (Ollama)",
+      "payload": {
+        "id": "ministral-3-8b-ollama",
+        "name": "Ministral 3 8B Vision (Ollama)",
+        "family": "Mistral",
+        "serving_model": "ollama:ministral-3:8b",
+        "ollama_model": "ministral-3:8b",
+        "mode": "local_ollama_vlm",
+        "memory_tier": "32GB",
+        "recommended_for": "本机已下载的 8B vision 模型；用于最高分路线的本地多模态短视频审核证据",
+        "hardware": "建议 32GB 内存或更高；当前机器已通过 ollama show 验证具备 vision capability",
+        "supports_audio": false,
+        "supports_video": true,
+        "estimated_disk_gb": 6.0,
+        "estimated_memory_gb": "约 10-16GB",
+        "pull_command": "ollama pull ministral-3:8b",
+        "notes": "Ollama 本地模型显示 capabilities 包含 completion、vision、tools，可接收关键帧图片完成结构化理解。"
+      },
+      "created_at": "2026-05-24T04:43:19+00:00"
+    },
+    {
+      "id": 1496,
+      "video_id": null,
+      "stage": "system",
+      "message": "演示数据库已清空",
+      "payload": {},
+      "created_at": "2026-05-24T04:43:19+00:00"
+    }
+  ]
+}

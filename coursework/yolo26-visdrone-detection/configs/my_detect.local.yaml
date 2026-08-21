@@ -1,0 +1,6 @@
+path: '/home/ybh/yubohan_[REDACTED]_exp5_6_yolo26/my_data/detection'
+train: images/train
+val: images/val
+
+names:
+  0: 'obstacle'

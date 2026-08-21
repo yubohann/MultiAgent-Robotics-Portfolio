@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{# 导入图标宏 #}
+{% from 'macros/icons.html' import icon_product_large, icon_inventory_large, icon_sales_large, icon_warning_large, icon_add, icon_refresh, icon_document, icon_warning with context %}
+
+{% block title %}超市管理系统 - Dashboard{% endblock %}
+
+{% block header_title %}Dashboard{% endblock %}
+
+{% set active_page = 'index' %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white p-6 rounded-2xl shadow-card border border-slate-100 hover-lift">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-slate-500 text-sm mb-1.5">商品总数</p>
+                <p class="text-3xl font-bold text-slate-800">{{ stats.total_products if stats else 0 }}</p>
+            </div>
+            <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
+                {{ icon_product_large() }}
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-card border border-slate-100 hover-lift">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-slate-500 text-sm mb-1.5">总库存</p>
+                <p class="text-3xl font-bold text-slate-800">{{ stats.total_inventory if stats else 0 }}</p>
+            </div>
+            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+                {{ icon_inventory_large() }}
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-card border border-slate-100 hover-lift">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-slate-500 text-sm mb-1.5">今日销售额</p>
+                <p class="text-3xl font-bold text-slate-800">¥{{ '%.2f'|format(stats.today_sales if stats else 0) }}</p>
+            </div>
+            <div class="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center">
+                {{ icon_sales_large() }}
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-card border border-slate-100 hover-lift">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-slate-500 text-sm mb-1.5">低库存商品</p>
+                <p class="text-3xl font-bold text-red-600">{{ stats.low_stock_count if stats else 0 }}</p>
+            </div>
+            <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
+                {{ icon_warning_large() }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+    <h3 class="text-xl font-semibold text-slate-800 mb-5">快速操作</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <a href="/product" class="flex items-center p-5 border border-slate-200 rounded-xl hover:border-primary hover:bg-blue-50 transition-all hover-lift">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                {{ icon_add() }}
+            </div>
+            <div>
+                <p class="font-medium text-slate-800 text-lg">添加商品</p>
+                <p class="text-sm text-slate-500 mt-1">录入新商品信息</p>
+            </div>
+        </a>
+
+        <a href="/inventory" class="flex items-center p-5 border border-slate-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all hover-lift">
+            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                {{ icon_refresh() }}
+            </div>
+            <div>
+                <p class="font-medium text-slate-800 text-lg">更新库存</p>
+                <p class="text-sm text-slate-500 mt-1">调整商品库存数量</p>
+            </div>
+        </a>
+
+        <a href="/sales" class="flex items-center p-5 border border-slate-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all hover-lift">
+            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                {{ icon_document() }}
+            </div>
+            <div>
+                <p class="font-medium text-slate-800 text-lg">记录销售</p>
+                <p class="text-sm text-slate-500 mt-1">登记新的销售订单</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

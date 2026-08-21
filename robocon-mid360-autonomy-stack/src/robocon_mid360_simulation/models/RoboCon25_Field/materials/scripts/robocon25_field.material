@@ -1,0 +1,50 @@
+
+material RoboCon/Carpet
+{
+  technique
+  {
+    pass
+    {
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      specular 0.2 0.2 0.2 1.0 12.5
+
+      texture_unit
+      {
+        scale 0.1 0.1
+        texture ../textures/carpet.jpg
+        filtering trilinear
+      }
+    }
+    
+    pass
+    {
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      specular 0.2 0.2 0.2 1.0 12.5
+
+      scene_blend alpha_blend
+      depth_write off
+      lighting off
+
+      texture_unit
+      {
+        texture ../textures/lines.png
+        filtering trilinear
+      }
+    }
+  }
+}
+
+material RoboCon/FieldBorder
+{
+  technique
+  {
+    pass ambient
+    {
+      ambient 0.2578 0.4023 0.1836
+      diffuse 0.2578 0.4023 0.1836
+      specular 0.1 0.1 0.1 1 1
+    }
+  }
+}

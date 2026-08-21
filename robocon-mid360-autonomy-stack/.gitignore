@@ -1,0 +1,46 @@
+# ROS 2 generated output
+build/
+install/
+log/
+build_clean/
+install_clean/
+log_clean/
+.trash_*/
+**/__pycache__/
+**/.pytest_cache/
+compile_commands.json
+
+# Private run data and hardware artifacts
+runs/
+metrics/
+bags/
+maps/
+private/
+deliverables/
+COMMANDS.md
+RELEASE_MANIFEST.md
+VENDOR_ADAPTATION_NOTES.md
+source_adaptation_matrix.md
+docs/
+src/**/docs/
+src/**/README.md
+src/**/DESIGN_NOTES.md
+src/**/CHANGELOG.md
+config/*local*
+*.bag
+*.db3
+*.log
+
+# Generated media and reports
+docs/visualizations/**/*.png
+docs/visualizations/**/*.pdf
+docs/visualizations/**/*.svg
+docs/visualizations/**/*.mp4
+docs/visualizations/**/*.webm
+docs/visualizations/**/*.jpg
+
+# Local editor and OS files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

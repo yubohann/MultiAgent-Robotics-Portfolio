@@ -1,0 +1,25 @@
+Name                                 Stmts   Miss  Cover   Missing
+------------------------------------------------------------------
+app\models\__init__.py                  19      0   100%
+app\models\admin_signup_request.py      14      0   100%
+app\models\announcement.py              15      0   100%
+app\models\announcement_read.py         11      0   100%
+app\models\cash_reconciliation.py       16      0   100%
+app\models\category.py                  10      0   100%
+app\models\employee.py                  13      0   100%
+app\models\finance_period_close.py      17      0   100%
+app\models\finance_transaction.py       17      0   100%
+app\models\inventory.py                  8      0   100%
+app\models\inventory_log.py             13      0   100%
+app\models\member.py                    13      0   100%
+app\models\payable_payment.py           13      0   100%
+app\models\product.py                   18      0   100%
+app\models\sale.py                      15      0   100%
+app\models\sale_item.py                 11      0   100%
+app\models\supplier.py                  13      0   100%
+app\models\supplier_payable.py          17      0   100%
+app\models\system_setting.py             9      0   100%
+app\models\user.py                      16      0   100%
+app\services\second_phase.py           252      0   100%
+------------------------------------------------------------------
+TOTAL                                  530      0   100%

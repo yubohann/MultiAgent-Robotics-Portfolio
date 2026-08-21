@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{# 导入图标宏 #}
+{% from 'macros/icons.html' import icon_sales with context %}
+
+{% block title %}销售管理 - 超市管理系统{% endblock %}
+
+{% block header_title %}销售管理{% endblock %}
+
+{% set active_page = 'sales' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
+            <div class="xl:col-span-2">
+                <label class="block text-sm font-medium text-slate-600 mb-2">订单号 / 收银员</label>
+                <input id="searchInput" type="text" placeholder="输入订单号或收银员" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-2">收银员</label>
+                <select id="cashierFilter" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white transition-all">
+                    <option value="">全部</option>
+                    {% for cashier in cashiers %}
+                        <option value="{{ cashier.user_id }}">{{ cashier.real_name or cashier.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-2">状态</label>
+                <select id="statusFilter" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white transition-all">
+                    <option value="">全部</option>
+                    <option value="completed">完成</option>
+                    <option value="refunded">已退款</option>
+                    <option value="cancelled">已取消</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-2">支付方式</label>
+                <select id="paymentFilter" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white transition-all">
+                    <option value="">全部</option>
+                    <option value="cash">现金</option>
+                    <option value="wechat">微信</option>
+                    <option value="alipay">支付宝</option>
+                    <option value="card">银行卡</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-2">开始日期</label>
+                <input id="startDateFilter" type="date" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-2">结束日期</label>
+                <input id="endDateFilter" type="date" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3 mt-4">
+            <button id="searchBtn" class="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">查询</button>
+            <button id="resetBtn" class="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors">重置</button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div>
+                <h4 class="text-lg font-semibold text-slate-800">订单列表</h4>
+                <p class="text-sm text-slate-500" id="resultInfo">加载中...</p>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-primary flex items-center justify-center">
+                {{ icon_sales() }}
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-sm text-slate-600">
+                        <th class="px-6 py-3 font-medium">订单号</th>
+                        <th class="px-6 py-3 font-medium">收银员</th>
+                        <th class="px-6 py-3 font-medium">商品数</th>
+                        <th class="px-6 py-3 font-medium">应收</th>
+                        <th class="px-6 py-3 font-medium">优惠</th>
+                        <th class="px-6 py-3 font-medium">实收</th>
+                        <th class="px-6 py-3 font-medium">支付方式</th>
+                        <th class="px-6 py-3 font-medium">状态</th>
+                        <th class="px-6 py-3 font-medium">时间</th>
+                        <th class="px-6 py-3 font-medium">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="orderTableBody" class="divide-y divide-slate-100">
+                    <tr>
+                        <td colspan="10" class="px-6 py-12 text-center text-slate-400">加载中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100">
+            <div class="text-sm text-slate-500" id="paginationInfo">共 0 条记录</div>
+            <div class="flex items-center gap-2" id="paginationControls"></div>
+        </div>
+    </div>
+</div>
+
+<div id="orderModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
+    <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div>
+                <h3 class="text-xl font-semibold text-slate-800">订单详情</h3>
+                <p class="text-sm text-slate-500" id="modalSubtitle">查看订单明细</p>
+            </div>
+            <button id="closeModalBtn" class="text-slate-400 hover:text-slate-700 transition-colors text-2xl leading-none">&times;</button>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" id="orderMeta"></div>
+
+            <div class="overflow-x-auto border border-slate-100 rounded-2xl">
+                <table class="min-w-full">
+                    <thead class="bg-slate-50">
+                        <tr class="text-left text-sm text-slate-600">
+                            <th class="px-4 py-3 font-medium">商品</th>
+                            <th class="px-4 py-3 font-medium">编码</th>
+                            <th class="px-4 py-3 font-medium">数量</th>
+                            <th class="px-4 py-3 font-medium">单价</th>
+                            <th class="px-4 py-3 font-medium">成本价</th>
+                            <th class="px-4 py-3 font-medium">小计</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderItemsBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script src="{{ url_for('static', filename='js/sales.js') }}"></script>
+{% endblock %}

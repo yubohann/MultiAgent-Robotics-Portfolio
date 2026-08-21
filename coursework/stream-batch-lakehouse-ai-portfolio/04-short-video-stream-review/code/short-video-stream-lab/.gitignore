@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+data/incoming/*.mp4
+data/incoming/*.mov
+data/incoming/*.m4v
+data/incoming/*.webm
+!data/incoming/upload_[REDACTED]_yubohan_drone_review.mp4
+!data/incoming/real_campus_sports_[REDACTED].mp4
+!data/incoming/real_low_light_review_[REDACTED].mp4
+!data/incoming/real_flash_risk_review_[REDACTED].mp4
+data/media/*
+data/state/*
+data/models/*

@@ -1,0 +1,4 @@
+﻿WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+short_video_ingest_[REDACTED]
+short_video_result_[REDACTED]

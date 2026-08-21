@@ -1,0 +1,125 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="default_world">
+    <!-- 引用 RoboCon25_Field 模型 -->
+    <include>
+      <uri>model://RoboCon25_Field</uri>
+    </include>
+
+    <!--
+      Simulation-only return surface. The public field asset is open-air, while
+      this robot profile mounts MID-360 facing upward. A high, non-visual static
+      plane supplies deterministic LiDAR returns for LIO/replay tests; it is not
+      part of the official ROBOCON field geometry.
+    -->
+    <model name="mid360_simulation_return_plane">
+      <static>true</static>
+      <pose>0 0 4.0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>24 18 0.05</size></box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- 设置世界背景和其他属性（可选） -->
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.8 0.8 0.8 1</background>
+      <shadows>1</shadows>
+    </scene>
+
+    <!-- 添加光照 -->
+    <light name="sun" type="directional">
+      <cast_shadows>1</cast_shadows>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+    
+    <!-- 调整视口位置（可选） -->
+    <!-- <gui fullscreen="0">
+      <camera name="user_camera">
+        <pose>10 10 10 0 0 0</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui> -->
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <pose>1.39824 2.83727 2.93672 0 1.032 -1.856</pose>
+        <view_controller>orbit</view_controller>
+        <projection_type>perspective</projection_type>
+      </camera>
+    </gui>
+
+    <!-- 加载篮球模型 -->
+    <model name='basketball'>
+      <static>0</static>
+      <link name='link'>
+        <pose>0 0 0 0 0 0</pose>
+        
+        <!-- 添加惯性参数 -->
+        <inertial>
+          <mass>0.6</mass>  <!-- 标准篮球重量约0.6kg -->
+          <inertia>
+            <ixx>0.00384</ixx>  <!-- 球体惯性矩公式: (2/5)*m*r² -->
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00384</iyy>
+            <iyz>0</iyz>
+            <izz>0.00384</izz>
+          </inertia>
+        </inertial>
+
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://basketball/model.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        
+        <collision name='collision'>
+          <geometry>
+            <sphere>
+              <radius>0.12</radius>
+            </sphere>
+          </geometry>
+          <surface>
+            <contact>
+              <ode>
+                <soft_cfm>0.0001</soft_cfm>     <!-- 降低弹性计算的阻尼 -->
+              </ode>
+            </contact>
+            <bounce>
+              <restitution_coefficient>0.85</restitution_coefficient>  <!-- 修正为合理值（真实篮球约为0.75*地面系数） -->
+              <threshold>0.05</threshold>       <!-- 最小碰撞速度阈值减小 -->
+            </bounce>
+            <friction>
+              <ode>
+                <mu>0.3</mu>    <!-- 减少静摩擦 -->
+                <mu2>0.2</mu2>  <!-- 减少动摩擦（避免粘连） -->
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>0 0 0 0 0 0</pose>
+    </model>
+    
+    
+  </world>
+</sdf>
+

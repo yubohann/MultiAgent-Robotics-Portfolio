@@ -1,0 +1,6 @@
+path: 'C:/Users/Administrator/Desktop/作品集/嵌入式系统课程设计/exp5_6_yolo26/my_data/detection'
+train: images/train
+val: images/val
+
+names:
+  0: 'obstacle'

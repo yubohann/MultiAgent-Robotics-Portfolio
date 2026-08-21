@@ -1,0 +1,18 @@
+﻿Public drone video source for Lab 4
+Student ID: [REDACTED]
+Name: Yu Bohan / Bohan Yu
+
+Selected source: Pexels public video
+Direct media URL downloaded:
+https://videos.pexels.com/video-files/7457249/7457249-uhd_3840_2160_25fps.mp4
+Saved file:
+code/short-video-stream-lab/data/incoming/upload_[REDACTED]_yubohan_drone.mp4
+
+License evidence:
+Pexels License: https://www.pexels.com/license/
+Pexels states photos and videos are free to use; attribution is not required, but credit is appreciated.
+For the report, keep a browser screenshot of the Pexels License page and the video/source page if available.
+
+Why this material fits Lab 4:
+Drone/aerial videos can include residential areas, roads, buildings, vehicles, infrastructure, and broad geographic context.
+They are suitable for demonstrating key-frame sampling, multimodal scene understanding, risk review, automatic tagging, and asynchronous publish/review decisions.

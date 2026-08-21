@@ -1,0 +1,158 @@
+# -*- coding: utf-8 -*-
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[3]
+OUTDIR = ROOT / "reports" / "system-analysis-design" / "ppt-defense"
+IMAGE_DIR = ROOT / "reports" / "system-analysis-design" / "images"
+OUTLINE = OUTDIR / "outline.json"
+
+
+def image(name: str) -> str:
+    return str((IMAGE_DIR / name).resolve())
+
+
+def figure_slide(title: str, subtitle: str, file_name: str, takeaway: str) -> dict:
+    return {
+        "type": "content",
+        "variant": "scientific-figure",
+        "title": title,
+        "subtitle": subtitle,
+        "assets": {
+            "figures": [
+                {
+                    "path": image(file_name),
+                    "label": "",
+                    "title": "",
+                    "caption": "",
+                }
+            ]
+        },
+        "summary_callout": takeaway,
+        "sources": [file_name],
+    }
+
+
+def main() -> None:
+    slides = [
+        {
+            "type": "title",
+            "title": "超市管理系统课程设计答辩",
+            "subtitle": "12 分钟汇报与演示 + 3 分钟提问验收",
+            "kicker": "软件开发与管理课程设计",
+            "assets": {"hero_image": image("29-总体技术架构.png")},
+            "sources": ["软件开发与管理课程设计 推荐答辩流程.xlsx", "系统分析与设计实验报告"],
+        },
+        {
+            "type": "content",
+            "variant": "stats",
+            "title": "1. 项目概况与分工（1 分钟）",
+            "subtitle": "先说明项目范围、团队角色、仓库交付和当前完成度",
+            "facts": [
+                {"value": "12", "label": "模块", "detail": "商品、库存、收银、财务、二期主数据"},
+                {"value": "69", "label": "图表", "detail": "57 张主图 + 12 张模块级用例图"},
+                {"value": "100%", "label": "覆盖率", "detail": "coverage fail_under = 100"},
+                {"value": "15", "label": "分钟", "detail": "12 分钟汇报演示 + 3 分钟问答"},
+            ],
+            "bullets": [
+                "项目范围：超市门店后台管理和收银业务。",
+                "团队分工：组长统筹，需求、后端、前端、测试与文档分别负责。",
+                "仓库证据：报告、源码、图表、drawio、测试、代码审查记录已归档。",
+            ],
+            "summary_callout": "开场口径：这是团队协作完成的可运行系统，不是单纯文档或页面原型。",
+            "sources": ["README.md", "docs/course-deliverables/test-case-design.md"],
+        },
+        figure_slide(
+            "2. 需求建模（2 分钟）：覆盖范围与代表性流程",
+            "展示用例图和业务流程，不逐张念图，重点讲覆盖范围和 2-3 个流程",
+            "03-业务用例总图.png",
+            "讲法：总用例说明角色边界，12 张模块级用例图证明数量要求和功能覆盖。",
+        ),
+        figure_slide(
+            "代表性流程：销售收银闭环",
+            "从商品检索到库存校验、销售单生成、库存扣减和流水记录",
+            "07-销售收银流程.png",
+            "讲法：销售收银是最能体现前后端联通、库存一致性和业务闭环的流程。",
+        ),
+        figure_slide(
+            "3. 数据建模（2 分钟）：ER 与 ORM 实体设计",
+            "说明核心实体、关系、关键字段，以及它们如何支撑业务流程",
+            "22-核心ER模型.png",
+            "讲法：Product、Inventory、Sale、SaleItem、Finance、Member、Supplier 等模型支撑业务。",
+        ),
+        figure_slide(
+            "4. 界面设计（2 分钟）：页面与业务流程对应",
+            "展示主要界面结构，说明用户如何完成商品、库存、收银、财务和二期主数据操作",
+            "05-前端信息架构.png",
+            "讲法：13 个页面不是孤立模板，而是对应需求流程、角色权限和用户操作路径。",
+        ),
+        {
+            "type": "content",
+            "variant": "table",
+            "title": "5. 系统运行演示（4 分钟）：建议按一个闭环演示",
+            "subtitle": "提前登录好测试账号和演示数据，演示时少切换、多闭环",
+            "headers": ["演示顺序", "页面入口", "要证明什么", "备用说明"],
+            "rows": [
+                ["1", "/product", "商品可维护，库存初始化", "商品编码唯一"],
+                ["2", "/inventory", "库存可查询、可预警、可追溯", "库存流水留痕"],
+                ["3", "/cashier", "收银台能检索、结算、扣库存", "库存不足会拦截"],
+                ["4", "/sales + /finance", "销售单可查，财务可日结", "金额和明细对应"],
+                ["5", "/members 或 /suppliers", "二期模块已落地", "不是纸面补充"],
+            ],
+            "column_weights": [0.16, 0.34, 0.18, 0.32],
+            "caption": "演示建议：优先展示一个完整业务闭环，例如商品维护 -> 收银结算 -> 销售查询 -> 财务对账。",
+        },
+        figure_slide(
+            "6. 测试与质量管理（2 分钟）",
+            "展示测试用例、单元测试、自动化测试结果、覆盖率和代码审查记录",
+            "52-测试覆盖矩阵.png",
+            "讲法：测试不仅验证正常路径，也覆盖重复编码、库存不足、越权访问等异常路径。",
+        ),
+        figure_slide(
+            "验收重点：四个一致性",
+            "需求与设计、设计与实现、实现与测试、个人贡献与仓库记录必须对应",
+            "53-发布交付物清单.png",
+            "讲法：老师检查 Gitee 时，可以沿着报告、图表、源码、测试和截图清单逐项核对。",
+        ),
+        {
+            "type": "content",
+            "variant": "standard",
+            "title": "7. 总结与问答（2 分钟）",
+            "subtitle": "总结完成度、未完成问题、改进计划，并准备回答老师追问",
+            "bullets": [
+                "完成度：系统可运行，需求、数据、界面、实现、测试和报告证据已归档。",
+                "待补证据：页面人工截图仍建议按清单补齐，增强现场验收可信度。",
+                "改进计划：多门店并发、真实支付接口、采购审批流、备份恢复和更细粒度权限。",
+                "问答准备：每个功能都能说出对应图表、页面、模型、服务和测试证据。",
+            ],
+            "summary_callout": "最终口径：文档、代码、测试、演示一致，个人贡献能在仓库材料中找到对应证据。",
+            "sources": ["软件开发与管理课程设计 推荐答辩流程.xlsx"],
+        },
+    ]
+
+    outline = {
+        "title": "超市管理系统答辩PPT",
+        "subtitle": "系统分析与设计课程答辩",
+        "deck_style": {
+            "font_pair": "system_clean_v1",
+            "visual_density": "high",
+            "emoji_mode": "none",
+            "header_mode": "bar",
+            "title_layout": "command-center",
+            "title_motif": "network",
+            "footer_mode": "standard",
+            "footer_page_numbers": False,
+        },
+        "slides": slides,
+    }
+    OUTDIR.mkdir(parents=True, exist_ok=True)
+    OUTLINE.write_text(json.dumps(outline, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"wrote {OUTLINE}")
+    print(f"slides {len(slides)}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,9 @@
+# Template dataset config for this completed YOLO26 lab package.
+# If you move the project to Ubuntu/WSL, run scripts/02_make_data_yaml.py again
+# to regenerate configs/my_detect.local.yaml with that machine's absolute path.
+path: ../my_data/detection
+train: images/train
+val: images/val
+
+names:
+  0: obstacle
