@@ -25,6 +25,7 @@ namespace gazebo
 {
 
     constexpr double kScanPatternTickToNanoseconds = 1000.0;
+    constexpr double kNanosecondsPerSecond = 1.0e9;
 
     double PatternOffsetNanoseconds(
         const double pattern_tick,
@@ -40,6 +41,46 @@ namespace gazebo
             relative_ticks += period_ticks;
         }
         return relative_ticks * kScanPatternTickToNanoseconds;
+    }
+
+    int64_t PacketPatternSamples(
+        const double scan_period_seconds,
+        const int64_t max_pattern_samples)
+    {
+        if (scan_period_seconds <= 0.0 || max_pattern_samples <= 0) {
+            return 0;
+        }
+
+        const auto update_period_samples = static_cast<int64_t>(std::llround(
+            scan_period_seconds * kNanosecondsPerSecond /
+            kScanPatternTickToNanoseconds));
+        return std::min(max_pattern_samples, std::max<int64_t>(1, update_period_samples));
+    }
+
+    int64_t PatternStartIndex(
+        const double simulation_time_seconds,
+        const int64_t max_pattern_samples)
+    {
+        if (max_pattern_samples <= 0) {
+            return 0;
+        }
+
+        const auto elapsed_pattern_samples = static_cast<int64_t>(std::floor(
+            std::max(0.0, simulation_time_seconds) * kNanosecondsPerSecond /
+            kScanPatternTickToNanoseconds));
+        return elapsed_pattern_samples % max_pattern_samples;
+    }
+
+    int64_t PatternIndexForRay(
+        const int64_t pattern_start_index,
+        const int64_t packet_pattern_samples,
+        const int64_t ray_index,
+        const int64_t ray_count,
+        const int64_t max_pattern_samples)
+    {
+        return (pattern_start_index +
+                (ray_index * packet_pattern_samples) / ray_count) %
+            max_pattern_samples;
     }
 
     GZ_REGISTER_SENSOR_PLUGIN(LivoxPointsPlugin)
@@ -158,16 +199,35 @@ namespace gazebo
         }
         RCLCPP_INFO(rclcpp::get_logger("LivoxPointsPlugin"), "sample: %ld", samplesStep);
         RCLCPP_INFO(rclcpp::get_logger("LivoxPointsPlugin"), "downsample: %ld", downSample);
-        rayShape->RayShapes().reserve(samplesStep / downSample);
+        const int64_t requested_ray_count =
+            (samplesStep + downSample - 1) / downSample;
+        const int64_t packet_pattern_samples =
+            PacketPatternSamples(scanPeriodSeconds, maxPointSize);
+        if (requested_ray_count <= 0 || packet_pattern_samples <= 0 ||
+            requested_ray_count > packet_pattern_samples) {
+            RCLCPP_ERROR(
+                rclcpp::get_logger("LivoxPointsPlugin"),
+                "invalid packet contract: requested rays=%ld, window samples=%ld, "
+                "update period=%.6fs. Increase the sensor update rate or downsample "
+                "until each ray has a unique acquisition time.",
+                requested_ray_count, packet_pattern_samples, scanPeriodSeconds);
+            return;
+        }
+        rayShape->RayShapes().reserve(requested_ray_count);
         rayShape->Load(sdfPtr);
         rayShape->Init();
         minDist = rangeElem->Get<double>("min");
         maxDist = rangeElem->Get<double>("max");
         auto offset = laserCollision->RelativePose();
         ignition::math::Vector3d start_point, end_point;
-        for (int j = 0; j < samplesStep; j += downSample)
+        // Each message covers one sensor update interval. Uniform selection
+        // keeps light profiles spatially complete without extending point
+        // timestamps beyond the next 10 Hz packet.
+        for (int64_t ray_index = 0; ray_index < requested_ray_count; ++ray_index)
         {
-            int index = j % maxPointSize;
+            const int64_t index = PatternIndexForRay(
+                0, packet_pattern_samples, ray_index, requested_ray_count,
+                maxPointSize);
             auto &rotate_info = aviaInfos[index];
             auto axis = offset.Rot() * rotate_info.direction;
             start_point = minDist * axis + offset.Pos();
@@ -323,25 +383,30 @@ namespace gazebo
         auto &rays = ray_shape->RayShapes();
         ignition::math::Vector3d start_point, end_point;
         auto offset = laserCollision->RelativePose();
-        int64_t end_index = currStartIndex + samplesStep;
-        long unsigned int ray_index = 0;
         auto ray_size = rays.size();
+        if (ray_size == 0 || maxPointSize <= 0) {
+            return;
+        }
+        const int64_t packet_pattern_samples =
+            PacketPatternSamples(scanPeriodSeconds, maxPointSize);
+        const int64_t pattern_start_index = PatternStartIndex(
+            world->SimTime().Double(), maxPointSize);
         points_pair.reserve(rays.size());
-        for (int k = currStartIndex; k < end_index; k += downSample)
+        for (std::size_t ray_index = 0; ray_index < ray_size; ++ray_index)
         {
-            auto index = k % maxPointSize;
+            // Keep selected CSV ticks ordered within one update window so
+            // CustomMsg offset_time remains monotonic without packet overlap.
+            const int64_t index = PatternIndexForRay(
+                pattern_start_index, packet_pattern_samples,
+                static_cast<int64_t>(ray_index), static_cast<int64_t>(ray_size),
+                maxPointSize);
             auto &rotate_info = aviaInfos[index];
             auto axis = offset.Rot() * rotate_info.direction;
             start_point = minDist * axis + offset.Pos();
             end_point = maxDist * axis + offset.Pos();
-            if (ray_index < ray_size)
-            {
-                rays[ray_index]->SetPoints(start_point, end_point);
-                points_pair.emplace_back(ray_index, rotate_info);
-            }
-            ray_index++;
+            rays[ray_index]->SetPoints(start_point, end_point);
+            points_pair.emplace_back(static_cast<int>(ray_index), rotate_info);
         }
-        currStartIndex += samplesStep;
     }
 
     void LivoxPointsPlugin::InitializeScan(msgs::LaserScan *&scan)

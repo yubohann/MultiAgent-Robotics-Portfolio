@@ -114,7 +114,6 @@ namespace gazebo
       std::string parent_name;
       std::string child_name;
       int64_t samplesStep = 0;
-      int64_t currStartIndex = 0;
       int64_t maxPointSize = 1000;
       int64_t downSample = 1;
       double scanPatternFirstTick = 0.0;

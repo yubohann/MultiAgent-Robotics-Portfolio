@@ -154,6 +154,21 @@ class SimulationAssetTests(unittest.TestCase):
         self.assertIn("cloud2_pub->get_subscription_count() > 0", source)
         self.assertIn("if (publish_cloud_mirror)", source)
 
+    def test_plugin_limits_each_packet_to_one_sensor_update_window(self):
+        source = (PACKAGE_ROOT / "src" / "livox_points_plugin.cpp").read_text(encoding="utf-8")
+        self.assertIn("PacketPatternSamples(scanPeriodSeconds, maxPointSize)", source)
+        self.assertIn("PatternStartIndex(", source)
+        self.assertIn("PatternIndexForRay(", source)
+        self.assertIn("requested_ray_count > packet_pattern_samples", source)
+        self.assertNotIn("currStartIndex += samplesStep", source)
+
+    def test_stream_probe_requires_non_overlapping_livox_packets(self):
+        probe = (PACKAGE_ROOT / "scripts" / "probe_simulation_streams.py").read_text(encoding="utf-8")
+        self.assertIn('"offset_time_monotonic"', probe)
+        self.assertIn('"packets_non_overlapping"', probe)
+        self.assertIn("timebase >= self.previous_lidar_end_time", probe)
+        self.assertIn('parser.add_argument("--lidar-topic"', probe)
+
     def test_launch_exposes_bounded_wsl_and_upstream_density_profiles(self):
         launch = (PACKAGE_ROOT / "launch" / "gazebo_mid360_candidate.launch.py").read_text(encoding="utf-8")
         robot = (PACKAGE_ROOT / "urdf" / "robocon25_mid360_robot.xacro").read_text(encoding="utf-8")
