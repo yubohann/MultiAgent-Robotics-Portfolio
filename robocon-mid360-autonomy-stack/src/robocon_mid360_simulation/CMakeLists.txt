@@ -36,7 +36,7 @@ endif()
 
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY launch models scan_mode urdf worlds config DESTINATION share/${PROJECT_NAME})
-install(PROGRAMS scripts/controlled_lio_run.py scripts/fixed_map_localization_smoke.py scripts/fixed_map_interlock_integration.py scripts/localization_recovery_interlock_smoke.py scripts/probe_simulation_streams.py scripts/run_controlled_lio_smoke.sh scripts/run_fixed_map_localization_smoke.sh scripts/run_fixed_map_interlock_integration.sh scripts/run_localization_recovery_interlock_smoke.sh scripts/run_simulation_mapping.sh DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/controlled_lio_run.py scripts/depth_visualizer.py scripts/fixed_map_localization_smoke.py scripts/fixed_map_interlock_integration.py scripts/localization_recovery_interlock_smoke.py scripts/probe_simulation_streams.py scripts/basketball_demo_controller.py scripts/run_controlled_lio_smoke.sh scripts/run_fixed_map_localization_smoke.sh scripts/run_fixed_map_interlock_integration.sh scripts/run_localization_recovery_interlock_smoke.sh scripts/run_simulation_mapping.sh DESTINATION lib/${PROJECT_NAME})
 install(FILES scripts/run_contract.py DESTINATION lib/${PROJECT_NAME})
 install(FILES LICENSE_UPSTREAM_PB_RM_SIMULATION.md LICENSE_UPSTREAM_FIELD_ASSET.md
   DESTINATION share/${PROJECT_NAME})

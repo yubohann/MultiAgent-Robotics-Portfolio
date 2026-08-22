@@ -1,0 +1,68 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    # Use the transient-local marker streams for the 2D view. The RViz Map
+    # display invokes an indexed-texture shader that fails on the WSLg/OGRE
+    # OpenGL profile used by this workstation.
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Occupied cells
+      Topic:
+        Value: /mid360/occupancy_occupied_cells
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 1
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Free cells
+      Topic:
+        Value: /mid360/occupancy_free_cells
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 1
+      Value: true
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Ground Grid
+      Plane: XY
+      Cell Size: 1
+      Color: 120; 120; 120
+      Value: true
+    - Class: rviz_default_plugins/Path
+      Enabled: true
+      Name: FAST-LIO Path
+      Topic:
+        Value: /path
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Line Style: Lines
+      Line Width: 0.05
+      Color: 25; 255; 0
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 25; 25; 25
+    Fixed Frame: camera_init
+    Frame Rate: 12
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+  Value: true
+Views:
+  Current:
+    Class: rviz_default_plugins/TopDownOrtho
+    Scale: 12
+    Target Frame: camera_init
+    X: 0
+    Y: 0
+  Saved: ~

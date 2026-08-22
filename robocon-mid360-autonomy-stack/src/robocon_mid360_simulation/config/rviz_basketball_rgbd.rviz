@@ -1,0 +1,62 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /RGB Camera1
+        - /Depth Camera1
+    Splitter Ratio: 0.45
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: RGB Camera
+      Normalize Range: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /robot1/simulated_rgbd_camera/image_raw
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 12
+      Median window: 1
+      Min Value: 0.2
+      Name: Depth Camera
+      Normalize Range: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /robot1/simulated_rgbd_camera/depth/image_visualized
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 20; 20; 20
+    Fixed Frame: camera_init
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+  Value: true
+Views:
+  Current:
+    Class: rviz_default_plugins/XYOrbit
+    Distance: 4
+    Focal Point:
+      X: 0
+      Y: 0
+      Z: 0
+    Pitch: 0.5
+    Yaw: 0.8
