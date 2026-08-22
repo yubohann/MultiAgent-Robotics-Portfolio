@@ -10,5 +10,3 @@
 python3 tools/validate_project.py
 python3 tools/run_python_contract_tests.py
 ```
-
-真实 MID-360、地图、bag、网卡参数和硬件运行证据不包含在公开源码中。

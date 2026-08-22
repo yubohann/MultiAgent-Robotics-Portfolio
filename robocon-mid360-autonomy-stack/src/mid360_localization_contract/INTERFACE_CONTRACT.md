@@ -45,5 +45,4 @@ Unknown values must be represented as `unknown` or `TBD`, never as a fabricated 
 
 ## QoS And Timing
 
-Sensor subscriptions use `qos_profile_sensor_data`. Exact driver QoS must be checked with `ros2 topic info -v` on Ubuntu. The initial competition gate is 0.30 s pose/input silence and is a target to validate, not a measured result.
-
+Sensor subscriptions use `qos_profile_sensor_data`. Exact driver QoS is checked with `ros2 topic info -v` on Ubuntu. The initial competition gate is 0.30 s pose/input silence.

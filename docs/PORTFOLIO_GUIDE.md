@@ -4,12 +4,12 @@
 
 ## How to Read This Repository
 
-The root README is an index, not an aggregate claim that every subproject has the same maturity. Open a project README before drawing conclusions about its code, results, data, or hardware status. The machine-readable [project registry](../tools/portfolio_registry.json) defines the curated project set, entry documents, and root-level check keys.
+The root README is an index for the curated project set. The machine-readable [project registry](../tools/portfolio_registry.json) defines its entry documents and root-level check keys.
 
 | Evidence label | Meaning |
 |---|---|
 | Framework | Public architecture, interfaces, documentation, and non-sensitive utilities. It does not imply that a withheld method has been evaluated. |
-| Simulation or replay | Evidence generated in the documented simulated or replayed environment. It is not hardware evidence. |
+| Simulation or replay | Evidence generated in the documented simulated or replayed environment. |
 | Hardware | Evidence limited to the hardware setup, protocol, and scope identified in the relevant project documentation. |
 | Coursework | Educational implementation or lab artifact. It is not represented as production software or a research benchmark. |
 

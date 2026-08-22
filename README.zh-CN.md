@@ -14,4 +14,4 @@
 - [AeroGate Graph](aerogate-graph/README.zh-CN.md)：图规划、编队控制和动态闸门仿真。
 - [FraudGraph ML Engineering](fraudgraph-ml-engineering/README.zh-CN.md)：图与序列联合欺诈检测工程。
 
-完整路径、检查命令和证据边界见 [Portfolio Guide](docs/PORTFOLIO_GUIDE.zh-CN.md)。
+完整路径和检查命令见 [Portfolio Guide](docs/PORTFOLIO_GUIDE.zh-CN.md)。

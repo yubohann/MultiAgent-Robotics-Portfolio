@@ -15,9 +15,7 @@ The following rulebook values were independently checked against
 
 The upstream collision rim height of 3.03 m was changed to 2.43 m, and both
 backboard meshes were lowered by 0.60 m in this adapted copy. This establishes
-a `rulebook_geometry_subset_verified` simulation asset, not a certification of
-the upstream author, all visual details, real field construction, referee
-judgement, or an official Gazebo release. The Rulebook does not provide a
+a `rulebook_geometry_subset_verified` asset. The Rulebook does not provide a
 numeric 3-point arc definition in the text, so zone classification remains a
 separate validated geometry task.
 

@@ -68,7 +68,7 @@ site/                             GitHub Pages portfolio site
 .github/workflows/                Continuous integration and Pages deployment
 ```
 
-Private run archives, generated maps, bags, internal audits, and development notebooks are intentionally kept outside the public source tree and are ignored by Git.
+Private run archives, generated maps, bags, internal audits, and development notebooks are kept outside the public source tree and are ignored by Git.
 
 ## Quick Start
 
@@ -108,7 +108,7 @@ bash tools/run_experiments.sh gui
 
 The dispatcher creates an isolated run directory, records the exact command and ROS domain, and keeps generated evidence outside the public source files.
 
-## Simulation Profiles
+## Runtime Profiles
 
 | Profile | Purpose |
 | --- | --- |
@@ -116,12 +116,12 @@ The dispatcher creates an isolated run directory, records the exact command and 
 | `2000-ray` | Fast topic and interface smoke profile |
 | `indoor_competition_candidate` | Structured indoor scene with field geometry and four hoop assets |
 | `open_field_degraded` | Quality-gating and geometric-degradation tests |
-| `gazebo_simulation` | Evidence label for local simulation results |
-| `bag_replay` | Evidence label for replayed recorded inputs |
+| `gazebo_simulation` | Gazebo sensor and physics runtime |
+| `bag_replay` | Replayed recorded inputs |
 
 ## Visual Snapshot
 
-The following 2025 ROBOCON-style Gazebo evidence is presented in sequence. Each visual is given its own row for readability.
+The following 2025 ROBOCON-style Gazebo and RViz views are presented in sequence. Each visual is given its own row for readability.
 
 <p align="center">
   <img src="site/assets/01-scene-gazebo-court.png" alt="2025 ROBOCON Gazebo basketball court scene" width="90%">
@@ -174,7 +174,7 @@ Explore the visual project overview at:
 
 **https://yubohann.github.io/Robocon-mid360-autonomy-stack/**
 
-The site highlights the architecture and the ordered 2025 ROBOCON simulation evidence in `site/assets/`.
+The site highlights the architecture and the ordered 2025 ROBOCON views in `site/assets/`.
 
 ## License
 

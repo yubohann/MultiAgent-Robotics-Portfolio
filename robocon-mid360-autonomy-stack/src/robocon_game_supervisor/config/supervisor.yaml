@@ -1,4 +1,3 @@
-# Checked-in transport template. Rule, hardware, and timing values remain private/TBD.
 robocon_game_supervisor:
   ros__parameters:
     command_topic: /robocon/operator_command
