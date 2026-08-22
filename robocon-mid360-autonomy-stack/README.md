@@ -136,6 +136,26 @@ The following views are curated Gazebo simulation evidence from the public portf
 
 <p align="center"><em>Scan timing, indoor reconstruction, competition-field geometry, and a live two-robot basketball run.</em></p>
 
+## 2025 ROBOCON Evidence Sequence
+
+The following five screenshots document the 2025 ROBOCON-style Gazebo simulation in order: scene, LiDAR point cloud, 2D PCD projection, RGB-D/depth view, and the basketball shot process.
+
+<p align="center">
+  <img src="site/assets/01-scene-gazebo-court.png" alt="2025 ROBOCON Gazebo basketball court scene" width="90%">
+</p>
+<p align="center">
+  <img src="site/assets/02-pointcloud-rviz.png" alt="MID-360 point cloud in RViz" width="90%">
+</p>
+<p align="center">
+  <img src="site/assets/03-pcd-2d-map-rviz.png" alt="2D PCD projection and occupancy map in RViz" width="90%">
+</p>
+<p align="center">
+  <img src="site/assets/04-rgbd-depth-robot2.png" alt="Robot 2 RGB-D and depth visualization" width="90%">
+</p>
+<p align="center">
+  <img src="site/assets/05-basketball-shot-process.png" alt="2025 ROBOCON dual-robot basketball shot process" width="90%">
+</p>
+
 For a camera-only recording without RViz's unused 3D render viewport, run:
 
 ```bash
