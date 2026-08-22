@@ -1,0 +1,194 @@
+{
+  "schema": "org.aerocity.bench.release.v2",
+  "release_version": "0.2.0-pilot",
+  "generator_version": "aerocity-generator-v2",
+  "master_seed": 20260729,
+  "core_sizes_m": [80, 96, 128],
+  "scale_ood_size_m": 160,
+  "split_counts": {
+    "train": 12,
+    "validation": 6,
+    "test_iid": 6,
+    "test_topology": 6,
+    "test_target_process": 6,
+    "test_resilience": 6,
+    "test_scale": 6
+  },
+  "episodes_per_layout": {
+    "train": 4,
+    "validation": 6,
+    "test_iid": 6,
+    "test_topology": 6,
+    "test_target_process": 6,
+    "test_resilience": 10,
+    "test_scale": 6
+  },
+  "target_count_ranges": {
+    "80": [6, 10],
+    "96": [8, 12],
+    "128": [10, 16],
+    "160": [14, 20]
+  },
+  "training_families": ["grid_corridor", "mixed_blocks", "industrial_spine"],
+  "topology_holdout_family": "topology_holdout",
+  "visual_assets": {
+    "bundle": "open_city_cc0_assets_20260729",
+    "standard": [
+      "street_lamp_01",
+      "concrete_road_barrier",
+      "tree_small_02",
+      "wooden_crate_01",
+      "utility_box_01"
+    ]
+  },
+  "fleet": {
+    "profile": "official-pilot-v1",
+    "count": 4
+  },
+  "evaluation_tracks": {
+    "primary_task": "geometry-search-3d",
+    "task_views": {
+      "exploration-3d": "supported",
+      "geometry-search-3d": "primary",
+      "perception-search-3d": "optional"
+    },
+    "fleet": {
+      "core_count": 4,
+      "scaling_counts": [2, 4, 8],
+      "resilience_count": 8,
+      "resilience_loss_counts": [0, 1, 2],
+      "conditional_stress_counts": [12],
+      "custom_count_range": [1, 32]
+    }
+  },
+  "observation_contract": {
+    "tiers": [
+      "T0_state_prior",
+      "T1_occupancy_voxel",
+      "T2_range_fov",
+      "T3_rgbd",
+      "T4_full_perception"
+    ],
+    "leaderboards": {
+      "exploration-3d": ["T0_state_prior", "T1_occupancy_voxel", "T2_range_fov", "T3_rgbd"],
+      "geometry-search-3d": ["T0_state_prior", "T1_occupancy_voxel", "T2_range_fov", "T3_rgbd"],
+      "perception-search-3d": ["T4_full_perception"]
+    },
+    "geometry_confirmation": {
+      "max_range_m": 3.0,
+      "horizontal_fov_deg": 68.0,
+      "vertical_fov_deg": 51.0,
+      "minimum_dwell_s": 0.5,
+      "require_line_of_sight": true,
+      "require_surface_facing": true,
+      "require_source_observation_id": true,
+      "allow_distance_only": false
+    },
+    "perception_confirmation": {
+      "requires_detector_output": true,
+      "separate_leaderboard": true,
+      "geometry_oracle_autofill": false
+    },
+    "cross_tier_ranking": "forbidden"
+  },
+  "dynamics": {
+    "active_profile": "standard",
+    "profiles": {
+      "inspect": {
+        "horizontal_speed_mps": 1.5,
+        "vertical_speed_mps": 1.2,
+        "acceleration_mps2": 1.5,
+        "yaw_rate_deg_s": 90.0,
+        "camera_rate_hz": 15.0,
+        "minimum_clearance_m": 0.8
+      },
+      "standard": {
+        "horizontal_speed_mps": 3.0,
+        "vertical_speed_mps": 2.0,
+        "acceleration_mps2": 2.5,
+        "yaw_rate_deg_s": 120.0,
+        "camera_rate_hz": 15.0,
+        "minimum_clearance_m": 1.0
+      },
+      "fast_unvalidated": {
+        "horizontal_speed_mps": 5.0,
+        "vertical_speed_mps": 2.5,
+        "acceleration_mps2": 3.5,
+        "yaw_rate_deg_s": 150.0,
+        "camera_rate_hz": 20.0,
+        "minimum_clearance_m": 1.5
+      }
+    }
+  },
+  "target_processes": {
+    "profiles": {
+      "uniform_surface": {},
+      "clustered_surface": {
+        "cluster_count": [2, 3],
+        "bandwidth_m": 18.0
+      },
+      "height_stratified": {
+        "minimum_bands": 3,
+        "band_weights": {
+          "near_ground": 0.10,
+          "lower": 0.20,
+          "mid": 0.25,
+          "elevated": 0.25,
+          "highrise": 0.20
+        }
+      }
+    },
+    "by_split": {
+      "train": ["uniform_surface", "clustered_surface"],
+      "validation": ["uniform_surface", "clustered_surface"],
+      "test_iid": ["uniform_surface", "clustered_surface"],
+      "test_topology": ["uniform_surface", "clustered_surface"],
+      "test_target_process": ["uniform_surface", "clustered_surface", "height_stratified"],
+      "test_resilience": ["uniform_surface"],
+      "test_scale": ["uniform_surface", "clustered_surface"]
+    }
+  },
+  "faults": {
+    "profiles": {
+      "none": {"type": "none", "affected_count": 0},
+      "temporary_comm_1": {
+        "type": "temporary_communication_isolation",
+        "affected_count": 1,
+        "onset_fraction": [0.25, 0.55],
+        "duration_fraction": [0.15, 0.30]
+      },
+      "hard_loss_1": {
+        "type": "hard_loss",
+        "affected_count": 1,
+        "onset_fraction": [0.25, 0.65]
+      },
+      "hard_loss_2": {
+        "type": "hard_loss",
+        "affected_count": 2,
+        "onset_fraction": [0.25, 0.65]
+      },
+      "observation_loss_1": {
+        "type": "observation_channel_loss",
+        "affected_count": 1,
+        "onset_fraction": [0.25, 0.65],
+        "channel": "local_geometry"
+      }
+    },
+    "by_split": {
+      "train": ["none"],
+      "validation": ["none"],
+      "test_iid": ["none"],
+      "test_topology": ["none"],
+      "test_target_process": ["none"],
+      "test_resilience": ["none", "temporary_comm_1", "hard_loss_1", "hard_loss_2", "observation_loss_1"],
+      "test_scale": ["none"]
+    }
+  },
+  "admission": {
+    "built_ratio": [0.22, 0.56],
+    "road_ratio": [0.15, 0.38],
+    "street_width_m": [8.0, 18.0],
+    "minimum_support_to_target_ratio": 6.0,
+    "minimum_target_separation_m": 5.0
+  }
+}

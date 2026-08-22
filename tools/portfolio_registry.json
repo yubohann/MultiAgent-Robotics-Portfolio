@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "entry_documents": [
+    "README.md",
+    "README.zh-CN.md",
+    "docs/PORTFOLIO_GUIDE.md",
+    "docs/PORTFOLIO_GUIDE.zh-CN.md",
+    "docs/INTEGRATED_PROJECTS.md"
+  ],
+  "projects": [
+    {
+      "id": "rivermark",
+      "title": "Rivermark Benchmark",
+      "directory": "rivermark",
+      "readme": "rivermark/README.md",
+      "category": "benchmark infrastructure",
+      "verification": "rivermark",
+      "documents": [
+        "rivermark/README.md",
+        "rivermark/README.zh-CN.md",
+        "rivermark/code/README.md"
+      ]
+    },
+    {
+      "id": "robocup-cbg-wm",
+      "title": "RoboCup CBG-WM",
+      "directory": "robocup-cbg-wm",
+      "readme": "robocup-cbg-wm/README.md",
+      "category": "multi-robot learning and replay",
+      "verification": "robocup",
+      "documents": [
+        "robocup-cbg-wm/README.md",
+        "robocup-cbg-wm/README.zh-CN.md",
+        "robocup-cbg-wm/docs/capability_boundaries.md",
+        "robocup-cbg-wm/docs/media/README.md"
+      ]
+    },
+    {
+      "id": "robocon-mid360-autonomy-stack",
+      "title": "Robocon MID-360 Autonomy Stack",
+      "directory": "robocon-mid360-autonomy-stack",
+      "readme": "robocon-mid360-autonomy-stack/README.md",
+      "category": "ROS 2 autonomy",
+      "verification": "mid360",
+      "documents": [
+        "robocon-mid360-autonomy-stack/README.md",
+        "robocon-mid360-autonomy-stack/README.zh-CN.md"
+      ]
+    },
+    {
+      "id": "aerogate-graph",
+      "title": "AeroGate Graph",
+      "directory": "aerogate-graph",
+      "readme": "aerogate-graph/README.md",
+      "category": "multi-agent simulation",
+      "verification": "aerogate",
+      "documents": [
+        "aerogate-graph/README.md",
+        "aerogate-graph/README.zh-CN.md",
+        "aerogate-graph/docs/ARCHITECTURE.md",
+        "aerogate-graph/docs/REPRODUCIBILITY.md"
+      ]
+    },
+    {
+      "id": "fraudgraph-ml-engineering",
+      "title": "FraudGraph ML Engineering",
+      "directory": "fraudgraph-ml-engineering",
+      "readme": "fraudgraph-ml-engineering/README.md",
+      "category": "machine learning engineering",
+      "verification": "fraudgraph",
+      "documents": [
+        "fraudgraph-ml-engineering/README.md",
+        "fraudgraph-ml-engineering/README.zh-CN.md",
+        "fraudgraph-ml-engineering/docs/reproducibility-checklist.md"
+      ]
+    },
+    {
+      "id": "ros2-systematic-learning-notes",
+      "title": "ROS 2 Learning Notes",
+      "directory": "ros2-systematic-learning-notes",
+      "readme": "ros2-systematic-learning-notes/README.md",
+      "category": "engineering handbook",
+      "verification": null,
+      "documents": [
+        "ros2-systematic-learning-notes/README.md",
+        "ros2-systematic-learning-notes/README.zh-CN.md"
+      ]
+    },
+    {
+      "id": "machine-learning-coursework",
+      "title": "Machine Learning Coursework",
+      "directory": "coursework/machine-learning",
+      "readme": "coursework/machine-learning/README.md",
+      "category": "coursework",
+      "verification": null,
+      "documents": [
+        "coursework/machine-learning/README.md",
+        "coursework/machine-learning/README.zh-CN.md",
+        "coursework/machine-learning/classic-ml-algorithms/README.md",
+        "coursework/machine-learning/classic-ml-algorithms/README.zh-CN.md",
+        "coursework/machine-learning/ml-assignment-3/README.md",
+        "coursework/machine-learning/ml-assignment-3/README.zh-CN.md"
+      ]
+    },
+    {
+      "id": "aerocity-bench",
+      "title": "AeroCityBench",
+      "directory": "aerocity-bench",
+      "readme": "aerocity-bench/README.md",
+      "category": "3D multi-UAV benchmark",
+      "verification": null,
+      "documents": [
+        "aerocity-bench/README.md",
+        "aerocity-bench/README.zh-CN.md",
+        "aerocity-bench/docs/README.md"
+      ]
+    },
+    {
+      "id": "hm3d-realised-qd",
+      "title": "HM3D Realised-QD",
+      "directory": "hm3d-realised-qd",
+      "readme": "hm3d-realised-qd/README.md",
+      "category": "multi-UAV exploration and quality-diversity",
+      "verification": null,
+      "documents": [
+        "hm3d-realised-qd/README.md",
+        "hm3d-realised-qd/README.zh-CN.md",
+        "hm3d-realised-qd/docs/README.md"
+      ]
+    },
+    {
+      "id": "yolo26-visdrone-detection",
+      "title": "YOLO26 + VisDrone Detection",
+      "directory": "coursework/yolo26-visdrone-detection",
+      "readme": "coursework/yolo26-visdrone-detection/README.md",
+      "category": "coursework",
+      "verification": null,
+      "documents": [
+        "coursework/yolo26-visdrone-detection/README.md",
+        "coursework/yolo26-visdrone-detection/README.zh-CN.md"
+      ]
+    },
+    {
+      "id": "stream-batch-lakehouse-ai-portfolio",
+      "title": "Stream-Batch Lakehouse AI Portfolio",
+      "directory": "coursework/stream-batch-lakehouse-ai-portfolio",
+      "readme": "coursework/stream-batch-lakehouse-ai-portfolio/README.md",
+      "category": "coursework",
+      "verification": null,
+      "documents": [
+        "coursework/stream-batch-lakehouse-ai-portfolio/README.md",
+        "coursework/stream-batch-lakehouse-ai-portfolio/README.zh-CN.md"
+      ]
+    },
+    {
+      "id": "supermarket-management-system",
+      "title": "Supermarket Management System",
+      "directory": "coursework/supermarket-management-system",
+      "readme": "coursework/supermarket-management-system/README.md",
+      "category": "coursework",
+      "verification": null,
+      "documents": [
+        "coursework/supermarket-management-system/README.md",
+        "coursework/supermarket-management-system/README.zh-CN.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "org.aerocity.bench.external-source-lock.v1",
+  "method_id": "fuel-upstream",
+  "upstream_url": "https://github.com/HKUST-Aerial-Robotics/FUEL.git",
+  "upstream_commit": "662dd23c7b52b258d3c4a0155ff6632118e8984f",
+  "upstream_license": "GPL-3.0-only",
+  "process_boundary": "container",
+  "ros_distribution": "noetic",
+  "base_image": "ros@sha256:72b8bc59035dc0a5b8e07aae28c16caa84192971d72d207c72ed734fb1d5e97d",
+  "source_context_contract": "A clean checkout of the exact upstream_commit is the Docker build context. The benchmark repository is never copied into the image.",
+  "scope": "Build-only evidence for the upstream exploration planner. This lock does not claim an AeroCityBench L0 or L1 integration."
+}

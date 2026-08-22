@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aerocity-bench"
+version = "0.2.0.dev0"
+description = "Open benchmark for 3D multi-UAV search under urban topology, target-process, and fleet-resilience shifts"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "AeroCityBench maintainers" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["jsonschema>=4.23", "pytest>=8.0", "ruff>=0.6"]
+release = ["usd-core>=25.5"]
+rl = ["gymnasium>=1.0", "pettingzoo>=1.24"]
+
+[project.scripts]
+aerocity-bench = "aerocity_bench.cli:main"
+
+[tool.hatch.build]
+# Keep engineering investigations and local release logs out of source
+# distributions.  They are useful in the repository history, but are neither
+# runtime inputs nor a redistributable benchmark artifact.
+exclude = [
+  "/.wheel_verify_*/",
+  "/debug/",
+  "/dist/",
+  "/fix-results.tsv",
+  "/reason/",
+  "/scenario/",
+  "/ship-log.md",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aerocity_bench"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"configs/releases/ordinary-v1-mini.json" = "aerocity_bench/resources/presets/ordinary-v1-mini.json"
+"schemas/release_config_ordinary_v3.schema.json" = "aerocity_bench/resources/schemas/release_config_ordinary_v3.schema.json"
+"tools/isaac_capture.py" = "aerocity_bench/tools/isaac_capture.py"
+"tools/isaac_native_gate.py" = "aerocity_bench/tools/isaac_native_gate.py"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = [".", "src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

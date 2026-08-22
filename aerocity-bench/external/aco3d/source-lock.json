@@ -1,0 +1,56 @@
+{
+  "schema": "org.aerocity.bench.external-method-source-lock.v1",
+  "method_id": "aco3d-public-atlas-inspection-ordering",
+  "scope": "source-locked translation of the published sequential 3-D inspection ordering core; not a claim that the upstream code supplies four-UAV control or hidden-target search",
+  "upstream": {
+    "url": "https://github.com/duynamrcv/aco_3d_ipp.git",
+    "commit": "c395f5b61f6746b2d39310dbc55a7ec3e1eae2d5",
+    "paper_doi": "10.1109/SII58957.2024.10417512",
+    "license": "MIT",
+    "license_sha256": "aa0694b92ccfeea65c810794c1f16dd368c0f9bbe0ac92c1189078f813abe1ba",
+    "source_file_sha256": {
+      "CreateModel.m": "25febad2847eb93792332c32b62b7e63dbd5fa9deed80c2472976fe7d972e62f",
+      "TourCost.m": "8aead9209c4464cc7e6e5e8f9aab0508b27d7a0366089f503d8c75ac8431273d",
+      "main.m": "3e5226ab265732ec70ff902a2e11b0c146cb289b9482e16c4a1fdca754c263a0"
+    }
+  },
+  "adapter": {
+    "execution_boundary": "separate Python JSONL process",
+    "implementation": "faithful translation of CreateModel.m, TourCost.m, and the fixed ACO loop; MATLAB/Octave was unavailable on the benchmark host",
+    "upstream_runtime_executed": false,
+    "upstream_code_copied_into_core": false,
+    "fixed_parameters": {
+      "iterations": 350,
+      "ants": 50,
+      "q": 1.0,
+      "alpha": 1.0,
+      "beta": 1.0,
+      "rho": 0.05
+    }
+  },
+  "public_semantics": {
+    "upstream_input": [
+      "ordered three-dimensional inspection-point coordinates",
+      "pairwise movement-cost model"
+    ],
+    "g2_i_mapping": [
+      "each drone receives only its pre-frozen, target-independent public sector cells",
+      "cell positions instantiate the upstream three-dimensional point set",
+      "the source movement-cost formula orders cells within that public sector",
+      "the shared benchmark executor owns all CF2X motion, observation, safety, anonymous receipt, and return behavior"
+    ],
+    "forbidden_inputs": [
+      "target coordinates or count",
+      "target process or labels",
+      "support sites or evaluator witnesses",
+      "private mesh, rendered depth, or evaluator rays",
+      "split labels or seeds"
+    ]
+  },
+  "known_limitations": [
+    "The locked source implementation optimizes one sequential tour; it does not allocate work among four vehicles.",
+    "G2-I's public mission-sector assignment therefore remains a benchmark contract rather than an upstream multi-UAV allocation result.",
+    "This translation is a development candidate until a source-equivalence fixture and a three-ancestor L0/L1 panel succeed.",
+    "It must not close Gate C, authorize formal-test access, or be presented as a native MATLAB upstream execution."
+  ]
+}

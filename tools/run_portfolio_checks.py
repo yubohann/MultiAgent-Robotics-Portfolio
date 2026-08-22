@@ -9,8 +9,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+from portfolio_registry import RegistryError, load_registry
+
 
 ROOT = Path(__file__).resolve().parents[1]
+CHECK_HANDLERS = frozenset({"aerogate", "fraudgraph", "mid360", "robocup", "rivermark"})
 
 
 def run(name: str, cwd: Path, command: list[str], extra_env: dict[str, str] | None = None) -> None:
@@ -23,24 +26,35 @@ def run(name: str, cwd: Path, command: list[str], extra_env: dict[str, str] | No
 
 
 def main() -> int:
+    try:
+        registry = load_registry(ROOT)
+    except RegistryError as exc:
+        print(f"Portfolio registry check failed: {exc}")
+        return 1
+    available_checks = registry.verification_keys
+    missing_handlers = set(available_checks) - CHECK_HANDLERS
+    if missing_handlers:
+        print(
+            "Portfolio registry check failed: no runner is registered for verification key(s): "
+            + ", ".join(sorted(missing_handlers))
+        )
+        return 1
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--project",
-        choices=("all", "portfolio", "aerogate", "fraudgraph", "mid360", "robocup", "rivermark"),
+        choices=("all", "portfolio", *available_checks),
         default="all",
         help="run one project check or the complete lightweight suite",
     )
     args = parser.parse_args()
-    selected = {args.project} if args.project != "all" else {
-        "portfolio", "aerogate", "fraudgraph", "mid360", "robocup", "rivermark"
-    }
+    selected = {args.project} if args.project != "all" else {"portfolio", *available_checks}
     python = sys.executable
     with tempfile.TemporaryDirectory(prefix="portfolio-check-") as temporary:
         scratch = Path(temporary)
         if "portfolio" in selected:
             run("portfolio integrity", ROOT, [python, "tools/verify_portfolio.py"])
         if "aerogate" in selected:
-            project = ROOT / "aerogate-graph"
+            project = registry.project_for_verification("aerogate").directory
             run("aerogate tests", project, [python, "-m", "pytest", "-q"])
             run(
                 "aerogate deterministic smoke",
@@ -52,15 +66,15 @@ def main() -> int:
                 ],
             )
         if "fraudgraph" in selected:
-            project = ROOT / "fraudgraph-ml-engineering"
+            project = registry.project_for_verification("fraudgraph").directory
             run("fraudgraph repository validation", project, [python, "scripts/validate_repository.py"])
             run("fraudgraph tests", project, [python, "-m", "pytest", "-q"])
         if "mid360" in selected:
-            project = ROOT / "robocon-mid360-autonomy-stack"
+            project = registry.project_for_verification("mid360").directory
             run("mid360 contract tests", project, [python, "tools/run_python_contract_tests.py"])
             run("mid360 metadata validation", project, [python, "tools/validate_project.py"])
         if "robocup" in selected:
-            project = ROOT / "robocup-cbg-wm"
+            project = registry.project_for_verification("robocup").directory
             rl_root = project / "isaaclab_sim" / "rl"
             run("robocup rule tests", project, [python, "-m", "pytest", "tests", "-q"], {"PYTHONPATH": str(rl_root)})
             run(
@@ -73,7 +87,7 @@ def main() -> int:
                 {"PYTHONPATH": str(rl_root)},
             )
         if "rivermark" in selected:
-            project = ROOT / "rivermark" / "code"
+            project = registry.project_for_verification("rivermark").directory / "code"
             run(
                 "rivermark researcher smoke",
                 project,

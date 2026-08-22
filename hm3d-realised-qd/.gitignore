@@ -1,0 +1,19 @@
+# Local-only research outputs
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+runs/
+checkpoints/
+artifacts/
+datasets/
+wandb/
+tensorboard/
+private_eval/
+*.pt
+*.pth
+*.ckpt
+
+# Third-party checkouts, their build products, and tool-specific environments
+# are reproducible from the locked manifests but are not project source.
+/external/

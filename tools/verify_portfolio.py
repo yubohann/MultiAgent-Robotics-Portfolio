@@ -6,30 +6,10 @@ import re
 import sys
 from pathlib import Path
 
+from portfolio_registry import RegistryError, load_registry
+
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCUMENTS = (
-    ROOT / "README.md",
-    ROOT / "docs" / "PORTFOLIO_GUIDE.md",
-    ROOT / "rivermark" / "README.md",
-    ROOT / "rivermark" / "code" / "README.md",
-    ROOT / "robocup-cbg-wm" / "README.md",
-    ROOT / "robocup-cbg-wm" / "docs" / "capability_boundaries.md",
-    ROOT / "robocup-cbg-wm" / "docs" / "media" / "README.md",
-    ROOT / "robocon-mid360-autonomy-stack" / "README.md",
-    ROOT / "aerogate-graph" / "README.md",
-    ROOT / "aerogate-graph" / "docs" / "ARCHITECTURE.md",
-    ROOT / "aerogate-graph" / "docs" / "REPRODUCIBILITY.md",
-    ROOT / "fraudgraph-ml-engineering" / "README.md",
-    ROOT / "fraudgraph-ml-engineering" / "docs" / "reproducibility-checklist.md",
-    ROOT / "ros2-systematic-learning-notes" / "README.md",
-    ROOT / "coursework" / "machine-learning" / "README.md",
-    ROOT / "coursework" / "machine-learning" / "README.zh-CN.md",
-    ROOT / "coursework" / "machine-learning" / "classic-ml-algorithms" / "README.md",
-    ROOT / "coursework" / "machine-learning" / "classic-ml-algorithms" / "README.zh-CN.md",
-    ROOT / "coursework" / "machine-learning" / "ml-assignment-3" / "README.md",
-    ROOT / "coursework" / "machine-learning" / "ml-assignment-3" / "README.zh-CN.md",
-)
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 HTML_LINK = re.compile(r'(?:href|src)="([^"]+)"')
 EXTERNAL_PREFIXES = ("#", "http://", "https://", "mailto:", "data:")
@@ -66,13 +46,21 @@ def validate_document(document: Path) -> list[str]:
 
 
 def main() -> int:
-    errors = [error for document in DOCUMENTS for error in validate_document(document)]
+    try:
+        registry = load_registry(ROOT)
+    except RegistryError as exc:
+        print(f"Portfolio registry check failed: {exc}")
+        return 1
+    errors = [error for document in registry.documents for error in validate_document(document)]
     if errors:
         print("Portfolio integrity check failed:")
         for error in errors:
             print(f"- {error}")
         return 1
-    print(f"Portfolio integrity check passed for {len(DOCUMENTS)} documents.")
+    print(
+        "Portfolio integrity check passed for "
+        f"{len(registry.documents)} documents across {len(registry.projects)} registered projects."
+    )
     return 0
 
 

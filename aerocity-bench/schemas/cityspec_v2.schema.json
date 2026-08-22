@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerocitybench.org/schemas/cityspec_v2.schema.json",
+  "title": "AeroCityBench method-visible CitySpec v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "generator_version",
+    "layout_id",
+    "layout_hash",
+    "size_m",
+    "roads",
+    "blocks",
+    "buildings",
+    "obstacles",
+    "decorations",
+    "flight_bounds",
+    "topology_signature",
+    "asset_set_hash",
+    "metrics"
+  ],
+  "properties": {
+    "schema": {"const": "org.aerocity.bench.cityspec.v2"},
+    "generator_version": {"type": "string", "minLength": 1},
+    "layout_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$"},
+    "layout_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "size_m": {"type": "integer", "minimum": 48, "maximum": 224},
+    "roads": {"type": "array", "minItems": 2},
+    "blocks": {"type": "array", "minItems": 2},
+    "buildings": {"type": "array", "minItems": 2},
+    "obstacles": {"type": "array", "minItems": 1},
+    "decorations": {"type": "array"},
+    "flight_bounds": {"type": "object"},
+    "topology_signature": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "asset_set_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "metrics": {"type": "object"}
+  }
+}

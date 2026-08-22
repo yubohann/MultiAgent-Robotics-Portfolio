@@ -2,15 +2,11 @@
 
 Research engineering for embodied and multi-agent systems: reproducible experiment contracts, simulation and replay pipelines, ROS 2 autonomy, and evaluation infrastructure.
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 **B.Eng. candidate in Computer Science and Technology, expected June 2027.** Focused on PhD and research-engineering opportunities in multi-agent learning, robotics systems, and embodied AI.
 
 [Research projects](#selected-public-work) | [Coursework](#coursework-and-learning) | [Engineering practice](#local-verification) | [GitHub profile](https://github.com/yubohann)
-
-<p align="center">
-  <a href="robocup-cbg-wm/README.md">
-    <img src="robocup-cbg-wm/assets/readme/ros2_runtime_graph.png" alt="ROS 2 perception, localization, navigation, behavior, and hardware runtime graph" width="94%" />
-  </a>
-</p>
 
 ## Research Engineering Focus
 
@@ -27,6 +23,8 @@ Research engineering for embodied and multi-agent systems: reproducible experime
 | [Rivermark](rivermark/) | Audit-first multi-sensor Search3D benchmark infrastructure | Contracts, schema validators, release gates, CPU researcher smoke, and test suite | [Overview](rivermark/README.md) · [Code](rivermark/code/README.md) |
 | [RoboCup CBG-WM](robocup-cbg-wm/) | Object-centric visual robotics, replay, and rule-gated evaluation | ROS 2 workspace, IsaacLab replay, current rule-environment smoke, and evaluation artifacts | [Overview](robocup-cbg-wm/README.md) · [Project brief](robocup-cbg-wm/docs/admissions_project_brief.md) |
 | [Robocon MID-360 Autonomy Stack](robocon-mid360-autonomy-stack/) | Simulation-first ROS 2 localization and competition-autonomy stack | Livox/FAST-LIO2 contracts, scan matching, perception gates, synthetic competition controls, and contract tests | [Overview](robocon-mid360-autonomy-stack/README.md) |
+| [AeroCityBench](aerocity-bench/) | Procedural 3D multi-UAV search benchmark | City generation, public/private evaluation boundaries, G2-I contracts, baseline adapters, and release audits | [Overview](aerocity-bench/README.md) |
+| [HM3D Realised-QD](hm3d-realised-qd/) | Outcome-grounded multi-UAV exploration and quality-diversity | Sparse-range contracts, realised receipts, QD/RL learning, CF2X runtime, and HM3D protocols | [Overview](hm3d-realised-qd/README.md) |
 | [AeroGate Graph](aerogate-graph/) | Modular 2D drone-racing simulator for graph route planning, formation control, and dynamic gate navigation | Single- and multi-agent environments, deterministic reproduction CLI, evaluation artifacts, optional IsaacLab adapters, and CI | [Overview](aerogate-graph/README.md) · [Architecture](aerogate-graph/docs/ARCHITECTURE.md) · [Reproducibility](aerogate-graph/docs/REPRODUCIBILITY.md) |
 | [FraudGraph ML Engineering](fraudgraph-ml-engineering/) | Reproducible graph-and-sequence fraud-detection engineering | Training package, dataset adapters, experiment protocol, CLI, CI, manifest tooling, and tests | [Overview](fraudgraph-ml-engineering/README.md) · [Protocol](fraudgraph-ml-engineering/docs/research-protocol.md) · [Reproducibility](fraudgraph-ml-engineering/docs/reproducibility-checklist.md) |
 | [ROS 2 Learning Notes](ros2-systematic-learning-notes/) | Structured ROS 2 engineering handbook | Systematic ROS 2 reference, project PDF, and deployment-oriented learning map | [Overview](ros2-systematic-learning-notes/README.md) |
@@ -35,7 +33,9 @@ Research engineering for embodied and multi-agent systems: reproducible experime
 
 Each project links its code, documentation, tests, and retained evidence directly. The portfolio is organized so a reviewer can move from the top-level systems view to an executable entry point without relying on a generic summary.
 
-For navigation and project-specific verification entry points, see [Portfolio Guide](docs/PORTFOLIO_GUIDE.md).
+For navigation and project-specific verification entry points, see the [Portfolio Guide](docs/PORTFOLIO_GUIDE.md). The checked-in [project registry](tools/portfolio_registry.json) is the single source of truth for the curated project set, its entry documents, and the local verification route for each runnable core project.
+
+Integrated source provenance is recorded in [Integrated Project Sources](docs/INTEGRATED_PROJECTS.md).
 
 ## Coursework and Learning
 

@@ -4,15 +4,25 @@ on:
   push:
     paths:
       - "README.md"
+      - "**/README*.md"
       - "docs/**"
+      - "aerocity-bench/**"
+      - "hm3d-realised-qd/**"
       - "coursework/machine-learning/**"
+      - "tools/portfolio_registry.json"
+      - "tools/portfolio_registry.py"
       - "tools/verify_portfolio.py"
       - ".github/workflows/portfolio-integrity.yml"
   pull_request:
     paths:
       - "README.md"
+      - "**/README*.md"
       - "docs/**"
+      - "aerocity-bench/**"
+      - "hm3d-realised-qd/**"
       - "coursework/machine-learning/**"
+      - "tools/portfolio_registry.json"
+      - "tools/portfolio_registry.py"
       - "tools/verify_portfolio.py"
       - ".github/workflows/portfolio-integrity.yml"
 

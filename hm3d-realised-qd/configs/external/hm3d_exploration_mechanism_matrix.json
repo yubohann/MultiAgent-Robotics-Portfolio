@@ -1,0 +1,23 @@
+{
+  "schema_version": "hm3d-exploration-mechanism-matrix-v4",
+  "status": "NOT_FORMAL_RESULT",
+  "adjacent_ablation_chain": [
+    "masked_discrete_sac",
+    "masked_discrete_sac_plus_duration",
+    "masked_discrete_sac_plus_recurrent_history",
+    "rb_sf_sac_public_features",
+    "rb_sf_sac_plus_realised_qd",
+    "rb_sf_sac_plus_realised_qd_plus_outcome_gated_ogfr"
+  ],
+  "ogfr_controls": [
+    "no_reuse",
+    "outcome_gated_fragment_reuse"
+  ],
+  "qd_controls": [
+    "no_qd",
+    "planned_qd",
+    "outcome_grounded_realised_qd"
+  ],
+  "qd_admission_rule": "P08 uses identical public initial states and candidate authority for every paired unit. Train-only history must contain at least 12 complete safe four-CF2X outcomes from at least two train scenes, at least 6 realised joint archive cells, Shannon-effective cells at least 4, non-degenerate non-collinear realised axes, and execution-footprint evidence. Intent calibration, replay-stability probes, prediction alignment and fixed validation-gain floors are diagnostics, not blockers. The online selector remains inactive below 6 outcome-grounded archive entries and records every abstention or changed choice. P08 records at least 12 four-CF2X paired units over two scenes and two seeds; planned-QD is an ablation and never a P10 ranked method.",
+  "reporting_rule": "No row may be interpreted as formal evidence until P07 task validity and P09 freeze pass."
+}

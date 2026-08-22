@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerocitybench.org/schemas/episode_private_v1.schema.json",
+  "title": "AeroCityBench evaluator-private episode v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "layout_id",
+    "layout_hash",
+    "episode_index",
+    "episode_seed",
+    "target_count",
+    "targets",
+    "starts",
+    "smoke",
+    "communication",
+    "energy_budget_j",
+    "episode_hash"
+  ],
+  "properties": {
+    "schema": {"const": "org.aerocity.bench.episode-private.v1"},
+    "layout_id": {"type": "string"},
+    "layout_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "episode_index": {"type": "integer", "minimum": 0},
+    "episode_seed": {"type": "integer", "minimum": 0},
+    "target_count": {"type": "integer", "minimum": 1},
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["target_id", "site_id", "support_class", "altitude_band", "position", "normal"],
+        "properties": {
+          "target_id": {"type": "string"},
+          "site_id": {"type": "string"},
+          "support_class": {"enum": ["roof", "facade", "entrance", "rubble"]},
+          "altitude_band": {"enum": ["low", "mid", "high", "very_high"]},
+          "position": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "items": false},
+          "normal": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "items": false}
+        }
+      }
+    },
+    "starts": {"type": "array", "minItems": 1},
+    "smoke": {"type": "object"},
+    "communication": {"type": "object"},
+    "energy_budget_j": {"type": "number", "exclusiveMinimum": 0},
+    "episode_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

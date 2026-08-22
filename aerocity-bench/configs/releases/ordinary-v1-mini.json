@@ -1,0 +1,179 @@
+{
+  "schema": "org.aerocity.bench.release.ordinary.v3",
+  "release_kind": "OFFICIAL",
+  "release_version": "1.0.0-ordinary-mini",
+  "generator_version": "aerocity-generator-ordinary-v3.1",
+  "master_seed": 20260729,
+  "core_sizes_m": [80],
+  "topology_ood_size_m": 96,
+  "split_counts": {
+    "train": 1,
+    "validation": 1,
+    "calibration": 1,
+    "test_iid": 1,
+    "test_topology": 1,
+    "test_process_ood": 1
+  },
+  "episodes_per_layout": {
+    "train": 3,
+    "validation": 3,
+    "calibration": 3,
+    "test_iid": 3,
+    "test_topology": 3,
+    "test_process_ood": 1
+  },
+  "target_count_ranges": {
+    "80": [6, 8],
+    "96": [8, 10]
+  },
+  "city_grammar": {
+    "development_families": ["offset_grid", "t_junction", "dead_end_courts"],
+    "topology_ood_families": ["ring_spokes", "staggered_loop"],
+    "spawn_grammars": ["edge", "intersection", "distributed"]
+  },
+  "assets": {
+    "bundle": "open_city_cc0_assets_20260729",
+    "registry": "ASSET_REGISTRY.json",
+    "allowlist": [
+      "street_lamp_01",
+      "concrete_road_barrier",
+      "tree_small_02",
+      "wooden_crate_01",
+      "utility_box_01"
+    ],
+    "spdx_policy": "CC0-only",
+    "redistribute": true,
+    "custom_official_forbidden": true
+  },
+  "fleet": {
+    "profile": "ordinary-canonical-four-v1",
+    "count": 4
+  },
+  "execution_contract": {
+    "canonical_profile": "G1_occupancy_voxel",
+    "formal_execution_level": "L1",
+    "control_period_s": 0.2,
+    "planning_deadline_s": 0.15,
+    "planning": {
+      "schema": "org.aerocity.bench.planning-cadence.v1",
+      "mode": "fixed-rate-with-public-events",
+      "period_s": 1.0,
+      "event_triggers": [
+        "anonymous_confirmation",
+        "safety_intervention",
+        "fleet_roster_change",
+        "return_reserve_entry"
+      ],
+      "held_action_rebinding": "latest-public-observation",
+      "retransmit_messages_on_hold": false
+    },
+    "clock": {
+      "basis": "simulated_execution_plus_compute_overrun",
+      "overrun_policy": "hold_last_safe_or_hover",
+      "max_consecutive_deadline_misses": 10
+    },
+    "episode": {
+      "duration_s": 300.0,
+      "return_reserve_s": 35.0,
+      "fixed_target_count_private": true
+    },
+    "observe": {
+      "exclusive_with_translation": true,
+      "continuous_dwell_s": 0.5,
+      "cooldown_s": 0.5,
+      "max_linear_speed_mps": 0.25,
+      "max_angular_speed_deg_s": 8.0,
+      "max_pose_drift_m": 0.12,
+      "source_freshness_s": 0.4,
+      "max_range_m": 3.0,
+      "horizontal_fov_deg": 68.0,
+      "vertical_fov_deg": 51.0,
+      "surface_facing_min_cosine": 0.25
+    },
+    "sensor_rig": {
+      "translation_body_m": [0.12, 0.0, -0.05],
+      "forward_axis": "+X",
+      "up_axis": "+Z",
+      "gimbal_mode": "bounded",
+      "pitch_limits_deg": [-90.0, 10.0],
+      "max_pitch_rate_deg_s": 90.0
+    },
+    "vehicle": {
+      "radius_m": 0.32,
+      "horizontal_speed_mps": 3.0,
+      "vertical_speed_mps": 2.0,
+      "acceleration_mps2": 2.5,
+      "yaw_rate_deg_s": 120.0,
+      "minimum_clearance_m": 0.75,
+      "home_radius_m": 2.0,
+      "energy_budget_j": 24000.0,
+      "energy_per_meter_j": 16.0,
+      "hover_power_w": 65.0
+    },
+    "communication": {
+      "range_m": 65.0,
+      "bandwidth_bytes_s": 16000.0,
+      "payload_bytes": 1024.0,
+      "latency_s": 0.06,
+      "drop_probability": 0.03,
+      "ttl_s": 0.8
+    },
+    "safety": {
+      "hard_collision_agent_terminal": true,
+      "hard_collision_rank_ineligible": true,
+      "out_of_bounds_policy": "reject_and_hover",
+      "max_out_of_bounds_actions": 5
+    }
+  },
+  "target_processes": {
+    "profiles": {
+      "uniform_surface": {},
+      "clustered_surface": {
+        "cluster_count": [2, 3],
+        "bandwidth_m": 18.0
+      },
+      "height_stratified": {
+        "minimum_bands": 3,
+        "band_weights": {
+          "near_ground": 0.1,
+          "lower": 0.2,
+          "mid": 0.25,
+          "elevated": 0.25,
+          "highrise": 0.2
+        }
+      },
+      "anisotropic_clustered_surface": {
+        "cluster_count": [2, 4],
+        "bandwidth_m": 20.0,
+        "vertical_scale": 2.5
+      }
+    },
+    "by_split": {
+      "train": ["uniform_surface", "clustered_surface", "height_stratified"],
+      "validation": ["uniform_surface", "clustered_surface", "height_stratified"],
+      "calibration": ["uniform_surface", "clustered_surface", "height_stratified"],
+      "test_iid": ["uniform_surface", "clustered_surface", "height_stratified"],
+      "test_topology": ["uniform_surface", "clustered_surface", "height_stratified"],
+      "test_process_ood": ["anisotropic_clustered_surface"]
+    }
+  },
+  "admission": {
+    "built_ratio": [0.16, 0.48],
+    "road_ratio": [0.08, 0.38],
+    "street_width_m": [7.0, 12.0],
+    "minimum_support_to_target_ratio": 8.0,
+    "minimum_target_separation_m": 3.5,
+    "minimum_surrounding_colliders": 1,
+    "witness_distance_m": 2.2,
+    "minimum_vertical_span_m": 14.0,
+    "maximum_single_observation_target_fraction": 0.34
+  },
+  "governance": {
+    "plan_version": "ordinary-paper-plan-v2",
+    "calibration_split": "calibration",
+    "formal_splits": ["test_iid", "test_topology", "test_process_ood"],
+    "calibration_formal_disjoint": true,
+    "method_results_may_tune_benchmark": false,
+    "formal_access": "private_until_contract_freeze"
+  }
+}

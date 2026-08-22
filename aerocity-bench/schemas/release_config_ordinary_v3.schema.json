@@ -1,0 +1,300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aerocity-bench.org/schemas/release_config_ordinary_v3.schema.json",
+  "title": "AeroCityBench ordinary-paper release configuration v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "release_kind", "release_version", "generator_version", "master_seed",
+    "core_sizes_m", "topology_ood_size_m", "split_counts", "episodes_per_layout",
+    "target_count_ranges", "city_grammar", "assets", "fleet", "execution_contract",
+    "target_processes", "admission", "governance"
+  ],
+  "properties": {
+    "schema": {"const": "org.aerocity.bench.release.ordinary.v3"},
+    "release_kind": {"enum": ["OFFICIAL", "CUSTOM"]},
+    "release_version": {"type": "string", "minLength": 1},
+    "generator_version": {"type": "string", "minLength": 1},
+    "master_seed": {"type": "integer", "minimum": 0},
+    "core_sizes_m": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "integer", "minimum": 48, "maximum": 224}},
+    "topology_ood_size_m": {"type": "integer", "minimum": 48, "maximum": 224},
+    "split_counts": {"$ref": "#/$defs/splitPositiveIntegers"},
+    "episodes_per_layout": {"$ref": "#/$defs/splitPositiveIntegers"},
+    "target_count_ranges": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/positiveRange"}
+    },
+    "city_grammar": {
+      "type": "object", "additionalProperties": false,
+      "required": ["development_families", "topology_ood_families", "spawn_grammars"],
+      "properties": {
+        "development_families": {"$ref": "#/$defs/nonEmptyUniqueStrings"},
+        "topology_ood_families": {"$ref": "#/$defs/nonEmptyUniqueStrings"},
+        "spawn_grammars": {"$ref": "#/$defs/nonEmptyUniqueStrings"}
+      }
+    },
+    "assets": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bundle", "registry", "allowlist", "spdx_policy", "redistribute", "custom_official_forbidden"],
+      "properties": {
+        "bundle": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "registry": {"const": "ASSET_REGISTRY.json"},
+        "allowlist": {"$ref": "#/$defs/nonEmptyUniqueStrings"},
+        "spdx_policy": {"const": "CC0-only"},
+        "redistribute": {"const": true},
+        "custom_official_forbidden": {"const": true}
+      }
+    },
+    "fleet": {
+      "type": "object", "additionalProperties": false, "required": ["profile", "count"],
+      "properties": {"profile": {"type": "string", "minLength": 1}, "count": {"const": 4}}
+    },
+    "execution_contract": {"$ref": "#/$defs/executionContract"},
+    "target_processes": {"$ref": "#/$defs/targetProcesses"},
+    "admission": {"$ref": "#/$defs/admission"},
+    "governance": {"$ref": "#/$defs/governance"}
+  },
+  "$defs": {
+    "executionContract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["canonical_profile", "formal_execution_level", "control_period_s", "planning_deadline_s", "planning", "clock", "episode", "observe", "sensor_rig", "vehicle", "communication", "safety"],
+      "properties": {
+        "canonical_profile": {"const": "G1_occupancy_voxel"},
+        "formal_execution_level": {"const": "L1"},
+        "control_period_s": {"type": "number", "exclusiveMinimum": 0},
+        "planning_deadline_s": {"type": "number", "exclusiveMinimum": 0},
+        "planning": {
+          "type": "object", "additionalProperties": false,
+          "required": ["schema", "mode", "period_s", "event_triggers", "held_action_rebinding", "retransmit_messages_on_hold"],
+          "properties": {
+            "schema": {"const": "org.aerocity.bench.planning-cadence.v1"},
+            "mode": {"const": "fixed-rate-with-public-events"},
+            "period_s": {"type": "number", "exclusiveMinimum": 0},
+            "event_triggers": {
+              "type": "array",
+              "prefixItems": [
+                {"const": "anonymous_confirmation"},
+                {"const": "safety_intervention"},
+                {"const": "fleet_roster_change"},
+                {"const": "return_reserve_entry"}
+              ],
+              "items": false,
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "held_action_rebinding": {"const": "latest-public-observation"},
+            "retransmit_messages_on_hold": {"const": false}
+          }
+        },
+        "clock": {
+          "type": "object", "additionalProperties": false,
+          "required": ["basis", "overrun_policy", "max_consecutive_deadline_misses"],
+          "properties": {
+            "basis": {"const": "simulated_execution_plus_compute_overrun"},
+            "overrun_policy": {"const": "hold_last_safe_or_hover"},
+            "max_consecutive_deadline_misses": {"type": "integer", "minimum": 1}
+          }
+        },
+        "episode": {
+          "type": "object", "additionalProperties": false,
+          "required": ["duration_s", "return_reserve_s", "fixed_target_count_private"],
+          "properties": {
+            "duration_s": {"type": "number", "exclusiveMinimum": 0},
+            "return_reserve_s": {"type": "number", "exclusiveMinimum": 0},
+            "fixed_target_count_private": {"const": true}
+          }
+        },
+        "observe": {
+          "type": "object", "additionalProperties": false,
+          "required": ["exclusive_with_translation", "continuous_dwell_s", "cooldown_s", "max_linear_speed_mps", "max_angular_speed_deg_s", "max_pose_drift_m", "source_freshness_s", "max_range_m", "horizontal_fov_deg", "vertical_fov_deg", "surface_facing_min_cosine"],
+          "properties": {
+            "exclusive_with_translation": {"const": true},
+            "continuous_dwell_s": {"type": "number", "exclusiveMinimum": 0},
+            "cooldown_s": {"type": "number", "exclusiveMinimum": 0},
+            "max_linear_speed_mps": {"type": "number", "exclusiveMinimum": 0},
+            "max_angular_speed_deg_s": {"type": "number", "exclusiveMinimum": 0},
+            "max_pose_drift_m": {"type": "number", "exclusiveMinimum": 0},
+            "source_freshness_s": {"type": "number", "exclusiveMinimum": 0},
+            "max_range_m": {"type": "number", "exclusiveMinimum": 0},
+            "horizontal_fov_deg": {"type": "number", "exclusiveMinimum": 0, "maximum": 180},
+            "vertical_fov_deg": {"type": "number", "exclusiveMinimum": 0, "maximum": 180},
+            "surface_facing_min_cosine": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+          }
+        },
+        "sensor_rig": {
+          "type": "object", "additionalProperties": false,
+          "required": ["translation_body_m", "forward_axis", "up_axis", "gimbal_mode"],
+          "properties": {
+            "translation_body_m": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "items": false, "minItems": 3, "maxItems": 3},
+            "forward_axis": {"const": "+X"},
+            "up_axis": {"const": "+Z"},
+            "gimbal_mode": {"enum": ["fixed", "bounded"]},
+            "pitch_limits_deg": {"type": "array", "prefixItems": [{"type": "number", "minimum": -180, "maximum": 180}, {"type": "number", "minimum": -180, "maximum": 180}], "items": false, "minItems": 2, "maxItems": 2},
+            "max_pitch_rate_deg_s": {"$ref": "#/$defs/positiveNumber"}
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"gimbal_mode": {"const": "bounded"}}},
+              "then": {"required": ["pitch_limits_deg", "max_pitch_rate_deg_s"]}
+            },
+            {
+              "if": {"properties": {"gimbal_mode": {"const": "fixed"}}},
+              "then": {"not": {"anyOf": [{"required": ["pitch_limits_deg"]}, {"required": ["max_pitch_rate_deg_s"]}]}}
+            }
+          ]
+        },
+        "vehicle": {
+          "type": "object", "additionalProperties": false,
+          "required": ["radius_m", "horizontal_speed_mps", "vertical_speed_mps", "acceleration_mps2", "yaw_rate_deg_s", "minimum_clearance_m", "home_radius_m", "energy_budget_j", "energy_per_meter_j", "hover_power_w"],
+          "properties": {
+            "radius_m": {"$ref": "#/$defs/positiveNumber"},
+            "horizontal_speed_mps": {"$ref": "#/$defs/positiveNumber"},
+            "vertical_speed_mps": {"$ref": "#/$defs/positiveNumber"},
+            "acceleration_mps2": {"$ref": "#/$defs/positiveNumber"},
+            "yaw_rate_deg_s": {"$ref": "#/$defs/positiveNumber"},
+            "minimum_clearance_m": {"$ref": "#/$defs/positiveNumber"},
+            "home_radius_m": {"$ref": "#/$defs/positiveNumber"},
+            "energy_budget_j": {"$ref": "#/$defs/positiveNumber"},
+            "energy_per_meter_j": {"$ref": "#/$defs/positiveNumber"},
+            "hover_power_w": {"$ref": "#/$defs/positiveNumber"}
+          }
+        },
+        "communication": {
+          "type": "object", "additionalProperties": false,
+          "required": ["range_m", "bandwidth_bytes_s", "payload_bytes", "latency_s", "drop_probability", "ttl_s"],
+          "properties": {
+            "range_m": {"$ref": "#/$defs/positiveNumber"},
+            "bandwidth_bytes_s": {"$ref": "#/$defs/positiveNumber"},
+            "payload_bytes": {"$ref": "#/$defs/positiveNumber"},
+            "latency_s": {"$ref": "#/$defs/positiveNumber"},
+            "drop_probability": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+            "ttl_s": {"$ref": "#/$defs/positiveNumber"}
+          }
+        },
+        "safety": {
+          "type": "object", "additionalProperties": false,
+          "required": ["hard_collision_agent_terminal", "hard_collision_rank_ineligible", "out_of_bounds_policy", "max_out_of_bounds_actions"],
+          "properties": {
+            "hard_collision_agent_terminal": {"const": true},
+            "hard_collision_rank_ineligible": {"const": true},
+            "out_of_bounds_policy": {"const": "reject_and_hover"},
+            "max_out_of_bounds_actions": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    },
+    "targetProcesses": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profiles", "by_split"],
+      "properties": {
+        "profiles": {
+          "type": "object", "additionalProperties": false,
+          "required": ["uniform_surface", "clustered_surface", "height_stratified", "anisotropic_clustered_surface"],
+          "properties": {
+            "uniform_surface": {"type": "object", "maxProperties": 0},
+            "clustered_surface": {"$ref": "#/$defs/clusterProfile"},
+            "height_stratified": {
+              "type": "object", "additionalProperties": false,
+              "required": ["minimum_bands", "band_weights"],
+              "properties": {
+                "minimum_bands": {"type": "integer", "minimum": 3, "maximum": 5},
+                "band_weights": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["near_ground", "lower", "mid", "elevated", "highrise"],
+                  "properties": {
+                    "near_ground": {"type": "number", "minimum": 0},
+                    "lower": {"type": "number", "minimum": 0},
+                    "mid": {"type": "number", "minimum": 0},
+                    "elevated": {"type": "number", "minimum": 0},
+                    "highrise": {"type": "number", "minimum": 0}
+                  }
+                }
+              }
+            },
+            "anisotropic_clustered_surface": {"$ref": "#/$defs/anisotropicClusterProfile"}
+          }
+        },
+        "by_split": {"$ref": "#/$defs/splitProcessLists"}
+      }
+    },
+    "clusterProfile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cluster_count", "bandwidth_m"],
+      "properties": {
+        "cluster_count": {"$ref": "#/$defs/positiveRange"},
+        "bandwidth_m": {"$ref": "#/$defs/positiveNumber"}
+      }
+    },
+    "anisotropicClusterProfile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cluster_count", "bandwidth_m", "vertical_scale"],
+      "properties": {
+        "cluster_count": {"$ref": "#/$defs/positiveRange"},
+        "bandwidth_m": {"$ref": "#/$defs/positiveNumber"},
+        "vertical_scale": {"$ref": "#/$defs/positiveNumber"}
+      }
+    },
+    "splitProcessLists": {
+      "type": "object", "additionalProperties": false,
+      "required": ["train", "validation", "calibration", "test_iid", "test_topology", "test_process_ood"],
+      "properties": {
+        "train": {"$ref": "#/$defs/nonEmptyUniqueStrings"},
+        "validation": {"$ref": "#/$defs/nonEmptyUniqueStrings"},
+        "calibration": {"$ref": "#/$defs/nonEmptyUniqueStrings"},
+        "test_iid": {"$ref": "#/$defs/nonEmptyUniqueStrings"},
+        "test_topology": {"$ref": "#/$defs/nonEmptyUniqueStrings"},
+        "test_process_ood": {"$ref": "#/$defs/nonEmptyUniqueStrings"}
+      }
+    },
+    "admission": {
+      "type": "object", "additionalProperties": false,
+      "required": ["built_ratio", "road_ratio", "street_width_m", "minimum_support_to_target_ratio", "minimum_target_separation_m", "minimum_surrounding_colliders", "witness_distance_m", "minimum_vertical_span_m", "maximum_single_observation_target_fraction"],
+      "properties": {
+        "built_ratio": {"$ref": "#/$defs/nonNegativeRange"},
+        "road_ratio": {"$ref": "#/$defs/nonNegativeRange"},
+        "street_width_m": {"$ref": "#/$defs/nonNegativeRange"},
+        "minimum_support_to_target_ratio": {"$ref": "#/$defs/positiveNumber"},
+        "minimum_target_separation_m": {"$ref": "#/$defs/positiveNumber"},
+        "minimum_surrounding_colliders": {"type": "integer", "minimum": 1},
+        "witness_distance_m": {"$ref": "#/$defs/positiveNumber"},
+        "minimum_vertical_span_m": {"$ref": "#/$defs/positiveNumber"},
+        "maximum_single_observation_target_fraction": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+      }
+    },
+    "governance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["plan_version", "calibration_split", "formal_splits", "calibration_formal_disjoint", "method_results_may_tune_benchmark", "formal_access"],
+      "properties": {
+        "plan_version": {"const": "ordinary-paper-plan-v2"},
+        "calibration_split": {"const": "calibration"},
+        "formal_splits": {"type": "array", "prefixItems": [{"const": "test_iid"}, {"const": "test_topology"}, {"const": "test_process_ood"}], "items": false, "minItems": 3, "maxItems": 3},
+        "calibration_formal_disjoint": {"const": true},
+        "method_results_may_tune_benchmark": {"const": false},
+        "formal_access": {"const": "private_until_contract_freeze"}
+      }
+    },
+    "positiveNumber": {"type": "number", "exclusiveMinimum": 0},
+    "nonNegativeRange": {
+      "type": "array", "prefixItems": [{"type": "number", "minimum": 0}, {"type": "number", "minimum": 0}], "items": false, "minItems": 2, "maxItems": 2
+    },
+    "positiveRange": {
+      "type": "array", "prefixItems": [{"type": "integer", "minimum": 1}, {"type": "integer", "minimum": 1}], "items": false, "minItems": 2, "maxItems": 2
+    },
+    "nonEmptyUniqueStrings": {
+      "type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}
+    },
+    "splitPositiveIntegers": {
+      "type": "object", "additionalProperties": false,
+      "required": ["train", "validation", "calibration", "test_iid", "test_topology", "test_process_ood"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 1},
+        "validation": {"type": "integer", "minimum": 1},
+        "calibration": {"type": "integer", "minimum": 1},
+        "test_iid": {"type": "integer", "minimum": 1},
+        "test_topology": {"type": "integer", "minimum": 1},
+        "test_process_ood": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

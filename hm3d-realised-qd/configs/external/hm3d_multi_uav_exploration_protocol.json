@@ -1,0 +1,65 @@
+{
+  "schema_version": "hm3d-multi-uav-exploration-protocol-v4",
+  "status": "NOT_FORMAL_RESULT",
+  "dataset": {
+    "name": "HM3D",
+    "version": "v0.2",
+    "asset_roots": [
+      "E:/asset/hm3d-train",
+      "E:/asset/hm3d-val"
+    ],
+    "split_unit": "scene",
+    "forbidden_paths": [
+      "experiments/aerocity-bench"
+    ]
+  },
+  "task": {
+    "name": "HM3D-derived multi-UAV online 3D exploration",
+    "task_interface": "hm3d-multi-uav-exploration-v1",
+    "primary_metric": "Explored-Free-Flight-Volume-AUC_time",
+    "fleet_size": 4,
+    "vehicle_asset": "Isaac CF2X",
+    "decision_loop": [
+      "public_sensor_outcome",
+      "local_belief_update",
+      "delivered_map_delta_merge",
+      "3d_frontier_candidate_generation",
+      "baseline_or_selector_choice",
+      "guarded_cf2x_execution",
+      "execution_outcome",
+      "metric_and_replay_update"
+    ]
+  },
+  "sensor_contract": {
+    "default_candidate": "sparse_range_3d",
+    "forbidden_shortcuts": [
+      "complete_mesh_as_method_input",
+      "private_esdf_as_method_input",
+      "target_coordinates",
+      "target_distance",
+      "evaluator_truth_map"
+    ],
+    "h15_required_modes": [
+      "physics_only",
+      "sparse_range_3d"
+    ]
+  },
+  "required_runtime_evidence": [
+    "hm3d_license_record",
+    "asset_manifest_with_scene_hashes",
+    "isaac_runtime_identity",
+    "glb_to_usd_conversion_manifest",
+    "aba_reset_audit",
+    "flight_space_esdf_audit",
+    "h15_sensor_pilot",
+    "communication_contract",
+    "scene_level_split"
+  ],
+  "formal_freeze_requirements": [
+    "P07_exploration_task_validity_passed",
+    "P08_mechanism_matrix_completed",
+    "no_test_scene_access_before_freeze",
+    "complete_failure_denominators",
+    "code_and_config_hash_locked"
+  ]
+}
