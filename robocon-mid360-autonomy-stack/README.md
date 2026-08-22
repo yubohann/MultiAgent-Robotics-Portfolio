@@ -136,6 +136,12 @@ The following views are curated Gazebo simulation evidence from the public portf
 
 <p align="center"><em>Scan timing, indoor reconstruction, competition-field geometry, and a live two-robot basketball run.</em></p>
 
+For a camera-only recording without RViz's unused 3D render viewport, run:
+
+```bash
+bash tools/run_rgbd_image_view.sh robot1 depth
+```
+
 ## Verification
 
 The CI workflow runs Python contract tests, validates ROS package manifests, installs ROS dependencies, builds the interface and control packages, and executes the ROS test suite. Local runs can use the same commands:

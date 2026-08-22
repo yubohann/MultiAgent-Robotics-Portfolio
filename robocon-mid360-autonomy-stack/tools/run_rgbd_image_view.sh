@@ -18,4 +18,4 @@ esac
 
 source /opt/ros/humble/setup.bash
 source "$workspace/install/setup.bash"
-exec ros2 run rqt_image_view rqt_image_view --ros-args -r "image:=$topic"
+exec ros2 run rqt_image_view rqt_image_view "$topic"
