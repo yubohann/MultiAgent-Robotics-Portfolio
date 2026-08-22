@@ -57,7 +57,7 @@
       "documents": [
         "aerogate-graph/README.md",
         "aerogate-graph/README.zh-CN.md",
-        "aerogate-graph/docs/ARCHITECTURE.md",
+        "aerogate-graph/docs/architecture.md",
         "aerogate-graph/docs/REPRODUCIBILITY.md"
       ]
     },
