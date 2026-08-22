@@ -37,7 +37,7 @@
   },
   "environment_lock": {
     "repository_relative_path": "requirements-isaac-capture.lock",
-    "sha256": "ceb1dc7e159c9205bf6fae06bd6afe50e2cfea3da2cc35f7fd7e5da6974d1f7e"
+      "sha256": "a9f880924eace57fa52c279c45192baf3c582ec98982c3bb77c981f64f4f72e1"
   },
   "gpu": {
     "vendor": "NVIDIA",

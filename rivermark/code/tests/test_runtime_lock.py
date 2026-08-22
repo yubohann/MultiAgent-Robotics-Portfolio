@@ -24,6 +24,7 @@ from rivermark_benchmark.runtime_lock import (  # noqa: E402
     compare_live_simulation,
     compare_runtime,
     configure_simulation_cfg,
+    environment_lock_sha256,
     load_runtime_lock,
     locked_launcher_kwargs,
     observe_live_simulation,
@@ -110,7 +111,7 @@ class RuntimeLockTests(unittest.TestCase):
         self.assertEqual(lock["distributions"]["opencv-python"], dependencies["opencv-python"])
         self.assertEqual(
             lock["environment_lock"]["sha256"],
-            hashlib.sha256(dependency_lock.read_bytes()).hexdigest(),
+            environment_lock_sha256(dependency_lock),
         )
 
     def test_valid_lock_and_observation_pass(self) -> None:
