@@ -121,24 +121,7 @@ The dispatcher creates an isolated run directory, records the exact command and 
 
 ## Visual Snapshot
 
-The following views are curated Gazebo simulation evidence from the public portfolio set.
-
-<p align="center">
-  <img src="site/assets/scan-timing.png" alt="Gazebo simulation timing and LiDAR scan evidence" width="48%">
-  <img src="site/assets/indoor-reconstruction.png" alt="Indoor Gazebo reconstruction and registered point cloud" width="48%">
-</p>
-<p align="center">
-  <img src="site/assets/field-geometry.png" alt="Gazebo field geometry with competition structures" width="70%">
-</p>
-<p align="center">
-  <img src="site/assets/robocon-mid360-basketball-demo.gif" alt="Live Gazebo two-robot basketball demonstration" width="80%">
-</p>
-
-<p align="center"><em>Scan timing, indoor reconstruction, competition-field geometry, and a live two-robot basketball run.</em></p>
-
-## 2025 ROBOCON Evidence Sequence
-
-The following five screenshots document the 2025 ROBOCON-style Gazebo simulation in order: scene, LiDAR point cloud, 2D PCD projection, RGB-D/depth view, and the basketball shot process.
+The following 2025 ROBOCON-style Gazebo evidence is presented in sequence. Each visual is given its own row for readability.
 
 <p align="center">
   <img src="site/assets/01-scene-gazebo-court.png" alt="2025 ROBOCON Gazebo basketball court scene" width="90%">
@@ -154,6 +137,9 @@ The following five screenshots document the 2025 ROBOCON-style Gazebo simulation
 </p>
 <p align="center">
   <img src="site/assets/05-basketball-shot-process.png" alt="2025 ROBOCON dual-robot basketball shot process" width="90%">
+</p>
+<p align="center">
+  <img src="site/assets/robocon-mid360-basketball-demo.gif" alt="Live 2025 ROBOCON-style two-robot basketball demonstration" width="90%">
 </p>
 
 For a camera-only recording without RViz's unused 3D render viewport, run:
@@ -188,7 +174,7 @@ Explore the visual project overview at:
 
 **https://yubohann.github.io/Robocon-mid360-autonomy-stack/**
 
-The site highlights the architecture and selected Gazebo simulation evidence from the three curated images in `site/assets/`.
+The site highlights the architecture and the ordered 2025 ROBOCON simulation evidence in `site/assets/`.
 
 ## License
 
