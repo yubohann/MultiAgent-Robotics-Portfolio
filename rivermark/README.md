@@ -71,6 +71,10 @@ python -m unittest discover -s tests -v
 
 Cells: `train-cell0/1/2/3/9/11`, `validation-cell13/14/15/16/17/18/19`, and `route-witness-r31` (protocol `citylite-t1-expert-coverage-v2`).
 
+For a new multi-start native recording batch, use [the route-family video
+procedure](docs/multistart-native-video-recording.md). It covers both frozen
+City-Lite route families and encodes only native Isaac RGB archives.
+
 ---
 
 ## Evaluation Pipeline
