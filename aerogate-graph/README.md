@@ -90,7 +90,7 @@ AeroGateGraph/
 └── docs/                     Architecture, setup, and contribution documentation
 ~~~
 
-See [Architecture](docs/ARCHITECTURE.md), the [research overview](docs/RESEARCH_OVERVIEW.md),
+See [Architecture](docs/architecture.md), the [research overview](docs/RESEARCH_OVERVIEW.md),
 [Quick Start](docs/QUICKSTART.md), and [Contributing](CONTRIBUTING.md) for supported
 boundaries and workflows.
 
