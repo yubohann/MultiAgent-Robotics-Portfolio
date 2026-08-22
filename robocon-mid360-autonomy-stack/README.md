@@ -130,8 +130,11 @@ The following views are curated Gazebo simulation evidence from the public portf
 <p align="center">
   <img src="site/assets/field-geometry.png" alt="Gazebo field geometry with competition structures" width="70%">
 </p>
+<p align="center">
+  <img src="site/assets/robocon-mid360-basketball-demo.gif" alt="Live Gazebo two-robot basketball demonstration" width="80%">
+</p>
 
-<p align="center"><em>Scan timing, indoor reconstruction, and competition-field geometry.</em></p>
+<p align="center"><em>Scan timing, indoor reconstruction, competition-field geometry, and a live two-robot basketball run.</em></p>
 
 ## Verification
 
