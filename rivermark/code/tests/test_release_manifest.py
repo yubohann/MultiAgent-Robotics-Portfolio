@@ -285,7 +285,9 @@ class ReleaseManifestTests(unittest.TestCase):
                         f"http://127.0.0.1:{server.server_port}/source.bin",
                         headers={"Range": f"bytes={offset}-"} if offset else {},
                     )
-                    return urllib.request.urlopen(request, timeout=5)
+                    # Keep the local fixture independent of any machine proxy.
+                    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+                    return opener.open(request, timeout=5)
 
                 with patch("rivermark_benchmark.release_manifest._open_download", side_effect=local_open):
                     results = download_shards(manifest_path, root / "download")
