@@ -1,5 +1,13 @@
 # Rivermark Benchmark
 
+<p align="center">
+  <img src="assets/demos/rivermark-search.gif" alt="Rivermark multi-agent 3D search" width="78%" />
+</p>
+
+<p align="center"><em>Multi-agent 3D search in the Rivermark benchmark.</em></p>
+
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 **A toolchain for collecting, auditing, and evaluating native Isaac Sim data for multi-agent 3D stealth-search (Search3D) research — eight physically simulated CF2X vehicles in a procedural City-Lite scene.**
 
 Rivermark is engineered around three goals: **reproducibility**, **data integrity**, and **cross-paradigm evaluation**. It is not a single simulation — it is a benchmark *infrastructure* that binds every capture to cryptographic contracts, audits each episode before admission, and exposes evaluation through a stable, schema-verified interface that classical planning, RL/MARL, QD, and vision-language-action (VLA) agents can all target.
