@@ -1,5 +1,11 @@
 # HM3D Realised-QD for Multi-UAV Exploration
 
+<p align="center">
+  <img src="assets/demos/hm3d-scene-1.gif" alt="HM3D multi-UAV exploration scene" width="78%" />
+</p>
+
+<p align="center"><em>Multi-UAV exploration in an HM3D-derived indoor scene.</em></p>
+
 [English](README.md) | [简体中文](README.zh-CN.md)
 
 Outcome-grounded quality-diversity and reinforcement learning for target-free multi-UAV exploration in HM3D-derived 3D environments.
