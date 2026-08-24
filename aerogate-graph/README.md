@@ -9,17 +9,80 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**A modular 2D drone-racing simulator for graph-based route planning, formation control, and dynamic gate navigation.**
+**A reproducible research environment for graph-based multi-UAV formation control, route planning, and dynamic gate navigation.**
 
-AeroGate Graph is an English, runnable research codebase for fixed-height drone racing.
-It provides single-agent and variable-size multi-agent environments, deterministic gate
-layouts, dynamic gate-density curricula, graph observations, virtual-structure formation
-control, global route planning, safety shields, evaluation scripts, and optional Isaac Lab
-visualization adapters.
+AeroGate Graph separates a deterministic fixed-height 2D core from optional PyTorch training
+and Isaac Lab replay. This makes route progress, formation error, clearance, and policy
+behavior inspectable as separate evidence rather than one opaque demonstration.
+
+The central research question is how a variable-size team can follow a global route while
+preserving a deformable formation and respecting collision and gate-channel constraints.
+The codebase combines graph observations, virtual-structure slots, A* route planning,
+action-level safety shielding, Graph-SAC/Graph-MASAC learning paths, expert pretraining,
+DAgger-style imitation, curriculum stages, and optional 3D replay.
 
 The repository consolidates the original gate-graph research workspace into one coherent
 project root, including the complete working codebase, retained assets, release
 checkpoints, and evaluation artifacts.
+
+## Evidence gallery
+
+The following figures correspond to specific modeling, training, or evaluation claims in
+the repository. They are organized as a trace from formation diagnostics to route execution,
+learning design, and multi-metric evaluation.
+
+### Formation-transition diagnostics
+
+The four error curves show eight-UAV convergence for line-to-triangle, triangle-to-rectangle,
+rectangle-to-diamond, and diamond-to-circle transitions. Each plot keeps per-agent error and
+the team mean visible so transient formation cost is not hidden.
+
+<p align="center">
+  <img src="assets/formation-control/01_line_to_triangle_formation_error.png" alt="Line to triangle formation error" width="49%" />
+  <img src="assets/formation-control/02_triangle_to_rectangle_formation_error.png" alt="Triangle to rectangle formation error" width="49%" />
+  <img src="assets/formation-control/03_rectangle_to_diamond_formation_error.png" alt="Rectangle to diamond formation error" width="49%" />
+  <img src="assets/formation-control/04_diamond_to_circle_formation_error.png" alt="Diamond to circle formation error" width="49%" />
+</p>
+
+### Route and simulation evidence
+
+These panels connect the 2D task to the Isaac Lab adapter: complete per-drone routes,
+four-stage formation transitions, fixed-height 3D geometry, and replay views from both the
+scene and following-drone perspectives.
+
+<p align="center">
+  <img src="assets/formation-control/formation_routes_2d.png" alt="Complete 2D routes for each drone" width="49%" />
+  <img src="assets/formation-control/formation_transition_isaaclab_3d_overview.png" alt="Isaac Lab three-dimensional formation transition overview" width="49%" />
+  <img src="assets/formation-control/formation_stage_transitions_2d.png" alt="Two-dimensional formation transition stages" width="49%" />
+  <img src="assets/formation-control/formation_stage_transitions_isaaclab_3d.png" alt="Isaac Lab three-dimensional formation transition stages" width="49%" />
+  <img src="assets/formation-control/isaaclab_replay_stage_grid.png" alt="Isaac Lab replay stage grid" width="49%" />
+  <img src="assets/formation-control/isaaclab_follow_view_stage_grid.png" alt="Isaac Lab replay from a following-drone view" width="49%" />
+</p>
+
+### Control and learning design
+
+The diagrams make the control contract explicit: virtual-structure control maps team state
+to slot targets; graph encoders aggregate typed node and edge information; centralized
+critics evaluate joint actions; reward feedback and curriculum stages govern policy updates.
+
+<p align="center">
+  <img src="assets/formation-control/virtual_structure_formation_control.png" alt="Virtual-structure formation control pipeline" width="49%" />
+  <img src="assets/formation-control/graph_flash_sac_architecture_overview.png" alt="Graph-FlashSAC overall architecture" width="49%" />
+  <img src="assets/formation-control/graph_flash_sac_control_architecture.png" alt="Graph-FlashSAC network and training update flow" width="49%" />
+  <img src="assets/formation-control/formation_reward_components_compact.png" alt="Compact reward component design" width="49%" />
+  <img src="assets/formation-control/formation_reward_components_detailed.png" alt="Detailed reward feedback and policy update flow" width="49%" />
+  <img src="assets/formation-control/curriculum_training_schedule.png" alt="Curriculum training schedule" width="49%" />
+</p>
+
+### Evaluation evidence
+
+The multi-metric pressure heatmap summarizes how formation quality, safety, and task pressure
+vary across evaluated stages. Read it alongside raw rollouts and seeded reports; it is not a
+standalone performance claim.
+
+<p align="center">
+  <img src="assets/formation-control/multi_metric_pressure_heatmap.png" alt="Multi-metric pressure heatmap" width="76%" />
+</p>
 
 ## Highlights
 
