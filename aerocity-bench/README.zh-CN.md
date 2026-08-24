@@ -1,5 +1,10 @@
 # AeroCityBench
 
+<p align="center">
+  <img src="assets/demos/aerocity-bench-overview.gif" alt="AeroCityBench 概览" width="49%" />
+  <img src="assets/demos/multi-uav-exploration.gif" alt="多无人机探索" width="49%" />
+</p>
+
 > 面向城市拓扑、目标过程和机群韧性变化的物理约束多无人机三维目标搜索开放基准。
 
 AeroCityBench 研究一个直接但常被忽略的问题：**多无人机覆盖更多空间，是否就更擅长发现目标？** 在三维城市中，答案未必成立。无人机可能飞过建筑却看不到屋顶，检查了错误立面，被建筑遮挡，或因运动过快而无法形成有效观测。AeroCityBench 将这些差异转化为可检验的任务和指标。

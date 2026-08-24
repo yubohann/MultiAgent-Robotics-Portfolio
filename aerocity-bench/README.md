@@ -1,5 +1,10 @@
 # AeroCityBench
 
+<p align="center">
+  <img src="assets/demos/aerocity-bench-overview.gif" alt="AeroCityBench overview" width="49%" />
+  <img src="assets/demos/multi-uav-exploration.gif" alt="Multi-UAV exploration" width="49%" />
+</p>
+
 > An open, physics-grounded benchmark for multi-UAV 3D target search under urban topology, target-process, and fleet-resilience shifts.
 
 AeroCityBench studies a simple but consequential question: **does covering more space make a multi-UAV system better at finding targets?** In a city, the answer is often no. A vehicle may fly past a building without seeing its roof, inspect the wrong facade, lose line of sight behind geometry, or move too quickly to obtain a valid observation. AeroCityBench makes these distinctions measurable.
