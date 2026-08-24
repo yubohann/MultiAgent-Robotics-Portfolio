@@ -1,5 +1,14 @@
 # AeroGate Graph
 
+<p align="center">
+  <img src="assets/demos/formation-transition.gif" alt="Multi-UAV formation transition through a gate field" width="49%" />
+  <img src="assets/demos/multi-uav-dynamic-obstacle-avoidance.gif" alt="Multi-UAV dynamic obstacle avoidance" width="49%" />
+</p>
+
+<p align="center"><em>Formation transitions and dynamic multi-UAV obstacle avoidance.</em></p>
+
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 **A modular 2D drone-racing simulator for graph-based route planning, formation control, and dynamic gate navigation.**
 
 AeroGate Graph is an English, runnable research codebase for fixed-height drone racing.
