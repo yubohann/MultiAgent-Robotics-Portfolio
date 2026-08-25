@@ -1,38 +1,47 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "fraudgraph-ml-engineering"
 version = "0.1.0"
-description = "Method framework for graph-and-sequence fraud detection engineering (core implementation withheld until publication)."
+description = "Reproducible graph-and-sequence fraud detection experiments across financial transaction datasets."
 readme = "README.md"
-requires-python = ">=3.10"
-license = { text = "MIT" }
-authors = [{ name = "Bohan Yu" }]
-keywords = ["fraud-detection", "graph-neural-networks", "sequence-modeling", "machine-learning-engineering", "financial-transactions"]
-classifiers = [
-    "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Programming Language :: Python :: 3",
+requires-python = ">=3.10,<3.13"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
+authors = [{ name = "Yu Bo Han" }]
+dependencies = [
+  "numpy==1.26.4",
+  "scipy==1.13.1",
+  "scikit-learn==1.5.2",
+  "PyYAML==6.0.2",
+  "tqdm==4.67.1",
+  "tensorboard==2.19.0",
+  "pandas==2.2.3",
+  "matplotlib==3.10.1",
+  "requests==2.32.3",
+  "psutil==7.0.0",
+  "pydantic>=2.6,<3",
 ]
-dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+cpu = ["torch==2.3.1", "torchdata==0.7.1", "dgl==2.2.1"]
+cu121 = ["torch==2.3.1", "torchvision==0.18.1", "torchaudio==2.3.1", "torchdata==0.7.1", "dgl==2.2.1+cu121"]
+dev = ["pytest>=8.0", "ruff>=0.6", "build>=1.2"]
 
 [project.scripts]
-fraudgraph = "fraud_ml_engineering.__main__:main"
+fraud-ml-train = "fraud_ml_engineering.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["fraud_ml_engineering*"]
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
-pythonpath = ["."]
-addopts = "-q"
+addopts = "-ra"
 
 [tool.ruff]
-line-length = 120
 target-version = "py310"
+line-length = 120
+extend-exclude = ["src/fraud_ml_engineering/vendor"]

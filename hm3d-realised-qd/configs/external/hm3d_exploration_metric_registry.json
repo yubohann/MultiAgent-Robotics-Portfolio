@@ -1,0 +1,56 @@
+{
+  "schema_version": "hm3d-exploration-metric-registry-v2",
+  "status": "ACTIVE_PROTOCOL_NOT_FORMAL_RESULT",
+  "primary": [
+    {
+      "id": "Explored-Free-Flight-Volume-AUC_time",
+      "unit": "normalized_auc_over_physical_time",
+      "higher_is_better": true,
+      "denominator": "evaluator_private_reachable_free_flight_volume_m3"
+    }
+  ],
+  "coverage_diagnostics": [
+    "Final-Coverage@Budget",
+    "Final-Explored-Free-Volume-m3",
+    "Mean-Explored-Free-Volume-Rate-m3-per-s",
+    "Coverage-Curve@Physical-Time"
+  ],
+  "map_correctness": [
+    "free_precision",
+    "free_recall",
+    "occupied_precision",
+    "occupied_recall",
+    "hallucinated_free_space_rate",
+    "belief_calibration"
+  ],
+  "multi_uav_coordination": [
+    "overlap_ratio",
+    "parallel_efficiency",
+    "marginal_gain_per_agent",
+    "workload_cv",
+    "workload_gini",
+    "idle_or_blocked_time"
+  ],
+  "three_dimensionality": [
+    "vertical_only_observable_coverage",
+    "cross_layer_frontier_completion",
+    "free_height_vs_fixed_height_delta",
+    "height_band_descriptor_entropy"
+  ],
+  "communication": [
+    "delivery_ratio",
+    "age_of_information_s",
+    "bytes_per_new_m3",
+    "disconnected_duration_s",
+    "performance_vs_comm_budget"
+  ],
+  "qd_ogfr_diagnostics": [
+    "archive_coverage",
+    "qd_score",
+    "planned_realised_descriptor_gap",
+    "selection_regret",
+    "fragment_acceptance_rate",
+    "fragment_negative_transfer_rate",
+    "gain_per_accepted_fragment"
+  ]
+}

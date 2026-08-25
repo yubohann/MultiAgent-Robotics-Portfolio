@@ -1,0 +1,3 @@
+$ErrorActionPreference = "Stop"
+$PackRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+& (Join-Path $PackRoot "run_gate_scenarios.ps1") -Scenario multi_static @args

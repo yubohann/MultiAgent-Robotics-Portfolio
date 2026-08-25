@@ -68,7 +68,7 @@ site/                             GitHub Pages portfolio site
 .github/workflows/                Continuous integration and Pages deployment
 ```
 
-Private run archives, generated maps, bags, internal audits, and development notebooks are intentionally kept outside the public source tree and are ignored by Git.
+Private run archives, generated maps, bags, internal audits, and development notebooks are kept outside the public source tree and are ignored by Git.
 
 ## Quick Start
 
@@ -88,7 +88,7 @@ Inspect launch arguments and run the dependency-light validation suite:
 ```bash
 ros2 launch robocon_mid360_simulation gazebo_mid360_lio.launch.py --show-args
 python3 tools/validate_project.py
-python3 -m unittest discover -s src -p 'test_*.py' -v
+python3 tools/run_python_contract_tests.py
 ```
 
 Run the bounded experiment groups from one command:
@@ -108,7 +108,7 @@ bash tools/run_experiments.sh gui
 
 The dispatcher creates an isolated run directory, records the exact command and ROS domain, and keeps generated evidence outside the public source files.
 
-## Simulation Profiles
+## Runtime Profiles
 
 | Profile | Purpose |
 | --- | --- |
@@ -116,22 +116,37 @@ The dispatcher creates an isolated run directory, records the exact command and 
 | `2000-ray` | Fast topic and interface smoke profile |
 | `indoor_competition_candidate` | Structured indoor scene with field geometry and four hoop assets |
 | `open_field_degraded` | Quality-gating and geometric-degradation tests |
-| `gazebo_simulation` | Evidence label for local simulation results |
-| `bag_replay` | Evidence label for replayed recorded inputs |
+| `gazebo_simulation` | Gazebo sensor and physics runtime |
+| `bag_replay` | Replayed recorded inputs |
 
 ## Visual Snapshot
 
-The following views are curated Gazebo simulation evidence from the public portfolio set.
+The following 2025 ROBOCON-style Gazebo and RViz views are presented in sequence. Each visual is given its own row for readability.
 
 <p align="center">
-  <img src="site/assets/scan-timing.png" alt="Gazebo simulation timing and LiDAR scan evidence" width="48%">
-  <img src="site/assets/indoor-reconstruction.png" alt="Indoor Gazebo reconstruction and registered point cloud" width="48%">
+  <img src="site/assets/01-scene-gazebo-court.png" alt="2025 ROBOCON Gazebo basketball court scene" width="90%">
 </p>
 <p align="center">
-  <img src="site/assets/field-geometry.png" alt="Gazebo field geometry with competition structures" width="70%">
+  <img src="site/assets/02-pointcloud-rviz.png" alt="MID-360 point cloud in RViz" width="90%">
+</p>
+<p align="center">
+  <img src="site/assets/03-pcd-2d-map-rviz.png" alt="2D PCD projection and occupancy map in RViz" width="90%">
+</p>
+<p align="center">
+  <img src="site/assets/04-rgbd-depth-robot2.png" alt="Robot 2 RGB-D and depth visualization" width="90%">
+</p>
+<p align="center">
+  <img src="site/assets/05-basketball-shot-process.png" alt="2025 ROBOCON dual-robot basketball shot process" width="90%">
+</p>
+<p align="center">
+  <img src="site/assets/robocon-mid360-basketball-demo.gif" alt="Live 2025 ROBOCON-style two-robot basketball demonstration" width="90%">
 </p>
 
-<p align="center"><em>Scan timing, indoor reconstruction, and competition-field geometry.</em></p>
+For a camera-only recording without RViz's unused 3D render viewport, run:
+
+```bash
+bash tools/run_rgbd_image_view.sh robot1 depth
+```
 
 ## Verification
 
@@ -159,7 +174,7 @@ Explore the visual project overview at:
 
 **https://yubohann.github.io/Robocon-mid360-autonomy-stack/**
 
-The site highlights the architecture and selected Gazebo simulation evidence from the three curated images in `site/assets/`.
+The site highlights the architecture and the ordered 2025 ROBOCON views in `site/assets/`.
 
 ## License
 

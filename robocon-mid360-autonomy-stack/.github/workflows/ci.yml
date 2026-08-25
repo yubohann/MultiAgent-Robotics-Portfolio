@@ -15,7 +15,9 @@ jobs:
           python-version: "3.10"
       - name: Run dependency-light contract tests
         shell: bash
-        run: python3 -m unittest discover -s src -p 'test_*.py' -v
+        run: |
+          python3 -m pip install pytest
+          python3 tools/run_python_contract_tests.py
       - name: Validate project metadata
         shell: bash
         run: python3 tools/validate_project.py

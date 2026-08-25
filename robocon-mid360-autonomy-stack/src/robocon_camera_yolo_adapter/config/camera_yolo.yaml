@@ -1,4 +1,3 @@
-# The legacy detector is hardware-gated and disabled until the target computer paths are verified.
 robocon_camera_yolo_adapter:
   ros__parameters:
     enabled: false
@@ -14,4 +13,3 @@ robocon_camera_yolo_adapter:
     diagnostic_topic: /camera/diagnostics
     publish_hz: 20.0
     observation_max_age_sec: 0.50
-

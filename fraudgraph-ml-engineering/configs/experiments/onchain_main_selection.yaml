@@ -1,0 +1,148 @@
+selection_policy: validation_only_auc_then_f1macro_then_gmean_then_prauc_then_recall_at_precision
+test_policy: single_post_selection_final_report
+datasets:
+  ethereum_phishing:
+    - name: phishing_default18
+      rounds: 18
+      seed: 30
+      local_epochs: 2
+      extra_local_epochs: 1
+      transformer_hidden_dim: 64
+      seq_hidden_dim: 64
+      transformer_num_layers: 1
+      fusion_hidden_dim: 64
+      classification_loss: cb_focal
+      consistency_weight: 0.10
+      graph_aux_loss_weight: 0.08
+      sequence_aux_loss_weight: 0.04
+      graph_gate_logit_bias: 0.10
+      eval_graph_gate_logit_bias: 0.16
+      graph_residual_min_gate: 0.45
+      sequence_residual_scale: 0.95
+      selection_note: Balanced on-chain graph/event/relation baseline.
+    - name: phishing_wide20
+      rounds: 20
+      seed: 31
+      local_epochs: 2
+      extra_local_epochs: 1
+      transformer_hidden_dim: 96
+      seq_hidden_dim: 96
+      transformer_num_layers: 2
+      fusion_hidden_dim: 96
+      classification_loss: cb_focal
+      consistency_weight: 0.10
+      graph_aux_loss_weight: 0.10
+      sequence_aux_loss_weight: 0.04
+      graph_gate_logit_bias: 0.12
+      eval_graph_gate_logit_bias: 0.18
+      graph_residual_min_gate: 0.50
+      sequence_residual_scale: 0.98
+      selection_note: Wider phishing candidate with stronger sequence capacity.
+  ethereum_ponzi:
+    - name: ponzi_graph_heavy18
+      rounds: 18
+      seed: 30
+      local_epochs: 2
+      extra_local_epochs: 1
+      transformer_hidden_dim: 64
+      seq_hidden_dim: 64
+      transformer_num_layers: 1
+      fusion_hidden_dim: 64
+      classification_loss: cb_focal
+      consistency_weight: 0.10
+      graph_aux_loss_weight: 0.10
+      sequence_aux_loss_weight: 0.00
+      graph_gate_logit_bias: 0.28
+      eval_graph_gate_logit_bias: 0.32
+      graph_residual_min_gate: 0.70
+      sequence_residual_scale: 0.55
+      selection_note: Graph-heavy Ponzi candidate.
+    - name: ponzi_balanced20
+      rounds: 20
+      seed: 32
+      local_epochs: 2
+      extra_local_epochs: 1
+      transformer_hidden_dim: 96
+      seq_hidden_dim: 96
+      transformer_num_layers: 2
+      fusion_hidden_dim: 96
+      classification_loss: cb_focal
+      consistency_weight: 0.10
+      graph_aux_loss_weight: 0.08
+      sequence_aux_loss_weight: 0.02
+      graph_gate_logit_bias: 0.22
+      eval_graph_gate_logit_bias: 0.28
+      graph_residual_min_gate: 0.58
+      sequence_residual_scale: 0.72
+      selection_note: Balanced Ponzi candidate with extra sequence capacity.
+  defi_rug_pull:
+    - name: rug_balanced18
+      rounds: 18
+      seed: 30
+      local_epochs: 2
+      extra_local_epochs: 1
+      transformer_hidden_dim: 64
+      seq_hidden_dim: 64
+      transformer_num_layers: 1
+      fusion_hidden_dim: 64
+      classification_loss: cb_focal
+      consistency_weight: 0.10
+      graph_aux_loss_weight: 0.10
+      sequence_aux_loss_weight: 0.02
+      graph_gate_logit_bias: 0.22
+      eval_graph_gate_logit_bias: 0.26
+      graph_residual_min_gate: 0.62
+      sequence_residual_scale: 0.70
+      selection_note: Balanced rug-pull candidate.
+    - name: rug_wide20
+      rounds: 20
+      seed: 33
+      local_epochs: 2
+      extra_local_epochs: 1
+      transformer_hidden_dim: 96
+      seq_hidden_dim: 96
+      transformer_num_layers: 2
+      fusion_hidden_dim: 96
+      classification_loss: cb_focal
+      consistency_weight: 0.10
+      graph_aux_loss_weight: 0.08
+      sequence_aux_loss_weight: 0.04
+      graph_gate_logit_bias: 0.18
+      eval_graph_gate_logit_bias: 0.22
+      graph_residual_min_gate: 0.50
+      sequence_residual_scale: 0.90
+      selection_note: Wider rug-pull candidate with stronger sequence branch.
+lite_overrides:
+  ethereum_phishing:
+    name: phishing_lite08
+    rounds: 8
+    seed: 30
+    local_epochs: 1
+    extra_local_epochs: 0
+    transformer_hidden_dim: 64
+    seq_hidden_dim: 64
+    transformer_num_layers: 1
+    fusion_hidden_dim: 64
+    selection_note: Lite phishing profile for constrained runs.
+  ethereum_ponzi:
+    name: ponzi_lite10
+    rounds: 10
+    seed: 30
+    local_epochs: 1
+    extra_local_epochs: 0
+    transformer_hidden_dim: 64
+    seq_hidden_dim: 64
+    transformer_num_layers: 1
+    fusion_hidden_dim: 64
+    selection_note: Lite Ponzi profile for constrained runs.
+  defi_rug_pull:
+    name: rug_lite10
+    rounds: 10
+    seed: 30
+    local_epochs: 1
+    extra_local_epochs: 0
+    transformer_hidden_dim: 64
+    seq_hidden_dim: 64
+    transformer_num_layers: 1
+    fusion_hidden_dim: 64
+    selection_note: Lite rug-pull profile for constrained runs.

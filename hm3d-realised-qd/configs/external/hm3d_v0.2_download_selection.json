@@ -1,0 +1,44 @@
+{
+  "schema_version": "hm3d-v0.2-download-selection-v1",
+  "source": "https://github.com/matterport/habitat-matterport-3dresearch",
+  "license_url": "https://matterport.com/legal/matterport-end-user-license-agreement-academic-use-model-data",
+  "asset_version": "HM3D v0.2 geometry for target-free exploration",
+  "credentials": {
+    "token_id_environment_variable": "HM3D_API_TOKEN_ID",
+    "token_secret_environment_variable": "HM3D_API_TOKEN_SECRET"
+  },
+  "selections": {
+    "development": [
+      "hm3d-minival-glb-v0.2.tar"
+    ],
+    "formal_exploration_geometry": [
+      "hm3d-train-glb-v0.2.tar",
+      "hm3d-val-glb-v0.2.tar"
+    ]
+  },
+  "resources": {
+    "hm3d-minival-glb-v0.2.tar": {
+      "url": "https://api.matterport.com/resources/habitat/hm3d-minival-glb-v0.2.tar",
+      "advertised_bytes": 486539264,
+      "kind": "geometry_glb",
+      "split": "minival"
+    },
+    "hm3d-train-glb-v0.2.tar": {
+      "url": "https://api.matterport.com/resources/habitat/hm3d-train-glb-v0.2.tar",
+      "advertised_bytes": 34359738368,
+      "kind": "geometry_glb",
+      "split": "train"
+    },
+    "hm3d-val-glb-v0.2.tar": {
+      "url": "https://api.matterport.com/resources/habitat/hm3d-val-glb-v0.2.tar",
+      "advertised_bytes": 4294967296,
+      "kind": "geometry_glb",
+      "split": "validation"
+    }
+  },
+  "excluded_as_redundant_for_isaac": [
+    "hm3d-minival-habitat-v0.2.tar",
+    "hm3d-train-habitat-v0.2.tar",
+    "hm3d-val-habitat-v0.2.tar"
+  ]
+}

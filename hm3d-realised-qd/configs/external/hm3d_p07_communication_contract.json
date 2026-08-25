@@ -1,0 +1,31 @@
+{
+  "schema_version": "hm3d-public-communication-contract-v3",
+  "contract_id": "hm3d-synchronous-segment-fusion-v3",
+  "mode": "intermittent_rendezvous",
+  "status": "development_frozen_for_p07",
+  "claim_scope": "benchmark_networking_condition_not_rf_propagation",
+  "network": {
+    "model": "range_los_undirected_relay_graph_v1",
+    "maximum_range_m": 10.0,
+    "telemetry_update_hz": 10.0,
+    "line_of_sight_required": true,
+    "base_latency_s": 0.05,
+    "per_hop_latency_s": 0.02,
+    "loss_probability": 0.0
+  },
+  "message_policy": {
+    "message_type": "public_sparse_range_segment_delta",
+    "aggregation": "one_delta_per_sender_per_decision",
+    "time_to_live_s": 0.5
+  },
+  "admission": {
+    "require_all_recipient_outcomes_resolved": true,
+    "all_telemetry_samples_connected_required": false,
+    "maximum_disconnected_duration_s": null
+  },
+  "parameter_basis": {
+    "purpose": "Constrain which end-of-decision sparse-map deltas reach the synchronous team fusion state using 10 Hz range/LOS telemetry without claiming a measured HM3D RF channel or unobserved between-sample connectivity.",
+    "delivery_policy": "A failed, dropped, or expired delta stays out of the next public belief but remains a scored, auditable episode outcome.",
+    "prohibited_claim": "real_indoor_radio_propagation"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "org.aerocity.bench.asset-source-policy.v1",
+  "accepted_spdx": ["CC0-1.0", "CC-BY-4.0", "CC-BY-3.0"],
+  "sources": [
+    {
+      "bundle": "open_city_cc0_assets_20260729",
+      "expected_registry": "ASSET_REGISTRY.json",
+      "role": "native_usd_visuals_and_pbr",
+      "redistribution_status": "requires_registry_validation"
+    },
+    {
+      "bundle": "open_city_cc0_kenney_source_packs_20260729",
+      "expected_registry": "ASSET_REGISTRY.json",
+      "role": "source_archives_requiring_versioned_conversion",
+      "redistribution_status": "source_cc0_conversion_pending"
+    }
+  ],
+  "excluded": [
+    "NVIDIA RiverMark assets",
+    "Isaac Sim or Nucleus assets without per-asset redistribution clearance",
+    "CF2X payloads not licensed for benchmark redistribution"
+  ]
+}
+

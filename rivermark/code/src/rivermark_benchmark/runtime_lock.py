@@ -19,7 +19,7 @@ import platform
 import re
 import sys
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Mapping, Sequence
 
 from .preflight import _probe_nvidia_smi, _version_at_least, sha256_file
@@ -62,6 +62,13 @@ def config_sha256(settings: Mapping[str, Any]) -> str:
     if not isinstance(settings, Mapping):
         raise TypeError("configuration settings must be a mapping")
     return hashlib.sha256(_canonical_bytes(settings)).hexdigest()
+
+
+def environment_lock_sha256(path: Path) -> str:
+    """Hash the dependency lock with stable LF semantics on every host."""
+
+    content = Path(path).read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(content).hexdigest()
 
 
 def _finite_number(value: Any) -> bool:
@@ -434,7 +441,11 @@ def resolve_locked_experience(lock: Mapping[str, Any], isaaclab_source: Path) ->
     """Resolve the lock's experience relative to the IsaacLab checkout root."""
 
     relative = PurePosixPath(str(lock["launcher"]["experience"]["path"]))
-    checkout_root = Path(isaaclab_source).expanduser().resolve().parents[1]
+    source_text = str(Path(isaaclab_source).expanduser())
+    if re.match(r"^[A-Za-z]:[\\/]", source_text):
+        checkout_root = PureWindowsPath(source_text).parents[1]
+        return Path(str(checkout_root.joinpath(*relative.parts)))
+    checkout_root = Path(source_text).resolve().parents[1]
     return checkout_root.joinpath(*relative.parts)
 
 
@@ -645,7 +656,7 @@ def observe_runtime(
         },
         "environment_lock": {
             "repository_relative_path": lock["environment_lock"]["repository_relative_path"],
-            "sha256": sha256_file(environment_lock) if environment_lock is not None and environment_lock.is_file() else None,
+            "sha256": environment_lock_sha256(environment_lock) if environment_lock is not None and environment_lock.is_file() else None,
         },
     }
 

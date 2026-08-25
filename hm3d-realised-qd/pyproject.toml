@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aerocity-method"
+version = "0.1.0"
+description = "Outcome-grounded quality-diversity and reinforcement learning for target-free HM3D multi-UAV exploration"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "LicenseRef-Proprietary"
+authors = [{ name = "AeroCity method workspace owner" }]
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+rl = ["torch>=2.1"]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aerocity_method"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/LOCAL_ONLY.md",
+  "/README.md",
+  "/configs",
+  "/docs",
+  "/manifests",
+  "/pyproject.toml",
+  "/scripts",
+  "/src",
+  "/tests",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+  "archive",
+  "external",
+  "reports",
+  "results",
+  "src/aerocity_method/vendor",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

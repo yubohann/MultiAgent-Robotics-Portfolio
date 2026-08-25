@@ -1,8 +1,5 @@
-"""FraudGraph ML Engineering.
+"""Hybrid graph-and-sequence fraud detection engineering toolkit."""
 
-This repository describes the method framework of a graph-and-sequence fraud
-detection engineering workflow. The research implementation is withheld until
-the associated paper is published; see NOTICE.md and core/.
-"""
+from .paths import ARTIFACTS_ROOT, CONFIG_ROOT, DATA_ROOT, REPO_ROOT
 
-__version__ = "0.1.0"
+__all__ = ["ARTIFACTS_ROOT", "CONFIG_ROOT", "DATA_ROOT", "REPO_ROOT"]

@@ -1,0 +1,61 @@
+{
+  "schema": "org.aerocity.bench.release.v1",
+  "release_version": "0.1.0-construction",
+  "generator_version": "aerocity-generator-v1",
+  "master_seed": 20260729,
+  "core_sizes_m": [100, 160, 224],
+  "ood_size_m": 288,
+  "split_counts": {
+    "train": 960,
+    "validation": 180,
+    "test_iid": 72,
+    "test_topology": 72,
+    "test_scale": 72,
+    "test_damage": 72,
+    "test_appearance": 72,
+    "test_prior": 72
+  },
+  "episodes_per_layout": {
+    "train": 4,
+    "validation": 8,
+    "test_iid": 12,
+    "test_topology": 12,
+    "test_scale": 12,
+    "test_damage": 12,
+    "test_appearance": 12,
+    "test_prior": 12
+  },
+  "target_count_ranges": {
+    "100": [12, 18],
+    "160": [18, 26],
+    "224": [24, 32],
+    "288": [30, 40]
+  },
+  "training_families": ["grid_corridor", "mixed_blocks", "industrial_spine"],
+  "topology_holdout_family": "topology_holdout",
+  "visual_assets": {
+    "bundle": "open_city_cc0_assets_20260729",
+    "standard": [
+      "street_lamp_01",
+      "concrete_road_barrier",
+      "tree_small_02",
+      "wooden_crate_01",
+      "utility_box_01"
+    ],
+    "appearance_holdout": [
+      "street_lamp_02",
+      "concrete_road_barrier_02",
+      "pine_tree_01",
+      "wooden_crate_02",
+      "utility_box_02"
+    ]
+  },
+  "admission": {
+    "built_ratio": [0.28, 0.55],
+    "road_ratio": [0.18, 0.35],
+    "street_width_m": [10.0, 22.0],
+    "minimum_support_to_target_ratio": 6.0,
+    "minimum_target_separation_m": 6.0
+  }
+}
+

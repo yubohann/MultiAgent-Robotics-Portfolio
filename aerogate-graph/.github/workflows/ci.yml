@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install Git LFS
+        run: sudo apt-get update && sudo apt-get install -y git-lfs
+      - name: Fetch LFS objects
+        run: git lfs pull
+      - name: Install locked core and developer dependencies
+        run: uv sync --locked --extra dev
+      - name: Lint public API, runtime modules, and regression tests
+        run: >
+          uv run ruff check aerogate shared/core/team_geometry.py
+          shared/core/dynamic_gate_density_2d.py multi_gate/env/observation_multi.py
+          multi_gate/env/reward_runtime.py multi_gate/env/safety_shields.py
+          multi_gate/env/dynamic_gate_runtime.py multi_gate/env/guidance_runtime.py
+          multi_gate/env/observation_runtime.py multi_gate/env/multi_gate_env.py tests
+      - name: Verify public API, runtime modules, and regression-test formatting
+        run: >
+          uv run ruff format --check aerogate shared/core/team_geometry.py
+          shared/core/dynamic_gate_density_2d.py multi_gate/env/observation_multi.py
+          multi_gate/env/reward_runtime.py multi_gate/env/safety_shields.py
+          multi_gate/env/dynamic_gate_runtime.py multi_gate/env/guidance_runtime.py
+          multi_gate/env/observation_runtime.py multi_gate/env/multi_gate_env.py tests
+      - name: Test
+        run: uv run python -m pytest
+      - name: Public API smoke test
+        run: uv run python -m aerogate smoke --scenario multi-static --agents 4 --steps 8
+      - name: Verify deterministic core reproduction
+        run: >
+          uv run python -m aerogate reproduce --scenario multi-static --agents 4
+          --seeds 3 7 11 --steps 8 --output artifacts/ci/reproducibility.json
+      - name: Upload reproducibility evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aerogate-reproducibility-report
+          path: artifacts/ci/reproducibility.json

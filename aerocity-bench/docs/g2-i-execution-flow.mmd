@@ -1,0 +1,28 @@
+flowchart TD
+  A["Freeze public G2-I atlas contract"] --> B["Compile target-agnostic regions and cells"]
+  B --> C["Implement surface-inspector and inspection-footprint metric"]
+  C --> D["L0 calibration: oracle, inspector, frontier diagnostic, atlas planner"]
+  D --> E{"Non-oracle confirmation is nonzero and not saturated?"}
+  E -- "No" --> F["Revise public atlas or task bracket"]
+  F --> B
+  E -- "Yes" --> G["Atlas-aware adapter and four-UAV public-policy vertical slice"]
+  G --> H["L1 CF2X / PhysX shortlist replay"]
+  H --> I{"Runtime, bias, and scientific gates pass?"}
+  I -- "No" --> J["Keep formal test closed and record failure"]
+  J --> C
+  I -- "Yes" --> K["Freeze calibration protocol and formal test contract"]
+  K --> L["Run formal methods and statistics"]
+
+  subgraph Public_Method_Input["Public method input"]
+    P1["G1-U coarse prior and local occupancy"]
+    P2["G2-I inspection atlas"]
+  end
+  P1 --> C
+  P2 --> C
+
+  subgraph Evaluator_Private["Evaluator-private"]
+    Q1["Targets, counts, process, witnesses, seeds"]
+    Q2["Confirmation receipt only"]
+  end
+  C --> Q2
+  Q1 --> Q2

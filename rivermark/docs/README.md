@@ -13,6 +13,7 @@ These docs explain what the benchmark does, how the data is captured and audited
 | [observation-abi.md](observation-abi.md) | The field-level contract for episode data |
 | [evaluation.md](evaluation.md) | How episodes are scored and how submissions work |
 | [capture.md](capture.md) | Running a native Isaac capture |
+| [multistart-native-video-recording.md](multistart-native-video-recording.md) | Planning and encoding native videos from both route families |
 | [validation-and-admission.md](validation-and-admission.md) | Independent validation and formal dataset admission |
 | [reproducibility.md](reproducibility.md) | Same-seed runs, runtime locks, clean-room reproduction |
 | [methods.md](methods.md) | Supported method families and what counts as evidence |

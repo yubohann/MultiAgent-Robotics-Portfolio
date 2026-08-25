@@ -1,0 +1,56 @@
+{
+  "package": "aerogate_graph evaluation artifacts",
+  "generated_on": "2026-06-21",
+  "selection_policy": "Gate-related CSV/JSON metrics retained for reproducibility; large video files are not included in this source package.",
+  "files": [
+    {
+      "relative_path": "results/csv_json/multi_static_dynamic_four_metrics_manifest.json",
+      "category": "metric_manifest",
+      "description": "Manifest for multi-agent static/dynamic four-metric figure data.",
+      "size_bytes": 1192,
+      "sha256": "9f3c9d92c1679a2631fa4c8e5a8505af9ac0a62da5185505f66da8fcc87a9105"
+    },
+    {
+      "relative_path": "results/csv_json/multi_static_dynamic_four_metrics_plot_data.csv",
+      "category": "metric_csv",
+      "description": "Multi-agent static/dynamic gate four-metric plot data.",
+      "size_bytes": 1974,
+      "sha256": "50f05cebb0ba7114b286feee3cb8607424f020d40232595d4d2719c434e5a0ee"
+    },
+    {
+      "relative_path": "results/csv_json/single_dynamic_gate42_video_manifest.csv",
+      "category": "episode_manifest_csv",
+      "description": "Manifest metadata for the selected single-agent dynamic gate42 replay episode.",
+      "size_bytes": 639,
+      "sha256": "ca8c0d94a809eeb575737e46998a31bf8d1fb56cef8f8973f406ba4490e5ef20"
+    },
+    {
+      "relative_path": "results/csv_json/single_dynamic_gate42_video_manifest.json",
+      "category": "episode_manifest_json",
+      "description": "JSON metadata for the selected single-agent dynamic gate42 replay episode.",
+      "size_bytes": 841,
+      "sha256": "312a370b9dc0b19b2bf80c8bd0bb69b9e97f1cd1b5343b4c54e559c6414c05ce"
+    },
+    {
+      "relative_path": "results/csv_json/single_dynamic_gate42_video_validation_report.csv",
+      "category": "validation_csv",
+      "description": "Validation summary for the selected single-agent dynamic gate42 replay episode.",
+      "size_bytes": 517,
+      "sha256": "004bfe7800d5d818b9bb0dc0d98cac0a458f98bbdd320f27da5c2cee87cc8f82"
+    },
+    {
+      "relative_path": "results/csv_json/single_dynamic_planner_baseline_availability.csv",
+      "category": "metric_csv",
+      "description": "Availability and audit table for the single-agent dynamic baseline metrics.",
+      "size_bytes": 311,
+      "sha256": "de55258b13057b7ba24fbe4aa6830ccfdb6d05098ba5b3ed4bcaef1d68edab1e"
+    },
+    {
+      "relative_path": "results/csv_json/single_dynamic_planner_baseline_eight_metrics.csv",
+      "category": "metric_csv",
+      "description": "Single-agent dynamic gate baseline metrics: success, collision, timeout, progress, clearance, path length, and flight time.",
+      "size_bytes": 13294,
+      "sha256": "99b0ebda2f279699286d9da1f01367ae090cea212e1764cd4374a077810e1c4b"
+    }
+  ]
+}

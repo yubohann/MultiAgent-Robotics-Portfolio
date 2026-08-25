@@ -1,0 +1,48 @@
+{
+  "dynamic_source_csv": "external_artifact:multi_dynamic_gate_density/difficulty_grid.csv",
+  "static_source_csv": "external_artifact:multi_static_gate_density/difficulty_grid.csv",
+  "obstacle_counts": [
+    6,
+    12,
+    18,
+    24,
+    30,
+    36,
+    42,
+    48,
+    54,
+    60
+  ],
+  "dynamic_color": "#D55E00",
+  "static_color": "#0072B2",
+  "collision_metric_definition": "max(dynamic_gate_collision_rate, obstacle_collision_rate, tree_collision_rate, agent_collision_rate)",
+  "static_final_acceptance": {
+    "all_success_rate_pct": [
+      100.0
+    ],
+    "all_collision_rate_pct": [
+      0.0
+    ],
+    "gate_post_radius_m": [
+      0.14
+    ],
+    "drone_radius_m": [
+      0.12
+    ],
+    "gate_half_width_m": [
+      3.2
+    ]
+  },
+  "dynamic_summary": {
+    "min_success_rate_pct": 66.66666666666666,
+    "max_collision_rate_pct": 33.33333333333333
+  },
+  "outputs": [
+    "multi_dynamic_four_metrics.svg",
+    "multi_static_four_metrics.svg",
+    "multi_static_dynamic_four_metrics_comparison.svg",
+    "multi_static_dynamic_four_metrics_plot_data.csv",
+    "multi_static_dynamic_alignment_note.md",
+    "manifest.json"
+  ]
+}

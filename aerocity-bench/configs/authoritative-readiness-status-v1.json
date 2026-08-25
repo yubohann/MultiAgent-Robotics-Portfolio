@@ -1,0 +1,178 @@
+{
+  "a_gate": {
+    "frozen_execution_contract_hash": "97f58824ef769b541b1895d235cb8c5841e957b9db6722d556a10f0a90b66828",
+    "matches_current_execution_contract": false,
+    "source": {
+      "file_sha256": "5bb522a6b675d8b41c9a59c5008dcbd567ab3776d251ec72f792e2acc38d665b",
+      "path": "reason/g2-i-risk-audit-20260731/g2-i-a-gate-freeze-20260802-v2.json"
+    },
+    "status": "VERIFIED"
+  },
+  "behavior_audit": {
+    "context_count": 0,
+    "distinct_search_mechanism_count": 0,
+    "mechanism_groups": [],
+    "source": null,
+    "status": "MISSING"
+  },
+  "blockers": [
+    "The verified A gate freezes an older execution contract; current cadence changes require method-independent recalibration before B-gate replay.",
+    "The current execution contract lacks three independent, closed four-CF2X L1 calibration ancestors.",
+    "No complete three-context public-action behavior audit is bound to the current method panel.",
+    "Two behaviorally distinct public search mechanisms have not been established.",
+    "Two distinct public search mechanisms have not both closed with nonzero anonymous confirmation under the current execution contract.",
+    "The current execution contract has no matching A-gate freeze or three-ancestor closed four-CF2X panel. A complete three-context behavior audit, substantive external method/statistical closure, scene/legal closure, and clean release reproducibility remain required before formal test access."
+  ],
+  "checks": {
+    "a_gate_binds_current_execution_contract": false,
+    "current_contract_has_three_closed_l1_ancestors": false,
+    "governance_authorizes_formal_main_matrix": false,
+    "three_context_behavior_audit_complete": false,
+    "two_current_public_search_mechanisms_closed_and_nonzero": false,
+    "two_distinct_public_search_mechanisms": false
+  },
+  "current_contract": {
+    "execution_contract_hash": "eecb078a8d44ca6f1633ad3c9395f70d1771975e6a97009bc263f0cd37a3708c",
+    "planning_cadence": {
+      "event_triggers": [
+        "anonymous_confirmation",
+        "safety_intervention",
+        "fleet_roster_change",
+        "return_reserve_entry"
+      ],
+      "held_action_rebinding": "latest-public-observation",
+      "mode": "fixed-rate-with-public-events",
+      "period_s": 1.0,
+      "retransmit_messages_on_hold": false,
+      "schema": "org.aerocity.bench.planning-cadence.v1"
+    },
+    "release_version": "1.0.0-ordinary-mini",
+    "source": {
+      "file_sha256": "8e65f5dca7616c070ffd0e69b44c836967023ee630e4f9c72d407da535eb867e",
+      "path": "configs/releases/ordinary-v1-mini.json"
+    }
+  },
+  "evidence_precedence": [
+    "current versioned release configuration",
+    "later hash-bound replay outcomes including failures",
+    "historical v16 calibration report"
+  ],
+  "failure_count": 6,
+  "formal_ready": false,
+  "formal_test_access_authorized": false,
+  "governance": {
+    "formal_main_matrix_authorized": false,
+    "formal_main_matrix_blockers": [
+      "The current execution contract has no matching A-gate freeze or three-ancestor closed four-CF2X panel. A complete three-context behavior audit, substantive external method/statistical closure, scene/legal closure, and clean release reproducibility remain required before formal test access."
+    ],
+    "long_training_authorized": false,
+    "long_training_blockers": [
+      "Training remains disabled until the current execution contract passes A/B, a substantive external 3-D public-method panel and the ancestor-level statistical protocol are frozen. The v16 CF2X panel is superseded historical calibration evidence."
+    ],
+    "registry_hash": "e2992fd04c989727664e96694c4f71809f0226e19c8e5242c24d2476f831432c",
+    "source": {
+      "file_sha256": "43ee800c098d4b39f0fe61e6c9ba015b58f09be74033003eb49a256e4eab5e79",
+      "path": "configs/experiment-governance-v1.json"
+    }
+  },
+  "later_replay_panel": {
+    "method_ids": [
+      "atlas-region-greedy",
+      "atlas-surface-inspector",
+      "sweep-3d"
+    ],
+    "preserved_incomplete_replay_count": 2,
+    "public_context_count": 1,
+    "records": [
+      {
+        "all_returned_home": true,
+        "calibration_episode_closed": false,
+        "confirmation_receipt_count": 4,
+        "deadline_miss_tick_count": 1,
+        "execution_contract_hash": "a88caeca813759415a9ce8e3a490f3d92f7ee3211d236efc784c2db70d46a08b",
+        "matches_current_execution_contract": false,
+        "method_id": "atlas-region-greedy",
+        "public_context": [
+          "d2d539a1820eaafb4c3829e0662f6738dece86bf5f999ed70d282013806a319a",
+          "4827f8f42da62f1ebcfd75f2dac506d1556641cdc164fcee56d3c860c5e22da6"
+        ],
+        "route_summary_hash": "940ec1df7d543b382e84d8e6ebd113c39921d342a0dd9d2bcaa5b5c9a58ab1ff",
+        "safe_completion": true,
+        "source": {
+          "file_sha256": "95d7ae6eba8f79fa8b75a5af558ca8584897efb38a4a2e19c54f1293498d164f",
+          "path": "reason/l1-smoke-evidence-20260803-b02-region-r3/ancestor-02-atlas-region-greedy.public.json"
+        }
+      },
+      {
+        "all_returned_home": true,
+        "calibration_episode_closed": false,
+        "confirmation_receipt_count": 4,
+        "deadline_miss_tick_count": 1,
+        "execution_contract_hash": "a88caeca813759415a9ce8e3a490f3d92f7ee3211d236efc784c2db70d46a08b",
+        "matches_current_execution_contract": false,
+        "method_id": "atlas-surface-inspector",
+        "public_context": [
+          "d2d539a1820eaafb4c3829e0662f6738dece86bf5f999ed70d282013806a319a",
+          "4827f8f42da62f1ebcfd75f2dac506d1556641cdc164fcee56d3c860c5e22da6"
+        ],
+        "route_summary_hash": "940ec1df7d543b382e84d8e6ebd113c39921d342a0dd9d2bcaa5b5c9a58ab1ff",
+        "safe_completion": true,
+        "source": {
+          "file_sha256": "2eb9c87f39587211fd563f11ce85b3820760c472cf60ee770503c54cda916170",
+          "path": "reason/l1-smoke-evidence-20260803-b02-surface-r1/ancestor-02-atlas-surface-inspector.public.json"
+        }
+      },
+      {
+        "all_returned_home": true,
+        "calibration_episode_closed": true,
+        "confirmation_receipt_count": 0,
+        "deadline_miss_tick_count": 0,
+        "execution_contract_hash": "a88caeca813759415a9ce8e3a490f3d92f7ee3211d236efc784c2db70d46a08b",
+        "matches_current_execution_contract": false,
+        "method_id": "sweep-3d",
+        "public_context": [
+          "d2d539a1820eaafb4c3829e0662f6738dece86bf5f999ed70d282013806a319a",
+          "4827f8f42da62f1ebcfd75f2dac506d1556641cdc164fcee56d3c860c5e22da6"
+        ],
+        "route_summary_hash": "8e612f495d29c2087ef6c72083abec79fc93a1271136441cbf152d0e0a660909",
+        "safe_completion": true,
+        "source": {
+          "file_sha256": "3c4643fcafc61fd011f33d29fc2809c4d39a02efd5ef142a714a56388aae53fa",
+          "path": "reason/l1-smoke-evidence-20260803-b02-sweep-r1/ancestor-02-sweep-3d.public.json"
+        }
+      }
+    ],
+    "route_summary_equivalence_is_not_general_behavior_equivalence": true,
+    "route_summary_groups_by_context": [
+      {
+        "public_context": [
+          "d2d539a1820eaafb4c3829e0662f6738dece86bf5f999ed70d282013806a319a",
+          "4827f8f42da62f1ebcfd75f2dac506d1556641cdc164fcee56d3c860c5e22da6"
+        ],
+        "route_summary_groups": [
+          [
+            "atlas-region-greedy",
+            "atlas-surface-inspector"
+          ],
+          [
+            "sweep-3d"
+          ]
+        ]
+      }
+    ]
+  },
+  "legacy_b_gate": {
+    "historical_replay_count": 9,
+    "reason": "It predates the current planning cadence and newer preserved failure evidence.",
+    "source": {
+      "file_sha256": "8e9c0fc5de6ef1e2edd1f0ac4ddda6d12c1e11cf6324bf6c65e51f6364ac3016",
+      "path": "reason/benchmark-external-methodology-audit-20260802/current-boundary-l1-panel-20260803/cf2x-b-gate-verification-v16-current-boundary.json"
+    },
+    "status": "VERIFIED",
+    "superseded_for_current_readiness": true
+  },
+  "long_training_authorized": false,
+  "report_hash": "4e8b35f5ac25f21b2a49219206a69b8271338a07309bce9dc31ad627b512ecb0",
+  "schema": "org.aerocity.bench.authoritative-readiness-status.v1",
+  "status": "FORMAL_NO_GO"
+}

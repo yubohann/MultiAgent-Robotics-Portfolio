@@ -1,0 +1,29 @@
+name: FraudGraph checks
+
+on:
+  push:
+    paths:
+      - "fraudgraph-ml-engineering/**"
+      - ".github/workflows/fraudgraph-checks.yml"
+  pull_request:
+    paths:
+      - "fraudgraph-ml-engineering/**"
+      - ".github/workflows/fraudgraph-checks.yml"
+
+jobs:
+  structure:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fraudgraph-ml-engineering
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python scripts/validate_repository.py
+      - run: python -m pytest
+      - run: python -m compileall -q src scripts tests
+      - run: python -m fraud_ml_engineering --help

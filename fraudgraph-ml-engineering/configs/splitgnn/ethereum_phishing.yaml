@@ -1,0 +1,20 @@
+# train parameters
+dataset: 'ethereum_phishing'
+seed: 30
+epoch: 1000
+early_stop: 150
+lr: 0.003
+weight_decay: 0.0001
+cuda: 0
+log: True
+data_path: '../data/'
+result_path: '../result/'
+
+
+# model parameters
+gamma: 1
+C: 1
+K: 0
+intra_dim: 16
+n_class: 2
+dropout: 0.15

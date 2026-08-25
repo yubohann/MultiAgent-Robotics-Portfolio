@@ -1,4 +1,3 @@
-# Simulation-only adapter profile. The 0.40 m transform is a nominal model value.
 mid360_input_guard:
   ros__parameters:
     lidar_topic: /livox/lidar

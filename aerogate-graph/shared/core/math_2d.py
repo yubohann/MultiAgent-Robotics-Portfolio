@@ -1,4 +1,4 @@
-"""Small 2D math helpers used by the isolated experiment line."""
+﻿"""Small 2D math helpers used by the isolated experiment line."""
 
 from __future__ import annotations
 

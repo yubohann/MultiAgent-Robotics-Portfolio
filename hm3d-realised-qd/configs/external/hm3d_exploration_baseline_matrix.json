@@ -1,0 +1,123 @@
+{
+  "schema_version": "hm3d-exploration-baseline-matrix-v4",
+  "status": "NOT_FORMAL_RESULT",
+  "common_protocol": "hm3d-multi-uav-exploration-protocol-v4",
+  "shared_action_authority": "public_3d_frontier_team_candidate_set",
+  "design_rule": "Three task-validity controls, one GVP-MREP controlled transfer when qualified, one archive-free learning control, and the proposed method form the only formal primary plot. MARL-IPP remains a controlled-transfer prototype until its author-code, PPO/LSTM and HM3D retraining qualification passes. Mechanism ablations are separate paired validation experiments, not additional external baselines.",
+  "formal_primary_plot": {
+    "baseline_ids": [
+      "random_public_candidate",
+      "frontier_3d_public_candidate",
+      "auction_cost_utility",
+      "gvp_mrep_port",
+      "single_rl_public_candidate"
+    ],
+    "proposed_id": "realised_qd_ogfr_rb_sf_sac",
+    "maximum_ranked_rows": 6,
+    "shared_controls": [
+      "scene_seed_and_initial_poses",
+      "public_sensor_entitlement",
+      "physical_time_and_candidate_budget",
+      "cf2x_dynamics_and_runtime_guard",
+      "communication_ledger",
+      "complete_failure_denominator"
+    ],
+    "p07_minimum_baseline_ids": [
+      "random_public_candidate",
+      "frontier_3d_public_candidate",
+      "auction_cost_utility"
+    ],
+    "parallel_confirmation_ids": [],
+    "execution_rule": "P07 task validity first uses the three non-learning common-protocol controls. P10 additionally requires a train-provenanced single_rl checkpoint. GVP-MREP enters only after original-environment and differential-equivalence qualification; it must never be relabeled as original ROS/RotorS reproduction."
+  },
+  "baselines": [
+    {
+      "id": "random_public_candidate",
+      "tier": "sanity_lower_bound",
+      "adaptation_status": "implemented_common_protocol",
+      "required_role": "verify_that_the_task_is_not_saturated"
+    },
+    {
+      "id": "auction_cost_utility",
+      "tier": "classical_3d_coordination",
+      "adaptation_status": "implemented_common_protocol",
+      "required_role": "transparent_public_gain_cost_assignment_without_learning_qd_or_fragment_credit"
+    },
+    {
+      "id": "frontier_3d_public_candidate",
+      "tier": "geometric_3d_control",
+      "adaptation_status": "implemented_common_protocol",
+      "required_role": "select_public_three_dimensional_frontiers_without_learning_qd_or_fragment_credit"
+    },
+    {
+      "id": "single_rl_public_candidate",
+      "tier": "learning_control",
+      "adaptation_status": "implemented_common_protocol_training_pending",
+      "required_role": "select_from_the_same_public_candidate_pool_without_qd_or_fragment_credit"
+    },
+    {
+      "id": "gvp_mrep_port",
+      "tier": "strong_planning_controlled_transfer",
+      "adaptation_status": "implemented_common_protocol_runtime_pending",
+      "source_method": "GVP-MREP_IROS_2024",
+      "required_role": "public_dynamic_topology_graph_distance_voronoi_allocation_without_qd_or_learning"
+    }
+  ],
+  "controlled_transfer_prototypes": [
+    {
+      "id": "marl_ipp_port",
+      "tier": "strong_rl_controlled_transfer_prototype",
+      "adaptation_status": "author_goldens_ppo_lstm_and_hm3d_retraining_pending",
+      "source_method": "MARL_IPP_RAL_2026",
+      "required_role": "author_attentionnet_per_agent_candidate_graph_lstm_ppo_controlled_transfer",
+      "formal_primary_plot_eligible": false
+    }
+  ],
+  "proposed_method": {
+    "id": "realised_qd_ogfr_rb_sf_sac",
+    "role": "proposed_method_not_an_external_baseline",
+    "claim": "realised repertoire diversity and outcome-provenance fragment credit improve online candidate selection under the same public protocol"
+  },
+  "mechanism_ablations": [
+    {
+      "pair": ["planned_qd", "realised_qd"],
+      "isolated_question": "Does archive admission require execution feedback?"
+    },
+    {
+      "pair": ["whole_candidate_or_no_reuse", "outcome_gated_fragment_reuse"],
+      "isolated_question": "Does provenance-gated fragment credit reduce unsafe transfer?"
+    },
+    {
+      "pair": ["vanilla_masked_discrete_sac", "rb_sf_sac_selector"],
+      "isolated_question": "Do the candidate-duration and constraint-aware selector changes help beyond ordinary SAC?"
+    }
+  ],
+  "controlled_transfer_provenance": "hm3d_external_baseline_provenance.json",
+  "implementation_references_not_formal_rows": [
+    {
+      "id": "epic_2025_lidar_aav_planner",
+      "use": "sparse_range_and_continuous_trajectory_design_reference",
+      "reason_not_formal": "ROS runtime has not passed the HM3D common-protocol adapter smoke"
+    },
+    {
+      "id": "highstar_2025_high_speed_uav_planner",
+      "use": "nonzero_terminal_velocity_and_motion_primitive_design_reference",
+      "reason_not_formal": "ROS runtime has not passed the HM3D common-protocol adapter smoke"
+    },
+    {
+      "id": "mggplanner_2025_multirobot_graph_merge",
+      "use": "map_merge_and_task_allocation_design_reference",
+      "reason_not_formal": "a direct common-candidate adapter is not implemented"
+    },
+    {
+      "id": "pipe_2025_bev_pathwise_information_gain",
+      "use": "pathwise_information_gain_design_reference",
+      "reason_not_formal": "its source snapshot is not an auditable git checkout and no common-protocol adapter is implemented"
+    },
+    {
+      "id": "dhc_me_2025_partial_code_reference",
+      "use": "paper_level_reference_only",
+      "reason_not_formal": "the upstream README reports that the repository is incomplete"
+    }
+  ]
+}

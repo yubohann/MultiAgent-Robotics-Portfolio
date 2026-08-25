@@ -1,0 +1,307 @@
+{
+  "schema": "org.aerocity.bench.external-candidate-input-semantics.v1",
+  "generated_on": "2026-08-03",
+  "purpose": "Gate C candidate screening. This registry records input semantics and disqualifications before an adapter is written. It is not a result table or a claim that any listed repository is integrated.",
+  "g2_i_public_inputs": [
+    "public inspection atlas (coarse regions or full cells as a declared ablation)",
+    "public mission sector and safe transit graph",
+    "public starts and vehicle self state",
+    "public flight and observation contract",
+    "anonymous confirmation receipts"
+  ],
+  "g2_i_forbidden_inputs": [
+    "target coordinates or count",
+    "target process or labels",
+    "support sites and evaluator witnesses",
+    "private city mesh, rendered depth, or evaluator ray results",
+    "split labels and seeds"
+  ],
+  "candidates": [
+    {
+      "candidate_id": "ortools-public-atlas-routing-baseline",
+      "upstream_url": "https://github.com/google/or-tools.git",
+      "upstream_commit": "98c165af62df62b3056c2ee0fca66b24e79097cb",
+      "license": "Apache-2.0",
+      "task_class": "general vehicle routing solver",
+      "required_upstream_inputs": [
+        "task nodes and weights",
+        "vehicle starts",
+        "travel-cost matrix or graph",
+        "route budget"
+      ],
+      "g2_i_mapping": "Direct only as a routing implementation: public full-atlas cells are nodes, represented area is a public weight, and the public safe-transit graph supplies travel costs.",
+      "missing_or_forbidden_inputs": [],
+      "license_status": "verified",
+      "integration_status": "development L0 closed; no formal score",
+      "c_gate_eligible": false,
+      "disposition": "Keep as an external-solver routing baseline. It is not an externally maintained three-dimensional search method."
+    },
+    {
+      "candidate_id": "aco3d-public-atlas-inspection-ordering",
+      "upstream_url": "https://github.com/duynamrcv/aco_3d_ipp.git",
+      "upstream_commit": "c395f5b61f6746b2d39310dbc55a7ec3e1eae2d5",
+      "license": "MIT",
+      "task_class": "three-dimensional geometry-search inspection ordering",
+      "required_upstream_inputs": [
+        "three-dimensional inspection-point coordinates",
+        "pairwise movement-cost model",
+        "one sequential inspection tour"
+      ],
+      "g2_i_mapping": "Direct for ordering only: the locked source-cost formula receives each drone's target-independent public sector cells. The public mission sector supplies the four-drone partition; shared CF2X execution supplies motion and OBSERVE.",
+      "missing_or_forbidden_inputs": [
+        "native MATLAB or Octave source-equivalence fixture",
+        "upstream multi-UAV assignment implementation",
+        "three-ancestor CF2X L1 closed integration"
+      ],
+      "license_status": "verified MIT at the locked commit",
+      "integration_status": "source-locked Python translation with a three-ancestor current-boundary L0 calibration panel; no native upstream runtime, upstream multi-UAV allocation, or CF2X L1 execution",
+      "c_gate_eligible": false,
+      "disposition": "Retain as the first semantically compatible external 3-D inspection-ordering candidate. Its L0 panel remains calibration-only and cannot close Gate C; native-source equivalence and the public three-ancestor CF2X L1 panel are still required."
+    },
+    {
+      "candidate_id": "fuel",
+      "upstream_url": "https://github.com/HKUST-Aerial-Robotics/FUEL.git",
+      "upstream_commit": "662dd23c7b52b258d3c4a0155ff6632118e8984f",
+      "license": "GPL-3.0-only",
+      "task_class": "online three-dimensional frontier exploration",
+      "required_upstream_inputs": [
+        "dense depth or point-cloud ray observations",
+        "fine free-space and occupancy map",
+        "frontier candidates with clearance and visibility support",
+        "ROS 1 map and planning graph"
+      ],
+      "g2_i_mapping": "No semantics-preserving mapping. G2-I exposes target-agnostic inspection cells and coarse local occupancy, not the ray-built free-space observations that FUEL uses to create and reject frontiers.",
+      "missing_or_forbidden_inputs": [
+        "rendered depth or sensor rays",
+        "fine ray-built free-space map",
+        "private city mesh"
+      ],
+      "license_status": "verified GPL; isolated container required",
+      "integration_status": "isolated ROS smoke reached GRAPH_READY_NO_ROUTE",
+      "c_gate_eligible": false,
+      "disposition": "Exclude from G2-I. It remains a future G1-U exploration candidate only if a separately declared public sensor-stream profile is released."
+    },
+    {
+      "candidate_id": "falcon",
+      "upstream_url": "https://github.com/HKUST-Aerial-Robotics/FALCON",
+      "upstream_commit": null,
+      "license": "unverified",
+      "task_class": "three-dimensional coverage-guided aerial exploration",
+      "required_upstream_inputs": [
+        "coverage map or point-cloud/map representation",
+        "coverage path and trajectory-planning environment",
+        "vehicle state and map-specific geometry"
+      ],
+      "g2_i_mapping": "No direct mapping demonstrated. Treating full public cells as a coverage map would be a new derived implementation, not a locked upstream integration.",
+      "missing_or_forbidden_inputs": [
+        "verified upstream license",
+        "demonstrated atlas-to-upstream map equivalence"
+      ],
+      "license_status": "GitHub root metadata had no SPDX license at screening time",
+      "integration_status": "screened only",
+      "c_gate_eligible": false,
+      "disposition": "Exclude until the upstream license and a semantics-preserving public-input adapter are independently verified."
+    },
+    {
+      "candidate_id": "racer",
+      "upstream_url": "https://github.com/SYSU-STAR/RACER",
+      "upstream_commit": null,
+      "license": "mixed or unverified",
+      "task_class": "decentralized multi-UAV frontier exploration",
+      "required_upstream_inputs": [
+        "point-cloud or occupancy-map updates",
+        "frontier and viewpoint generation",
+        "ROS 1 asynchronous peer communication"
+      ],
+      "g2_i_mapping": "No direct mapping demonstrated. Its frontier pipeline has different observation semantics from a predeclared public inspection atlas.",
+      "missing_or_forbidden_inputs": [
+        "fine online mapping observations",
+        "verified repository-wide license closure"
+      ],
+      "license_status": "screening found mixed package notices and no verified root closure",
+      "integration_status": "screened only",
+      "c_gate_eligible": false,
+      "disposition": "Exclude from the formal candidate set; do not infer a license from a README or substitute private geometry."
+    },
+    {
+      "candidate_id": "marvel",
+      "upstream_url": "https://github.com/marmotlab/MARVEL",
+      "upstream_commit": null,
+      "license": "MIT",
+      "task_class": "two-dimensional limited-field-of-view exploration",
+      "required_upstream_inputs": [
+        "two-dimensional occupancy grid",
+        "two-dimensional field-of-view observations",
+        "decentralized communication state"
+      ],
+      "g2_i_mapping": "Only a declared two-dimensional transfer diagnostic is possible; a projection loses the three-dimensional inspection orientation and cannot claim comparable geometry-search performance.",
+      "missing_or_forbidden_inputs": [
+        "three-dimensional oriented inspection-cell semantics"
+      ],
+      "license_status": "verified at prior screen",
+      "integration_status": "short transfer diagnostics only",
+      "c_gate_eligible": false,
+      "disposition": "Retain only in a compatibility appendix. It cannot close Gate C or join the G2-I main table."
+    },
+    {
+      "candidate_id": "mav_voxblox_planning",
+      "upstream_url": "https://github.com/ethz-asl/mav_voxblox_planning",
+      "upstream_commit": null,
+      "license": "BSD-3-Clause",
+      "task_class": "trajectory planning over volumetric maps",
+      "required_upstream_inputs": [
+        "TSDF map",
+        "ESDF map",
+        "specified goal pose"
+      ],
+      "g2_i_mapping": "It can be a low-level trajectory-planning control comparison only after a separately audited public map profile exists. It does not select inspection regions or search for targets.",
+      "missing_or_forbidden_inputs": [
+        "TSDF and ESDF map",
+        "independent search or inspection-order policy"
+      ],
+      "license_status": "verified at prior screen",
+      "integration_status": "screened only",
+      "c_gate_eligible": false,
+      "disposition": "Exclude as a substantive search method; do not count a shared controller component as a baseline."
+    },
+    {
+      "candidate_id": "ea-a-star-hwga",
+      "upstream_url": "https://github.com/xuxingyu0425/EA-A-HWGA",
+      "upstream_commit": "f5817e92e36b3ec9a2a81a23ecad109c191ba2b6",
+      "license": "MIT",
+      "task_class": "energy-aware multi-UAV wind-farm inspection assignment",
+      "required_upstream_inputs": [
+        "wind-turbine task locations",
+        "terrain and obstacle model",
+        "vehicle-specific energy model",
+        "energy cost matrix",
+        "dynamic base-station variables"
+      ],
+      "g2_i_mapping": "The public atlas can supply inspection-cell locations, but not its wind-farm terrain/energy-matrix semantics or dynamic-base decision variables. Replacing those parts would create a benchmark-owned derivative rather than run the locked upstream method.",
+      "missing_or_forbidden_inputs": [
+        "published peer-reviewed method version",
+        "public terrain and energy-cost semantics equivalent to the upstream model",
+        "direct G2-I action-interface mapping"
+      ],
+      "license_status": "MIT stated by repository; upstream README calls the paper a submitted manuscript",
+      "integration_status": "GitHub screened only",
+      "c_gate_eligible": false,
+      "disposition": "Do not integrate now. It is useful evidence that inspection routing exists, but not a validated G2-I external baseline."
+    },
+    {
+      "candidate_id": "highstar",
+      "upstream_url": "https://github.com/NKU-MobFly-Robotics/HighStar.git",
+      "upstream_commit": "6dd50cbc003a33c736d64a04f2950e6fa5001280",
+      "license": "unverified",
+      "task_class": "online three-dimensional UAV frontier exploration",
+      "required_upstream_inputs": [
+        "online OctoMap occupancy/free-space updates",
+        "unknown-space frontier and viewpoint candidates",
+        "voxel-graph motion primitives and convex-hull trajectory environment",
+        "ROS 1 odometry and map topics"
+      ],
+      "g2_i_mapping": "No semantics-preserving mapping. HighStar's published planner creates viewpoints from online unknown/free-space geometry, whereas G2-I publishes an inspection atlas and does not expose the ray-built map required to form those frontiers.",
+      "missing_or_forbidden_inputs": [
+        "online ray-built free-space and unknown-space map",
+        "frontier-generation observations",
+        "verified repository-wide license closure"
+      ],
+      "license_status": "no root SPDX license found in the locked upstream tree",
+      "integration_status": "local source and README screened only",
+      "c_gate_eligible": false,
+      "disposition": "Exclude from G2-I. Retain as a future G1-U candidate only if a separate public sensor-stream profile is frozen."
+    },
+    {
+      "candidate_id": "epic",
+      "upstream_url": "https://github.com/Robotics-STAR-Lab/EPIC.git",
+      "upstream_commit": "d73c3150e57d669ac21bcad5c859f52c2827c9ba",
+      "license": "GPL-3.0-only",
+      "task_class": "online three-dimensional LiDAR point-cloud exploration",
+      "required_upstream_inputs": [
+        "online LiDAR point-cloud observations",
+        "point-cloud compression and topology-map updates",
+        "frontier/viewpoint generation from unexplored geometry",
+        "ROS 1 vehicle state and trajectory environment"
+      ],
+      "g2_i_mapping": "No direct mapping demonstrated. Supplying the private city mesh or rendered LiDAR would violate G2-I information boundaries; deriving EPIC's mapping pipeline from atlas cells would replace its exploration core.",
+      "missing_or_forbidden_inputs": [
+        "online LiDAR point-cloud stream",
+        "ray-derived unexplored-space semantics",
+        "private city geometry or rendered sensor data"
+      ],
+      "license_status": "verified GPL; any future execution requires an isolated process or container",
+      "integration_status": "local source and paper metadata screened only",
+      "c_gate_eligible": false,
+      "disposition": "Exclude from G2-I and do not implement an adapter. It is relevant only to a separately specified G1-U LiDAR exploration track."
+    },
+    {
+      "candidate_id": "tu-darmstadt-3d-coverage-path-planning",
+      "upstream_url": "https://github.com/tu-darmstadt-ros-pkg/3d_coverage_path_planning.git",
+      "upstream_commit": "b2d035af8e0800d819b62c50d3c1a8936503f72d",
+      "license": "MIT",
+      "task_class": "three-dimensional prior-mesh coverage planning for a ground robot",
+      "required_upstream_inputs": [
+        "complete and target three-dimensional mesh models",
+        "mesh navigation path planner",
+        "ground-robot body geometry and reachable start point",
+        "sensor recording plugin and accumulated reconstruction"
+      ],
+      "g2_i_mapping": "The task is academically close but not directly compatible. Converting the atlas into complete/target mesh models would invent a new input representation, and its ground-robot navigation and reconstruction loop are not the shared CF2X flight/OBSERVE contract.",
+      "missing_or_forbidden_inputs": [
+        "public complete and target mesh models",
+        "ground-robot kinematics and mesh-navigation semantics",
+        "semantics-preserving atlas-to-mesh conversion"
+      ],
+      "license_status": "verified MIT at the locked upstream revision",
+      "integration_status": "README, source contract, and paper metadata screened only",
+      "c_gate_eligible": false,
+      "disposition": "Exclude from G2-I. Cite as related prior-mesh inspection work, not as a runnable CF2X baseline."
+    },
+    {
+      "candidate_id": "rayfronts",
+      "upstream_url": "https://github.com/seungchan-kim/RayFronts.git",
+      "upstream_commit": null,
+      "license": "MIT",
+      "task_class": "three-dimensional perception-search and semantic mapping",
+      "required_upstream_inputs": [
+        "RGB images, depth images, and camera intrinsics",
+        "open-vocabulary semantic encoder and pretrained model weights",
+        "online semantic occupancy/frontier map",
+        "ROS 2 sensor and waypoint topics"
+      ],
+      "g2_i_mapping": "No G2-I geometry mapping. RayFronts uses RGB/depth-derived semantic ray frontiers and text prompts to reduce a semantic search volume; the geometry-search track deliberately withholds these modalities and target semantics.",
+      "missing_or_forbidden_inputs": [
+        "continuous RGB/depth and intrinsics stream",
+        "semantic target prompt and pretrained perception model",
+        "perception-search capability profile"
+      ],
+      "license_status": "MIT root license observed in the local source snapshot; exact upstream revision and model/dependency provenance are not locked",
+      "integration_status": "local README and source contract screened only",
+      "c_gate_eligible": false,
+      "disposition": "Exclude from G2-I and Gate C. It is a relevant future perception-search candidate only after a separately frozen RGB-D profile and model-license audit."
+    },
+    {
+      "candidate_id": "raven",
+      "upstream_url": "https://github.com/castacks/RAVEN.git",
+      "upstream_commit": null,
+      "license": "BSD-3-Clause root; multi-repository dependency closure unverified",
+      "task_class": "three-dimensional perception-search aerial navigation stack",
+      "required_upstream_inputs": [
+        "Isaac Sim sensor streams through AirStack",
+        "RayFronts RGB/depth semantic mapping",
+        "global waypoint overwrite interface and local collision-avoidance stack",
+        "optional language-vision model and downloaded pretrained weights"
+      ],
+      "g2_i_mapping": "No semantics-preserving G2-I mapping. RAVEN's published system makes global semantic plans from camera-derived memory and optionally a language-vision model. Giving it these inputs would create a different perception-search task; removing them would remove its method core.",
+      "missing_or_forbidden_inputs": [
+        "continuous RGB/depth and camera intrinsics",
+        "semantic prompt, semantic memory, and pretrained model weights",
+        "AirStack/RayFronts dependency and container provenance closure"
+      ],
+      "license_status": "BSD-3-Clause root license observed in the local source snapshot; recursive submodules and pretrained model licenses are not closed",
+      "integration_status": "local README and source contract screened only",
+      "c_gate_eligible": false,
+      "disposition": "Exclude from G2-I and Gate C. Cite it as an ICRA 2026 perception-navigation reference; evaluate it only in a separately declared perception-search track."
+    }
+  ]
+}

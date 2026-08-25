@@ -1,0 +1,32 @@
+flowchart TB
+  API["AeroGate public API and CLI"] --> SCENARIOS["Scenario registry and rollout summaries"]
+  SCENARIOS --> SINGLE["Single-agent environment"]
+  SCENARIOS --> MULTI["Variable-team environment"]
+
+  subgraph CORE["Deterministic 2D core"]
+    KIN["Fixed-height kinematics"]
+    GEO["Gate geometry and collision maps"]
+    TEAM["Team clearance and separation metrics"]
+  end
+
+  SINGLE --> KIN
+  SINGLE --> GEO
+  MULTI --> KIN
+  MULTI --> GEO
+  MULTI --> TEAM
+  MULTI --> PLAN["Global route planner"]
+  MULTI --> FORM["Virtual-structure formation"]
+  MULTI --> SHIELD["Action safety shields"]
+  MULTI --> REWARD["Reward and termination diagnostics"]
+
+  SINGLE --> SAC["Graph-SAC optional training"]
+  MULTI --> MASAC["Graph-MASAC optional training"]
+  SAC --> EVAL["Task evaluation drivers"]
+  MASAC --> EVAL
+  SCENARIOS --> REPRO["Seeded reproducibility report"]
+  EVAL --> ARTIFACTS["Checkpoints and evaluation artifacts"]
+  REPRO --> ARTIFACTS
+
+  GEO --> ASSETS["Gate and drone assets"]
+  ASSETS --> ISAAC["Optional Isaac Lab adapters"]
+  MULTI --> ISAAC

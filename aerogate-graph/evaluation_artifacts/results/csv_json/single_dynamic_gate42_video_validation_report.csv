@@ -1,0 +1,2 @@
+﻿seed,success,done_reason,actual_gate_motion_range_m,moving_gate_swept_clearance_m_min,gate_visual_stage_bottom_m,gate_visual_stage_top_m,drone_visual_predicted_top_m,drone_visual_top_below_gate_top,complete_top_mp4,complete_follow_mp4,validation_passed
+0,1,goal_reached,3.1278095921151303,0.0683417089483383,0.0,8.0,4.040158921436325,1,external_artifact:single_dynamic/gate_042/ours_mainline/seed_00/top_view_complete.mp4,external_artifact:single_dynamic/gate_042/ours_mainline/seed_00/follow_view_complete.mp4,1

@@ -1,0 +1,21 @@
+{
+  "schema": "org.aerocity.bench.g2-i-measurement-claim-protocol.v1",
+  "formal_score_eligible": false,
+  "outcome_metric": "mean_final_confirmed_recall",
+  "independent_unit": "layout_ancestor",
+  "cross_validation": "leave_one_layout_ancestor_out",
+  "coverage_only_features": [
+    "free_space_coverage_auc"
+  ],
+  "augmented_features": [
+    "free_space_coverage_auc",
+    "inspection_footprint_auc"
+  ],
+  "method_fixed_effects": true,
+  "minimum_ancestor_count": 29,
+  "bootstrap_replicates": 5000,
+  "bootstrap_seed": 20260803,
+  "failure_denominator_policy": "retain_all_completed_ancestor_rows",
+  "panel_manifest_schema": "org.aerocity.bench.g2-i-measurement-claim-panel.v1",
+  "protocol_hash": "cc5ae6f75e8fc6d3f413b75cad0e74a8fba80b4c322092b76b1b0a31a5377266"
+}

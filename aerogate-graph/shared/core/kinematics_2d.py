@@ -1,4 +1,4 @@
-"""Planar kinematics updater for the fixed-height drone experiments."""
+﻿"""Planar kinematics updater for the fixed-height drone experiments."""
 
 from __future__ import annotations
 

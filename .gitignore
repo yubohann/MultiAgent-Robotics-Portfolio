@@ -1,0 +1,24 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+build/
+dist/
+*.egg-info/
+.tox/
+.nox/
+htmlcov/
+.DS_Store
+Thumbs.db
+
+# Integrated project histories and runtime investigations stay in their
+# upstream repositories; the portfolio carries the public source surface.
+aerocity-bench/debug/
+aerocity-bench/reason/
+hm3d-realised-qd/archive/
+hm3d-realised-qd/debug/
+hm3d-realised-qd/reason/

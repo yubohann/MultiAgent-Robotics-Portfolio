@@ -1,0 +1,157 @@
+{
+  "schema_version": "hm3d-controlled-transfer-provenance-v1",
+  "status": "SOURCE_LOCKED_IMPLEMENTATION_NOT_FORMAL_RESULT",
+  "fairness_rule": {
+    "algorithm_only_difference": true,
+    "shared_inputs": [
+      "four_cf2x_public_initial_reset",
+      "public_sparse_range_outcomes",
+      "public_sparse_voxel_belief",
+      "public_3d_frontier_team_candidate_pool",
+      "same_physx_guard_and_cf2x_controller",
+      "same_communication_contract",
+      "same_physical_time_budget",
+      "same_random_seed_and_failure_denominator"
+    ],
+    "forbidden_inputs": [
+      "complete_hm3d_mesh",
+      "private_esdf_or_distance_field",
+      "evaluator_truth_map",
+      "target_identity_or_target_distance",
+      "unselected_counterfactual_reward"
+    ]
+  },
+  "sources": [
+    {
+      "method_id": "gvp_mrep_port",
+      "paper": "Fast and Communication-Efficient Multi-UAV Exploration Via Voronoi Partition on Dynamic Topological Graph",
+      "venue": "IROS 2024",
+      "doi": "10.1109/IROS58592.2024.10801613",
+      "repository": "https://github.com/NKU-MobFly-Robotics/GVP-MREP",
+      "license": "MIT",
+      "local_snapshot": "E:/Outcome_Grounded_Repertoire_Literature_2026/official_repositories/GVP-MREP-main",
+      "source_files": [
+        {
+          "path": "Exploration/graph_partition/src/graph_partition.cpp",
+          "sha256": "9eb02ce91f6e49184b224649ab6d6563139a82de58031ba5a60797ff36cbc846",
+          "role": "graph Voronoi partition and frontier ownership"
+        },
+        {
+          "path": "Mapping/lowres_map/src/lowres_map.cpp",
+          "sha256": "aa36048f46d1e46cb9864607a841f21deffb96c3652c6bbc0843a87ed66940b5",
+          "role": "topological path and frontier route costs"
+        },
+        {
+          "path": "README.md",
+          "sha256": "8215cca076cd3a2a9165b38e5b31834cf81ad63b04c5e7764123137b00ec8450",
+          "role": "algorithm and runtime scope"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "1079634fd784d9dcf43c12a749b97698f3a0a8b576892d47295780e4f49d28c7",
+          "role": "MIT redistribution record"
+        }
+      ],
+      "ported_components": [
+        "dynamic public topology graph",
+        "graph shortest-path allocation cost",
+        "Voronoi ownership score",
+        "load-balanced multi-UAV assignment",
+        "communication-aware makespan term"
+      ],
+      "replaced_components": [
+        "ROS/RotorS transport",
+        "GVP-MREP depth map and viewpoint sampler",
+        "GCOPTER/MINCO trajectory optimiser",
+        "original UAV controller and world"
+      ],
+      "paper_label": "GVP-MREP-inspired controlled transfer, not original-environment reproduction"
+    },
+    {
+      "method_id": "marl_ipp_port",
+      "paper": "Multi-Agent Informative Path Planning for Target Mapping",
+      "venue": "IEEE Robotics and Automation Letters 2026",
+      "doi": "10.1109/LRA.2026.3655204",
+      "repository": "https://github.com/AccGen99/marl_ipp",
+      "source_commit": "8d02dab751c647b69a2b4f666aa7bfca5c096dda",
+      "local_snapshot": "E:/github_repos/marl_ipp-main",
+      "license": "MIT",
+      "source_files": [
+        {
+          "path": "attention_net.py",
+          "sha256": "877d2b4c130cb090dc2b28bd14046bd36256a3648317e47bad9ef7d5be4d4728",
+          "role": "author AttentionNet and LSTM policy core"
+        },
+        {
+          "path": "parameters.py",
+          "sha256": "fcac2123c840b3a3bf5d6e4f0f323beb9f7b9384e628d1b8f787532ea0d0eb49",
+          "role": "author graph and PPO parameter contract"
+        },
+        {
+          "path": "driver.py",
+          "sha256": "f0373b878c6b4f1157ebf43525b5c67e3783995660ac079f3b92812636e8e5f6",
+          "role": "author PPO update, clipping and optimization path"
+        },
+        {
+          "path": "worker.py",
+          "sha256": "98a4ebff90137c8689287484f687dded2beb193cbaf0769a7ef0369ba7d56577",
+          "role": "author recurrent rollout and return collection path"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "a27202f7d198843fff0dbefcab151418e6aa0c3e961063db50186b65566a1ce1",
+          "role": "MIT redistribution record"
+        }
+      ],
+      "ported_components": [
+        "author AttentionNet",
+        "per-agent candidate graph and masked action head",
+        "recurrent LSTM/PPO decision semantics"
+      ],
+      "replaced_components": [
+        "target-mapping reward and Gaussian-process target uncertainty",
+        "author PyBullet/Houses3K environment",
+        "original sensing, targets and robot dynamics"
+      ],
+      "paper_label": "MARL-IPP controlled-transfer prototype; not an original target-mapping reproduction"
+    },
+    {
+      "method_id": "marvel_supplementary_reference",
+      "paper": "MARVEL: Multi-Agent Reinforcement Learning for Constrained Field-of-View Multi-Robot Exploration in Large-Scale Environments",
+      "venue": "ICRA 2025",
+      "doi": "10.1109/ICRA55743.2025.11127700",
+      "local_snapshot": "E:/github_repos/MARVEL-main",
+      "license": "MIT",
+      "source_files": [
+        {
+          "path": "utils/model.py",
+          "sha256": "39badd37cad16ebb54760ab0b2e0552a689fbbd875c08dfe91b0ab14b20aad79",
+          "role": "multi-head graph encoder, decoder and pointer policy design"
+        },
+        {
+          "path": "driver.py",
+          "sha256": "c237e5d8d619609975e7751ff0a57c3e695847b9a4b3a5b8b612280752dcc36c",
+          "role": "SAC training and checkpoint provenance reference"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "59d436fd382cdf5c15e2c04770959087407e982c9323ff7456de32f33bd44c03",
+          "role": "MIT redistribution record"
+        }
+      ],
+      "ported_components": [
+        "graph attention over communicating agents",
+        "frontier and orientation feature fusion",
+        "masked candidate policy head",
+        "outcome-backed SAC-style return updates"
+      ],
+      "replaced_components": [
+        "2D occupancy-grid node manager",
+        "original heading-bin action space",
+        "original simulator and robot dynamics",
+        "ground-truth frontier diagnostics"
+      ],
+      "paper_label": "MARVEL graph-attention supplementary reference; not an HM3D primary baseline or original-task reproduction"
+    }
+  ]
+}

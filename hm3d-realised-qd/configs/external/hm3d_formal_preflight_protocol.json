@@ -1,0 +1,64 @@
+{
+  "schema_version": "hm3d-formal-preflight-protocol-v4",
+  "dataset": "HM3D",
+  "task_interface": "hm3d-derived-multi-uav-exploration-3d",
+  "method_core": "realised-QD+OGFR-enhanced-RB-SF-SAC",
+  "phases": [
+    {"phase_id": "P01", "kind": "asset_lock", "required_origin": "source_license_audit"},
+    {"phase_id": "P02", "kind": "runtime_aba_reset", "required_origin": "real_runtime"},
+    {"phase_id": "P03", "kind": "flight_space_3d", "required_origin": "real_runtime"},
+    {"phase_id": "P04", "kind": "public_observation_contract", "required_origin": "real_runtime"},
+    {"phase_id": "P05", "kind": "scene_split_freeze", "required_origin": "source_license_audit"},
+    {"phase_id": "P06", "kind": "sensor_h15_pilot", "required_origin": "real_runtime"},
+    {"phase_id": "P07", "kind": "task_validity_matrix", "required_origin": "real_runtime"},
+    {"phase_id": "P08", "kind": "mechanism_pilot", "required_origin": "real_runtime"},
+    {"phase_id": "P09", "kind": "formal_protocol_freeze", "required_origin": "protocol_audit"},
+    {"phase_id": "P10", "kind": "formal_holdout_matrix", "required_origin": "real_runtime"}
+  ],
+  "fleet_size": 4,
+  "sensor_pilot_modes": [
+    "physics_only",
+    "sparse_range_3d"
+  ],
+  "task_validity_methods": [
+    "random",
+    "frontier_3d",
+    "auction"
+  ],
+  "mechanism_variants": [
+    "no_qd",
+    "planned_qd",
+    "realised_qd",
+    "no_ogfr",
+    "ogfr",
+    "rb_sf_sac_reference",
+    "rb_sf_sac_selected"
+  ],
+  "formal_matrix_methods": [
+    "random",
+    "frontier_3d",
+    "auction",
+    "gvp_mrep_port",
+    "single_rl",
+    "realised_qd_ogfr_rb_sf_sac"
+  ],
+  "primary_metric": "Explored-Free-Flight-Volume-AUC_time",
+  "split_policy": "official_scene_split_no_overlap",
+  "allowed_flight_representations": [
+    "voxel_esdf_3d",
+    "mesh_distance_field_3d"
+  ],
+  "allowed_evidence_origins": [
+    "real_runtime",
+    "source_license_audit",
+    "protocol_audit"
+  ],
+  "three_d_thresholds": {
+    "min_vertical_span_m": 1.0,
+    "min_connected_height_bands": 2,
+    "min_vertical_opportunity_fraction": 0.05,
+    "min_fixed_altitude_relative_auc_gain": 0.10
+  },
+  "aerocity_bench_mode": "read_only",
+  "status": "protocol_only"
+}

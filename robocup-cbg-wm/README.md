@@ -6,10 +6,27 @@
 [![RL](https://img.shields.io/badge/RL-CBG-WM%20CVaR%20MPC-7C3AED)](isaaclab_sim/rl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-111827)](LICENSE)
 
+<p align="center">
+  <img src="./assets/readme/overview.png" alt="RoboCup vision robot platform, ROS2 stack, and competition outcomes" width="96%" />
+</p>
 
-![Final replay three-view synchronized replay](./docs/media/最终回放_三视角同步拼接版.gif)
+<p align="center"><strong>Object-centric visual robotics, rule-gated behavior, and replayable multi-agent evaluation.</strong></p>
 
-![RoboCup VisionRL overview](./assets/readme/overview.png?raw=true)
+<p align="center">
+  <a href="./docs/media/large_scale_50v50_isaaclab_preview.gif">
+    <img src="./docs/media/large_scale_50v50_isaaclab_preview.gif" alt="12-second IsaacLab 50v50 replay preview" width="86%" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="./docs/media/large_scale_50v50_isaaclab_replay.mp4">Full IsaacLab replay (MP4)</a> ·
+  <a href="./docs/media/最终回放_三视角同步拼接版.gif">Synchronized three-view replay (GIF)</a> ·
+  <a href="./docs/media/README.md">Media notes</a>
+</p>
+
+<p align="center">
+  <img src="./assets/readme/robot_sensor_layout.png" alt="Robot sensor layout, coordinate frames, and actuator interfaces" width="96%" />
+</p>
 
 CBG-WM (Uncertainty-Aware Counterfactual Belief-Graph World Model) is a ROS2 + IsaacLab robotics research project for adversarial multi-agent visual navigation. It combines uncertainty-aware belief tokens, typed object-interaction graph dynamics, a probabilistic ensemble world model, and Flow-proposal CVaR risk MPC with rule-aware action shielding, pushable rigid obstacles, laser-target dwell/range constraints, IsaacLab replay, and a Sim2Real deployment contract. The legacy object-centric SAC Flow policy is retained as the required baseline.
 
@@ -50,6 +67,19 @@ For a short admissions/reviewer-oriented summary, start with [Admissions Project
 
 ## Quick Start
 
+Install the dependency-light rule environment and test tools:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest tests -q
+```
+
+Install the optional training and rendering stack only when running those paths:
+
+```bash
+python -m pip install -e ".[training]"
+```
+
 ```bash
 cd crc_robocup_vision_ws
 rosdep install --from-paths src --ignore-src -r -y
@@ -85,6 +115,8 @@ python -m pip install -r isaaclab_sim/rl/requirements.txt
 cd isaaclab_sim/rl
 python evaluate_selfplay.py --episodes 8
 ```
+
+The public rule environment includes its own arena geometry and synthetic target configuration. No external dataset is required for rule-environment tests, self-play smoke runs, or the 50v50 rule simulator.
 
 IsaacLab preview on Windows should be launched through the project wrapper so
 Kit writes user config, logs, pip envs and extension cache under

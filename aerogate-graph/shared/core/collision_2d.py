@@ -55,8 +55,19 @@ class GateObstacleMap2D:
     def from_gate(cls, *, gate_post_radius_scale: float = 1.0) -> "GateObstacleMap2D":
         """Return the default gate-only map."""
 
-        _ = gate_post_radius_scale
-        return cls.empty()
+        from assets.gate_scene_layouts import EXP1_EXTERNAL_GATE_LAYOUT, gate_post_obstacle_specs
+
+        scale = max(float(gate_post_radius_scale), 0.0)
+        obstacles = tuple(
+            GatePostObstacle2D(
+                center_xy=spec.center_xy,
+                collision_radius_m=float(spec.radius_m) * scale,
+                description="static gate post",
+                usd_path=str(spec.usd_path),
+            )
+            for spec in gate_post_obstacle_specs(EXP1_EXTERNAL_GATE_LAYOUT)
+        )
+        return cls(obstacles)
 
     @classmethod
     def from_legacy_gate(cls, *, gate_post_radius_scale: float = 1.0) -> "GateObstacleMap2D":

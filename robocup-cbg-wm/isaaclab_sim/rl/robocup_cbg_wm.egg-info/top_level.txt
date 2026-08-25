@@ -1,0 +1,8 @@
+experiments
+large_scale_50v50_battle
+planning
+policies
+replay
+robocup_visionrl_gym_env
+robocup_visionrl_selfplay_env
+world_model

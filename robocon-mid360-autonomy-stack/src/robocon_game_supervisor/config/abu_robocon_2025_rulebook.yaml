@@ -1,5 +1,4 @@
 # Values transcribed from the official ABU ROBOCON 2025 Rulebook (2024-08-14).
-# This file records rule constraints. It does not certify every mesh or real mechanism.
 profile_id: "abu_robocon_2025_robot_basketball_rulebook_20240814"
 source_url: "https://aburobocon2025.mnb.mn/uploads/file/ABU_ROBOCON_2025_Rulebook_20240814.pdf"
 source_sha256: "cd57640abf2625f9983e9768cd8fad7bb87d7f716b51d1222a3e0caae9d30eb3"

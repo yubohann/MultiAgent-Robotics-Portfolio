@@ -1,0 +1,9 @@
+﻿metric,available_rows,total_rows,complete
+success_rate,88,88,True
+collision_rate,88,88,True
+progress_distance_m_mean,88,88,True
+path_length_m_mean,88,88,True
+flight_time_s_mean,88,88,True
+mean_speed_mps_mean,88,88,True
+min_clearance_m_mean,81,88,False
+dynamic_swept_collision_count_mean,11,88,False

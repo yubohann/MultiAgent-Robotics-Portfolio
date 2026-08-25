@@ -1,0 +1,37 @@
+name: Portfolio integrity
+
+on:
+  push:
+    paths:
+      - "README.md"
+      - "**/README*.md"
+      - "docs/**"
+      - "aerocity-bench/**"
+      - "hm3d-realised-qd/**"
+      - "coursework/machine-learning/**"
+      - "tools/portfolio_registry.json"
+      - "tools/portfolio_registry.py"
+      - "tools/verify_portfolio.py"
+      - ".github/workflows/portfolio-integrity.yml"
+  pull_request:
+    paths:
+      - "README.md"
+      - "**/README*.md"
+      - "docs/**"
+      - "aerocity-bench/**"
+      - "hm3d-realised-qd/**"
+      - "coursework/machine-learning/**"
+      - "tools/portfolio_registry.json"
+      - "tools/portfolio_registry.py"
+      - "tools/verify_portfolio.py"
+      - ".github/workflows/portfolio-integrity.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python tools/verify_portfolio.py

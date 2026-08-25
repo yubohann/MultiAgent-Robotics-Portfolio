@@ -1,0 +1,99 @@
+{
+  "schema_version": "hm3d-exploration-observation-contract-v3",
+  "contract_id": "hm3d-sparse-range-public-exploration-v3",
+  "task_interface": "hm3d-derived-multi-uav-exploration-3d",
+  "status": "ACTIVE_PROTOCOL_NOT_FORMAL_RESULT",
+  "sensor_profile": {
+    "profile_id": "sparse-range-3d-vfov90",
+    "ray_pattern": "dense-public-range-grid-26",
+    "ray_directions": [
+      [1.0, 0.0, 0.0],
+      [-1.0, 0.0, 0.0],
+      [0.0, 1.0, 0.0],
+      [0.0, -1.0, 0.0],
+      [0.0, 0.0, 1.0],
+      [0.0, 0.0, -1.0],
+      [0.7071067811865476, 0.7071067811865476, 0.0],
+      [0.7071067811865476, -0.7071067811865476, 0.0],
+      [-0.7071067811865476, 0.7071067811865476, 0.0],
+      [-0.7071067811865476, -0.7071067811865476, 0.0],
+      [0.7071067811865476, 0.0, 0.7071067811865476],
+      [0.7071067811865476, 0.0, -0.7071067811865476],
+      [-0.7071067811865476, 0.0, 0.7071067811865476],
+      [-0.7071067811865476, 0.0, -0.7071067811865476],
+      [0.0, 0.7071067811865476, 0.7071067811865476],
+      [0.0, 0.7071067811865476, -0.7071067811865476],
+      [0.0, -0.7071067811865476, 0.7071067811865476],
+      [0.0, -0.7071067811865476, -0.7071067811865476],
+      [0.5773502691896258, 0.5773502691896258, 0.5773502691896258],
+      [0.5773502691896258, 0.5773502691896258, -0.5773502691896258],
+      [0.5773502691896258, -0.5773502691896258, 0.5773502691896258],
+      [0.5773502691896258, -0.5773502691896258, -0.5773502691896258],
+      [-0.5773502691896258, 0.5773502691896258, 0.5773502691896258],
+      [-0.5773502691896258, 0.5773502691896258, -0.5773502691896258],
+      [-0.5773502691896258, -0.5773502691896258, 0.5773502691896258],
+      [-0.5773502691896258, -0.5773502691896258, -0.5773502691896258]
+    ],
+    "maximum_range_m": 20.0,
+    "update_hz": 10.0,
+    "enabled_windows": [
+      "reset_bootstrap",
+      "transit",
+      "observe",
+      "dwell"
+    ],
+    "source_observation_id_required": true
+  },
+  "method_visible": [
+    "own_cf2x_pose_and_execution_outcome",
+    "public_sparse_range_ray_outcomes",
+    "local_sparse_voxel_belief",
+    "delivered_public_map_deltas_only",
+    "public_range_los_relay_telemetry",
+    "public_frontier_candidates",
+    "candidate_guard_admission_result"
+  ],
+  "method_forbidden": [
+    "complete_hm3d_mesh",
+    "private_esdf_or_distance_field",
+    "evaluator_free_flight_mask",
+    "coverage_denominator_voxel_identity",
+    "target_coordinates",
+    "target_distance",
+    "evaluator_truth_map",
+    "unexecuted_counterfactual_outcome"
+  ],
+  "public_belief": {
+    "representation": "sparse_occupancy_voxels",
+    "resolution_m": 0.25,
+    "ray_replay": "idempotent_by_observation_id",
+    "merge_rule": "own_outcomes_and_delivered_peer_deltas_only",
+    "occupied_update_precedence": "occupied_wins_over_free"
+  },
+  "evaluation": {
+    "primary_metric": "Explored-Free-Flight-Volume-AUC_time",
+    "coverage_numerator": "deduplicated_evaluator_confirmed_free_flight_voxels_reached_by_real_source_bound_sensor_rays",
+    "coverage_denominator": "frozen_reachable_vehicle_clear_enclosed_free_flight_volume_from_p03",
+    "time_integration": "trapezoidal_physical_simulation_time_with_t0_and_budget_samples",
+    "required_report_fields": [
+      "explored_free_flight_volume_auc_time",
+      "final_coverage_at_budget",
+      "final_explored_free_volume_m3",
+      "evaluator_reachable_free_flight_volume_m3",
+      "mean_explored_free_volume_rate_m3_per_s"
+    ],
+    "completion_diagnostic": "Threshold_free_coverage_curve_diagnostics_do_not_replace_primary_metric"
+  },
+  "fairness": {
+    "all_ranked_methods_share": [
+      "scene_seed_initial_poses",
+      "sensor_profile_and_history",
+      "physical_time_budget",
+      "candidate_pool",
+      "cf2x_dynamics_and_guard",
+      "communication_contract",
+      "failure_denominators"
+    ],
+    "disallowed_shortcut": "no_method_may_receive_extra_sensor_frames_or_evaluator_geometry"
+  }
+}

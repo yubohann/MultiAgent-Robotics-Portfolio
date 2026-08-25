@@ -1,0 +1,73 @@
+selection_policy: validation_only_auc_then_f1macro_then_gmean_then_prauc_then_recall_at_precision
+test_policy: candidate_stage_reports_only
+candidates:
+  - tag: candidate_a
+    federated_rounds: 16
+    local_epochs: 3
+    extra_local_epochs: 1
+    edge_loss_weight: 0.18
+    seq_hidden_dim: 64
+    fusion_hidden_dim: 96
+    transformer_hidden_dim: 64
+    transformer_num_layers: 1
+    consistency_weight: 0.0
+    learning_rate_override:
+    weight_decay_override:
+    dropout_override:
+    note: Stable baseline candidate.
+  - tag: candidate_b
+    federated_rounds: 22
+    local_epochs: 4
+    extra_local_epochs: 1
+    edge_loss_weight: 0.20
+    seq_hidden_dim: 96
+    fusion_hidden_dim: 128
+    transformer_hidden_dim: 96
+    transformer_num_layers: 2
+    consistency_weight: 0.0
+    learning_rate_override:
+    weight_decay_override:
+    dropout_override:
+    note: Wider sequence branch candidate.
+  - tag: candidate_c
+    federated_rounds: 28
+    local_epochs: 3
+    extra_local_epochs: 1
+    edge_loss_weight: 0.16
+    seq_hidden_dim: 96
+    fusion_hidden_dim: 128
+    transformer_hidden_dim: 96
+    transformer_num_layers: 2
+    consistency_weight: 0.02
+    learning_rate_override: 0.0018
+    weight_decay_override: 0.0002
+    dropout_override: 0.20
+    note: Lower learning rate with light consistency.
+  - tag: candidate_d
+    federated_rounds: 32
+    local_epochs: 3
+    extra_local_epochs: 1
+    edge_loss_weight: 0.14
+    seq_hidden_dim: 128
+    fusion_hidden_dim: 160
+    transformer_hidden_dim: 128
+    transformer_num_layers: 2
+    consistency_weight: 0.03
+    learning_rate_override: 0.0015
+    weight_decay_override: 0.00025
+    dropout_override: 0.25
+    note: Wider backbone candidate.
+  - tag: candidate_e
+    federated_rounds: 36
+    local_epochs: 2
+    extra_local_epochs: 1
+    edge_loss_weight: 0.12
+    seq_hidden_dim: 128
+    fusion_hidden_dim: 160
+    transformer_hidden_dim: 128
+    transformer_num_layers: 3
+    consistency_weight: 0.04
+    learning_rate_override: 0.0012
+    weight_decay_override: 0.0003
+    dropout_override: 0.28
+    note: Slow-and-stable deeper candidate.

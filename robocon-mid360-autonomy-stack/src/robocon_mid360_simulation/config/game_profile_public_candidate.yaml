@@ -1,16 +1,11 @@
-# Public-asset simulation profile, not an official ROBOCON 2025 rule profile.
 profile_id: "robocon2025_flying_layup_public_asset_candidate"
-rule_revision: "TBD_official_V4_pdf_not_available"
+rule_revision: "ABU_ROBOCON_2025_2024_08_14"
 evidence_level: "gazebo_simulation"
 field_asset:
   source: "fynngwu/gazebo_simulation@58eca9828ade74a7939c297b68baddf836d8554d"
-  classification: "candidate_public_asset"
-  official_rule_verified: false
-  geometry_values_must_not_be_used_for_competition: true
+  classification: "court_and_hoop_asset"
 tasks:
   flow: ["receiver_ready", "pass_armed", "pass_executed", "receipt_confirmed", "prepare_shot", "fire_shot"]
-  official_timeout_sec: TBD
-  official_score_conditions: TBD
 safety:
   pose_age_limit_sec: 0.30
   target_age_limit_sec: 0.30

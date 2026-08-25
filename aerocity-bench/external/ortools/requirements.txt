@@ -1,0 +1,3 @@
+# This environment is intentionally external to the AeroCityBench wheel.
+# Install it into a dedicated process environment, never as a BSD-core import.
+ortools==9.15.6755

@@ -1,0 +1,24 @@
+[
+  {
+    "scene": "single_dynamic",
+    "scene_label": "E2 Dynamic Single",
+    "gate_count": 42,
+    "method": "ours_mainline",
+    "method_label": "Our Mainline",
+    "seed": 0,
+    "episode_dir": "external_artifact:single_dynamic/gate_042/ours_mainline/seed_00/episode_000",
+    "source_episode": "external_artifact:single_dynamic/gate_042/ours_mainline/source_episode_seed_00",
+    "success": 1,
+    "collision": 0,
+    "timeout": 0,
+    "done_reason": "goal_reached",
+    "progress_distance_m": 53.452621379956554,
+    "final_goal_distance_m": 0.5473786200434434,
+    "flight_time_s": 68.0,
+    "actual_gate_motion_range_m": 3.1278095921151303,
+    "moving_gate_speed_mps": 2.0,
+    "moving_gate_amplitude_m": 1.2,
+    "moving_gate_swept_clearance_m_min": 0.0683417089483383,
+    "height_contract_passed": 1
+  }
+]
