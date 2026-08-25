@@ -8,6 +8,11 @@ Research engineering for embodied and multi-agent systems: reproducible experime
 
 [Research projects](#selected-public-work) | [Coursework](#coursework-and-learning) | [Engineering practice](#local-verification) | [GitHub profile](https://github.com/yubohann)
 
+## Video demonstrations
+
+- [Multi-agent robotics research demonstration](https://www.youtube.com/watch?v=V4CoEqpcfR4) — research systems and experimental results.
+- [ROBOCON robotics laboratory work](https://www.youtube.com/watch?v=AA78LbGNxQ8) — physical-robot integration and laboratory testing.
+
 ## Research Engineering Focus
 
 | Area | What I build | Public evidence |
