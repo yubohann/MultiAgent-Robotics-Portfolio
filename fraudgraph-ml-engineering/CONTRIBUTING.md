@@ -9,7 +9,7 @@ FraudGraph ML Engineering is a research engineering portfolio. Contributions sho
 3. Run `python -m compileall -q src scripts tests`.
 4. Run `python -m build` to confirm the package can be distributed.
 5. Install the wheel without dependencies and run `python -m fraud_ml_engineering --help`.
-6. Record a manifest for any reported experiment using `scripts/record_run_manifest.py`.
+6. Record a manifest for any reported experiment using `python -m fraud_ml_engineering.experiment_tools.record_run_manifest`.
 7. Keep datasets, checkpoints, generated reports, and local environment files out of Git.
 
 The `make quality` target runs the validator, tests, and compilation together. The hosted quality workflow additionally builds the wheel and source distribution on Python 3.10 and 3.12.

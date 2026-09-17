@@ -1,0 +1,3 @@
+listening on short_video_ingest_2311311120, publishing decisions to short_video_result_2311311120
+processed: {'id': '7db356d83c1e', 'title': '2311311120_余博涵_Kafka_无人机巡检短视频', 'status': 'published', 'risk_score': 0.0, 'tags': ['无人机巡检', '居民区', '空中拍摄', '基础设施检查', '环境监测', '短视频', '横屏', '自然光', '运动明显']}
+consumer exit after 1 messages

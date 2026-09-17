@@ -6,8 +6,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $DefaultIsaacPython = Join-Path $env:USERPROFILE "anaconda3\envs\env_isaaclab\python.exe"
-$PythonExe = if ($env:AEROCITY_ISAAC_PYTHON) {
-    $env:AEROCITY_ISAAC_PYTHON
+$PythonExe = if ($env:REALISED_QD_ISAAC_PYTHON) {
+    $env:REALISED_QD_ISAAC_PYTHON
 } else {
     $DefaultIsaacPython
 }

@@ -11,7 +11,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from utils import IRIS_LABEL_NAMES, load_iris, results_path, standardize, stratified_train_test_split
 
 plt.rcParams["font.sans-serif"] = ["SimHei"]

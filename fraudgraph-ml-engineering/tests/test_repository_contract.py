@@ -41,6 +41,26 @@ def test_required_project_files_exist() -> None:
         "requirements/requirements-cu121.txt",
         ".github/workflows/quality.yml",
         "Makefile",
+        "src/fraud_ml_engineering/caching.py",
+        "src/fraud_ml_engineering/experiment_tools/__init__.py",
+        "src/fraud_ml_engineering/experiment_tools/generate_auditable_comparison_report.py",
+        "src/fraud_ml_engineering/experiment_tools/generate_hybrid_paper_package.py",
+        "src/fraud_ml_engineering/experiment_tools/record_run_manifest.py",
+        "src/fraud_ml_engineering/experiment_tools/run_hybrid_fusion_ablation.py",
+        "src/fraud_ml_engineering/experiment_tools/run_hybrid_low_label_mechanism_ablation.py",
+        "src/fraud_ml_engineering/experiment_tools/run_hybrid_mainline_protocol.py",
+        "src/fraud_ml_engineering/experiment_tools/run_ieee_acceptance_matrix.py",
+        "src/fraud_ml_engineering/experiment_tools/run_ieee_splitgnn_tuning.py",
+        "src/fraud_ml_engineering/experiment_tools/run_splitgnn_smoke_suite.py",
+        "scripts/generate_auditable_comparison_report.py",
+        "scripts/generate_hybrid_paper_package.py",
+        "scripts/record_run_manifest.py",
+        "scripts/run_hybrid_fusion_ablation.py",
+        "scripts/run_hybrid_low_label_mechanism_ablation.py",
+        "scripts/run_hybrid_mainline_protocol.py",
+        "scripts/run_ieee_acceptance_matrix.py",
+        "scripts/run_ieee_splitgnn_tuning.py",
+        "scripts/run_splitgnn_smoke_suite.py",
     )
     missing = [path for path in expected if not (REPO_ROOT / path).is_file()]
     assert not missing
@@ -53,8 +73,9 @@ def test_configuration_contract_is_present() -> None:
 
 def test_internal_imports_are_package_relative() -> None:
     local_modules = {path.stem for path in PACKAGE_ROOT.glob("*.py")}
+    source_paths = list(PACKAGE_ROOT.glob("*.py")) + list((PACKAGE_ROOT / "experiment_tools").glob("*.py"))
     violations: list[str] = []
-    for source_path in PACKAGE_ROOT.glob("*.py"):
+    for source_path in source_paths:
         tree = ast.parse(source_path.read_text(encoding="utf-8-sig"), filename=str(source_path))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module in local_modules:

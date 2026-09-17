@@ -2,11 +2,11 @@
 
 ## Isaac Drone Racer assets
 
-The gate and drone assets under `assets/gate/` and `assets/5_in_drone/` originate from
+The gate and drone assets under `assets/gate/` and `assets/five_in_drone/` originate from
 [`kousheekc/isaac_drone_racer`](https://github.com/kousheekc/isaac_drone_racer). They are
 included under the upstream BSD 3-Clause License. This includes the Git LFS-managed files
-`assets/gate/gate.glb`, `assets/5_in_drone/meshes/base_link.dae`, and
-`assets/5_in_drone/meshes/prop.dae`.
+`assets/gate/gate.glb`, `assets/five_in_drone/meshes/base_link.dae`, and
+`assets/five_in_drone/meshes/prop.dae`.
 
 BSD 3-Clause License
 

@@ -13,6 +13,10 @@
 
 **状态。** 实验五和实验六已完成。在 677 张验证图片和 39961 个实例上，结果为精确率 0.809，召回率 0.638，mAP50 为 0.703，mAP50-95 为 0.415。训练权重已导出为 `best.onnx`，并用 Netron 查看网络结构。
 
+## 我的职责
+
+独立完成 VisDrone obstacle 子集准备与标签转换（`scripts/05_prepare_visdrone_subset.py`、`01_split_yolo_dataset.py`、`02_make_data_yaml.py`），并运行 YOLO26m 训练，验证，预测与 ONNX 导出全流程（`03_train_yolo26.py`、`04_exp6_val_predict_export.py`、`06_extract_real_video_frames.py`），产出 `screenshots/` 中的过程证据与 `docs/` 中的实验说明。报告指标来自 677 张验证图片和 39961 个实例的已保存验证结果。
+
 ## 实验流程
 
 ```text
@@ -61,7 +65,7 @@ yolo export model=runs/yolo26/train/weights/best.pt format=onnx imgsz=640 dynami
 
 - `scripts/`，上述实验流程脚本。
 - `configs/`，类别文件与数据集 YAML。
-- `detect_test/`，预测演示图片。
+- `detection-samples/`，预测演示图片。
 - `screenshots/`，实验五和实验六的全过程证据截图。
 - `docs/`，无人机图片来源与 Sim2Real 真实相机数据建议。
 - `yolo26n.pt`，保留用于快速测试的轻量官方权重。

@@ -18,6 +18,10 @@ The assignment builds a compact pipeline that covers preprocessing, dimensionali
 
 **Status.** All four tasks complete, with figures, projections and comparison summaries saved under `results/`.
 
+## My Role
+
+Built the four tasks and the shared preprocessing around a fixed split: the from-scratch vectorized kNN classifier, the mean-threshold ID3 tree, the PCA and LDA runs, and the saved projections, accuracy sweep and comparison summaries under `results/`.
+
 ## Tasks and Saved Outputs
 
 | # | Task | Implementation | Evidence |

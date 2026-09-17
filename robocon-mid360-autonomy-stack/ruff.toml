@@ -2,6 +2,6 @@
 # Vendored FAST-LIO and Livox driver sources stay byte-identical to upstream and are not linted.
 
 extend-exclude = [
-    "src/vendor_fast_lio",
-    "src/vendor_livox_ros_driver2",
+    "src/vendor/fast_lio",
+    "src/vendor/livox_ros_driver2",
 ]

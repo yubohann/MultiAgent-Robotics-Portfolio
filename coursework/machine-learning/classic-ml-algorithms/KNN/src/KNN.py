@@ -1,13 +1,6 @@
 # Author: Bohan Yu
 
-import os
-import csv
-import math
-import random
-import argparse
-from collections import Counter
-
-class KNN:
+import argparseimport csvimport mathimport osimport randomfrom collections import Counterclass KNN:
     def __init__(self, k=5, distance_metric='euclidean'):
         """Initialize the neighbour count and distance metric."""
         self.k = k
@@ -141,7 +134,7 @@ def load_iris_data(file_path):
     class_names = []
     
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             reader = csv.reader(f)
             for row in reader:
 

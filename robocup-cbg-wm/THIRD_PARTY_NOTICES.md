@@ -25,8 +25,8 @@ Historical ROS1 baseline packages reviewed during migration.
 
 Robot geometry reference.
 
-- `rcvrl_description/meshes/zoo/base_link.stl`
-- `rcvrl_description/meshes/zoo/laser_link.stl`
+- `description/meshes/zoo/base_link.stl`
+- `description/meshes/zoo/laser_link.stl`
 
 These meshes are adapted from the local Zoo robot description package included with the project material. They serve as CAD reference assets, with collision geometry, sensor frames, ROS2 package interfaces and runtime behavior maintained in this portfolio workspace.
 

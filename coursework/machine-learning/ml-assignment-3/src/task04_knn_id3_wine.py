@@ -10,7 +10,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import numpy as np
-
 from utils import load_wine, results_path, standardize, stratified_train_test_split
 
 

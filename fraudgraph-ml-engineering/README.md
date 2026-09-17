@@ -55,15 +55,17 @@ The CUDA 12.1 profile installs from `requirements/requirements-cu121.txt`. Sourc
 ## Experiment workflow
 
 ```powershell
-python scripts/run_splitgnn_smoke_suite.py --dataset comp --device cpu
-python scripts/run_hybrid_mainline_protocol.py --help
-python scripts/run_hybrid_fusion_ablation.py --help
-python scripts/run_hybrid_low_label_mechanism_ablation.py --help
-python scripts/run_ieee_acceptance_matrix.py --help
-python scripts/run_ieee_splitgnn_tuning.py --help
+python -m fraud_ml_engineering.experiment_tools.run_splitgnn_smoke_suite --dataset comp --device cpu
+python -m fraud_ml_engineering.experiment_tools.run_hybrid_mainline_protocol --help
+python -m fraud_ml_engineering.experiment_tools.run_hybrid_fusion_ablation --help
+python -m fraud_ml_engineering.experiment_tools.run_hybrid_low_label_mechanism_ablation --help
+python -m fraud_ml_engineering.experiment_tools.run_ieee_acceptance_matrix --help
+python -m fraud_ml_engineering.experiment_tools.run_ieee_splitgnn_tuning --help
 ```
 
-Record run provenance before long experiments with `scripts/record_run_manifest.py`, documented in [docs/experiment-manifest.md](docs/experiment-manifest.md). Consolidate completed results through [docs/comparison-report-schema.md](docs/comparison-report-schema.md). Protocol details live in [docs/research-protocol.md](docs/research-protocol.md) and [docs/experiment-catalog.md](docs/experiment-catalog.md).
+Every operator entry point is packaged under `fraud_ml_engineering.experiment_tools` and also shipped as a thin wrapper under `scripts/` with the same CLI.
+
+Record run provenance before long experiments with `python -m fraud_ml_engineering.experiment_tools.record_run_manifest`, documented in [docs/experiment-manifest.md](docs/experiment-manifest.md). Consolidate completed results through [docs/comparison-report-schema.md](docs/comparison-report-schema.md). Protocol details live in [docs/research-protocol.md](docs/research-protocol.md) and [docs/experiment-catalog.md](docs/experiment-catalog.md).
 
 ## Repository evidence
 

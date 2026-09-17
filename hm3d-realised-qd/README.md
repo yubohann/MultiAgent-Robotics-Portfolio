@@ -10,6 +10,16 @@ Four CF2X quadrotors explore an unknown indoor scan with public sparse-range sen
 
 **Status.** `v0.1.0` research snapshot, 2026-08-08. The realised-QD selector holds a verified P10 component result across 42 real episodes, and the RB-SF-SAC policy and RFG fragment reuse are the next integration steps onto the formal selection path.
 
+## My Role
+
+`pyproject.toml` lists Bohan Yu as the project author, and this directory records the work behind that authorship.
+
+- **Research design.** Formalised the target-free multi-UAV exploration task, the shared sensing, communication and safety contracts, and the `Explored-Free-Flight-Volume-AUC_time` metric, then pre-registered the hypotheses and ablation chain in the [method design](docs/method-design-realised-qd-rfg-rb-sf-sac-2026-08-08.md).
+- **World model and QD learning implementation.** Built the sparse occupancy belief, the frontier, route-access and observation candidate generator, the 3D realised-QD archive and selector with intent-audit fallback (`src/realised_qd/runtime/hm3d_realised_qd.py`, `src/realised_qd/archives/`), and the RB-SF-SAC, masked-PPO and replay stack (`src/realised_qd/learning/`).
+- **Exploration and outcome pipeline.** Implemented the CF2X/PhysX executor, safety ledger, transit-timing calibration, persistent collection and train-outcome dataset builders (`src/realised_qd/runtime/`, `scripts/exploration/`, `scripts/mechanism/`).
+- **Experiment execution.** Ran the 42 formal P10 episodes, the 00626 mechanism ablation and the QD replay calibration on real Isaac and PhysX; the realised-QD component led all five baselines on scene 00626 and closed the no_qd < planned_qd < realised_qd gradient.
+- **Engineering and documentation.** Fixed the seven recorded pipeline defects with regression tests ([results summary](docs/experiment-results-2026-08-08.md), section 5), and wrote the method specification, protocol configs and the test suites under `tests/`.
+
 ## Core Design
 
 - The task is target-free online exploration of HM3D-derived indoor scenes, with `Explored-Free-Flight-Volume-AUC_time` as the primary metric under a shared CF2X, communication, safety and physical-time contract.
@@ -35,14 +45,14 @@ uv sync --extra dev --extra rl --extra hm3d
 .\.venv\Scripts\python.exe -m ruff check src tests scripts
 ```
 
-Isaac and PhysX runs go through `scripts/run_isaac_python.ps1` with a verified IsaacLab interpreter and `AEROCITY_CF2X_USD` set to the local CF2X USD asset. The public source tree holds code, contracts and documentation. HM3D assets, converted meshes, checkpoints and raw run outputs stay in the local workspace.
+Isaac and PhysX runs go through `scripts/run_isaac_python.ps1` with a verified IsaacLab interpreter and `REALISED_QD_CF2X_USD` set to the local CF2X USD asset. The public source tree holds code, contracts and documentation. HM3D assets, converted meshes, checkpoints and raw run outputs stay in the local workspace.
 
 ## Documentation
 
 - [Documentation index](docs/README.md), the current design, results and notes set.
-- [Method design](docs/主方法严格设计_realised_QD_RFG_RB_SF_SAC_2026-08-08.md), the realised-QD, RB-SF-SAC and RFG contract.
-- [P10 main table](docs/P10主表结果_2026-08-08.md), the component result table and ablation.
-- [Results summary](docs/论文实验结果汇总_2026-08-08.md), the frozen research record behind the numbers above.
+- [Method design](docs/method-design-realised-qd-rfg-rb-sf-sac-2026-08-08.md), the realised-QD, RB-SF-SAC and RFG contract.
+- [P10 main table](docs/p10-main-results-2026-08-08.md), the component result table and ablation.
+- [Results summary](docs/experiment-results-2026-08-08.md), the frozen research record behind the numbers above.
 
 ## License
 

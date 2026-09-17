@@ -62,23 +62,23 @@ def main() -> int:
             run("fraudgraph tests", project, [python, "-m", "pytest", "-q"])
         if "mid360" in selected:
             project = registry.project_for_verification("mid360").directory
-            run("mid360 contract tests", project, [python, "tools/run_python_contract_tests.py"])
-            run("mid360 metadata validation", project, [python, "tools/validate_project.py"])
+            run("mid360 contract tests", project, [python, "tools/runners/run_python_contract_tests.py"])
+            run("mid360 metadata validation", project, [python, "tools/runners/validate_project.py"])
         if "robocup" in selected:
             project = registry.project_for_verification("robocup").directory
-            rl_root = project / "isaaclab_sim" / "rl"
+            rl_root = project / "sim" / "rl"
             run("robocup rule tests", project, [python, "-m", "pytest", "tests", "-q"], {"PYTHONPATH": str(rl_root)})
             run(
                 "robocup self-play smoke",
                 project,
                 [
-                    python, "isaaclab_sim/rl/evaluate_selfplay.py", "--episodes", "2", "--max-steps", "8",
+                    python, "sim/rl/evaluate_selfplay.py", "--episodes", "2", "--max-steps", "8",
                     "--output", str(scratch / "robocup-selfplay.json"),
                 ],
                 {"PYTHONPATH": str(rl_root)},
             )
         if "rivermark" in selected:
-            project = registry.project_for_verification("rivermark").directory / "code"
+            project = registry.project_for_verification("rivermark").directory
             run(
                 "rivermark researcher smoke",
                 project,

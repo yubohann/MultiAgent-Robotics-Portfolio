@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from aerocity_method.runtime.physx_query_cache import MemoizedRaycastClosestQuery
+from realised_qd.runtime.physx_query_cache import MemoizedRaycastClosestQuery
 
 
 class _StaticQuery:

@@ -12,7 +12,7 @@ python -m venv .venv
 python -m pip install -e .
 $out = Join-Path $env:TEMP 'rivermark-researcher-smoke'
 python -m rivermark_benchmark.researcher_entry $out
-python -m rivermark_benchmark.fixture verify "$out\fixture\fixture_manifest.json"
+python -m rivermark_benchmark.data.fixture verify "$out\fixture\fixture_manifest.json"
 ```
 
 The smoke checks the fixture manifest and payload identities, loader shape and timestamp consistency, a public metric submission, and the private-truth separation. The report records the exact source revision and Python and NumPy versions, describing the CPU path.

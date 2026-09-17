@@ -6,7 +6,7 @@ import math
 from collections.abc import Sequence
 from pathlib import Path
 
-from assets.five_in_drone import DEFAULT_DRONE_USD, spawn_real_drones
+from assets.five_in_drone import DEFAULT_FIVE_IN_DRONE_USD, spawn_real_drones
 from assets.gate_scene_layouts import DEFAULT_GATE_USD, GateCourseLayout2D, gate_visual_instances
 
 DEFAULT_GATE_CAMERA_EYE = (0.0, -78.0, 26.0)
@@ -18,14 +18,14 @@ def build_gate_course_scene(
     sim,
     layout: GateCourseLayout2D,
     drone_positions_xyz: Sequence[Sequence[float]],
-    drone_usd_path: str | Path | None = DEFAULT_DRONE_USD,
+    drone_usd_path: str | Path | None = DEFAULT_FIVE_IN_DRONE_USD,
     drone_scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
     gate_usd_path: str | Path = DEFAULT_GATE_USD,
     camera_eye: tuple[float, float, float] | None = DEFAULT_GATE_CAMERA_EYE,
     camera_target: tuple[float, float, float] | None = DEFAULT_GATE_CAMERA_TARGET,
     camera_prim_path: str | None = None,
 ) -> dict[str, list[str]]:
-    """Build a visual shell scene with the local gate USD and 5_in_drone."""
+    """Build a visual shell scene with the local gate USD and five_in_drone."""
 
     _spawn_ground_and_lights()
     gate_prim_paths = spawn_gate_course_assets(layout=layout, gate_usd_path=gate_usd_path)

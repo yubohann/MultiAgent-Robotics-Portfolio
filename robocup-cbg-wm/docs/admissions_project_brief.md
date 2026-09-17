@@ -41,7 +41,7 @@ Primary evidence.
 - `docs/rl_data/world_model_sacflow_final/training_summary.json`
 - `docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.json`
 - `docs/rl_data/world_model_sacflow_final/strict_replay_summary.json`
-- `docs/media/最终回放_三视角同步拼接版.gif`
+- `docs/assets/最终回放_三视角同步拼接版.gif`
 
 ### Large-Scale 50v50 Extension
 
@@ -53,8 +53,8 @@ Primary evidence.
 
 - `docs/rl_data/large_scale_curriculum/curriculum_summary.json`
 - `docs/rl_data/large_scale_50v50/eval_summary.json`
-- `docs/figures/large_scale_50v50/`
-- `docs/media/large_scale_50v50_isaaclab_replay.mp4`
+- `docs/assets/large_scale_50v50/`
+- `docs/assets/large_scale_50v50_isaaclab_replay.mp4`
 
 ## What I Would Emphasize in an Application
 
@@ -77,8 +77,8 @@ For a fast review, follow these steps.
 1. Read the README top section and watch the first GIF.
 2. Open `docs/capabilities.md` for the capability list and measured evidence.
 3. Inspect `docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.json`.
-4. Watch the three-view replay GIFs or MP4s under `docs/media/`.
-5. If interested in scaling, read `docs/rl_data/large_scale_50v50/eval_summary.json` and the figures under `docs/figures/large_scale_50v50/`.
+4. Watch the three-view replay GIFs or MP4s under `docs/assets/`.
+5. If interested in scaling, read `docs/rl_data/large_scale_50v50/eval_summary.json` and the figures under `docs/assets/large_scale_50v50/`.
 
 ## Suggested Application Description
 

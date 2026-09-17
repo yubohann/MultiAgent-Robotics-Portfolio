@@ -8,7 +8,7 @@ It addresses a narrower question than generic video prediction. Can a robot use 
 
 ## Implemented architecture
 
-![CBG-WM training and scoring pipeline](figures/cbg_wm_accgd_pipeline.png)
+![CBG-WM training and scoring pipeline](assets/cbg_wm_accgd_pipeline.png)
 
 1. `BeliefTracker` converts simulated detections to a fixed set of typed belief tokens. Each token contains pose, velocity, type-specific attributes, extent, visibility, last-seen time, observation age, covariance, occlusion and presence. Occluded objects retain their last belief and accumulate uncertainty. Fixed target and armor geometry may enter as a high-covariance field-map prior, and movable boxes require observation. Referee and hit events synchronize target and armor presence even when geometry is occluded. The planner consumes belief tokens as its state representation.
 2. `build_typed_edges` constructs sparse relations for observation, contact, route blocking, base protection, threats, proximity and line of sight. The construction and graph dynamics are equivariant when tokens and their type labels are permuted together.
@@ -19,17 +19,17 @@ The four learned risk channels are robot and target collision, blocked motion or
 
 ## Source map
 
-- `isaaclab_sim/rl/world_model/belief_graph.py` defines the token schema, sensor belief tracker, typed graph and rule labels.
-- `isaaclab_sim/rl/world_model/cbg_world_model.py` implements typed message passing, the stochastic ensemble, loss and multi-step rollout.
-- `isaaclab_sim/rl/planning/risk_mpc.py` implements Flow proposals, CVaR scoring and receding-horizon action selection.
-- `isaaclab_sim/rl/train_world_model_sacflow_selfplay.py` covers replay collection, ensemble training, the MPC action path and checkpoint fields.
-- `isaaclab_sim/rl/evaluate_cbg_world_model.py` covers prediction, calibration, OOD and intervention scoring.
-- `isaaclab_sim/rl/configs/cbg_wm_ablations.yaml` holds the required ablation matrix.
+- `sim/rl/world_model/belief_graph.py` defines the token schema, sensor belief tracker, typed graph and rule labels.
+- `sim/rl/world_model/cbg_world_model.py` implements typed message passing, the stochastic ensemble, loss and multi-step rollout.
+- `sim/rl/planning/risk_mpc.py` implements Flow proposals, CVaR scoring and receding-horizon action selection.
+- `sim/rl/train_world_model_sacflow_selfplay.py` covers replay collection, ensemble training, the MPC action path and checkpoint fields.
+- `sim/rl/evaluate_cbg_world_model.py` covers prediction, calibration, OOD and intervention scoring.
+- `sim/rl/configs/cbg_wm_ablations.yaml` holds the required ablation matrix.
 
 ## Training
 
 ```bash
-python isaaclab_sim/rl/train_world_model_sacflow_selfplay.py \
+python sim/rl/train_world_model_sacflow_selfplay.py \
   --config configs/world_model_flow.yaml \
   --output ../output/rl/cbg_wm_seed260707
 ```
@@ -43,8 +43,8 @@ The saved checkpoint uses algorithm ID `cbg_wm_sac_flow_selfplay`. Legacy `objec
 Run the nominal multi-step and calibration scoring.
 
 ```bash
-python isaaclab_sim/rl/evaluate_cbg_world_model.py \
-  --checkpoint isaaclab_sim/output/rl/cbg_wm_seed260707/policy.pt \
+python sim/rl/evaluate_cbg_world_model.py \
+  --checkpoint sim/output/rl/cbg_wm_seed260707/policy.pt \
   --scenario nominal \
   --episodes 8 \
   --output ../output/eval/cbg_wm_nominal.json

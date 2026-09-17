@@ -1,6 +1,7 @@
+from sqlalchemy import func
+
 from app import db
 from app.models import Category, Inventory, Product, Sale, SaleItem
-from sqlalchemy import func
 
 
 def get_dashboard_overview():

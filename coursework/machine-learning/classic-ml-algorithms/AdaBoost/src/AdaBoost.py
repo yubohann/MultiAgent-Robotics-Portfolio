@@ -1,20 +1,12 @@
 # Author: Bohan Yu
 
-import csv
-import math
-import random
-import argparse
-import os
-from typing import List, Tuple
-
-
-def load_magic_data(file_path: str) -> Tuple[List[List[float]], List[int]]:
+import argparseimport csvimport mathimport osimport randomfrom typing import List, Tupledef load_magic_data(file_path: str) -> Tuple[List[List[float]], List[int]]:
     """Load the Magic Gamma Telescope dataset from CSV and map labels to +1 and -1."""
     X = []
     y = []
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"数据文件未找到: {file_path}")
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding='utf-8') as f:
         reader = csv.reader(f)
         for row in reader:
             if not row:

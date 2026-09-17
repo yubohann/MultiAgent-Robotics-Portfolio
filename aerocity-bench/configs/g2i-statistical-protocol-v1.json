@@ -1,5 +1,5 @@
 {
-  "schema": "org.aerocity.bench.g2-i-statistical-protocol.v1",
+  "schema": "org.aerocity.bench.g2i-statistical-protocol.v1",
   "formal_score_eligible": false,
   "primary_metric": "mean_final_confirmed_recall",
   "independent_unit": "layout_ancestor",

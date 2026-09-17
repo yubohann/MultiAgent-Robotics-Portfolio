@@ -17,10 +17,10 @@ jobs:
         shell: bash
         run: |
           python3 -m pip install pytest
-          python3 tools/run_python_contract_tests.py
+          python3 tools/runners/run_python_contract_tests.py
       - name: Validate project metadata
         shell: bash
-        run: python3 tools/validate_project.py
+        run: python3 tools/runners/validate_project.py
 
   ros2-build:
     runs-on: ubuntu-22.04
@@ -41,7 +41,7 @@ jobs:
           source /opt/ros/humble/setup.bash
           colcon build --symlink-install \
             --packages-up-to mid360_localization_contract mid360_map_localizer \
-            robocon_perception_adapter robocon_pose_command_bridge robocon_game_supervisor
+            perception_adapter pose_command_bridge game_supervisor
       - name: Run ROS tests
         shell: bash
         run: |

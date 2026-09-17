@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from single_gate.env.single_gate_env import SingleGate2DEnv
+from tasks.single.env.single_gate_env import SingleGate2DEnv
 
 
 def test_single_gate_env_reset_and_step_smoke() -> None:

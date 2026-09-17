@@ -8,12 +8,12 @@ Main directories.
 
 | Path | Purpose |
 | --- | --- |
-| `crc_robocup_vision_ws/` | ROS2 Jazzy workspace for robot bringup, navigation, vision, behavior, shooter and interfaces |
-| `isaaclab_sim/` | IsaacLab scene, replay utilities, rule environment and RL tooling |
-| `isaaclab_sim/rl/` | Self-play environments, world-model SAC Flow training, scoring and export scripts |
+| `ros_ws/` | ROS2 Jazzy workspace for robot bringup, navigation, vision, behavior, shooter and interfaces |
+| `sim/` | IsaacLab scene, replay utilities, rule environment and RL tooling |
+| `sim/rl/` | Self-play environments, world-model SAC Flow training, scoring and export scripts |
 | `config/` | Public arena, target layout and scoring contracts |
 | `docs/rl_data/` | Published training summaries, scoring JSON and CSV data and replay audits |
-| `docs/media/` | Final MP4 and GIF replay media |
+| `docs/assets/` | Final MP4 and GIF replay media |
 | `tests/` | Pytest checks for rule contracts, target layout, strategy logic and Sim2Real configuration |
 
 ## 2. Environment Levels
@@ -31,14 +31,14 @@ Requirements.
 Commands.
 
 ```bash
-python -m pip install -r isaaclab_sim/rl/requirements.txt
+python -m pip install -r sim/rl/requirements.txt
 python -m pytest tests -q
 ```
 
 Quick rule-environment scoring run.
 
 ```bash
-cd isaaclab_sim/rl
+cd sim/rl
 python evaluate_selfplay.py --episodes 8
 ```
 
@@ -59,23 +59,23 @@ Recommended platform.
 - `colcon`
 - `rosdep`
 
-ROSIDL generation needs a build path with ASCII characters, so a WSL workspace is copied to a native Linux path such as `~/crc_robocup_vision_ws` before building.
+ROSIDL generation needs a build path with ASCII characters, so a WSL workspace is copied to a native Linux path such as `~/ros_ws` before building.
 
 Commands.
 
 ```bash
-cd ~/crc_robocup_vision_ws
+cd ~/ros_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 source install/setup.bash
-ros2 launch rcvrl_bringup competition.launch.py start_navigation:=false shooter_dry_run:=true auto_start:=false
+ros2 launch bringup competition.launch.py start_navigation:=false shooter_dry_run:=true auto_start:=false
 ```
 
 Useful launch variants.
 
 ```bash
-ros2 launch rcvrl_bringup competition.launch.py team_color:=yellow target_file:=$(ros2 pkg prefix rcvrl_navigation)/share/rcvrl_navigation/config/targets.elimination.yellow.yaml
-ros2 launch rcvrl_bringup competition.launch.py team_color:=blue target_file:=$(ros2 pkg prefix rcvrl_navigation)/share/rcvrl_navigation/config/targets.elimination.blue.yaml
+ros2 launch bringup competition.launch.py team_color:=yellow target_file:=$(ros2 pkg prefix navigation)/share/navigation/config/targets.elimination.yellow.yaml
+ros2 launch bringup competition.launch.py team_color:=blue target_file:=$(ros2 pkg prefix navigation)/share/navigation/config/targets.elimination.blue.yaml
 ```
 
 Expected behavior.
@@ -104,7 +104,7 @@ To inspect or stop this project's IsaacLab processes.
 Published replay media.
 
 ```text
-docs/media/最终回放_三视角同步拼接版.gif
+docs/assets/最终回放_三视角同步拼接版.gif
 ```
 
 The compact GitHub checkout carries the three-view GIF, and the individual MP4 source views are generated locally.
@@ -115,7 +115,7 @@ The public training and scoring artifacts are already included under `docs/rl_da
 
 Important generated-output rules.
 
-- local training outputs go under `isaaclab_sim/output/`.
+- local training outputs go under `sim/output/`.
 - temporary videos, cache files and debug frames stay local, and selected final evidence is committed.
 - public claims point to JSON and CSV metrics, replay audits and MP4 or GIF files.
 
@@ -137,10 +137,10 @@ Recommended order.
 Move the workspace to a native Linux path.
 
 ```bash
-cp -r /mnt/c/path/to/crc_robocup_vision_ws ~/crc_robocup_vision_ws
+cp -r /mnt/c/path/to/ros_ws ~/ros_ws
 ```
 
-Then rebuild from `~/crc_robocup_vision_ws`.
+Then rebuild from `~/ros_ws`.
 
 ### IsaacLab runtime path conflicts
 
@@ -153,7 +153,7 @@ Check the published artifacts alongside the reward signal.
 - `docs/capabilities.md`
 - `docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.json`
 - `docs/rl_data/world_model_sacflow_final/strict_replay_summary.json`
-- replay MP4 and GIF files under `docs/media/`
+- replay MP4 and GIF files under `docs/assets/`
 
 ### 50v50 evidence status
 

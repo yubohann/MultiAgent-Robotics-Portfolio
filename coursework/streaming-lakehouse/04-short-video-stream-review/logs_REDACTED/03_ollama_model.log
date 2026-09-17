@@ -1,0 +1,74 @@
+STUDENT_ID=2311311120
+NAME              ID              SIZE      MODIFIED       
+gemma3:4b         a2af6cc3eb7f    3.3 GB    32 minutes ago    
+qwen3-vl:4b       1343d82ebee3    3.3 GB    36 minutes ago    
+ministral-3:8b    1922accd5827    6.0 GB    2 weeks ago       
+ministral-3:3b    f04aa1c738f6    3.0 GB    2 months ago      
+  Model
+    architecture        mistral3    
+    parameters          8.9B        
+    context length      262144      
+    embedding length    4096        
+    quantization        Q4_K_M      
+
+  Capabilities
+    completion    
+    vision        
+    tools         
+
+  Parameters
+    temperature    0.15    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+  Model
+    architecture        qwen3vl    
+    parameters          4.4B       
+    context length      262144     
+    embedding length    2560       
+    quantization        Q4_K_M     
+
+  Capabilities
+    completion    
+    vision        
+    tools         
+    thinking      
+
+  Parameters
+    temperature    1       
+    top_k          20      
+    top_p          0.95    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+  Model
+    architecture        gemma3    
+    parameters          4.3B      
+    context length      131072    
+    embedding length    2560      
+    quantization        Q4_K_M    
+
+  Capabilities
+    completion    
+    vision        
+
+  Parameters
+    temperature    1                  
+    top_k          64                 
+    top_p          0.95               
+    stop           "<end_of_turn>"    
+
+  License
+    Gemma Terms of Use                  
+    Last modified: February 21, 2024    
+    ...                                 
+
+exists: ministral-3:8b
+exists: qwen3-vl:4b
+exists: gemma3:4b

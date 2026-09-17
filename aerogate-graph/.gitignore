@@ -35,7 +35,7 @@ tensorboard/
 
 # Packaging artifacts and generated scene assets (too large for git / regenerable)
 release_bundle/
-assets/5_in_drone/configuration/*.usd
+assets/five_in_drone/configuration/*.usd
 
 # OS
 .DS_Store

@@ -1,9 +1,8 @@
-from argparse import ArgumentParser
-from pathlib import Path
 import shutil
 import urllib.request
 import zipfile
-
+from argparse import ArgumentParser
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTERNAL = ROOT / "external" / "VisDrone"

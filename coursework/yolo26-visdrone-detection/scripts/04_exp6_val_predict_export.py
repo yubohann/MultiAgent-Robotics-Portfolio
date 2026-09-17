@@ -3,11 +3,10 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DATA_YAML = ROOT / "configs" / "my_detect.local.yaml"
 DEFAULT_WEIGHTS = ROOT / "runs" / "yolo26" / "train" / "weights" / "best.pt"
-DEFAULT_SOURCE = ROOT / "detect_test"
+DEFAULT_SOURCE = ROOT / "detection-samples"
 
 
 def parse_args():

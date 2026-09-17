@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "aerogategraph"
 version = "0.1.0"
@@ -24,7 +28,32 @@ viz = [
 ]
 
 [project.scripts]
-# No console scripts yet; entry points are per-line scripts under scripts/ and <line>/scripts/.
+aerogate-train-single = "tasks.single.scripts.train_single:main"
+aerogate-train-multi = "tasks.multi.scripts.train_multi:main"
+aerogate-smoke-single = "tasks.single.scripts.smoke_single:main"
+aerogate-smoke-multi = "tasks.multi.scripts.smoke_multi:main"
+aerogate-eval-single = "tasks.single.scripts.eval_single:main"
+aerogate-eval-multi = "tasks.multi.scripts.eval_multi:main"
+aerogate-eval-multi-batched = "tasks.multi.scripts.eval_multi_batched:main"
+aerogate-replay-single = "tasks.single.scripts.replay_single:main"
+aerogate-replay-multi = "tasks.multi.scripts.replay_multi:main"
+aerogate-replay-single-isaaclab = "tasks.single.scripts.replay_single_isaaclab:main"
+aerogate-replay-multi-isaaclab = "tasks.multi.scripts.replay_multi_isaaclab:main"
+aerogate-live-preview-multi-isaaclab = "tasks.multi.scripts.live_preview_multi_isaaclab:main"
+aerogate-eval-gate-density-single = "tasks.density_single.scripts.run_gate_density_eval:main"
+aerogate-eval-paper-gate-density-single = "tasks.density_single.scripts.run_paper_gate_density_single_eval:main"
+aerogate-eval-paper-gate-density-multi = "tasks.multi.scripts.run_paper_multi_gate_density_eval:main"
+aerogate-train-gate-density-multi-8 = "tasks.density_multi.scripts.train_dynamic_gate_density_8d_curriculum:main"
+aerogate-train-gate-density-imitation = "tasks.density_single.scripts.train_gate_density_imitation:main"
+aerogate-eval-planner-only = "tasks.internal.scripts.eval_planner_only:main"
+aerogate-eval-planner-baselines = "scripts.run_classic_planner_baselines:main"
+aerogate-eval-variable-team-size = "scripts.run_variable_team_size_eval:main"
+aerogate-validate-paper-2d-curricula = "scripts.validate_paper_2d_curricula:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tasks*", "shared*", "assets*", "scripts*"]
+namespaces = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -38,15 +67,6 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501"]
-
-[tool.ruff.lint.per-file-ignores]
-# Entry-point scripts under scripts/ bootstrap `sys.path` (or bind module globals at
-# import time) before importing first-party packages, because they are executed
-# directly from the repo instead of being installed. Module-level imports therefore
-# intentionally appear below executable statements; E402 is expected in this pattern.
-# In-package modules never get this exemption and keep all imports at the top.
-"scripts/*.py" = ["E402"]
-"**/scripts/*.py" = ["E402"]
 
 [tool.ruff.format]
 quote-style = "double"

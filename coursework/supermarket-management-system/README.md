@@ -13,6 +13,10 @@ The system covers products, inventory, checkout, sales, finance, announcements, 
 
 **Status.** Course design complete. 11 automated tests pass, and the coverage report shows 530 statements at 100 percent.
 
+## My Role
+
+Built the Flask application end to end: models, routes, services, templates and static assets (`app/`), the SQL schema and seed data (`data/`), and the pytest suite with the backend coverage gate (`tests/`). Produced the analysis and design report, report figures and defense deck (`reports/`), the exported and editable system diagram sets (`supermarket-management-diagrams/`, `supermarket-management-diagrams-drawio-editable/`), and the course deliverable notes (`docs/course-deliverables/`).
+
 ## Modules
 
 - Products, CRUD, shelf status, CSV and Excel import and inventory initialization

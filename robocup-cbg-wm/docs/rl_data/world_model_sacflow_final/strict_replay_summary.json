@@ -17,7 +17,7 @@
     "base_rush_steps_per_episode": 99.375,
     "wall_time_s": 87.603
   },
-  "checkpoint": "~\\RoboCupVisionRL_AutoCommit\\isaaclab_sim\\output\\rl\\world_model_sacflow_seed260707_rerun\\policy.pt",
+  "checkpoint": "~\\RoboCupVisionRL_AutoCommit\\sim\\output\\rl\\world_model_sacflow_seed260707_rerun\\policy.pt",
   "deterministic": false,
   "device": "cuda",
   "torch_version": "2.7.0+cu128",
@@ -413,8 +413,8 @@
   "violations": [],
   "warnings": [],
   "output_files": {
-    "summary_json": "isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_summary.json",
-    "trace_csv": "isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_trace.csv",
-    "events_jsonl": "isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_events.jsonl"
+    "summary_json": "sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_summary.json",
+    "trace_csv": "sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_trace.csv",
+    "events_jsonl": "sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_events.jsonl"
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema": "org.aerocity.bench.external-solver-lock.v1",
   "method_id": "ortools-public-atlas-routing-baseline",
-  "scope": "public G2-I inspection-sector routing baseline; not an upstream 3-D hidden-target-search implementation",
+  "scope": "public G2I inspection-sector routing baseline; not an upstream 3-D hidden-target-search implementation",
   "upstream": {
     "url": "https://github.com/google/or-tools.git",
     "commit": "98c165af62df62b3056c2ee0fca66b24e79097cb",

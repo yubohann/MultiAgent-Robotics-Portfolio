@@ -26,7 +26,7 @@ Primary evidence files.
 docs/rl_data/world_model_sacflow_final/training_summary.json
 docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.json
 docs/rl_data/world_model_sacflow_final/strict_replay_summary.json
-docs/media/最终回放_三视角同步拼接版.gif
+docs/assets/最终回放_三视角同步拼接版.gif
 ```
 
 ## 2. Two-Robot Measured Results
@@ -99,9 +99,9 @@ Large-scale evidence files.
 ```text
 docs/rl_data/large_scale_50v50/
 docs/rl_data/large_scale_curriculum/
-docs/media/large_scale_50v50_isaaclab_replay.mp4
-docs/media/large_scale_50v50_replay.mp4
-docs/figures/large_scale_50v50/
+docs/assets/large_scale_50v50_isaaclab_replay.mp4
+docs/assets/large_scale_50v50_replay.mp4
+docs/assets/large_scale_50v50/
 ```
 
 The 50v50 result is a simulation-stage rule-level benchmark with an IsaacLab visual and tactical replay of the accepted trace.
@@ -116,7 +116,7 @@ The 50v50 result is a simulation-stage rule-level benchmark with an IsaacLab vis
 | Rule-aware action shield | Validated in main scenario | zero static and box penetrations |
 | Pushable red boxes | Validated in main scenario | push events and changing box poses |
 | Base blocker line of sight | Validated in main scenario | strict replay hard violations 0 |
-| ROS2 runtime contract | Used for 1v1 real-robot experiments | `crc_robocup_vision_ws/` packages |
+| ROS2 runtime contract | Used for 1v1 real-robot experiments | `ros_ws/` packages |
 | IsaacLab two-robot replay | Validated | final three-view MP4 and GIF |
 | 1v1 real-robot experiment | Performed | `docs/sim2real.md` and the ROS2 deployment stack |
 | Large-scale 50v50 rule benchmark | Implemented and scored | 256-game scoring run and 50v50 artifacts |

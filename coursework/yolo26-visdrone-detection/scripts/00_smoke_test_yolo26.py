@@ -1,10 +1,9 @@
-from pathlib import Path
 import urllib.request
+from pathlib import Path
 
 import torch
 import ultralytics
 from ultralytics import YOLO
-
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"

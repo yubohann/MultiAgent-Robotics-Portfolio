@@ -5,15 +5,15 @@
 </p>
 
 <p align="center">
-  <a href="./docs/media/large_scale_50v50_isaaclab_preview.gif">
-    <img src="./docs/media/large_scale_50v50_isaaclab_preview.gif" alt="IsaacLab 50v50 replay preview" width="86%" />
+  <a href="./docs/assets/large_scale_50v50_isaaclab_preview.gif">
+    <img src="./docs/assets/large_scale_50v50_isaaclab_preview.gif" alt="IsaacLab 50v50 replay preview" width="86%" />
   </a>
 </p>
 
 <p align="center">
-  <a href="./docs/media/large_scale_50v50_isaaclab_replay.mp4">Full IsaacLab replay MP4</a>,
-  <a href="./docs/media/最终回放_三视角同步拼接版.gif">Synchronized three-view replay GIF</a>,
-  <a href="./docs/media/README.md">Media notes</a>
+  <a href="./docs/assets/large_scale_50v50_isaaclab_replay.mp4">Full IsaacLab replay MP4</a>,
+  <a href="./docs/assets/最终回放_三视角同步拼接版.gif">Synchronized three-view replay GIF</a>,
+  <a href="./docs/assets/README.md">Media notes</a>
 </p>
 
 **An uncertainty-aware belief-graph world model for rule-gated multi-robot tactics, built in ROS 2 and IsaacLab.**
@@ -21,6 +21,15 @@
 CBG-WM is a robotics research artifact for a RoboCup-style adversarial match. Two differential-drive robots share a 3 m by 3 m arena, hunt opponent targets through a 0.80 s laser dwell gate and a 5 cm to 50 cm normal-target range, push rigid red boxes and open base armor plates in order. Detections go stale behind cover, movable boxes change line of sight, armor state decides which base shots are legal, and referee events rewrite object presence. CBG-WM keeps typed belief tokens for every object, predicts interaction dynamics with a stochastic ensemble, and ranks joint Flow proposals by lower-tail risk before a geometry-aware shield executes the first action.
 
 **Status.** `v0.1.0` research artifact. The validated main line is the two-robot match with a 128-episode scoring run, an 8-episode strict replay audit, three-view IsaacLab media and 1v1 real-robot experiment coverage. The 50v50 rule benchmark is a simulation-stage extension.
+
+## My Role
+
+This repository is the shared team artifact of the RoboCup China 2025 visual challenge entry, whose results were produced jointly. Within the team, my contributions covered the perception and localization subsystem, the simulation and reinforcement-learning pipeline, the rule and replay validation tooling, and the documentation.
+
+- Perception and localization: AprilTag Tag36h11 target detection (`ros_ws/src/vision`), the camera, ToF and bumper interface contract, wheel-odometry and IMU fusion for `robot_localization` (`ros_ws/src/bringup/config/sensor_fusion.yaml`), robot frames and model (`ros_ws/src/description`), and the Nav2 and slam_toolbox configuration (`ros_ws/src/navigation`).
+- Simulation and RL pipeline: the rule environment and self-play environments (`sim/rl/gym_env`, `sim/rl/selfplay_env`), world-model and Flow-policy training, scoring and export scripts, the IsaacLab scene and strict replay rendering (`sim/arena_sim`), and the 50v50 rule-level benchmark.
+- Rules and replay validation: rule gates and geometry contracts (`sim/arena_sim/rules.py`, `sim/rl`), the scoring and strict replay audits mirrored under `docs/rl_data/`, and the simulator determinism tests in `tests/`.
+- Documentation: the English and Chinese README pair, the `docs/` guides, `docs/capabilities.md` and the media notes in `docs/assets/README.md`.
 
 ## Verified Evidence
 
@@ -56,17 +65,17 @@ The extension trains a staged curriculum from 5v5 to 10v10 to 25v25 to 50v50 and
 | Robot contacts, mean and P95 | 0.00 and 0.00 |
 | Obstacle contacts | 0.00 |
 
-[50v50 IsaacLab replay MP4](./docs/media/large_scale_50v50_isaaclab_replay.mp4)
+[50v50 IsaacLab replay MP4](./docs/assets/large_scale_50v50_isaaclab_replay.mp4)
 
-![50v50 rule layout](./docs/figures/large_scale_50v50/large_scale_50v50_rule_layout.png)
+![50v50 rule layout](./docs/assets/large_scale_50v50/large_scale_50v50_rule_layout.png)
 
-![50v50 training curve](./docs/figures/large_scale_50v50/large_scale_50v50_training.png)
+![50v50 training curve](./docs/assets/large_scale_50v50/large_scale_50v50_training.png)
 
-![World-model SAC Flow training curve](./docs/figures/rl/rl_training_curve_gpu.svg)
+![World-model SAC Flow training curve](./docs/assets/rl/rl_training_curve_gpu.svg)
 
 ### Runtime Stack
 
-The ROS 2 Jazzy workspace carries `rcvrl_bringup`, `rcvrl_behavior`, `rcvrl_vision`, `rcvrl_navigation`, `rcvrl_motion`, `rcvrl_shooter`, `rcvrl_description` and `rcvrl_interfaces`. Nav2 owns navigation, `slam_toolbox` owns mapping, `rcvrl_vision` detects AprilTag Tag36h11 targets, and shooter commands pass through ROS 2 services behind an opponent-target safety gate.
+The ROS 2 Jazzy workspace carries `bringup`, `behavior`, `vision`, `navigation`, `motion`, `shooter`, `description` and `interfaces`. Nav2 owns navigation, `slam_toolbox` owns mapping, `vision` detects AprilTag Tag36h11 targets, and shooter commands pass through ROS 2 services behind an opponent-target safety gate.
 
 [RoboCup VisionRL runtime and demo video](https://www.bilibili.com/video/BV1Pj9ZBKEc8/?spm_id_from=333.1387.list.card_archive.click&vd_source=f79b94dd69d0c8d08ee5c3400b69d46d)
 
@@ -79,7 +88,7 @@ The ROS 2 Jazzy workspace carries `rcvrl_bringup`, `rcvrl_behavior`, `rcvrl_visi
 
 The method note is in [CBG-WM](docs/cbg_wm.md).
 
-![Method architecture](./docs/figures/paper/fig02_method_architecture.png)
+![Method architecture](./docs/assets/paper/fig02_method_architecture.png)
 
 ## Platform
 
@@ -107,24 +116,24 @@ python -m pip install -e ".[training]"
 ROS 2 workspace on Ubuntu 24.04 with ROS 2 Jazzy.
 
 ```bash
-cd crc_robocup_vision_ws
+cd ros_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 source install/setup.bash
-ros2 launch rcvrl_bringup competition.launch.py
+ros2 launch bringup competition.launch.py
 ```
 
 Hardware-free launch smoke test.
 
 ```bash
-ros2 launch rcvrl_bringup competition.launch.py start_navigation:=false shooter_dry_run:=true auto_start:=false
+ros2 launch bringup competition.launch.py start_navigation:=false shooter_dry_run:=true auto_start:=false
 ```
 
 The yellow and blue elimination launches pick their side and route file.
 
 ```bash
-ros2 launch rcvrl_bringup competition.launch.py team_color:=yellow target_file:=$(ros2 pkg prefix rcvrl_navigation)/share/rcvrl_navigation/config/targets.elimination.yellow.yaml
-ros2 launch rcvrl_bringup competition.launch.py team_color:=blue target_file:=$(ros2 pkg prefix rcvrl_navigation)/share/rcvrl_navigation/config/targets.elimination.blue.yaml
+ros2 launch bringup competition.launch.py team_color:=yellow target_file:=$(ros2 pkg prefix navigation)/share/navigation/config/targets.elimination.yellow.yaml
+ros2 launch bringup competition.launch.py team_color:=blue target_file:=$(ros2 pkg prefix navigation)/share/navigation/config/targets.elimination.blue.yaml
 ```
 
 ROSIDL generation needs an ASCII build path, so WSL users copy the workspace to a native Linux location first.
@@ -132,8 +141,8 @@ ROSIDL generation needs an ASCII build path, so WSL users copy the workspace to 
 Rule environment smoke run.
 
 ```bash
-python -m pip install -r isaaclab_sim/rl/requirements.txt
-cd isaaclab_sim/rl
+python -m pip install -r sim/rl/requirements.txt
+cd sim/rl
 python evaluate_selfplay.py --episodes 8
 ```
 

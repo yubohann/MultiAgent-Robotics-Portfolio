@@ -3,7 +3,7 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [project]
-name = "aerocity-method"
+name = "realised-qd"
 version = "0.1.0"
 description = "Outcome-grounded quality-diversity and reinforcement learning for target-free HM3D multi-UAV exploration"
 readme = "README.md"
@@ -30,7 +30,7 @@ rl = ["torch>=2.1"]
 dev = ["pytest>=8.0", "ruff>=0.6"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/aerocity_method"]
+packages = ["src/realised_qd"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -53,11 +53,10 @@ pythonpath = ["src"]
 target-version = "py311"
 line-length = 100
 extend-exclude = [
-  "archive",
   "external",
   "reports",
   "results",
-  "src/aerocity_method/vendor",
+  "src/realised_qd/vendor",
 ]
 
 [tool.ruff.lint]

@@ -22,13 +22,13 @@
       "communication_ledger",
       "complete_failure_denominator"
     ],
-    "p07_minimum_baseline_ids": [
+    "exploration_minimum_baseline_ids": [
       "random_public_candidate",
       "frontier_3d_public_candidate",
       "auction_cost_utility"
     ],
     "parallel_confirmation_ids": [],
-    "execution_rule": "P07 task validity first uses the three non-learning common-protocol controls. P10 additionally requires a train-provenanced single_rl checkpoint. GVP-MREP enters only after original-environment and differential-equivalence qualification; it must never be relabeled as original ROS/RotorS reproduction."
+    "execution_rule": "Exploration task validity first uses the three non-learning common-protocol controls. P10 additionally requires a train-provenanced single_rl checkpoint. GVP-MREP enters only after original-environment and differential-equivalence qualification; it must never be relabeled as original ROS/RotorS reproduction."
   },
   "baselines": [
     {

@@ -13,6 +13,10 @@
 
 **状态。** 课程设计已完成，11 个自动化测试全部通过，覆盖率报告为 530 条语句 100%。
 
+## 我的职责
+
+独立完成 Flask 应用的完整实现：模型，路由，服务，模板与静态资源（`app/`），SQL 建表与种子数据（`data/`），以及带后端覆盖率门槛的 pytest 测试集（`tests/`）。完成系统分析与设计报告，报告配图与答辩 PPT（`reports/`），系统图表导出集与可编辑源文件（`supermarket-management-diagrams/`、`supermarket-management-diagrams-drawio-editable/`），以及课程交付物说明（`docs/course-deliverables/`）。
+
 ## 功能模块
 
 - 商品管理，增删改查，上下架，CSV 与 Excel 导入，库存初始化

@@ -5,7 +5,7 @@ import math
 
 import pytest
 
-from aerocity_method.contracts.io import (
+from realised_qd.contracts.io import (
     canonical_json_bytes,
     finite_number,
     payload_label,

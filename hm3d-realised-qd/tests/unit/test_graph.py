@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from aerocity_method.graphs.builder import build_candidate_graph
+from realised_qd.graphs.builder import build_candidate_graph
 
 
 def test_graph_id_is_invariant_to_candidate_order(manifests):

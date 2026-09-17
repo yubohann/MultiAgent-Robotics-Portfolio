@@ -58,12 +58,6 @@ class GateObstacleMap2D:
         _ = gate_post_radius_scale
         return cls.empty()
 
-    @classmethod
-    def from_legacy_gate(cls, *, gate_post_radius_scale: float = 1.0) -> GateObstacleMap2D:
-        """Compatibility alias for older call sites."""
-
-        return cls.from_gate(gate_post_radius_scale=gate_post_radius_scale)
-
     def __len__(self) -> int:
         return len(self.obstacles)
 

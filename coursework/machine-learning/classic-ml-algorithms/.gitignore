@@ -32,4 +32,4 @@ $RECYCLE.BIN/
 *.lnk
 
 # Large dataset (downloaded separately)
-Naive_Bayes/20news-18828/
+Naive-Bayes/20news-18828/

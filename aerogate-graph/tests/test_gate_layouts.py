@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from gate_density_single.scripts.run_gate_density_eval import (
+from tasks.density_single.scripts.run_gate_density_eval import (
     ALLOWED_GATE_LAYOUT_VERSIONS,
     _generate_gate_layout,
     _layout_profile,

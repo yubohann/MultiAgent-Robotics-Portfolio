@@ -12,25 +12,25 @@ from xml.sax.saxutils import escape
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs" / "figures" / "paper"
-MEDIA = ROOT / "docs" / "media"
+OUT = ROOT / "docs" / "assets" / "paper"
+MEDIA = ROOT / "docs" / "assets"
 DOC_DATA = ROOT / "docs" / "rl_data" / "world_model_sacflow_final"
 TRAIN_CSV_CANDIDATES = [
     DOC_DATA / "training_curve.csv",
-    ROOT / "isaaclab_sim" / "output" / "rl" / "world_model_sacflow_seed260707_rerun" / "training_curve.csv",
+    ROOT / "sim" / "output" / "rl" / "world_model_sacflow_seed260707_rerun" / "training_curve.csv",
 ]
 TRAIN_SUMMARY_CANDIDATES = [
     DOC_DATA / "training_summary.json",
-    ROOT / "isaaclab_sim" / "output" / "rl" / "world_model_sacflow_seed260707_rerun" / "training_summary.json",
+    ROOT / "sim" / "output" / "rl" / "world_model_sacflow_seed260707_rerun" / "training_summary.json",
 ]
 EVAL_JSON_CANDIDATES = [
     DOC_DATA / "contract_eval_multiseed.json",
-    ROOT / "isaaclab_sim" / "output" / "eval" / "world_model_sacflow_microaim_contract_eval256.json",
-    ROOT / "isaaclab_sim" / "output" / "eval" / "world_model_sacflow_rs004_multiseed_contract_eval128.json",
+    ROOT / "sim" / "output" / "eval" / "world_model_sacflow_microaim_contract_eval256.json",
+    ROOT / "sim" / "output" / "eval" / "world_model_sacflow_rs004_multiseed_contract_eval128.json",
 ]
 STRICT_JSON_CANDIDATES = [
     DOC_DATA / "strict_replay_summary.json",
-    ROOT / "isaaclab_sim" / "output" / "replay" / "world_model_sacflow_strict_replay_abs" / "strict_replay_summary.json",
+    ROOT / "sim" / "output" / "replay" / "world_model_sacflow_strict_replay_abs" / "strict_replay_summary.json",
 ]
 
 W, H = 1920, 1080
@@ -583,7 +583,7 @@ def fig05_pipeline(strict_summary) -> Figure:
     )
     fig.panel(38, 120, 550, 780, "(a)", "ROS2 runtime contract", COL["white"])
     ros_nodes = [
-        ("rcvrl_vision\nAprilTag / target detection", COL["pale_blue"], COL["blue"]),
+        ("vision\nAprilTag / target detection", COL["pale_blue"], COL["blue"]),
         ("robot_localization\nwheel odom + IMU EKF", COL["pale_green"], COL["green"]),
         ("Nav2 controller\ncostmap + cmd_vel", COL["cream"], COL["orange"]),
         ("shooter services\nlaser dwell gate", COL["pale_red"], COL["red"]),

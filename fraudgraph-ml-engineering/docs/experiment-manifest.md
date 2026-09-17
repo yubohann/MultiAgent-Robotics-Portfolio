@@ -7,7 +7,7 @@ Every reported result should have a companion `manifest.json`. The manifest is a
 Record the exact command after the `--` separator.
 
 ```powershell
-python scripts/record_run_manifest.py `
+python -m fraud_ml_engineering.experiment_tools.record_run_manifest `
   --output artifacts/elliptic/mainline_manifest.json `
   --dataset elliptic `
   --seed 42 `

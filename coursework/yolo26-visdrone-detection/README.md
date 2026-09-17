@@ -13,6 +13,10 @@ The project covers the full detection workflow, from VisDrone subset preparation
 
 **Status.** Experiments 5 and 6 complete. Validation over 677 images and 39961 instances scores 0.809 precision, 0.638 recall, 0.703 mAP50 and 0.415 mAP50-95. The trained model is exported to `best.onnx` and the structure is inspected in Netron.
 
+## My Role
+
+Prepared the VisDrone obstacle subset and label conversion (`scripts/05_prepare_visdrone_subset.py`, `01_split_yolo_dataset.py`, `02_make_data_yaml.py`), ran the YOLO26m training, validation, prediction and ONNX export pipeline (`03_train_yolo26.py`, `04_exp6_val_predict_export.py`, `06_extract_real_video_frames.py`), and produced the run evidence in `screenshots/` plus the experiment write-ups in `docs/`. The reported scores come from the saved validation run on 677 images and 39961 instances.
+
 ## Pipeline
 
 ```text
@@ -61,7 +65,7 @@ yolo export model=runs/yolo26/train/weights/best.pt format=onnx imgsz=640 dynami
 
 - `scripts/`, the pipeline above.
 - `configs/`, the class list and dataset yaml files.
-- `detect_test/`, VisDrone images for prediction demos.
+- `detection-samples/`, VisDrone images for prediction demos.
 - `screenshots/`, stage-by-stage evidence for both experiments.
 - `docs/`, drone image source notes and sim-to-real camera data suggestions.
 - `yolo26n.pt`, lightweight official weights kept for quick tests.

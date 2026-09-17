@@ -12,7 +12,7 @@ A working record of how the AeroCityBench pilot was designed, what has been buil
 
 **2026-07-29. The theme is fixed.** AeroCityBench scores cooperation on hidden 3D targets inside procedural cities with real occlusion, collisions, flight dynamics, communication and energy constraints. Target truth, failure identity, split labels and seeds stay scorer-side. A method that covers a lot of ground still needs a legal observation to score.
 
-**2026-07-31. Task migration to G2-I.** The evaluated task moves to `geometry-search-3d`. The public, target-agnostic inspection atlas defines what can be inspected, a mission sector fixes the searchable region, and private targets only decide whether an OBSERVE action produces an anonymous confirmation receipt. The older `exploration-3d` track becomes a retired coverage diagnostic with a separate report line.
+**2026-07-31. Task migration to G2I.** The evaluated task moves to `geometry-search-3d`. The public, target-agnostic inspection atlas defines what can be inspected, a mission sector fixes the searchable region, and private targets only decide whether an OBSERVE action produces an anonymous confirmation receipt. The older `exploration-3d` track becomes a retired coverage diagnostic with a separate report line.
 
 **2026-08-01. Mission-sector v2.** The compiler keeps per-cell region metadata while binarizing routes and publishes `cell_assignment_by_drone`. The validator recomputes flight, dwell, climb and return-reserve lower bounds from the public assignment, so a plan with a missing cell, a duplicate assignment or a cross-vehicle reuse is rejected before execution.
 
@@ -25,7 +25,7 @@ A working record of how the AeroCityBench pilot was designed, what has been buil
 | Workstream | State |
 | --- | --- |
 | Generator, task schemas, public and private projections | Implemented and tested on CPU |
-| G2-I inspection atlas and leakage probes | Implemented and tested on CPU |
+| G2I inspection atlas and leakage probes | Implemented and tested on CPU |
 | Mission sector and capacity certificate | Implemented with independent recomputation |
 | Reference baselines and L0 runtime | Implemented and calibrated |
 | External method adapters (OR-Tools, MARVEL, ACO3D) | JSONL process boundary with source locks |

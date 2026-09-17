@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import json
 import subprocess
 import sys
@@ -8,12 +7,10 @@ from pathlib import Path
 
 import pytest
 
+from fraud_ml_engineering.experiment_tools import generate_auditable_comparison_report as MODULE
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "generate_auditable_comparison_report.py"
-SPEC = importlib.util.spec_from_file_location("auditable_comparison_report", SCRIPT_PATH)
-assert SPEC is not None and SPEC.loader is not None
-MODULE = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(MODULE)
 
 
 def _record_payload(*, dataset: str = "comp", data_revision: str = "release-a") -> dict[str, object]:

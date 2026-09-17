@@ -16,6 +16,10 @@ All notable development milestones for AeroCityBench are recorded here.
 - restructured documentation into a benchmark design, research notes and a run guide.
 - rewrote the ordinary-v3 test module around generation, projections, compilation, scene output,
   release building and baseline evaluation.
+- layered the package into `core`, `generation`, `runtime`, `atlas`, `bridge` and `release`
+  subpackages, split `tools/` into adapters, smoke, calibration, scene, quality, native and
+  release groups, and grouped `tests/` into unit, pipeline and adapters, updating every import,
+  path reference and documentation command.
 - sized down the demo GIFs and translated the last internal tool output to English.
 
 ## [0.2.0.dev0] - 2026-07-30

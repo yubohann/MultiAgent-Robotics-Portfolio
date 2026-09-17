@@ -1,9 +1,8 @@
+import shutil
 from argparse import ArgumentParser
 from pathlib import Path
-import shutil
 
 import cv2
-
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT = ROOT / "external" / "real_videos"

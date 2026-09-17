@@ -2,8 +2,6 @@
 
 """Elliptic Bitcoin transaction loader with causal sequence/event views."""
 
-import json
-import zlib
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +17,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 
+from .caching import load_graph_cache, resolve_graph_cache_paths, store_graph_cache
 from .fraud_dataset import (
     SEQUENCE_BUILDER_VERSION,
     ClientShard,
@@ -110,47 +109,11 @@ def _elliptic_cache_signature(
     }
 
 
-def _resolve_cache_paths(signature: dict[str, Any]) -> tuple[Path, Path]:
-    tag = zlib.crc32(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")) & 0xFFFFFFFF
-    return (
-        ELLIPTIC_CACHE_DIR / f"elliptic_{tag:08x}.dgl",
-        ELLIPTIC_CACHE_DIR / f"elliptic_{tag:08x}.json",
-    )
-
-
 def _legacy_cache_signature_without_coassociation(signature: dict[str, Any]) -> dict[str, Any]:
     legacy_signature = dict(signature)
     legacy_signature.pop("coassociation_topk", None)
     legacy_signature.pop("coassociation_time_window", None)
     return legacy_signature
-
-
-def _load_cached_graph(
-    *,
-    signature: dict[str, Any],
-    graph_path: Path,
-    metadata_path: Path,
-) -> tuple[dgl.DGLHeteroGraph, dict[str, Any]] | None:
-    if not graph_path.exists() or not metadata_path.exists():
-        return None
-    metadata = json.loads(metadata_path.read_text(encoding="utf-8-sig"))
-    if dict(metadata.get("cache_signature", {})) != signature:
-        return None
-    graph = dgl.load_graphs(str(graph_path))[0][0]
-    return graph, metadata
-
-
-def _write_cache(
-    *,
-    graph: dgl.DGLHeteroGraph,
-    metadata: dict[str, Any],
-    graph_path: Path,
-    metadata_path: Path,
-) -> None:
-    graph_path.parent.mkdir(parents=True, exist_ok=True)
-    metadata_path.parent.mkdir(parents=True, exist_ok=True)
-    dgl.save_graphs(str(graph_path), [graph])
-    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8-sig")
 
 
 def _clone_graph_for_runtime(graph: dgl.DGLHeteroGraph) -> dgl.DGLHeteroGraph:
@@ -907,7 +870,11 @@ def _upgrade_legacy_cached_graph(
     upgraded_metadata = dict(metadata)
     upgraded_metadata["cache_signature"] = dict(cache_signature)
     data_summary = dict(metadata.get("data_summary", {}) or {})
-    cache_graph_path, cache_metadata_path = _resolve_cache_paths(cache_signature)
+    cache_graph_path, cache_metadata_path = resolve_graph_cache_paths(
+        cache_signature,
+        prefix="elliptic",
+        cache_dir=ELLIPTIC_CACHE_DIR,
+    )
     data_summary["wavelet_context_dim"] = int(upgraded_graph.nodes[NODE_TYPE].data["wavelet_context"].shape[1])
     data_summary["coassociation_topk"] = int(coassociation_topk)
     data_summary["coassociation_time_window"] = int(coassociation_time_window)
@@ -1166,7 +1133,11 @@ def _build_graph_payload(
     _refresh_homo_edge_train_mask(graph)
 
     relation_order = list(graph.etypes)
-    cache_graph_path, cache_metadata_path = _resolve_cache_paths(cache_signature)
+    cache_graph_path, cache_metadata_path = resolve_graph_cache_paths(
+        cache_signature,
+        prefix="elliptic",
+        cache_dir=ELLIPTIC_CACHE_DIR,
+    )
     data_summary = {
         "dataset": "elliptic",
         "dataset_registry_name": "elliptic",
@@ -1254,8 +1225,12 @@ def load_elliptic_dataset(
         coassociation_topk=int(coassociation_topk),
         coassociation_time_window=int(coassociation_time_window),
     )
-    cache_graph_path, cache_metadata_path = _resolve_cache_paths(signature)
-    cached_payload = None if rebuild_cache else _load_cached_graph(
+    cache_graph_path, cache_metadata_path = resolve_graph_cache_paths(
+        signature,
+        prefix="elliptic",
+        cache_dir=ELLIPTIC_CACHE_DIR,
+    )
+    cached_payload = None if rebuild_cache else load_graph_cache(
         signature=signature,
         graph_path=cache_graph_path,
         metadata_path=cache_metadata_path,
@@ -1268,8 +1243,12 @@ def load_elliptic_dataset(
             graph, metadata = cached_graph, cached_metadata
     if cached_payload is None:
         legacy_signature = _legacy_cache_signature_without_coassociation(signature)
-        legacy_graph_path, legacy_metadata_path = _resolve_cache_paths(legacy_signature)
-        legacy_cached_payload = _load_cached_graph(
+        legacy_graph_path, legacy_metadata_path = resolve_graph_cache_paths(
+            legacy_signature,
+            prefix="elliptic",
+            cache_dir=ELLIPTIC_CACHE_DIR,
+        )
+        legacy_cached_payload = load_graph_cache(
             signature=legacy_signature,
             graph_path=legacy_graph_path,
             metadata_path=legacy_metadata_path,
@@ -1297,7 +1276,7 @@ def load_elliptic_dataset(
                 coassociation_topk=int(coassociation_topk),
                 coassociation_time_window=int(coassociation_time_window),
             )
-        _write_cache(
+        store_graph_cache(
             graph=graph,
             metadata=metadata,
             graph_path=cache_graph_path,

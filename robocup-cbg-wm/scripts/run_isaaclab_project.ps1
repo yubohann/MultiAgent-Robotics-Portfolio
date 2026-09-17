@@ -18,8 +18,13 @@ param(
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-if ([string]::IsNullOrWhiteSpace($ScriptPath)) {
-    $ScriptPath = Join-Path $RepoRoot "isaaclab_sim\robocup_visionrl_arena_sim.py"
+$UseModule = [string]::IsNullOrWhiteSpace($ScriptPath)
+if ($UseModule) {
+    $ScriptPath = "arena_sim"
+    $WorkDir = Join-Path $RepoRoot "sim"
+}
+else {
+    $WorkDir = $RepoRoot
 }
 
 $RuntimeRoot = Join-Path $RepoRoot ".isaaclab_runtime"
@@ -62,7 +67,8 @@ $KitArgs = @(
     "--/crashreporter/dumpDir", $DumpDir
 ) -join " "
 
-$PythonArgs = @($ScriptPath, "--duration", "$Duration", "--kit_args", $KitArgs)
+$ScriptArgs = if ($UseModule) { @("-m", $ScriptPath) } else { @($ScriptPath) }
+$PythonArgs = $ScriptArgs + @("--duration", "$Duration", "--kit_args", $KitArgs)
 if ($Headless) {
     $PythonArgs += "--headless"
 }
@@ -86,6 +92,7 @@ Write-Host "[RoboCupVisionRL] Runtime root: $RuntimeRoot"
 Write-Host "[RoboCupVisionRL] Kit user config: $UserConfigPath"
 Write-Host "[RoboCupVisionRL] Launching IsaacLab with project-local cache/config."
 if ($DryRun) {
+    Write-Host "[RoboCupVisionRL] Working directory: $WorkDir"
     Write-Host "[RoboCupVisionRL] Dry run only. Command:"
     if (Test-Path $PythonExe) {
         Write-Host "$PythonExe $($PythonArgs -join ' ')"
@@ -95,11 +102,17 @@ if ($DryRun) {
     }
     exit 0
 }
-if (Test-Path $PythonExe) {
-    & $PythonExe @PythonArgs
+Push-Location -LiteralPath $WorkDir
+try {
+    if (Test-Path $PythonExe) {
+        & $PythonExe @PythonArgs
+    }
+    else {
+        Write-Warning "PythonExe not found; falling back to isaaclab.bat. Complex --kit_args may be less reliable through cmd.exe."
+        & $IsaacLabBat @(@("-p") + $PythonArgs)
+    }
 }
-else {
-    Write-Warning "PythonExe not found; falling back to isaaclab.bat. Complex --kit_args may be less reliable through cmd.exe."
-    & $IsaacLabBat @(@("-p") + $PythonArgs)
+finally {
+    Pop-Location
 }
 exit $LASTEXITCODE

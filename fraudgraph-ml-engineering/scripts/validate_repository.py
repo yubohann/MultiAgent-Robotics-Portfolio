@@ -31,6 +31,26 @@ REQUIRED_FILES = (
     "requirements/requirements-cu121.txt",
     ".github/workflows/quality.yml",
     "Makefile",
+    "src/fraud_ml_engineering/caching.py",
+    "src/fraud_ml_engineering/experiment_tools/__init__.py",
+    "src/fraud_ml_engineering/experiment_tools/generate_auditable_comparison_report.py",
+    "src/fraud_ml_engineering/experiment_tools/generate_hybrid_paper_package.py",
+    "src/fraud_ml_engineering/experiment_tools/record_run_manifest.py",
+    "src/fraud_ml_engineering/experiment_tools/run_hybrid_fusion_ablation.py",
+    "src/fraud_ml_engineering/experiment_tools/run_hybrid_low_label_mechanism_ablation.py",
+    "src/fraud_ml_engineering/experiment_tools/run_hybrid_mainline_protocol.py",
+    "src/fraud_ml_engineering/experiment_tools/run_ieee_acceptance_matrix.py",
+    "src/fraud_ml_engineering/experiment_tools/run_ieee_splitgnn_tuning.py",
+    "src/fraud_ml_engineering/experiment_tools/run_splitgnn_smoke_suite.py",
+    "scripts/generate_auditable_comparison_report.py",
+    "scripts/generate_hybrid_paper_package.py",
+    "scripts/record_run_manifest.py",
+    "scripts/run_hybrid_fusion_ablation.py",
+    "scripts/run_hybrid_low_label_mechanism_ablation.py",
+    "scripts/run_hybrid_mainline_protocol.py",
+    "scripts/run_ieee_acceptance_matrix.py",
+    "scripts/run_ieee_splitgnn_tuning.py",
+    "scripts/run_splitgnn_smoke_suite.py",
 )
 LEGACY_PATH_MARKERS = ("C:\\Users\\\\", "D:\\", "dataset.SplitGNN")
 LEGACY_ARTIFACT_MARKERS = ("hybrid_mafrl",)
@@ -68,8 +88,9 @@ def check_package_compiles() -> str | None:
 
 def check_internal_imports() -> str | None:
     local_modules = {path.stem for path in PACKAGE_ROOT.glob("*.py")}
+    source_paths = list(PACKAGE_ROOT.glob("*.py")) + list((PACKAGE_ROOT / "experiment_tools").glob("*.py"))
     violations: list[str] = []
-    for source_path in PACKAGE_ROOT.glob("*.py"):
+    for source_path in source_paths:
         tree = ast.parse(_read(source_path), filename=str(source_path))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module in local_modules:

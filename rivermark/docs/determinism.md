@@ -23,7 +23,7 @@ The first same-seed attempt compared numeric semantic IDs and failed two metrics
 
 ## Clean-Room Replay
 
-The P0-D milestone covers a second-machine replay of the CPU fixture and the public target-free Isaac smoke from a fresh clone. `code/archived/modules/clean_room_smoke.py` holds the bounded preparation check behind that replay. It requires a clean checkout, clones the requested revision with `--no-local --no-hardlinks`, runs the researcher smoke inside that clone, and writes only `clean_room_report.json`. The report carries the clone revision, fixture manifest identity, and bounded child status. The module sits outside the installed package until the milestone closes and its entry point returns.
+The P0-D milestone covers a second-machine replay of the CPU fixture and the public target-free Isaac smoke from a fresh clone. `archived/modules/clean_room_smoke.py` holds the bounded preparation check behind that replay. It requires a clean checkout, clones the requested revision with `--no-local --no-hardlinks`, runs the researcher smoke inside that clone, and writes only `clean_room_report.json`. The report carries the clone revision, fixture manifest identity, and bounded child status. The module sits outside the installed package until the milestone closes and its entry point returns.
 
 ## CPU-Only Entry Path
 

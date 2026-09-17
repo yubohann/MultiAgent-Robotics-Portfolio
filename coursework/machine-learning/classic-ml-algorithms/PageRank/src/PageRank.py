@@ -1,10 +1,6 @@
 # Author: Bohan Yu
 
-import os
-import argparse
-from collections import defaultdict
-
-class PageRank:
+import argparseimport osfrom collections import defaultdictclass PageRank:
     
     def __init__(self, damping_factor=0.85, max_iterations=100, tolerance=1e-6):
         """Initialize the damping factor, iteration limit and tolerance."""
@@ -36,8 +32,8 @@ class PageRank:
     def load_graph_from_file(self, file_path):
         """Load a directed graph from a text file."""
         try:
-            with open(file_path, 'r') as f:
-                for line_num, line in enumerate(f, 1):
+            with open(file_path) as f:
+                for _line_num, line in enumerate(f, 1):
                     line = line.strip()
                     
 
@@ -195,7 +191,7 @@ def load_web_graph(file_path, max_nodes=None):
     
     try:
         edge_count = 0
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             for line in f:
                 line = line.strip()
                 

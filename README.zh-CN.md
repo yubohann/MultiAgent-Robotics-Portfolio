@@ -59,7 +59,7 @@
 |---|---|---|
 | [机器学习课程](coursework/machine-learning/) | 从零实现经典算法，PCA 与 LDA，kNN 与 ID3 | Python，NumPy，pandas，scikit-learn |
 | [YOLO26 与 VisDrone 检测](coursework/yolo26-visdrone-detection/) | 无人机目标检测，验证与 ONNX 导出 | Ultralytics YOLO，VisDrone，ONNX |
-| [湖仓与流批一体作品集](coursework/stream-batch-lakehouse-ai-portfolio/) | 湖仓，流处理，推荐与短视频评审实验 | Kafka，Flink，MinIO，Paimon，Spark |
+| [湖仓与流批一体作品集](coursework/streaming-lakehouse/) | 湖仓，流处理，推荐与短视频评审实验 | Kafka，Flink，MinIO，Paimon，Spark |
 | [超市管理系统](coursework/supermarket-management-system/) | 门店管理应用与工程文档 | Flask，SQLAlchemy，SQLite，pytest |
 | [具身智能学习路线图](embodied-ai-learning-roadmap.md) | 十二周从大模型到机器人学习的项目制路线 | PyTorch，机器人学习，ROS 2 |
 

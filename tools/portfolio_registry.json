@@ -17,8 +17,7 @@
       "verification": "rivermark",
       "documents": [
         "rivermark/README.md",
-        "rivermark/README.zh-CN.md",
-        "rivermark/code/README.md"
+        "rivermark/README.zh-CN.md"
       ]
     },
     {
@@ -32,7 +31,7 @@
         "robocup-cbg-wm/README.md",
         "robocup-cbg-wm/README.zh-CN.md",
         "robocup-cbg-wm/docs/capabilities.md",
-        "robocup-cbg-wm/docs/media/README.md"
+        "robocup-cbg-wm/docs/assets/README.md"
       ]
     },
     {
@@ -137,15 +136,15 @@
       ]
     },
     {
-      "id": "stream-batch-lakehouse-ai-portfolio",
+      "id": "streaming-lakehouse",
       "title": "Stream-Batch Lakehouse AI Portfolio",
-      "directory": "coursework/stream-batch-lakehouse-ai-portfolio",
-      "readme": "coursework/stream-batch-lakehouse-ai-portfolio/README.md",
+      "directory": "coursework/streaming-lakehouse",
+      "readme": "coursework/streaming-lakehouse/README.md",
       "category": "coursework",
       "verification": null,
       "documents": [
-        "coursework/stream-batch-lakehouse-ai-portfolio/README.md",
-        "coursework/stream-batch-lakehouse-ai-portfolio/README.zh-CN.md"
+        "coursework/streaming-lakehouse/README.md",
+        "coursework/streaming-lakehouse/README.zh-CN.md"
       ]
     },
     {

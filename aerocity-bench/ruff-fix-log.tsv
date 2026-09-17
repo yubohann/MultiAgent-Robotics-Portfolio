@@ -1,0 +1,9 @@
+iteration	errors_before	errors_after	fix_applied	status
+1	1	0	Accepted receipt v2 history and validated v3 planner invocation fields	improved
+2	1	0	Sorted the new planning cadence test imports	done
+3	1	0	Sorted the behavior-preflight manifest imports	done
+4	6	0	Wrapped G2I RL interface lines without changing semantics	done
+5	1	0	Renamed an unused v4 receipt-audit loop variable	done
+6	3	0	Fixed multi-context readiness, failure accounting, and behavior-audit schema compatibility	done
+7	1	0	Updated the public-boundary fixture to the current planning-cadence contract	done
+8	1	0	Built wheel and sdist with the available uv frontend after the optional build module was absent	done

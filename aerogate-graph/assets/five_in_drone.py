@@ -1,4 +1,4 @@
-"""Local spawn helpers for the 5_in_drone asset."""
+"""Local spawn helpers for the five_in_drone asset."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
 
 ASSETS_ROOT = Path(__file__).resolve().parent
-DEFAULT_FIVE_IN_DRONE_USD = ASSETS_ROOT / "5_in_drone" / "5_in_drone.usd"
+DEFAULT_FIVE_IN_DRONE_USD = ASSETS_ROOT / "five_in_drone" / "five_in_drone.usd"
 
 
 FIVE_IN_DRONE = ArticulationCfg(
@@ -58,7 +58,7 @@ def spawn_real_drones(
     drone_usd_path: str | Path | None = None,
     drone_scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
 ) -> list[str]:
-    """Spawn one or more 5_in_drone USD prims at the requested positions."""
+    """Spawn one or more five_in_drone USD prims at the requested positions."""
 
     resolved_drone_path = Path(drone_usd_path) if drone_usd_path is not None else DEFAULT_FIVE_IN_DRONE_USD
     if not resolved_drone_path.exists():
@@ -78,7 +78,3 @@ def spawn_real_drones(
         )
         prim_paths.append(prim_path)
     return prim_paths
-
-
-# Compatibility alias for earlier code paths.
-DEFAULT_DRONE_USD = DEFAULT_FIVE_IN_DRONE_USD

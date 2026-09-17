@@ -1,5 +1,5 @@
-import re
 import json
+import re
 from urllib import error, request
 
 from flask import current_app
@@ -9,7 +9,6 @@ from app import db
 from app.models import Category, Inventory, Product
 from app.services.analytics import get_sales_overview, get_top_products
 from app.services.inventory import get_inventory_alerts, get_inventory_summary
-
 
 _FAQ_PRESET_ANSWERS = {
     '如何添加新商品': {

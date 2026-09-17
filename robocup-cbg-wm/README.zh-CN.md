@@ -5,14 +5,14 @@
 </p>
 
 <p align="center">
-  <a href="./docs/media/最终回放_三视角同步拼接版.gif">
-    <img src="./docs/media/最终回放_三视角同步拼接版.gif" alt="三视角同步回放" width="86%" />
+  <a href="./docs/assets/最终回放_三视角同步拼接版.gif">
+    <img src="./docs/assets/最终回放_三视角同步拼接版.gif" alt="三视角同步回放" width="86%" />
   </a>
 </p>
 
 <p align="center">
-  <a href="./docs/media/large_scale_50v50_isaaclab_replay.mp4">完整 IsaacLab 回放 MP4</a>，
-  <a href="./docs/media/README.md">媒体说明</a>
+  <a href="./docs/assets/large_scale_50v50_isaaclab_replay.mp4">完整 IsaacLab 回放 MP4</a>，
+  <a href="./docs/assets/README.md">媒体说明</a>
 </p>
 
 **面向规则约束多机器人对抗战术的不确定性 belief graph 世界模型，基于 ROS 2 与 IsaacLab 构建。**
@@ -20,6 +20,15 @@
 CBG-WM 是一个面向 RoboCup 风格对抗比赛的机器人研究作品。两台差速机器人在 3 米乘 3 米场地中寻找对方目标，通过激光距离与驻留门限射击，推动刚性红色箱体，并按顺序打开基地护甲。遮挡后的检测会变旧，可移动箱体改变视线，护甲状态决定哪些基地射击合法，裁判事件会改写目标存在状态。CBG-WM 为每个对象维护带类型的 belief token，用随机集成预测交互动力学，并按低尾风险对联合 Flow 候选排序，再交由几何感知屏蔽执行首个动作。
 
 **状态。** `v0.1.0` 研究作品。已验证主线是双机对抗，包含 128 回合计分运行，8 回合严格回放审计，三视角 IsaacLab 媒体与 1v1 实机实验记录。50v50 规则基准是仿真阶段扩展。
+
+## 我的职责
+
+本仓库是 RoboCup 中国赛 2025 视觉挑战赛参赛作品的团队共享产物，比赛结果由团队共同完成。在团队中，我的工作覆盖感知与定位子系统、仿真与强化学习管线、规则与回放验证工具以及文档。
+
+- 感知与定位: AprilTag Tag36h11 目标检测 (`ros_ws/src/vision`)，相机、ToF 与碰撞触点接口契约，轮速里程计与 IMU 的 `robot_localization` 融合配置 (`ros_ws/src/bringup/config/sensor_fusion.yaml`)，机器人模型与 TF 坐标系 (`ros_ws/src/description`)，以及 Nav2 与 slam_toolbox 配置 (`ros_ws/src/navigation`)。
+- 仿真与 RL 管线: 规则环境与 self-play 环境 (`sim/rl/gym_env`、`sim/rl/selfplay_env`)，世界模型与 Flow 策略的训练、计分和导出脚本，IsaacLab 场景与严格回放渲染 (`sim/arena_sim`)，以及 50v50 规则级基准。
+- 规则与回放验证: 规则门与几何契约 (`sim/arena_sim/rules.py`、`sim/rl`)，`docs/rl_data/` 中归档的计分与严格回放审计，以及 `tests/` 中的仿真确定性测试。
+- 文档: 中英文 README、`docs/` 指南、`docs/capabilities.md` 与 `docs/assets/README.md` 媒体说明。
 
 ## 已核验证据
 
@@ -55,17 +64,17 @@ CBG-WM 是一个面向 RoboCup 风格对抗比赛的机器人研究作品。两�
 | 机器人接触均值与 P95 | 0.00 与 0.00 |
 | 障碍接触 | 0.00 |
 
-[50v50 IsaacLab 回放 MP4](docs/media/large_scale_50v50_isaaclab_replay.mp4)
+[50v50 IsaacLab 回放 MP4](docs/assets/large_scale_50v50_isaaclab_replay.mp4)
 
-![50v50 规则布局](docs/figures/large_scale_50v50/large_scale_50v50_rule_layout.png)
+![50v50 规则布局](docs/assets/large_scale_50v50/large_scale_50v50_rule_layout.png)
 
-![50v50 训练曲线](docs/figures/large_scale_50v50/large_scale_50v50_training.png)
+![50v50 训练曲线](docs/assets/large_scale_50v50/large_scale_50v50_training.png)
 
-![世界模型 SAC Flow 训练曲线](docs/figures/rl/rl_training_curve_gpu.svg)
+![世界模型 SAC Flow 训练曲线](docs/assets/rl/rl_training_curve_gpu.svg)
 
 ### 运行栈
 
-ROS 2 Jazzy 工作区包含 `rcvrl_bringup`，`rcvrl_behavior`，`rcvrl_vision`，`rcvrl_navigation`，`rcvrl_motion`，`rcvrl_shooter`，`rcvrl_description` 与 `rcvrl_interfaces`。Nav2 负责导航，`slam_toolbox` 负责建图，`rcvrl_vision` 检测 AprilTag Tag36h11 目标，射击指令经 ROS 2 服务并在对方目标安全门之后执行。
+ROS 2 Jazzy 工作区包含 `bringup`，`behavior`，`vision`，`navigation`，`motion`，`shooter`，`description` 与 `interfaces`。Nav2 负责导航，`slam_toolbox` 负责建图，`vision` 检测 AprilTag Tag36h11 目标，射击指令经 ROS 2 服务并在对方目标安全门之后执行。
 
 [RoboCup VisionRL 运行演示视频](https://www.bilibili.com/video/BV1Pj9ZBKEc8/?spm_id_from=333.1387.list.card_archive.click&vd_source=f79b94dd69d0c8d08ee5c3400b69d46d)
 
@@ -78,7 +87,7 @@ ROS 2 Jazzy 工作区包含 `rcvrl_bringup`，`rcvrl_behavior`，`rcvrl_vision`�
 
 方法说明见 [CBG-WM](docs/cbg_wm.md)。
 
-![方法架构](docs/figures/paper/fig02_method_architecture.png)
+![方法架构](docs/assets/paper/fig02_method_architecture.png)
 
 ## 平台
 
@@ -106,24 +115,24 @@ python -m pip install -e ".[training]"
 Ubuntu 24.04 与 ROS 2 Jazzy 上的工作区构建。
 
 ```bash
-cd crc_robocup_vision_ws
+cd ros_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 source install/setup.bash
-ros2 launch rcvrl_bringup competition.launch.py
+ros2 launch bringup competition.launch.py
 ```
 
 无硬件启动冒烟检查。
 
 ```bash
-ros2 launch rcvrl_bringup competition.launch.py start_navigation:=false shooter_dry_run:=true auto_start:=false
+ros2 launch bringup competition.launch.py start_navigation:=false shooter_dry_run:=true auto_start:=false
 ```
 
 黄方与蓝方淘汰赛启动会各自选择阵营与路线文件。
 
 ```bash
-ros2 launch rcvrl_bringup competition.launch.py team_color:=yellow target_file:=$(ros2 pkg prefix rcvrl_navigation)/share/rcvrl_navigation/config/targets.elimination.yellow.yaml
-ros2 launch rcvrl_bringup competition.launch.py team_color:=blue target_file:=$(ros2 pkg prefix rcvrl_navigation)/share/rcvrl_navigation/config/targets.elimination.blue.yaml
+ros2 launch bringup competition.launch.py team_color:=yellow target_file:=$(ros2 pkg prefix navigation)/share/navigation/config/targets.elimination.yellow.yaml
+ros2 launch bringup competition.launch.py team_color:=blue target_file:=$(ros2 pkg prefix navigation)/share/navigation/config/targets.elimination.blue.yaml
 ```
 
 ROSIDL 生成需要 ASCII 构建路径，WSL 用户先把工作区复制到原生 Linux 路径。
@@ -131,8 +140,8 @@ ROSIDL 生成需要 ASCII 构建路径，WSL 用户先把工作区复制到原�
 规则环境冒烟运行。
 
 ```bash
-python -m pip install -r isaaclab_sim/rl/requirements.txt
-cd isaaclab_sim/rl
+python -m pip install -r sim/rl/requirements.txt
+cd sim/rl
 python evaluate_selfplay.py --episodes 8
 ```
 

@@ -10,10 +10,10 @@ A false-confirmation budget is an eligibility hard gate alongside safety. Eligib
 
 ## Metrics
 
-`rivermark_benchmark.metrics` defines the versioned Search3D metric and bootstrap summaries over public inputs, keeping target coordinates outside.
+`rivermark_benchmark.score.metrics` defines the versioned Search3D metric and bootstrap summaries over public inputs, keeping target coordinates outside.
 
 ```python
-from rivermark_benchmark.metrics import bootstrap_summary, score_search_episode
+from rivermark_benchmark.score.metrics import bootstrap_summary, score_search_episode
 
 episode = score_search_episode(
     [0.0, 1.0, 2.0], [0, 1, 2], target_count=2, time_budget_s=2.0
@@ -31,7 +31,7 @@ Validate and score a local submission on the CPU path.
 
 ```powershell
 $env:PYTHONPATH = (Resolve-Path .\src)
-python -m rivermark_benchmark.evaluator .\submission.json `
+python -m rivermark_benchmark.score.evaluator .\submission.json `
   --dataset-version 0.1.0 --split validation `
   --dataset-index-identity <published-index-identity> `
   --output .\submission-report.json

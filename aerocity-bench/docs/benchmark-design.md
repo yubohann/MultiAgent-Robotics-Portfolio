@@ -10,7 +10,7 @@ The lead question: **does a method that covers more space also find more targets
 | --- | --- |
 | Vehicle state, permitted sensor observations, time and energy budget | Target coordinates, counts, labels, and generating process |
 | Public starts, communication messages, and a target-agnostic coarse prior | Legal observation witnesses and confirmation decisions |
-| The G2-I inspection atlas, derived from geometry alone | Test split, city family, and generation seeds |
+| The G2I inspection atlas, derived from geometry alone | Test split, city family, and generation seeds |
 
 Publishing target coordinates would reduce search to visiting known points. The scorer holds the answer sheet, and a method earns confirmation only through an observation it can actually produce in flight.
 
@@ -71,8 +71,8 @@ Attempts that fail a condition earn nothing. Flying through a wall, claiming a f
 
 ## Task Tracks
 
-- **G2-I geometry search** is the main track. It scores confirmation through a target-agnostic inspection atlas and the observation contract above.
-- **G1-U exploration** is a retired coverage diagnostic from the pilot design. It stays selectable for reference, and its numbers report separately from G2-I.
+- **G2I geometry search** is the main track. It scores confirmation through a target-agnostic inspection atlas and the observation contract above.
+- **G1-U exploration** is a retired coverage diagnostic from the pilot design. It stays selectable for reference, and its numbers report separately from G2I.
 - **Perception search** is reserved for a separately ranked detection-and-search track. RGB-D is allowed for mapping and visual policies, while geometric ranking uses geometry alone.
 
 ## City Generation

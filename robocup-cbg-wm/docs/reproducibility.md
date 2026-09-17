@@ -2,12 +2,12 @@
 
 This page lists the minimal commands and artifact locations for running and auditing the public repository evidence.
 
-Generated outputs stay under `isaaclab_sim/output/`. Selected final evidence is committed under `docs/`.
+Generated outputs stay under `sim/output/`. Selected final evidence is committed under `docs/`.
 
 ## 1. Python Tests
 
 ```bash
-python -m pip install -r isaaclab_sim/rl/requirements.txt
+python -m pip install -r sim/rl/requirements.txt
 python -m pytest tests -q
 ```
 
@@ -23,13 +23,13 @@ Recommended environment.
 
 - Linux or WSL with CUDA PyTorch
 - Python 3.10+
-- dependencies from `isaaclab_sim/rl/requirements.txt`
+- dependencies from `sim/rl/requirements.txt`
 
 Reference command.
 
 ```bash
-python3 isaaclab_sim/rl/train_world_model_sacflow_selfplay.py \
-  --config isaaclab_sim/rl/configs/world_model_flow.yaml \
+python3 sim/rl/train_world_model_sacflow_selfplay.py \
+  --config sim/rl/configs/world_model_flow.yaml \
   --timesteps 200000 \
   --num-envs 32 \
   --batch-size 1024 \
@@ -38,13 +38,13 @@ python3 isaaclab_sim/rl/train_world_model_sacflow_selfplay.py \
   --hidden-dim 256 \
   --device cuda \
   --seed 260707 \
-  --output isaaclab_sim/output/rl/world_model_sacflow_seed260707
+  --output sim/output/rl/world_model_sacflow_seed260707
 ```
 
 Expected checkpoint.
 
 ```text
-isaaclab_sim/output/rl/world_model_sacflow_seed260707/policy.pt
+sim/output/rl/world_model_sacflow_seed260707/policy.pt
 ```
 
 ## 3. Scoring
@@ -52,22 +52,22 @@ isaaclab_sim/output/rl/world_model_sacflow_seed260707/policy.pt
 Stochastic policy scoring.
 
 ```bash
-python3 isaaclab_sim/rl/evaluate_world_model_sacflow_policy.py \
-  --checkpoint isaaclab_sim/output/rl/world_model_sacflow_seed260707/policy.pt \
+python3 sim/rl/evaluate_world_model_sacflow_policy.py \
+  --checkpoint sim/output/rl/world_model_sacflow_seed260707/policy.pt \
   --episodes 64 \
   --stochastic \
-  --output isaaclab_sim/output/eval/world_model_sacflow_eval64.json
+  --output sim/output/eval/world_model_sacflow_eval64.json
 ```
 
 Rule-contract scoring.
 
 ```bash
-python3 isaaclab_sim/rl/evaluate_strategy_contract.py \
-  --checkpoint isaaclab_sim/output/rl/world_model_sacflow_seed260707/policy.pt \
+python3 sim/rl/evaluate_strategy_contract.py \
+  --checkpoint sim/output/rl/world_model_sacflow_seed260707/policy.pt \
   --episodes 64 \
   --stochastic \
-  --output-json isaaclab_sim/output/eval/world_model_sacflow_contract_eval64.json \
-  --output-csv isaaclab_sim/output/eval/world_model_sacflow_contract_eval64.csv
+  --output-json sim/output/eval/world_model_sacflow_contract_eval64.json \
+  --output-csv sim/output/eval/world_model_sacflow_contract_eval64.csv
 ```
 
 Published reference artifacts.
@@ -83,10 +83,10 @@ docs/rl_data/world_model_sacflow_final/strict_replay_audit.md
 ## 4. Policy Export
 
 ```bash
-python3 isaaclab_sim/rl/export_world_model_sacflow_policy.py \
-  --checkpoint isaaclab_sim/output/rl/world_model_sacflow_seed260707/policy.pt \
+python3 sim/rl/export_world_model_sacflow_policy.py \
+  --checkpoint sim/output/rl/world_model_sacflow_seed260707/policy.pt \
   --format torchscript \
-  --output-dir isaaclab_sim/output/policy_export/world_model_sacflow_seed260707
+  --output-dir sim/output/policy_export/world_model_sacflow_seed260707
 ```
 
 Record the exported policy path in report or application material when the export serves deployment.
@@ -96,7 +96,7 @@ Record the exported policy path in report or application material when the expor
 Published final three-view media.
 
 ```text
-docs/media/最终回放_三视角同步拼接版.gif
+docs/assets/最终回放_三视角同步拼接版.gif
 ```
 
 The full-resolution individual MP4 views are local generated artifacts, and the compact repository state carries the three-view GIF.
@@ -122,8 +122,8 @@ Primary artifacts.
 ```text
 docs/rl_data/large_scale_curriculum/
 docs/rl_data/large_scale_50v50/
-docs/media/large_scale_50v50_isaaclab_replay.mp4
-docs/figures/large_scale_50v50/
+docs/assets/large_scale_50v50_isaaclab_replay.mp4
+docs/assets/large_scale_50v50/
 ```
 
 ## 7. Evidence Audit Checklist

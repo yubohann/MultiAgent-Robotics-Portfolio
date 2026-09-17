@@ -1,12 +1,21 @@
-from datetime import date, datetime, timedelta
-from decimal import Decimal, ROUND_HALF_UP
 import random
 import re
+from datetime import date, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func
 
 from app import db
-from app.models import CashReconciliation, FinancePeriodClose, FinanceTransaction, PayablePayment, Sale, SaleItem, SupplierPayable, User
+from app.models import (
+    CashReconciliation,
+    FinancePeriodClose,
+    FinanceTransaction,
+    PayablePayment,
+    Sale,
+    SaleItem,
+    SupplierPayable,
+    User,
+)
 
 PAYMENT_METHOD_LABELS = {
     'cash': '现金',

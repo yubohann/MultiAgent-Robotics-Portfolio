@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from aerocity_method.runtime.sensors import (
+from realised_qd.runtime.sensors import (
     SENSOR_PILOT_MODES,
     SensorEntitlement,
     SensorFairnessAdmission,

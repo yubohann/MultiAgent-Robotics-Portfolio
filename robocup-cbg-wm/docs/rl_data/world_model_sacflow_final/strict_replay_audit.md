@@ -6,7 +6,7 @@ This report replays the trained object-centric SAC Flow tactical actor and audit
 
 ## Replay Setup
 
-- checkpoint `~\RoboCupVisionRL_AutoCommit\isaaclab_sim\output\rl\world_model_sacflow_seed260707_rerun\policy.pt`
+- checkpoint `~\RoboCupVisionRL_AutoCommit\sim\output\rl\world_model_sacflow_seed260707_rerun\policy.pt`
 - deterministic `False`
 - device `cuda`
 - episodes `8`
@@ -47,9 +47,9 @@ This report replays the trained object-centric SAC Flow tactical actor and audit
 
 ## Output Files
 
-- JSON summary `isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_summary.json`
-- CSV trace `isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_trace.csv`
-- JSONL event log `isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_events.jsonl`
+- JSON summary `sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_summary.json`
+- CSV trace `sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_trace.csv`
+- JSONL event log `sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_events.jsonl`
 
 ## Notes
 

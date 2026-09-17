@@ -25,12 +25,6 @@ EXPECTED_MAX_DRONE_ACCEL_MPS2 = 2.45
 DEMO8_CHECKPOINT = Path(os.environ["GATE2D_DEMO8_CHECKPOINT"]) if os.environ.get("GATE2D_DEMO8_CHECKPOINT") else None
 
 
-def _bootstrap() -> None:
-    root_str = str(ROOT)
-    if root_str not in sys.path:
-        sys.path.insert(0, root_str)
-
-
 def _load_module(name: str, path: Path) -> Any:
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -95,9 +89,6 @@ def _validate_doc(failures: list[str]) -> dict[str, object]:
 
 
 def _validate_multi_gate_runner(failures: list[str]) -> dict[str, object]:
-    _bootstrap()
-    from multi_gate.configs import get_multi_experiment_config
-    from multi_gate.sanity import validate_dynamic_gate_density_environment
     from shared.configs.global_config import GLOBAL_CONFIG
     from shared.core.dynamic_gate_density_2d import (
         TRAINING_DRONE_ACCEL_AXIS_MPS2,
@@ -108,8 +99,10 @@ def _validate_multi_gate_runner(failures: list[str]) -> dict[str, object]:
         eval_drone_speed_axis_mps,
         validate_dynamic_gate_density_geometry,
     )
+    from tasks.multi.configs import get_multi_experiment_config
+    from tasks.multi.sanity import validate_dynamic_gate_density_environment
 
-    runner_path = ROOT / "multi_gate" / "scripts" / "run_dynamic_gate_density_8d_curriculum.py"
+    runner_path = ROOT / "tasks" / "multi" / "scripts" / "run_dynamic_gate_density_8d_curriculum.py"
     runner = _load_module("paper_dynamic_gate_runner", runner_path)
     base_config = get_multi_experiment_config("dynamic_gate_density_8d_v1")
     stages = list(runner._stages())
@@ -207,7 +200,7 @@ def _validate_multi_gate_runner(failures: list[str]) -> dict[str, object]:
 
 
 def _validate_self_contained_runner(failures: list[str]) -> dict[str, object]:
-    runner_path = ROOT / "gate_density_multi_8" / "scripts" / "train_dynamic_gate_density_8d_curriculum.py"
+    runner_path = ROOT / "tasks" / "density_multi" / "scripts" / "train_dynamic_gate_density_8d_curriculum.py"
     runner = _load_module("paper_self_contained_gate_runner", runner_path)
     stages = list(runner.build_curriculum())
     counts = tuple(int(stage.gate_count) for stage in stages)
@@ -235,8 +228,8 @@ def _validate_self_contained_runner(failures: list[str]) -> dict[str, object]:
 
 
 def _validate_single_gate_height_contract(failures: list[str]) -> dict[str, object]:
-    runner_path = ROOT / "gate_density_single" / "scripts" / "run_gate_density_eval.py"
-    wrapper_path = ROOT / "gate_density_single" / "scripts" / "run_paper_gate_density_single_eval.py"
+    runner_path = ROOT / "tasks" / "density_single" / "scripts" / "run_gate_density_eval.py"
+    wrapper_path = ROOT / "tasks" / "density_single" / "scripts" / "run_paper_gate_density_single_eval.py"
     runner = _load_module("paper_single_gate_density_runner", runner_path)
     runner_source = runner_path.read_text(encoding="utf-8")
     wrapper_source = wrapper_path.read_text(encoding="utf-8")
@@ -257,13 +250,15 @@ def _validate_single_gate_height_contract(failures: list[str]) -> dict[str, obje
     _assert("side_bypass_failure_rate" in wrapper_source, "single_wrapper_missing_side_bypass_rate_column", failures)
     _assert("E9_single_drone_speed_gradient" in wrapper_source, "single_wrapper_missing_speed_gradient_eval", failures)
     _assert("gate_visual_scale_xyz" in runner_source, "single_eval_missing_gate_visual_scale", failures)
-    multi_wrapper_path = ROOT / "multi_gate" / "scripts" / "run_paper_multi_gate_density_eval.py"
-    multi_legacy_wrapper_path = ROOT / "multi_gate" / "scripts" / "run_dynamic_gate_density_8d_paper_eval.py"
-    multi_training_path = ROOT / "multi_gate" / "training.py"
-    multi_replay_path = ROOT / "multi_gate" / "replay.py"
+    multi_wrapper_path = ROOT / "tasks" / "multi" / "scripts" / "run_paper_multi_gate_density_eval.py"
+    multi_legacy_wrapper_path = ROOT / "tasks" / "multi" / "scripts" / "run_dynamic_gate_density_8d_paper_eval.py"
+    multi_training_root = ROOT / "tasks" / "multi" / "training"
+    multi_replay_path = ROOT / "tasks" / "multi" / "replay.py"
     multi_wrapper_source = multi_wrapper_path.read_text(encoding="utf-8")
     multi_legacy_wrapper_source = multi_legacy_wrapper_path.read_text(encoding="utf-8")
-    multi_training_source = multi_training_path.read_text(encoding="utf-8")
+    multi_training_source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted(multi_training_root.glob("*.py"))
+    )
     multi_replay_source = multi_replay_path.read_text(encoding="utf-8")
     _assert("DEFAULT_DRONE_SPEED_MPS = 3.50" in multi_wrapper_source, "multi_wrapper_default_speed_not_3p5", failures)
     _assert("DEFAULT_DRONE_SPEED_MPS = 3.50" in multi_legacy_wrapper_source, "multi_legacy_wrapper_default_speed_not_3p5", failures)

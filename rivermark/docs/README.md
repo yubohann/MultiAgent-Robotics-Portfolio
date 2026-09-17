@@ -19,15 +19,21 @@ These documents cover what the benchmark does, how data is captured and checked,
 | [Methods](methods.md) | Supported method families and what counts as evidence |
 | [Data Access](data-access.md) | Reading episodes, projections, and the researcher entry path |
 | [Governance](governance.md) | Asset provenance, licensing, and API stability |
+| [API and Schema Stability](api-schema-stability.md) | Support levels, compatibility rules, and deprecation |
+| [Asset Policy](asset-policy.md) | Asset provenance, licensing, and redistribution terms |
+| [Security and Integrity](security-and-integrity.md) | Integrity reports, private data, and disclosure |
 | [Limitations](limitations.md) | Current scope and the development roadmap |
 
 ## Repository Scopes
 
 ```text
-code/src/rivermark_benchmark/  installable package, capture, validation, scoring, admission
-code/config/                   collection protocols, runtime locks, label ontology, baseline suite
-code/schemas/                  JSON Schema contracts for every artifact
-code/tests/                    CPU test suite for contracts, integrity, and quality gates
+src/rivermark_benchmark/       installable package grouped by function: isaac/, pack/, data/,
+                               train/, score/, audit/, runtime/, ops/, citylite_scene/,
+                               collection_protocol/
+config/                        collection protocols, runtime locks, label ontology, baseline suite
+schemas/                       JSON Schema contracts for every artifact
+tests/unit/                    CPU test suite for contracts, integrity, and quality gates
+tests/integration/             native capture, validation, pack, and evidence pipeline tests
 docs/                          this documentation set
 media/                         rendered videos and key frames
 evidence/                      repeatability reports and example manifests
@@ -35,8 +41,9 @@ evidence/                      repeatability reports and example manifests
 
 ## Running the CPU Path
 
+Run from the repository root.
+
 ```powershell
-cd code
 python -m pip install -e ".[cpu-ci]"
 $out = Join-Path $env:TEMP 'rivermark-researcher-smoke'
 python -m rivermark_benchmark.researcher_entry $out

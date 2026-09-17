@@ -9,28 +9,28 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .audit import validate_release
-from .baselines import BASELINES, baseline_descriptors, create_baseline
-from .builder import build_release
-from .builder_v3 import (
+from aerocity_bench.core.canonical import read_json, write_json
+from aerocity_bench.core.config import EXPECTED_SPLITS, load_release_config
+from aerocity_bench.core.errors import AeroCityError
+from aerocity_bench.core.resources import PRESETS, preset, write_preset
+from aerocity_bench.generation.builder import build_release
+from aerocity_bench.generation.builder_v3 import (
     build_ordinary_release,
     export_public_release,
     validate_ordinary_release,
     validate_public_release,
 )
-from .canonical import read_json, write_json
-from .config import EXPECTED_SPLITS, load_release_config
-from .errors import AeroCityError
-from .metrics import evaluate_run
-from .ordinary_config import (
+from aerocity_bench.generation.ordinary_config import (
     FORMAL_SPLITS,
     ORDINARY_SPLITS,
     load_ordinary_config,
     load_public_runtime_contract,
 )
-from .resources import PRESETS, preset, write_preset
-from .runtime import L0FleetRuntime
-from .supply_chain import load_official_cc0_lock
+from aerocity_bench.release.audit import validate_release
+from aerocity_bench.release.supply_chain import load_official_cc0_lock
+from aerocity_bench.runtime.baselines import BASELINES, baseline_descriptors, create_baseline
+from aerocity_bench.runtime.metrics import evaluate_run
+from aerocity_bench.runtime.runtime import L0FleetRuntime
 
 
 def _parser() -> argparse.ArgumentParser:

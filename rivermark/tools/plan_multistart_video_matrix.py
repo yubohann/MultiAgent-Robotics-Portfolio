@@ -16,9 +16,9 @@ from typing import Any
 
 
 def _load_routes(repo_root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
-    source = repo_root / "rivermark" / "code" / "src"
+    source = repo_root / "rivermark" / "src"
     sys.path.insert(0, str(source))
-    from rivermark_benchmark.citylite_scene.routes import (  # noqa: PLC0415
+    from rivermark_benchmark.citylite_scene.routes import (
         PUBLIC_ROUTE_FAMILIES_W_M,
         TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M,
     )
@@ -39,7 +39,7 @@ def _command_template(
     return [
         "<ISAAC_PYTHON>",
         "-m",
-        "rivermark_benchmark.isaac_capture",
+        "rivermark_benchmark.isaac.isaac_capture",
         "--output-dir",
         output_dir,
         "--drone-usd",
@@ -57,7 +57,7 @@ def _command_template(
         "--evaluator-private-manifest-retention-root",
         "<EXTERNAL_PRIVATE_RETENTION_ROOT>",
         "--runtime-lock",
-        str(repo_root / "rivermark" / "code" / "config" / "isaac_runtime.windows-5.1.json"),
+        str(repo_root / "rivermark" / "config" / "isaac_runtime.windows-5.1.json"),
         "--isaaclab-source",
         "<ISAACLAB_SOURCE>",
         "--sensor-physics-smoke-receipt",
@@ -76,16 +76,16 @@ def build_matrix(
 ) -> dict[str, Any]:
     protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
     if not isinstance(protocol, dict) or not isinstance(protocol.get("cells"), list):
-        raise ValueError("collection protocol must contain a cells list")
+        raise TypeError("collection protocol must contain a cells list")
     route_families, starts_by_family = _load_routes(repo_root)
     rows: list[dict[str, Any]] = []
     for cell in protocol["cells"]:
         if not isinstance(cell, dict):
-            raise ValueError("protocol cell must be an object")
+            raise TypeError("protocol cell must be an object")
         cell_id = str(cell["cell_id"])
         conditions = cell.get("conditions")
         if not isinstance(conditions, dict):
-            raise ValueError(f"cell {cell_id} has no conditions object")
+            raise TypeError(f"cell {cell_id} has no conditions object")
         family_id = str(conditions["route_family"])
         if family_id not in route_families:
             raise ValueError(f"cell {cell_id} references unknown route family {family_id}")
@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--protocol",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "code" / "config" / "collection_protocol.citylite_t1_expert_coverage_v2.json",
+        default=Path(__file__).resolve().parents[1] / "config" / "collection_protocol.citylite_t1_expert_coverage_v2.json",
     )
     parser.add_argument("--episodes-per-cell", type=int, default=4)
     parser.add_argument("--output", type=Path, required=True)

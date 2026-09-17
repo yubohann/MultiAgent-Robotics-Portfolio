@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from aerocity_method.contracts.models import (
+from realised_qd.contracts.models import (
     ABI_VERSION,
     BudgetLedger,
     CandidateGraphBatch,

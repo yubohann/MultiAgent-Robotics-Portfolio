@@ -30,16 +30,20 @@ flowchart LR
 | --- | --- |
 | 自身状态，允许的传感器，时间与能量预算 | 目标坐标，数量，标签与生成过程 |
 | 公开起点，通信消息与目标无关的粗先验 | 合法观测见证与确认判定 |
-| 由几何生成的 G2-I 检查图谱 | 测试划分，城市族与随机种子 |
+| 由几何生成的 G2I 检查图谱 | 测试划分，城市族与随机种子 |
 
 ## 基准内容
 
 - 受约束的程序化城市生成器，版本化发布配置与开放资产许可检查。
 - 公开与私有任务投影，JSON Schema 与发布清单。
-- 由几何独立编译的 G2-I 检查图谱与递归泄漏检查。
+- 由几何独立编译的 G2I 检查图谱与递归泄漏检查。
 - 绑定真实观测的 `OBSERVE` 合同与计分器私有确认。
 - 基线适配器以及外部方法的 CPU 与原生预检工具。
 - 在 CPU 上运行的合同，生成，几何，指标与适配器测试。
+
+## 我的职责
+
+独立完成基准的完整构建。生成器：受约束的程序化城市语法，几何编译与目标过程（`src/aerocity_bench/generation/`）。合同与划分：公开与私有任务投影，JSON Schema，发布配置，以及按城市祖先隔离的训练，验证与测试划分（`src/aerocity_bench/core/`、`schemas/`、`configs/releases/`）。图谱与计分：由几何独立编译的检查图谱，递归泄漏检查，观测回执与分项指标（`src/aerocity_bench/atlas/`、`runtime/metrics.py`）。基线与适配器：参考基线与外部方法的 JSONL 适配器（`runtime/baselines.py`、`runtime/adapters.py`、`tools/adapters/`）。校准与实验：L0 到 L1 校准面板，预检工具与 CPU 测试集（`tools/calibration/`、`tools/smoke/`、`tests/`）。文档：基准设计，研究记录与运行指南（`docs/`）。
 
 ## 已核验的证据
 
@@ -57,7 +61,7 @@ flowchart LR
 
 ```powershell
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_public_boundary.py tests/test_inspection_atlas.py tests/test_ordinary_v3.py -q
+python -m pytest tests/unit/test_public_boundary.py tests/pipeline/test_inspection_atlas.py tests/pipeline/test_ordinary_v3.py -q
 ```
 
 本地开发发布需要经过验证的开放资产包与可写输出目录。

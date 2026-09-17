@@ -10,7 +10,7 @@ controller.
 
 It is an interface smoke test, not a benchmark episode: the synthetic cloud is
 not an AeroCity city, no target/evaluator data exists in this process, and a
-route emission does not imply G1-U or G2-I compatibility.
+route emission does not imply G1-U or G2I compatibility.
 """
 
 from __future__ import annotations

@@ -8,6 +8,10 @@
 
 **状态。** 十个实现均可基于仓库内公开数据集运行，环境为 Python 3.8 或更高版本与 NumPy。
 
+## 我的职责
+
+独立使用 NumPy 与 Python 标准库从零实现全部算法，包括优化，剪枝，平滑与收敛逻辑，并在仓库内公开数据集上运行每个实现，编写记录实验过程与结果的分算法报告。
+
 ## 算法目录
 
 | # | 算法 | 类别 | 数据集 | 核心要点 |
@@ -19,7 +23,7 @@
 | 5 | [EM](EM/) | 聚类 | Congressional Voting | 高斯混合模型的期望最大化 |
 | 6 | [K-means](K-means/) | 聚类 | Iris | k-means++ 初始化与迭代收敛 |
 | 7 | [kNN](KNN/) | 分类 | Iris | 距离度量与多数投票 |
-| 8 | [Naive Bayes](Naive_Bayes/) | 分类 | 20 Newsgroups | 多项式模型与拉普拉斯平滑 |
+| 8 | [Naive Bayes](Naive-Bayes/) | 分类 | 20 Newsgroups | 多项式模型与拉普拉斯平滑 |
 | 9 | [PageRank](PageRank/) | 图算法 | 示例网页图 | 阻尼因子的幂迭代 |
 | 10 | [SVM](SVM/) | 分类 | Iris | 多分类间隔优化 |
 
@@ -35,7 +39,7 @@ python CART/src/CART.py -f CART/data/winequality-red.csv
 python EM/src/EM.py -f EM/data/house-votes-84.data
 python K-means/src/K-means.py -f K-means/data/iris.data
 python KNN/src/KNN.py -f KNN/data/iris.data
-python Naive_Bayes/src/Naive_Bayes.py
+python Naive-Bayes/src/Naive_Bayes.py
 python PageRank/src/PageRank.py --sample
 python SVM/src/SVM.py -f SVM/data/iris.data
 ```

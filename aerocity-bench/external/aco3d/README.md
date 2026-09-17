@@ -6,7 +6,7 @@ Unmanned Aerial Vehicles" (DOI `10.1109/SII58957.2024.10417512`).  The
 upstream repository is locked at `c395f5b61f6746b2d39310dbc55a7ec3e1eae2d5`.
 Its source is intentionally kept outside the AeroCityBench repository.
 
-`tools/aco3d_g2i_process_adapter.py` is a separate-process, source-locked
+`tools/adapters/aco3d_g2i_process_adapter.py` is a separate-process, source-locked
 translation of the published point-ordering loop.  It is not a copy of the
 upstream MATLAB files.  The adapter accepts each drone's already frozen,
 target-independent public sector and orders only the public 3-D inspection
@@ -15,9 +15,9 @@ observation validation, anonymous confirmations, return, and scoring remain
 owned by the benchmark.
 
 The source code's executable `main.m` computes one tour and does not contain
-four-vehicle work allocation.  The public G2-I sector assignment consequently
+four-vehicle work allocation.  The public G2I sector assignment consequently
 does not become an ACO3D result.  This is a truthful input-semantics match for
-the ordering subproblem, but not yet a substantive external G2-I result or a
+the ordering subproblem, but not yet a substantive external G2I result or a
 Gate C closure.  In particular, the host currently lacks MATLAB and GNU
 Octave, so no native-upstream equivalence claim is made.
 

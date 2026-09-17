@@ -8,7 +8,18 @@
 
 Cities hide targets. A quadrotor can pass a building and miss a courtyard, lose a target behind an obstacle edge, or cross the visible window too fast to confirm anything. Rivermark records those cases as synchronized multi-sensor episodes. Every step writes the control command first and then advances the simulation, so the causal chain from observation to action stays intact. Scene, protocol, runtime, and source revision are bound to identity contracts, and an episode enters the formal dataset after independent validation passes. Hidden target truth stays on the scorer side, and a search method earns credit through real observations in flight.
 
-**Status.** Protocol `citylite-t1-expert-coverage-v2` is frozen with the full four train and four validation episode sequence captured. The native capture path targets Isaac Sim 5.1 with Isaac Lab 2.3.2, and the CPU toolchain verifies from a clean checkout.
+**Status.** Protocol `citylite-t1-expert-coverage-v2` is frozen. The 4 train + 4 validation unique-candidate sequence is complete. No further collection binding is permitted under active protocol v2. The native capture path targets Isaac Sim 5.1 with Isaac Lab 2.3.2, and the CPU toolchain verifies from a clean checkout.
+
+## My Role
+
+I designed and built Rivermark end to end. Every section below maps to material in this repository.
+
+- **Benchmark design.** The Search3D task contract, the observation and action ABI, the City-Lite scene contract, the content-identity and runtime-lock scheme, and the frozen `citylite-t1-expert-coverage-v2` collection protocol with its `config/` records and the `schemas/` contract for every artifact.
+- **Scene and task implementation.** The procedural City-Lite composition in `src/rivermark_benchmark/citylite_scene/`: route families, safe starts, material and geometry realization, and condition checks.
+- **Capture and scoring pipelines.** The native Isaac Sim capture path in `src/rivermark_benchmark/isaac/`, the episode contracts and projections in `data/`, the independent validator and formal-dataset admission in `audit/`, the failure ledger in `runtime/`, and the scorer with public metric definitions in `score/`.
+- **Learning baselines.** The pilot method set in `train/` (classical, RL, MARL, quality-diversity, and torch training paths), the SB3 transfer path, and the bounded baseline suite in `config/baseline_suite.cpu_pilot_v1.json` with its provenance-labelled report.
+- **Experiment execution.** Collection and capture runs for the frozen cohort, same-seed repeatability captures and geometry scans, and the rendered route-witness and cell videos in `media/` with the reports in `evidence/`.
+- **Documentation.** The README set, the `docs/` guides, the schemas, the changelog, and the citation metadata.
 
 ## Verified So Far
 
@@ -49,10 +60,9 @@ The `media` directory holds rendered overview and composite MP4s plus key frames
 
 ## Quick Start on the CPU Path
 
-Python 3.10 or newer.
+Python 3.10 or newer. Run every command from the repository root.
 
 ```powershell
-cd code
 python -m pip install -e ".[cpu-ci]"
 $output = Join-Path $env:TEMP 'rivermark-researcher-smoke'
 python -m rivermark_benchmark.researcher_entry $output
@@ -64,6 +74,18 @@ Run the CPU test suite.
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+## Source Layout
+
+The repository root is the standalone source package for native Isaac Sim multi-agent 3D stealth-search data collection, validation, and scoring.
+
+- `src/rivermark_benchmark/` is layered by function: `isaac/` (native capture and evidence), `pack/` (pack descriptors, specs, readiness, public manifests), `data/` (contracts, episodes, archives, and projections), `train/` (policy methods and training), `score/` (scoring, evaluation, diagnostics, same-seed analysis), `audit/` (validation, formal dataset admission, and release audit), `runtime/` (simulation runtime, preflight, runtime locks, and failure ledger), and `ops/` (operator and release-media tooling), plus the `citylite_scene/` and `collection_protocol/` contract packages
+- `config/` holds collection protocols, runtime locks, the label ontology, and the baseline suite
+- `schemas/` holds JSON Schema contracts for every artifact
+- `docs/` holds this documentation set plus the API and schema stability, asset policy, and security and integrity policies
+- `tests/unit/` holds CPU tests for contracts, integrity, and quality gates
+- `tests/integration/` holds native capture, validation, pack, and evidence pipeline tests
+- `tools/` holds native video planning and encoding scripts
 
 ## Documentation
 
@@ -82,4 +104,4 @@ python -m unittest discover -s tests -v
 
 ## License
 
-Rivermark-authored source code, schemas, and documentation are licensed under **Apache-2.0**. NVIDIA Isaac Sim, Rivermark content, CF2X USD, and third-party assets live outside this repository and follow their applicable terms. See `code/LICENSE` for the full text.
+Rivermark-authored source code, schemas, and documentation are licensed under **Apache-2.0**. NVIDIA Isaac Sim, Rivermark content, CF2X USD, and third-party assets live outside this repository and follow their applicable terms. See `LICENSE` for the full text.

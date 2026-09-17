@@ -6,7 +6,7 @@ This catalog maps each research question to its executable protocol, controls, a
 
 1. Acquire the authorized dataset and follow the layout in [data-and-reproduction.md](data-and-reproduction.md).
 2. Install the appropriate CPU or CUDA profile from the root README.
-3. Create a provenance sidecar with [record_run_manifest.py](../scripts/record_run_manifest.py) before starting a long job.
+3. Create a provenance sidecar with [record_run_manifest.py](../src/fraud_ml_engineering/experiment_tools/record_run_manifest.py) before starting a long job.
 4. Keep the manifest, command logs, summaries, diagnostics, and selected checkpoint together inside the local `artifacts/` directory.
 
 The default `reuse` checkpoint mode is useful for interrupted work. Use `--checkpoint_mode fresh` when a new, independent run is required, and keep artifacts from different data revisions separate.
@@ -15,11 +15,11 @@ The default `reuse` checkpoint mode is useful for interrupted work. Use `--check
 
 | Research question | Protocol and scope | Primary controls | Required evidence | Result location |
 | --- | --- | --- | --- | --- |
-| RQ1. Does graph structure add signal? | `scripts/run_hybrid_mainline_protocol.py` compares full, Transformer-only, and SplitGNN-only branches across `yelp`, `amazon`, and `comp`. | Fixed dataset split, seed, rounds, label fraction, deterministic planner, disabled federated training. | Per-seed summaries, validation-selected checkpoint, held-out test metrics, branch diagnostics, and aggregate JSON and Markdown report. | `artifacts/experiments/mainline_protocol/` by default. |
-| RQ2. Which fusion rule is justified? | `scripts/run_hybrid_fusion_ablation.py` runs graph-only, late fusion, graph-dominant residual, and shared-private prototype variants. | Same data, seed set, round budget, device profile, and scoring policy across variants. | Per-variant and per-seed summaries plus `fusion_ablation_summary.json` and `.md`. Selection and comparison use validation metrics. | `artifacts/experiments/fusion_ablation/`. |
-| RQ3. What remains under scarce labels? | `scripts/run_hybrid_low_label_mechanism_ablation.py` traverses graph-only and increasingly capable hybrid mechanisms at 10%, 5%, and 1% labeled data. | Fixed label fraction per comparison, seed set, round budget, deterministic planner, and mechanism ladder. | Per-seed records, label-fraction aggregates, uncertainty across seeds, and held-out scoring after validation selection. | `artifacts/experiments/low_label_mechanism_ablation/`. |
-| IEEE-CIS engineering acceptance | `scripts/run_ieee_acceptance_matrix.py` stages cache build, one round, four rounds, and the target schedule. | Fixed feature, relation, and sampling profiles, temporal split ratios, cache policy, and resource settings. | Stage stdout and stderr, cache or training summaries, resource observations, and acceptance matrix JSON and Markdown. | `artifacts/experiments/ieee_acceptance_matrix/`. |
-| IEEE-CIS candidate selection | `scripts/run_ieee_splitgnn_tuning.py` scores typed candidates from `configs/experiments/ieee_splitgnn_tuning.yaml`. | Same IEEE dataset revision, seed, sampling profile, and candidate-stage scoring policy. | Candidate table, selected configuration, validation-only ranking rule, and separately reported test metrics. | `artifacts/experiments/ieee_splitgnn_tuning/`. |
+| RQ1. Does graph structure add signal? | `python -m fraud_ml_engineering.experiment_tools.run_hybrid_mainline_protocol` compares full, Transformer-only, and SplitGNN-only branches across `yelp`, `amazon`, and `comp`. | Fixed dataset split, seed, rounds, label fraction, deterministic planner, disabled federated training. | Per-seed summaries, validation-selected checkpoint, held-out test metrics, branch diagnostics, and aggregate JSON and Markdown report. | `artifacts/experiments/mainline_protocol/` by default. |
+| RQ2. Which fusion rule is justified? | `python -m fraud_ml_engineering.experiment_tools.run_hybrid_fusion_ablation` runs graph-only, late fusion, graph-dominant residual, and shared-private prototype variants. | Same data, seed set, round budget, device profile, and scoring policy across variants. | Per-variant and per-seed summaries plus `fusion_ablation_summary.json` and `.md`. Selection and comparison use validation metrics. | `artifacts/experiments/fusion_ablation/`. |
+| RQ3. What remains under scarce labels? | `python -m fraud_ml_engineering.experiment_tools.run_hybrid_low_label_mechanism_ablation` traverses graph-only and increasingly capable hybrid mechanisms at 10%, 5%, and 1% labeled data. | Fixed label fraction per comparison, seed set, round budget, deterministic planner, and mechanism ladder. | Per-seed records, label-fraction aggregates, uncertainty across seeds, and held-out scoring after validation selection. | `artifacts/experiments/low_label_mechanism_ablation/`. |
+| IEEE-CIS engineering acceptance | `python -m fraud_ml_engineering.experiment_tools.run_ieee_acceptance_matrix` stages cache build, one round, four rounds, and the target schedule. | Fixed feature, relation, and sampling profiles, temporal split ratios, cache policy, and resource settings. | Stage stdout and stderr, cache or training summaries, resource observations, and acceptance matrix JSON and Markdown. | `artifacts/experiments/ieee_acceptance_matrix/`. |
+| IEEE-CIS candidate selection | `python -m fraud_ml_engineering.experiment_tools.run_ieee_splitgnn_tuning` scores typed candidates from `configs/experiments/ieee_splitgnn_tuning.yaml`. | Same IEEE dataset revision, seed, sampling profile, and candidate-stage scoring policy. | Candidate table, selected configuration, validation-only ranking rule, and separately reported test metrics. | `artifacts/experiments/ieee_splitgnn_tuning/`. |
 
 ## Configuration references
 
@@ -35,20 +35,20 @@ The default `reuse` checkpoint mode is useful for interrupted work. Use `--check
 Start with command help to inspect all switches before scheduling work.
 
 ```powershell
-python scripts/run_hybrid_mainline_protocol.py --help
-python scripts/run_hybrid_fusion_ablation.py --help
-python scripts/run_hybrid_low_label_mechanism_ablation.py --help
-python scripts/run_ieee_acceptance_matrix.py --help
-python scripts/run_ieee_splitgnn_tuning.py --help
+python -m fraud_ml_engineering.experiment_tools.run_hybrid_mainline_protocol --help
+python -m fraud_ml_engineering.experiment_tools.run_hybrid_fusion_ablation --help
+python -m fraud_ml_engineering.experiment_tools.run_hybrid_low_label_mechanism_ablation --help
+python -m fraud_ml_engineering.experiment_tools.run_ieee_acceptance_matrix --help
+python -m fraud_ml_engineering.experiment_tools.run_ieee_splitgnn_tuning --help
 ```
 
 For a narrowly scoped, smoke-level experiment, use one dataset, one seed, one round, CPU, and `--disable_tb`. This verifies environment and data compatibility.
 
 ```powershell
-python scripts/run_hybrid_fusion_ablation.py --datasets comp --variants graph_only --seeds 30 --rounds 1 --device cpu --disable_tb --checkpoint_mode fresh
+python -m fraud_ml_engineering.experiment_tools.run_hybrid_fusion_ablation --datasets comp --variants graph_only --seeds 30 --rounds 1 --device cpu --disable_tb --checkpoint_mode fresh
 ```
 
-For a reportable protocol, retain the default three seeds or explicitly justify another seed set. Preserve the generated summaries and diagnostics for every successful and failed run. The paper-package generator at `scripts/generate_hybrid_paper_package.py` consolidates complete artifact trees. Partial runs stay out of the package.
+For a reportable protocol, retain the default three seeds or explicitly justify another seed set. Preserve the generated summaries and diagnostics for every successful and failed run. The paper-package generator `python -m fraud_ml_engineering.experiment_tools.generate_hybrid_paper_package` consolidates complete artifact trees. Partial runs stay out of the package.
 
 ## Interpretation guardrails
 

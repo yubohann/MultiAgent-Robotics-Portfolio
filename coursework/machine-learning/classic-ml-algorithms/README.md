@@ -8,6 +8,10 @@ The implementations use NumPy and the Python standard library for the algorithm 
 
 **Status.** All ten implementations run on the checked-in public datasets with Python 3.8 or newer and NumPy.
 
+## My Role
+
+Implemented every algorithm from scratch with NumPy and the Python standard library, including the optimization, pruning, smoothing and convergence logic, ran each implementation on its checked-in public dataset, and wrote the per-algorithm lab reports that document the runs and results.
+
 ## Algorithms
 
 | # | Algorithm | Category | Dataset | Core idea |
@@ -19,7 +23,7 @@ The implementations use NumPy and the Python standard library for the algorithm 
 | 5 | [EM](EM/) | Clustering | Congressional Voting | Expectation-maximization for Gaussian mixtures |
 | 6 | [K-means](K-means/) | Clustering | Iris | k-means++ initialization and iterative convergence |
 | 7 | [kNN](KNN/) | Classification | Iris | Distance metrics and majority voting |
-| 8 | [Naive Bayes](Naive_Bayes/) | Classification | 20 Newsgroups | Multinomial model with Laplace smoothing |
+| 8 | [Naive Bayes](Naive-Bayes/) | Classification | 20 Newsgroups | Multinomial model with Laplace smoothing |
 | 9 | [PageRank](PageRank/) | Graph algorithm | Sample web graph | Power iteration with damping |
 | 10 | [SVM](SVM/) | Classification | Iris | Multiclass margin-based optimization |
 
@@ -35,7 +39,7 @@ python CART/src/CART.py -f CART/data/winequality-red.csv
 python EM/src/EM.py -f EM/data/house-votes-84.data
 python K-means/src/K-means.py -f K-means/data/iris.data
 python KNN/src/KNN.py -f KNN/data/iris.data
-python Naive_Bayes/src/Naive_Bayes.py
+python Naive-Bayes/src/Naive_Bayes.py
 python PageRank/src/PageRank.py --sample
 python SVM/src/SVM.py -f SVM/data/iris.data
 ```

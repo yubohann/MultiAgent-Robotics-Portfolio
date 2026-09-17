@@ -1,13 +1,6 @@
 # Author: Bohan Yu
 
-import os
-import csv
-
-import random
-import argparse
-from collections import defaultdict, Counter
-
-class Node:
+import argparseimport csvimport osimport randomfrom collections import Counter, defaultdictclass Node:
     """Decision tree node."""
     def __init__(self, feature=None, threshold=None, left=None, right=None, value=None):
         self.feature = feature
@@ -219,7 +212,7 @@ def load_wine_quality_data(file_path):
     feature_names = None
     
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding='utf-8') as f:
             reader = csv.reader(f, delimiter=';')
             
 

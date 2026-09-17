@@ -30,16 +30,20 @@ An OBSERVE must satisfy range, field of view, facing, line of sight, allowed sur
 | --- | --- |
 | Vehicle state, permitted sensors, time and energy budget | Target coordinates, counts, labels and generating process |
 | Public starts, communication messages, target-agnostic coarse prior | Legal observation witnesses and confirmation decisions |
-| The G2-I inspection atlas, derived from geometry alone | Test split, city family and generation seeds |
+| The G2I inspection atlas, derived from geometry alone | Test split, city family and generation seeds |
 
 ## Inside the Benchmark
 
 - A constrained procedural city generator with versioned release configs and open-asset policy checks.
 - Public and private task projections, JSON schemas and release manifests.
-- A G2-I inspection atlas compiled from geometry alone, with recursive leakage probes.
+- A G2I inspection atlas compiled from geometry alone, with recursive leakage probes.
 - Scorer contracts for evidence-bound `OBSERVE` actions and private confirmation.
 - Baseline adapters plus CPU and native preflight tools for external methods.
 - Contract, generation, geometry, metric and adapter tests that run on CPU.
+
+## My Role
+
+Built the benchmark end to end. Generator: the constrained procedural city grammar, geometry compile and target processes (`src/aerocity_bench/generation/`). Contracts and splits: the public and private task projections, JSON schemas, release configs and the ancestor-isolated train, validation and test splits (`src/aerocity_bench/core/`, `schemas/`, `configs/releases/`). Atlas and scoring: the geometry-only inspection atlas, recursive leakage probes, observation receipts and disaggregated metrics (`src/aerocity_bench/atlas/`, `runtime/metrics.py`). Baselines and adapters: the reference baselines and the external-method JSONL adapters (`runtime/baselines.py`, `runtime/adapters.py`, `tools/adapters/`). Calibration and experiments: the L0 to L1 calibration panels, preflight tools and the CPU test suite (`tools/calibration/`, `tools/smoke/`, `tests/`). Documentation: the benchmark design, research notes and run guide (`docs/`).
 
 ## Verified So Far
 
@@ -57,7 +61,7 @@ Python 3.11 or newer.
 
 ```powershell
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_public_boundary.py tests/test_inspection_atlas.py tests/test_ordinary_v3.py -q
+python -m pytest tests/unit/test_public_boundary.py tests/pipeline/test_inspection_atlas.py tests/pipeline/test_ordinary_v3.py -q
 ```
 
 Building a local development release needs a verified open-asset bundle and a writable output directory.

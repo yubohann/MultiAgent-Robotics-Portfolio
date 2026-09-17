@@ -2,12 +2,6 @@
 
 """AMLSim account-level dataset loader."""
 
-import json
-import os
-import time
-import zlib
-from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +16,14 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .checkpointing import atomic_write_json
+from .caching import (
+    exclusive_cache_write_lock,
+    load_graph_cache,
+    lock_file_for_metadata,
+    remove_cached_file,
+    resolve_graph_cache_paths,
+    store_graph_cache,
+)
 from .fraud_dataset import (
     SEQUENCE_BUILDER_VERSION,
     ClientShard,
@@ -563,97 +564,6 @@ def _cache_signature(
     }
 
 
-def _resolve_cache_paths(signature: dict[str, Any]) -> tuple[Path, Path]:
-    tag = zlib.crc32(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")) & 0xFFFFFFFF
-    return AMLSIM_CACHE_DIR / f"amlsim_{tag:08x}.dgl", AMLSIM_CACHE_DIR / f"amlsim_{tag:08x}.json"
-
-
-def _cache_lock_path(metadata_path: Path) -> Path:
-    return metadata_path.with_suffix(metadata_path.suffix + ".lock")
-
-
-def _safe_unlink(path: Path) -> None:
-    try:
-        path.unlink()
-    except FileNotFoundError:
-        return
-    except OSError:
-        return
-
-
-@contextmanager
-def _cache_build_lock(lock_path: Path) -> Iterator[None]:
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    deadline = time.monotonic() + AMLSIM_CACHE_LOCK_TIMEOUT_SECONDS
-    while True:
-        try:
-            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            with os.fdopen(fd, "w", encoding="utf-8") as file:
-                json.dump(
-                    {
-                        "pid": int(os.getpid()),
-                        "created_at": float(time.time()),
-                    },
-                    file,
-                    ensure_ascii=False,
-                )
-            break
-        except FileExistsError:
-            try:
-                age_seconds = time.time() - float(lock_path.stat().st_mtime)
-            except FileNotFoundError:
-                continue
-            if age_seconds >= AMLSIM_CACHE_LOCK_STALE_SECONDS:
-                _safe_unlink(lock_path)
-                continue
-            if time.monotonic() >= deadline:
-                raise TimeoutError(f"Timed out waiting for AMLSim cache lock: {lock_path}")
-            time.sleep(AMLSIM_CACHE_LOCK_POLL_SECONDS)
-    try:
-        yield
-    finally:
-        _safe_unlink(lock_path)
-
-
-def _load_cached_graph(
-    *,
-    signature: dict[str, Any],
-    graph_path: Path,
-    metadata_path: Path,
-) -> tuple[dgl.DGLHeteroGraph, dict[str, Any]] | None:
-    if not graph_path.exists() or not metadata_path.exists():
-        return None
-    try:
-        metadata = json.loads(metadata_path.read_text(encoding="utf-8-sig"))
-        if dict(metadata.get("cache_signature", {})) != signature:
-            return None
-        graph = dgl.load_graphs(str(graph_path))[0][0]
-        return graph, metadata
-    except (OSError, TypeError, ValueError, dgl.DGLError):
-        _safe_unlink(metadata_path)
-        _safe_unlink(graph_path)
-        return None
-
-
-def _write_cache(
-    *,
-    graph: dgl.DGLHeteroGraph,
-    metadata: dict[str, Any],
-    graph_path: Path,
-    metadata_path: Path,
-) -> None:
-    graph_path.parent.mkdir(parents=True, exist_ok=True)
-    metadata_path.parent.mkdir(parents=True, exist_ok=True)
-    temp_token = f"{os.getpid()}.{time.time_ns()}"
-    temp_graph_path = graph_path.with_suffix(graph_path.suffix + f".{temp_token}.tmp")
-    try:
-        dgl.save_graphs(str(temp_graph_path), [graph])
-        os.replace(temp_graph_path, graph_path)
-        atomic_write_json(metadata_path, metadata)
-    finally:
-        _safe_unlink(temp_graph_path)
-
-
 def _build_graph_payload(
     *,
     source_info: dict[str, Any],
@@ -1032,22 +942,38 @@ def load_amlsim_dataset(
         activity_bins=activity_bins,
         event_history_len=event_history_len,
     )
-    cache_graph_path, cache_metadata_path = _resolve_cache_paths(signature)
-    lock_path = _cache_lock_path(cache_metadata_path)
+    cache_graph_path, cache_metadata_path = resolve_graph_cache_paths(
+        signature,
+        prefix="amlsim",
+        cache_dir=AMLSIM_CACHE_DIR,
+    )
+    lock_path = lock_file_for_metadata(cache_metadata_path)
     cached = None
     if not rebuild_cache:
-        cached = _load_cached_graph(signature=signature, graph_path=cache_graph_path, metadata_path=cache_metadata_path)
+        cached = load_graph_cache(
+            signature=signature,
+            graph_path=cache_graph_path,
+            metadata_path=cache_metadata_path,
+            tolerate_corruption=True,
+        )
     if cached is None:
-        with _cache_build_lock(lock_path):
+        with exclusive_cache_write_lock(
+            lock_path,
+            timeout_seconds=AMLSIM_CACHE_LOCK_TIMEOUT_SECONDS,
+            stale_seconds=AMLSIM_CACHE_LOCK_STALE_SECONDS,
+            poll_seconds=AMLSIM_CACHE_LOCK_POLL_SECONDS,
+            timeout_message=f"Timed out waiting for AMLSim cache lock: {lock_path}",
+        ):
             if rebuild_cache:
-                _safe_unlink(cache_graph_path)
-                _safe_unlink(cache_metadata_path)
+                remove_cached_file(cache_graph_path)
+                remove_cached_file(cache_metadata_path)
                 cached_after_lock = None
             else:
-                cached_after_lock = _load_cached_graph(
+                cached_after_lock = load_graph_cache(
                     signature=signature,
                     graph_path=cache_graph_path,
                     metadata_path=cache_metadata_path,
+                    tolerate_corruption=True,
                 )
             if cached_after_lock is None:
                 graph, metadata = _build_graph_payload(
@@ -1059,7 +985,13 @@ def load_amlsim_dataset(
                     activity_bins=activity_bins,
                     event_history_len=event_history_len,
                 )
-                _write_cache(graph=graph, metadata=metadata, graph_path=cache_graph_path, metadata_path=cache_metadata_path)
+                store_graph_cache(
+                    graph=graph,
+                    metadata=metadata,
+                    graph_path=cache_graph_path,
+                    metadata_path=cache_metadata_path,
+                    atomic=True,
+                )
             else:
                 graph, metadata = cached_after_lock
     else:

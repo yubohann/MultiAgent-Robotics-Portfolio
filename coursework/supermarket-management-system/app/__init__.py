@@ -3,10 +3,9 @@ import os
 import time
 from logging.handlers import RotatingFileHandler
 
-from flask import Flask
-from flask import g, has_request_context, request
-from flask_sqlalchemy import SQLAlchemy
 from config import Config
+from flask import Flask, g, has_request_context, request
+from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
@@ -91,25 +90,25 @@ def create_app(test_config=None):
 
     with app.app_context():
         from app.models import (  # noqa: F401 - imported so db.create_all() sees every model
-            User,
             AdminSignupRequest,
             Announcement,
             AnnouncementRead,
+            CashReconciliation,
             Category,
-            Product,
+            Employee,
+            FinancePeriodClose,
+            FinanceTransaction,
             Inventory,
             InventoryLog,
+            Member,
+            PayablePayment,
+            Product,
             Sale,
             SaleItem,
-            FinanceTransaction,
-            CashReconciliation,
-            SupplierPayable,
-            PayablePayment,
-            FinancePeriodClose,
-            Member,
-            Employee,
             Supplier,
+            SupplierPayable,
             SystemSetting,
+            User,
         )
         db.create_all()
         

@@ -3,7 +3,6 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DATA_YAML = ROOT / "configs" / "my_detect.local.yaml"
 

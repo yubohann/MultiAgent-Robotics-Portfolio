@@ -5,14 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
-OUT_DIR="isaaclab_sim/output/rl/world_model_sacflow_seed260707_rerun"
+OUT_DIR="sim/output/rl/world_model_sacflow_seed260707_rerun"
 mkdir -p "${OUT_DIR}"
 LOG="${OUT_DIR}/train.log"
 
 {
   echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') starting world-model SAC Flow training"
-  python3 isaaclab_sim/rl/train_world_model_sacflow_selfplay.py \
-    --config isaaclab_sim/rl/configs/world_model_flow.yaml \
+  python3 sim/rl/train_world_model_sacflow_selfplay.py \
+    --config sim/rl/configs/world_model_flow.yaml \
     --timesteps 200000 \
     --num-envs 32 \
     --batch-size 1024 \

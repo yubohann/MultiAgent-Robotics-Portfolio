@@ -1,0 +1,46 @@
+include LICENSE
+include NOTICE
+include README.md
+include CHANGELOG.md
+include CITATION.cff
+include pyproject.toml
+include requirements-isaac-capture.lock
+
+recursive-include config *.json
+recursive-include docs *.md
+recursive-include schemas *.json
+recursive-include src *.py
+recursive-include tests *.py *.json
+
+exclude docs/ISAAC_EXECUTION_PROMPT.md
+
+prune artifacts
+prune assets
+prune build
+prune captures
+prune checkpoints
+prune data
+prune demos
+prune dist
+prune evidence
+prune evaluator_private
+prune models
+prune papers
+prune private
+
+global-exclude *.arrow
+global-exclude *.avi
+global-exclude *.ckpt
+global-exclude *.mkv
+global-exclude *.mov
+global-exclude *.mp4
+global-exclude *.npy
+global-exclude *.npz
+global-exclude *.onnx
+global-exclude *.parquet
+global-exclude *.pt
+global-exclude *.pth
+global-exclude *.safetensors
+global-exclude *.usda
+global-exclude *.usdc
+global-exclude *.usd

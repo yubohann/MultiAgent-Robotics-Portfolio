@@ -11,11 +11,11 @@ Start with the benchmark design for the task, scoring contract and splits. The r
 ## Repository Scopes
 
 ```text
-src/aerocity_bench/  installable package, contracts, generator, scorer, baselines
+src/aerocity_bench/  installable package: core, generation, runtime, atlas, bridge, release
 configs/             versioned release configurations and statistical protocols
 schemas/             JSON schemas for public, private, fault and release artifacts
-tools/               builders, adapters, calibration runners and preflights
-tests/               contract, generation, geometry, metric and adapter tests
+tools/               adapters, smoke, calibration, scene, quality, native and release helpers
+tests/               unit, pipeline and external-adapter test groups
 assets/              provenance registry for approved redistributable assets
 external/            isolated upstream-method adapters with source locks
 docs/                this documentation set

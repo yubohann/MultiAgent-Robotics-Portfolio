@@ -10,9 +10,9 @@ without a simulator installation.
 ~~~powershell
 uv sync --extra dev
 uv run python -m pytest
-uv run ruff check aerogate shared/core/team_geometry.py multi_gate/env/reward_runtime.py tests
-uv run ruff format --check aerogate shared/core/team_geometry.py multi_gate/env/reward_runtime.py tests
-uv run python -m aerogate reproduce --scenario multi-static --agents 4 --seeds 3 7 11 --steps 8
+uv run ruff check tasks shared assets scripts tests
+uv run ruff format --check tasks shared assets scripts tests
+uv run aerogate-train-multi --help
 ~~~
 
 Use `python -m pip install -e ".[dev]"` only when a locked `uv` environment is unavailable.

@@ -30,6 +30,18 @@ The stack connects a Livox MID-360 simulation, FAST-LIO2 odometry and mapping, f
 - **Gazebo environments.** A candidate indoor competition scene, an open-field degradation scene, field geometry, robot model, hoops and a simulated MID-360 sensor.
 - **Deterministic experiments.** One-command dispatchers, manifests, deterministic ROS domain isolation, metrics exporters and plotting tools.
 
+## My Role
+
+I led the LiDAR and perception work for the ROBOCON Robot Basketball system and owned the integration boundary between localization, navigation, dual-robot communication, and embedded control. In this workspace that covered:
+
+- **LiDAR and perception.** MID-360 and built-in IMU integration, timestamp and extrinsic checks, RGB-D/YOLO basket observations, and the target-validity gates.
+- **Localization and mapping.** FAST-LIO2 integration and configuration, field mapping, fixed-map scan matching, map metadata, and the `map -> odom` anchor.
+- **Autonomy stack integration.** ROS 2 launch composition, topic and TF contracts, the pose-to-command path, and the interfaces to the dual-robot link and the STM32 execution layer.
+- **Simulation and validation.** Gazebo scenes, robot and sensor models, the deterministic experiment runners, fault injection, and the metric exporters used to check interfaces before field tests.
+- **Documentation.** The interface contract, the bilingual READMEs, the upstream notices, and the deployment procedures.
+
+The same interfaces were migrated to the physical competition robots, where I ran the sensor, topic, transform, protocol, and mechanism-level field debugging.
+
 ## Pipeline
 
 ```text
@@ -66,24 +78,24 @@ source install/setup.bash
 Inspect launch arguments and run the dependency-light validation suite.
 
 ```bash
-ros2 launch robocon_mid360_simulation gazebo_mid360_lio.launch.py --show-args
-python3 tools/validate_project.py
-python3 tools/run_python_contract_tests.py
+ros2 launch mid360_simulation gazebo_mid360_lio.launch.py --show-args
+python3 tools/runners/validate_project.py
+python3 tools/runners/run_python_contract_tests.py
 ```
 
 Run the bounded experiment groups from one command.
 
 ```bash
-bash tools/run_experiments.sh --dry-run all
-bash tools/run_experiments.sh quality
-bash tools/run_experiments.sh faults
-bash tools/run_experiments.sh rgbd
+bash tools/runners/run_experiments.sh --dry-run all
+bash tools/runners/run_experiments.sh quality
+bash tools/runners/run_experiments.sh faults
+bash tools/runners/run_experiments.sh rgbd
 ```
 
 A visible Gazebo and RViz session.
 
 ```bash
-bash tools/run_experiments.sh gui
+bash tools/runners/run_experiments.sh gui
 ```
 
 The dispatcher creates an isolated run directory, records the exact command and ROS domain, and keeps generated evidence outside the public source files.
@@ -111,8 +123,8 @@ colcon test-result --verbose
 Additional tools export run summaries and figures from retained JSON and CSV data.
 
 ```bash
-python3 tools/export_run_metrics.py <run-directory> <output-directory>
-python3 tools/plot_run_metrics.py <metrics.csv> <output-directory>
+python3 tools/metrics/export_run_metrics.py <run-directory> <output-directory>
+python3 tools/plotting/plot_run_metrics.py <metrics.csv> <output-directory>
 ```
 
 ## Repository Layout
@@ -122,14 +134,15 @@ src/
   mid360_localization_contract/  Input, frame, tracking, and map contracts
   mid360_map_localizer/          Fixed-map scan matcher
   mid360_map_tools/              Registered-cloud mapper and occupancy tools
-  robocon_game_supervisor/       Competition state machine and safety gates
-  robocon_perception_adapter/    Target validity and perception interface
-  robocon_camera_yolo_adapter/   Detector interface and metric scoring
-  robocon_pose_command_bridge/   Pose-to-command arbitration interface
-  robocon_mid360_simulation/     Gazebo worlds, robot, sensor, and runners
-  vendor_fast_lio/               FAST-LIO2 source and license notice
-  vendor_livox_ros_driver2/      Livox ROS 2 driver and license notice
-tools/                            Validation, replay, metrics, and plotting utilities
+  game_supervisor/               Competition state machine and safety gates
+  perception_adapter/            Target validity and perception interface
+  camera_yolo_adapter/           Detector interface and metric scoring
+  pose_command_bridge/           Pose-to-command arbitration interface
+  mid360_simulation/             Gazebo worlds, robot, sensor, and runners
+  vendor/
+    fast_lio/                    FAST-LIO2 source and license notice
+    livox_ros_driver2/           Livox ROS 2 driver and license notice
+tools/                            Capture, metrics, plotting, and runner utilities
 site/                             GitHub Pages portfolio site
 .github/workflows/                Continuous integration and Pages deployment
 ```

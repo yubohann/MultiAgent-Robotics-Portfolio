@@ -2,8 +2,8 @@
   "summary": {
     "episodes": 128,
     "source_files": [
-      "isaaclab_sim/output/eval/world_model_sacflow_seed260707_rerun_contract_eval64.json",
-      "isaaclab_sim/output/eval/world_model_sacflow_seed260900_rs004_contract_eval64.json"
+      "sim/output/eval/world_model_sacflow_seed260707_rerun_contract_eval64.json",
+      "sim/output/eval/world_model_sacflow_seed260900_rs004_contract_eval64.json"
     ],
     "yellow_win_rate": 0.4922,
     "blue_win_rate": 0.5078,

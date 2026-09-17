@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from multi_gate.env.multi_gate_env import MultiGate2DEnv
+from tasks.multi.env.multi_gate_env import MultiGate2DEnv
 
 
 def test_multi_gate_env_reset_and_step_smoke() -> None:

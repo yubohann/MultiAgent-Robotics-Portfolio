@@ -1,6 +1,6 @@
 # Native Isaac Capture
 
-`rivermark_benchmark.isaac_capture` runs the native collection. One long-lived Isaac AppLauncher process builds a fresh stage with the approved City-Lite roots and eight physical CF2X vehicles. This page covers capture preparation and each physics step.
+`rivermark_benchmark.isaac.isaac_capture` runs the native collection. One long-lived Isaac AppLauncher process builds a fresh stage with the approved City-Lite roots and eight physical CF2X vehicles. This page covers capture preparation and each physics step.
 
 ## The Step Loop
 

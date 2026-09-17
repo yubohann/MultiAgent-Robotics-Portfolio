@@ -1,10 +1,10 @@
 # Validation and Formal Admission
 
-A captured episode becomes formal data through `rivermark_benchmark.formal_dataset`, the step between raw captures and a published dataset.
+A captured episode becomes formal data through `rivermark_benchmark.audit.formal_dataset`, the step between raw captures and a published dataset.
 
 ## Validation
 
-`rivermark_benchmark.isaac_validate` reopens the raw artifacts and checks stage identity, collision-proxy binding, sensor synchronization, action causality, visual and LiDAR intrusion gates, contacts, route and condition realization, target-visibility evidence, and file bindings.
+`rivermark_benchmark.audit.isaac_validate` reopens the raw artifacts and checks stage identity, collision-proxy binding, sensor synchronization, action causality, visual and LiDAR intrusion gates, contacts, route and condition realization, target-visibility evidence, and file bindings.
 
 After validation passes, the packer creates an admission candidate.
 
@@ -26,7 +26,7 @@ Candidates are closed-world directories. Unbound files, symbolic links, and dire
 
 ```powershell
 $env:PYTHONPATH = (Resolve-Path .\src)
-python -m rivermark_benchmark.formal_dataset collect C:\captures\episode-0001 .\rivermark `
+python -m rivermark_benchmark.audit.formal_dataset collect C:\captures\episode-0001 .\rivermark `
   --trusted-receipt-identity <formal_capture_receipt_identity> `
   --supply-chain-manifest <signed-release-supply-chain.json>
 ```
@@ -42,7 +42,7 @@ Split assignments are predeclared in the candidate manifest and stay frozen afte
 ## Release Verification
 
 ```powershell
-python -m rivermark_benchmark.formal_dataset verify-dataset .\rivermark
+python -m rivermark_benchmark.audit.formal_dataset verify-dataset .\rivermark
 ```
 
 Verification rechecks every payload, revalidates the manifest and admission record, rejects unbound files and symlinks, checks lineage split groups, and compares the stored index against a fresh deterministic reconstruction. A changed payload, a stale index, or an accidental private directory is a hard failure.

@@ -13,6 +13,10 @@ The first project implements AdaBoost, Apriori, C4.5, CART, EM, K-means, kNN, Na
 
 **Status.** Coursework complete. Sources, datasets, figures and saved results are all in the tree.
 
+## My Role
+
+Implemented all ten classical algorithms from the numerical core to the CLI entry point (`classic-ml-algorithms/*/src/`), ran each on its checked-in dataset and wrote the per-algorithm lab reports. Built the Assignment 3 pipeline end to end: data loading and fixed-split preprocessing, from-scratch vectorized kNN and mean-threshold ID3, the PCA and LDA runs, and the saved figures and comparison summaries under `ml-assignment-3/results/`.
+
 ## Projects
 
 | Project | Scope | Stack |

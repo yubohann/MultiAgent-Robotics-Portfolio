@@ -37,7 +37,7 @@ Research engineering for embodied and multi-agent systems, covering multi-UAV se
 
 | Project | Focus | Start here |
 |---|---|---|
-| [Rivermark](rivermark/) | Multi-agent 3D search benchmark on Isaac Sim with contract-pinned capture and scoring. | [Overview](rivermark/README.md), [Code](rivermark/code/README.md) |
+| [Rivermark](rivermark/) | Multi-agent 3D search benchmark on Isaac Sim with contract-pinned capture and scoring. | [Overview](rivermark/README.md) |
 | [RoboCup CBG-WM](robocup-cbg-wm/) | Object-centric world models with risk-aware MPC and rule-gated scoring for adversarial multi-robot navigation. | [Overview](robocup-cbg-wm/README.md), [Project brief](robocup-cbg-wm/docs/admissions_project_brief.md) |
 | [Robocon MID-360 Autonomy Stack](robocon-mid360-autonomy-stack/) | Livox MID-360 and FAST-LIO2 localization and a competition autonomy stack for a basketball-shooting robot. | [Overview](robocon-mid360-autonomy-stack/README.md) |
 | [AeroCityBench](aerocity-bench/) | Procedural 3D multi-UAV search benchmark with public and private scoring splits. | [Overview](aerocity-bench/README.md) |
@@ -59,7 +59,7 @@ Research engineering for embodied and multi-agent systems, covering multi-UAV se
 |---|---|---|
 | [Machine Learning Coursework](coursework/machine-learning/) | From-scratch classic algorithms, PCA and LDA, kNN and ID3 | Python, NumPy, pandas, scikit-learn |
 | [YOLO26 + VisDrone Detection](coursework/yolo26-visdrone-detection/) | Drone object detection, validation and ONNX export | Ultralytics YOLO, VisDrone, ONNX |
-| [Stream-Batch Lakehouse AI Portfolio](coursework/stream-batch-lakehouse-ai-portfolio/) | Lakehouse, streaming, recommender and short-video review labs | Kafka, Flink, MinIO, Paimon, Spark |
+| [Stream-Batch Lakehouse AI Portfolio](coursework/streaming-lakehouse/) | Lakehouse, streaming, recommender and short-video review labs | Kafka, Flink, MinIO, Paimon, Spark |
 | [Supermarket Management System](coursework/supermarket-management-system/) | Store-management application and engineering documentation | Flask, SQLAlchemy, SQLite, pytest |
 | [Embodied AI Learning Roadmap](embodied-ai-learning-roadmap.md) | Twelve-week project-driven route from LLMs to robot learning | PyTorch, robot learning, ROS 2 |
 

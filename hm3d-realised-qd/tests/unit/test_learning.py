@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from aerocity_method.contracts.models import FragmentReplayRecord
-from aerocity_method.learning.masked_ppo import MaskedPPO, MaskedPPOConfig
-from aerocity_method.learning.rb_sf_sac import RBSFSAC, RBSFSACConfig
-from aerocity_method.learning.replay import (
+from realised_qd.contracts.models import FragmentReplayRecord
+from realised_qd.learning.masked_ppo import MaskedPPO, MaskedPPOConfig
+from realised_qd.learning.rb_sf_sac import RBSFSAC, RBSFSACConfig
+from realised_qd.learning.replay import (
     CandidateTransition,
     FragmentReplayBuffer,
     ReplayBuffer,
     pad_candidate_batch,
 )
-from aerocity_method.learning.vanilla_sac import VanillaMaskedDiscreteSAC, vanilla_sac_config
+from realised_qd.learning.vanilla_sac import VanillaMaskedDiscreteSAC, vanilla_sac_config
 
 try:
     import torch

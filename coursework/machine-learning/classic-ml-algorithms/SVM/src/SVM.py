@@ -1,21 +1,12 @@
 #!/usr/bin/env python3
 # Author: Bohan Yu
 
-import argparse
-import math
-import random
-import os
-import sys
-import urllib.request
-
-
-
-def load_iris_from_file(path):
+import argparseimport mathimport osimport randomimport sysimport urllib.requestdef load_iris_from_file(path):
     X = []
     y = []
     if not os.path.exists(path):
         return None, None
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -113,7 +104,7 @@ def train_pegasos(X, y, lambda_reg=0.0001, epochs=50, batch_size=1, seed=42, lr0
     svm = LinearSVM(dim, lambda_reg=lambda_reg)
     t = 0
     n = len(X)
-    for epoch in range(epochs):
+    for _epoch in range(epochs):
         indices = list(range(n))
         random.shuffle(indices)
         for start in range(0, n, batch_size):
@@ -203,7 +194,7 @@ def main():
     ovr.fit(X_train, y_train, epochs=args.epochs, batch_size=args.batch_size, seed=args.seed)
     y_pred = ovr.predict(X_test)
     acc = accuracy(y_test, y_pred)
-    print('测试准确率: {:.4f}'.format(acc))
+    print(f'测试准确率: {acc:.4f}')
 
 
     print('\n示例预测（真实 -> 预测）:')

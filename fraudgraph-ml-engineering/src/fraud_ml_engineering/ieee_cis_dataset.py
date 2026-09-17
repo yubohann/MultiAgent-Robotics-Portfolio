@@ -3,10 +3,8 @@
 """IEEE-CIS fraud dataset loader with strict chronological sampling and graph construction."""
 
 import copy
-import json
 import math
 import re
-import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -22,6 +20,7 @@ import numpy as np
 import pandas as pd
 import torch
 
+from .caching import cache_signature_tag, load_graph_cache, store_graph_file, store_metadata_file
 from .fraud_dataset import (
     IEEE_FULL_SEQUENCE_COMPACT_DIM,
     SEQUENCE_BUILDER_VERSION,
@@ -1445,7 +1444,7 @@ def _cache_signature(
     }
 
 
-def _resolve_cache_paths(signature: dict[str, Any]) -> IEEECachedPaths:
+def _resolve_ieee_cache_paths(signature: dict[str, Any]) -> IEEECachedPaths:
     default_signature = _cache_signature(
         data_root=IEEE_DEFAULT_ROOT.expanduser().resolve(),
         max_transactions=IEEE_DEFAULT_MAX_TRANSACTIONS,
@@ -1466,12 +1465,12 @@ def _resolve_cache_paths(signature: dict[str, Any]) -> IEEECachedPaths:
             artifact_dir=IEEE_CACHE_GRAPH_PATH.parent / "ieee_artifacts",
         )
 
-    tag = zlib.crc32(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")) & 0xFFFFFFFF
+    tag = cache_signature_tag(signature)
     cache_dir = IEEE_CACHE_GRAPH_PATH.parent / "cache"
     return IEEECachedPaths(
-        graph_path=cache_dir / f"ieee_{tag:08x}.dgl",
-        metadata_path=cache_dir / f"ieee_{tag:08x}.json",
-        artifact_dir=cache_dir / f"ieee_{tag:08x}_artifacts",
+        graph_path=cache_dir / f"ieee_{tag}.dgl",
+        metadata_path=cache_dir / f"ieee_{tag}.json",
+        artifact_dir=cache_dir / f"ieee_{tag}_artifacts",
     )
 
 
@@ -1624,7 +1623,7 @@ def _inject_cache_paths_into_metadata(
     metadata["data_summary"] = data_summary
 
 
-def _load_cached_graph(
+def _load_ieee_cached_graph(
     *,
     signature: dict[str, Any],
     cache_paths: IEEECachedPaths,
@@ -1634,15 +1633,15 @@ def _load_cached_graph(
         f"graph={cache_paths.graph_path.name} metadata={cache_paths.metadata_path.name} "
         f"artifact_dir={cache_paths.artifact_dir.name}"
     )
-    if not cache_paths.graph_path.exists() or not cache_paths.metadata_path.exists():
-        _memory_log("cache_read: miss_missing_files")
+    cached = load_graph_cache(
+        signature=signature,
+        graph_path=cache_paths.graph_path,
+        metadata_path=cache_paths.metadata_path,
+        log=_memory_log,
+    )
+    if cached is None:
         return None
-    metadata = json.loads(cache_paths.metadata_path.read_text(encoding="utf-8-sig"))
-    _memory_log("cache_read: metadata_loaded")
-    if dict(metadata.get("cache_signature", {})) != signature:
-        _memory_log("cache_read: miss_signature_mismatch")
-        return None
-    graph = dgl.load_graphs(str(cache_paths.graph_path))[0][0]
+    graph, metadata = cached
     _memory_log(
         "cache_read: graph_loaded "
         f"nodes={int(graph.num_nodes(NODE_TYPE))} etypes={len(graph.etypes)}"
@@ -1659,7 +1658,7 @@ def _load_cached_graph(
     return graph, metadata
 
 
-def _write_cache(
+def _write_ieee_cache(
     *,
     graph: dgl.DGLHeteroGraph,
     metadata: dict[str, Any],
@@ -1670,12 +1669,10 @@ def _write_cache(
         f"graph={cache_paths.graph_path.name} metadata={cache_paths.metadata_path.name} "
         f"artifact_dir={cache_paths.artifact_dir.name}"
     )
-    cache_paths.graph_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_paths.metadata_path.parent.mkdir(parents=True, exist_ok=True)
     detached_artifacts = _detach_ieee_artifact_payloads(graph)
     try:
         _memory_log("cache_write: saving_core_graph")
-        dgl.save_graphs(str(cache_paths.graph_path), [graph])
+        store_graph_file(cache_paths.graph_path, graph)
         _memory_log("cache_write: core_graph_saved")
         artifact_cache = _save_ieee_artifact_shards(
             artifact_payloads=detached_artifacts,
@@ -1686,7 +1683,7 @@ def _write_cache(
             cache_paths=cache_paths,
             artifact_cache=artifact_cache,
         )
-        cache_paths.metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8-sig")
+        store_metadata_file(cache_paths.metadata_path, metadata)
         _memory_log("cache_write: metadata_saved")
     finally:
         _restore_ieee_artifact_payloads(graph, detached_artifacts)
@@ -2190,7 +2187,7 @@ def load_ieee_cis_dataset(
             ieee_sequence_feature_dim=ieee_sequence_feature_dim,
             ieee_event_feature_dim=ieee_event_feature_dim,
         )
-        cache_paths = _resolve_cache_paths(signature)
+        cache_paths = _resolve_ieee_cache_paths(signature)
         _memory_log(
             "load_ieee_cis_dataset: cache_paths_resolved "
             f"graph={cache_paths.graph_path.name} metadata={cache_paths.metadata_path.name} "
@@ -2200,7 +2197,7 @@ def load_ieee_cis_dataset(
         if bool(rebuild_cache):
             _memory_log("load_ieee_cis_dataset: force_rebuild_requested")
         else:
-            cached = _load_cached_graph(
+            cached = _load_ieee_cached_graph(
                 signature=signature,
                 cache_paths=cache_paths,
             )
@@ -2219,7 +2216,7 @@ def load_ieee_cis_dataset(
                 ieee_sequence_feature_dim=ieee_sequence_feature_dim,
                 ieee_event_feature_dim=ieee_event_feature_dim,
             )
-            _write_cache(
+            _write_ieee_cache(
                 graph=graph,
                 metadata=metadata,
                 cache_paths=cache_paths,
@@ -2263,7 +2260,7 @@ def load_ieee_cis_dataset(
                 ieee_sequence_feature_dim=ieee_sequence_feature_dim,
                 ieee_event_feature_dim=ieee_event_feature_dim,
             )
-            _write_cache(
+            _write_ieee_cache(
                 graph=graph,
                 metadata=metadata,
                 cache_paths=cache_paths,
@@ -2282,7 +2279,7 @@ def load_ieee_cis_dataset(
                 ieee_sequence_feature_dim=ieee_sequence_feature_dim,
                 ieee_event_feature_dim=ieee_event_feature_dim,
             )
-            _write_cache(
+            _write_ieee_cache(
                 graph=graph,
                 metadata=metadata,
                 cache_paths=cache_paths,

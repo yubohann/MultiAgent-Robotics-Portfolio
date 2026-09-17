@@ -4,14 +4,14 @@ from dataclasses import replace
 
 import pytest
 
-from aerocity_method.contracts.models import (
+from realised_qd.contracts.models import (
     CandidateFragmentManifest,
     FragmentInstance,
     FragmentOutcome,
     FragmentTypeSignature,
     PublicMethodContext,
 )
-from aerocity_method.runtime.tokens import authorize_manifest
+from realised_qd.runtime.tokens import authorize_manifest
 
 
 def _context() -> PublicMethodContext:

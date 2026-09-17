@@ -8,12 +8,12 @@ CORE_MODULES = (
     "shared.core.collision_2d",
     "shared.core.dynamic_gate_density_2d",
     "shared.runtime.paths",
-    "gate_density_single.scripts.run_gate_density_eval",
-    "gate_density_multi_8.scripts.train_dynamic_gate_density_8d_curriculum",
-    "single_gate.env.single_gate_env",
-    "multi_gate.env.multi_gate_env",
-    "multi_gate.configs",
-    "single_internal_gate.planners.classic_planners",
+    "tasks.density_single.scripts.run_gate_density_eval",
+    "tasks.density_multi.scripts.train_dynamic_gate_density_8d_curriculum",
+    "tasks.single.env.single_gate_env",
+    "tasks.multi.env.multi_gate_env",
+    "tasks.multi.configs",
+    "tasks.internal.planners.classic_planners",
 )
 
 

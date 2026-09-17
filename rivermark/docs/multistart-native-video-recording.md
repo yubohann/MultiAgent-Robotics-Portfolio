@@ -20,16 +20,16 @@ Replace the placeholders in each matrix row with paths from the local asset pack
 
 ```powershell
 & C:\Users\Administrator\IsaacLab\python\python.exe `
-  -m rivermark_benchmark.isaac_capture `
+  -m rivermark_benchmark.isaac.isaac_capture `
   --output-dir E:\rivermark-native-video\train\episode-0000 `
   --drone-usd <external-cf2x.usd> `
   --scene-contract <external-city-lite-contract.json> `
-  --collection-protocol .\code\config\collection_protocol.citylite_t1_expert_coverage_v2.json `
+  --collection-protocol .\config\collection_protocol.citylite_t1_expert_coverage_v2.json `
   --collection-cell-id train-citylite-direct-v2 `
   --collection-episode-index 0 `
   --evaluator-private-manifest <external-private-manifest.json> `
   --evaluator-private-manifest-retention-root E:\rivermark-private-retention `
-  --runtime-lock .\code\config\isaac_runtime.windows-5.1.json `
+  --runtime-lock .\config\isaac_runtime.windows-5.1.json `
   --isaaclab-source C:\Users\Administrator\IsaacLab\source `
   --sensor-physics-smoke-receipt <external-isaac-smoke-receipt.json> `
   --control-mode fixed_public_route `
@@ -43,7 +43,7 @@ The capture's native RGB frames, depth, semantic labels, pose, actions, and runt
 After a capture passes its receipt and independent validation, encode the native RGB archive directly.
 
 ```powershell
-$env:PYTHONPATH = (Resolve-Path .\code\src)
+$env:PYTHONPATH = (Resolve-Path .\src)
 python .\tools\encode_native_video.py `
   --capture-dir E:\rivermark-native-video\train\episode-0000 `
   --view overview `

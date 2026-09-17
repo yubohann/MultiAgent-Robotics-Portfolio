@@ -8,11 +8,11 @@ Rivermark ships source, schemas, contracts, and checks only. Simulator assets ar
 
 The repository keeps raw NVIDIA USD, materials, textures, the unresolved CF2X binary, composed City-Lite layers, videos, and derived payloads outside Git until a redistribution decision covers the exact artifact. Formal release validation demands a resolved license and a recorded human decision for every released asset.
 
-`rivermark_benchmark.asset_provenance` inspects a local installation on the CPU path.
+`rivermark_benchmark.ops.asset_provenance` inspects a local installation on the CPU path.
 
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
-python -m rivermark_benchmark.asset_provenance C:\path\to\cf2x.usd C:\path\to\rivermark.usd
+python -m rivermark_benchmark.ops.asset_provenance C:\path\to\cf2x.usd C:\path\to\rivermark.usd
 ```
 
 A blocked result points to keeping the file local and leaves the legal call to a human. A passed scan still reports `license_status: unresolved` until a human records an applicable upstream license.

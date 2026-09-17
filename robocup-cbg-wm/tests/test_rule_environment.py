@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
-from robocup_visionrl_selfplay_env import (
+from selfplay_env import (
     AGENTS,
     TACTICAL_ACTION_DIM,
     RoboCupVisionRLSelfPlayEnv,

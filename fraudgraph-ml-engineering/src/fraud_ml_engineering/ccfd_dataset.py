@@ -2,9 +2,7 @@
 
 """Credit-card fraud CSV loader used by the legacy ``ccfd`` registry entry."""
 
-import json
 import math
-import zlib
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +17,7 @@ import numpy as np
 import pandas as pd
 import torch
 
+from .caching import load_graph_cache, resolve_graph_cache_paths, store_graph_cache
 from .fraud_dataset import (
     SEQUENCE_BUILDER_VERSION,
     ClientShard,
@@ -540,44 +539,6 @@ def _default_cache_signature() -> dict[str, Any] | None:
     )
 
 
-def _resolve_cache_paths(signature: dict[str, Any]) -> tuple[Path, Path]:
-    default_signature = _default_cache_signature()
-    if default_signature is not None and signature == default_signature:
-        return CCFD_CACHE_GRAPH_PATH, CCFD_CACHE_METADATA_PATH
-
-    tag = zlib.crc32(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")) & 0xFFFFFFFF
-    cache_dir = CCFD_CACHE_GRAPH_PATH.parent / "cache"
-    return cache_dir / f"ccfd_{tag:08x}.dgl", cache_dir / f"ccfd_{tag:08x}.json"
-
-
-def _load_cached_graph(
-    *,
-    signature: dict[str, Any],
-    graph_path: Path,
-    metadata_path: Path,
-) -> tuple[dgl.DGLHeteroGraph, dict[str, Any]] | None:
-    if not graph_path.exists() or not metadata_path.exists():
-        return None
-    metadata = json.loads(metadata_path.read_text(encoding="utf-8-sig"))
-    if dict(metadata.get("cache_signature", {})) != signature:
-        return None
-    graph = dgl.load_graphs(str(graph_path))[0][0]
-    return graph, metadata
-
-
-def _write_cache(
-    *,
-    graph: dgl.DGLHeteroGraph,
-    metadata: dict[str, Any],
-    graph_path: Path,
-    metadata_path: Path,
-) -> None:
-    graph_path.parent.mkdir(parents=True, exist_ok=True)
-    metadata_path.parent.mkdir(parents=True, exist_ok=True)
-    dgl.save_graphs(str(graph_path), [graph])
-    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8-sig")
-
-
 def _build_graph_payload(
     *,
     source_info: dict[str, Any],
@@ -761,8 +722,15 @@ def load_ccfd_dataset(
         valid_ratio=valid_ratio,
         seed=seed,
     )
-    cache_graph_path, cache_metadata_path = _resolve_cache_paths(signature)
-    cached = _load_cached_graph(
+    cache_graph_path, cache_metadata_path = resolve_graph_cache_paths(
+        signature,
+        prefix="ccfd",
+        cache_dir=CCFD_CACHE_GRAPH_PATH.parent / "cache",
+        default_signature=_default_cache_signature(),
+        default_graph_path=CCFD_CACHE_GRAPH_PATH,
+        default_metadata_path=CCFD_CACHE_METADATA_PATH,
+    )
+    cached = load_graph_cache(
         signature=signature,
         graph_path=cache_graph_path,
         metadata_path=cache_metadata_path,
@@ -779,7 +747,7 @@ def load_ccfd_dataset(
             valid_ratio=valid_ratio,
             seed=seed,
         )
-        _write_cache(
+        store_graph_cache(
             graph=graph,
             metadata=metadata,
             graph_path=cache_graph_path,

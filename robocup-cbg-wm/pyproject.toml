@@ -23,15 +23,15 @@ training = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["isaaclab_sim/rl"]
+where = ["sim/rl"]
 include = [
   "experiments*",
   "large_scale_50v50_battle*",
   "planning*",
   "policies*",
   "replay*",
-  "robocup_visionrl_gym_env*",
-  "robocup_visionrl_selfplay_env*",
+  "gym_env*",
+  "selfplay_env*",
   "world_model*",
 ]
 

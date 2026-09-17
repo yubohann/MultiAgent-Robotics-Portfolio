@@ -1,6 +1,6 @@
 # Auditable Comparison Report
 
-`scripts/generate_auditable_comparison_report.py` creates a comparison report from explicit result records. Every row comes from a supplied record. Scanned directories, inferred metrics, old summaries, and historical model picks stay out of scope, so the comparison ties directly to evidence a reviewer can inspect.
+`python -m fraud_ml_engineering.experiment_tools.generate_auditable_comparison_report` creates a comparison report from explicit result records. Every row comes from a supplied record. Scanned directories, inferred metrics, old summaries, and historical model picks stay out of scope, so the comparison ties directly to evidence a reviewer can inspect.
 
 ## Input record
 
@@ -34,7 +34,7 @@ The numeric values above are schema placeholders. Include any additional numeric
 ## Generate a report
 
 ```powershell
-python scripts/generate_auditable_comparison_report.py `
+python -m fraud_ml_engineering.experiment_tools.generate_auditable_comparison_report `
   --record artifacts/records/comp_splitgnn_seed30.json `
   --record artifacts/records/comp_graph_baseline_seed30.json `
   --output_root artifacts/experiments/auditable_comparison

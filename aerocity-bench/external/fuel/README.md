@@ -14,7 +14,7 @@ or an AeroCityBench bridge.
 On this host, first verify the existing locked checkout without invoking Docker:
 
 ```powershell
-python tools/build_fuel_container.py --source E:\github_repos\FUEL-locked-662dd23c7b52 --verify-only
+python tools/release/build_fuel_container.py --source E:\github_repos\FUEL-locked-662dd23c7b52 --verify-only
 ```
 
 Then build through WSL Docker. The image must remain local until an independent
@@ -25,7 +25,7 @@ wsl.exe -d Ubuntu-22.04 -- docker build --file /mnt/c/Users/Administrator/IsaacL
 ```
 
 A successful build proves only that the locked upstream planner compiles in an
-isolated environment. It does not prove a G2-I integration, an L0/L1 result,
+isolated environment. It does not prove a G2I integration, an L0/L1 result,
 or formal-score eligibility.
 
 The repository also contains a single-UAV ROS graph smoke that starts only
@@ -35,12 +35,12 @@ network and a read-only root filesystem; it never starts FUEL's trajectory
 server or a position-command topic:
 
 ```powershell
-python tools/run_fuel_ros_smoke.py --source E:\github_repos\FUEL-locked-662dd23c7b52 --duration-s 12 --output reason\benchmark-external-methodology-audit-20260802\fuel-ros-smoke-20260803.json
+python tools/smoke/run_fuel_ros_smoke.py --source E:\github_repos\FUEL-locked-662dd23c7b52 --duration-s 12 --output reason\benchmark-external-methodology-audit-20260802\fuel-ros-smoke-20260803.json
 ```
 
 The current smoke establishes the ROS input graph but reports no route. That
 negative result is preserved because FUEL requires a dense ray-built free-space
 map, while G1-U currently exposes only coarse occupied voxels. Do not solve
 this by providing private scene geometry or by changing FUEL thresholds; either
-would make the method incomparable. FUEL is not a G2-I integration or C-gate
+would make the method incomparable. FUEL is not a G2I integration or C-gate
 external method.

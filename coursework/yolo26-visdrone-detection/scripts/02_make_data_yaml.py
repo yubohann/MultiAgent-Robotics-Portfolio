@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 CLASSES_FILE = ROOT / "configs" / "classes.txt"
 OUTPUT_FILE = ROOT / "configs" / "my_detect.local.yaml"

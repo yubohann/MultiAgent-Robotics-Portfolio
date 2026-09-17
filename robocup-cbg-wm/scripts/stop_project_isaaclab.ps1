@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ScriptNeedle = "robocup_visionrl_arena_sim.py"
+$ScriptNeedle = "arena_sim"
 $AllowedNames = @("python.exe", "pythonw.exe", "kit.exe", "isaac-sim.exe")
 
 try {

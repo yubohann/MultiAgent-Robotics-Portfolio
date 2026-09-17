@@ -37,7 +37,7 @@ Ubuntu/WSL 中建议使用的实验路径
 ```text
 1. 使用实验五训练得到的 best.pt 进行验证；
 2. 查看 Precision、Recall、mAP50、mAP50-95 等指标；
-3. 对 detect_test 目录中的图片进行预测；
+3. 对 detection-samples 目录中的图片进行预测；
 4. 查看预测框和置信度；
 5. 使用脚本完成验证、预测和导出；
 6. 将 best.pt 导出为 ONNX；
@@ -62,7 +62,7 @@ exp5_6_yolo26/
 ├── configs/
 ├── data_raw/
 ├── my_data/
-├── detect_test/
+├── detection-samples/
 ├── scripts/
 ├── docs/
 ├── screenshots/
@@ -86,7 +86,7 @@ exp5_6_yolo26/
 | `configs/` | 类别文件和数据集 YAML 配置 |
 | `data_raw/` | 原始图片和原始 YOLO 标签 |
 | `my_data/` | 划分后的训练集和验证集 |
-| `detect_test/` | 推理测试图片 |
+| `detection-samples/` | 推理测试图片 |
 | `scripts/` | 自动化脚本 |
 | `docs/` | 数据来源，Sim2Real 数据建议等说明 |
 | `screenshots/` | 实验五，实验六截图保存目录 |
@@ -367,7 +367,7 @@ confusion_matrix.png：混淆矩阵。
 ```text
 权重：runs/yolo26/train/weights/best.pt
 数据集配置：configs/my_detect.local.yaml
-预测图片：detect_test/
+预测图片：detection-samples/
 ```
 
 运行命令
@@ -381,7 +381,7 @@ python scripts/04_exp6_val_predict_export.py --device 0
 ```text
 1. 使用 best.pt 在验证集上 val；
 2. 输出 Box(P)、R、mAP50、mAP50-95；
-3. 对 detect_test 目录图片 predict；
+3. 对 detection-samples 目录图片 predict；
 4. 保存预测图片到 runs/yolo26/predict；
 5. 导出 ONNX 模型；
 6. 输出 ONNX 路径。
@@ -455,7 +455,7 @@ configs/classes.txt
 
 ```text
 1. 有一段无人机/摄像头视频；
-2. 想提取若干帧作为 detect_test 图片；
+2. 想提取若干帧作为 detection-samples 图片；
 3. 想后续人工标注后加入训练集；
 4. 想补充 Sim2Real 真实域图像。
 ```
@@ -717,9 +717,9 @@ ls -lh runs/yolo26/train/weights/best.pt
 可以从原始图片复制 30 张
 
 ```bash
-rm -f detect_test/*
-find data_raw/images -type f | head -30 | xargs -I{} cp "{}" detect_test/
-ls -lh detect_test | head
+rm -f detection-samples/*
+find data_raw/images -type f | head -30 | xargs -I{} cp "{}" detection-samples/
+ls -lh detection-samples | head
 ```
 
 ### 7.3 验证模型
@@ -775,7 +775,7 @@ mAP50-95 低于 mAP50 是正常现象，因为高 IoU 阈值对框定位精度�
 命令
 
 ```bash
-yolo detect predict model=runs/yolo26/train/weights/best.pt source=detect_test save=True conf=0.5 imgsz=640 device=0
+yolo detect predict model=runs/yolo26/train/weights/best.pt source=detection-samples save=True conf=0.5 imgsz=640 device=0
 ```
 
 结果目录可能为
@@ -932,7 +932,7 @@ val_batch0_labels.jpg
 
 预测结果目录。
 
-里面是对 `detect_test` 图片推理后的可视化结果。
+里面是对 `detection-samples` 图片推理后的可视化结果。
 
 ### 9.4 `best.onnx`
 
@@ -1090,7 +1090,7 @@ best.pt 和 results.png。
 
 ```text
 best.pt 存在；
-detect_test 测试图片；
+detection-samples 测试图片；
 验证指标表格；
 预测过程输出；
 预测结果图片；
@@ -1108,7 +1108,7 @@ Netron 网络结构。
 
 ### 12.2 实验六可以这样写
 
-> 实验六基于实验五训练得到的 `best.pt` 完成模型验证，推理和导出。验证阶段使用 `configs/my_detect.local.yaml` 在验证集上计算 Precision，Recall，mAP50 和 mAP50-95 等指标。预测阶段对 `detect_test` 目录中的无人机视角图片进行推理，并保存带有 obstacle 检测框和置信度的结果图。导出阶段将 PyTorch 权重转换为 ONNX 模型，并使用 Netron 查看网络输入，输出和结构。该实验验证了 YOLO26 自训练模型从训练结果到部署格式转换的完整链路。
+> 实验六基于实验五训练得到的 `best.pt` 完成模型验证，推理和导出。验证阶段使用 `configs/my_detect.local.yaml` 在验证集上计算 Precision，Recall，mAP50 和 mAP50-95 等指标。预测阶段对 `detection-samples` 目录中的无人机视角图片进行推理，并保存带有 obstacle 检测框和置信度的结果图。导出阶段将 PyTorch 权重转换为 ONNX 模型，并使用 Netron 查看网络输入，输出和结构。该实验验证了 YOLO26 自训练模型从训练结果到部署格式转换的完整链路。
 
 ## 13. 答辩常见问题和答案
 

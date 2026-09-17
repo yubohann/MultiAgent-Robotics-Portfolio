@@ -1,14 +1,6 @@
 # 作者：23计算1Bohan Yu 
 
-import os
-import csv
-import math
-import random
-import argparse
-from collections import Counter, defaultdict
-
-
-def load_iris_data(file_path=None):
+import argparseimport csvimport mathimport osimport randomfrom collections import Counter, defaultdictdef load_iris_data(file_path=None):
 	if file_path is None:
 		script_dir = os.path.dirname(os.path.abspath(__file__))
 		file_path = os.path.normpath(os.path.join(script_dir, '..', 'data', 'iris.data'))
@@ -17,7 +9,7 @@ def load_iris_data(file_path=None):
 	y = []
 	if not os.path.exists(file_path):
 		raise FileNotFoundError(f"Iris 数据文件未找到: {file_path}")
-	with open(file_path, 'r', encoding='utf-8') as f:
+	with open(file_path, encoding='utf-8') as f:
 		reader = csv.reader(f)
 		for row in reader:
 			if not row:
@@ -89,7 +81,7 @@ class KMeans:
 
 		centers = self._init_centroids(X)
 
-		for it in range(self.max_iter):
+		for _it in range(self.max_iter):
 			clusters = [[] for _ in range(self.n_clusters)]
 			labels = [None] * len(X)
 
@@ -138,7 +130,7 @@ def purity_score(true_labels, pred_labels):
 	for cl, tl in zip(pred_labels, true_labels):
 		cluster_to_labels[cl].append(tl)
 	correct = 0
-	for cl, labs in cluster_to_labels.items():
+	for _cl, labs in cluster_to_labels.items():
 		if not labs:
 			continue
 		most_common, cnt = Counter(labs).most_common(1)[0]

@@ -97,18 +97,18 @@ cat configs/my_detect.local.yaml
 
 ## 3. 准备推理测试图片
 
-从原始图片复制 30 张到 `detect_test`
+从原始图片复制 30 张到 `detection-samples`
 
 ```bash
-rm -f detect_test/*
-find data_raw/images -type f | head -30 | xargs -I{} cp "{}" detect_test/
-ls -lh detect_test | head
+rm -f detection-samples/*
+find data_raw/images -type f | head -30 | xargs -I{} cp "{}" detection-samples/
+ls -lh detection-samples | head
 ```
 
 截图
 
 ```text
-detect_test 中有待推理图片。
+detection-samples 中有待推理图片。
 ```
 
 ## 4. 使用 YOLO26m 训练
@@ -170,13 +170,13 @@ yolo detect val model=runs/yolo26/train/weights/best.pt data=configs/my_detect.l
 ## 6. 推理测试图片
 
 ```bash
-yolo detect predict model=runs/yolo26/train/weights/best.pt source=detect_test save=True conf=0.5 imgsz=640 device=0
+yolo detect predict model=runs/yolo26/train/weights/best.pt source=detection-samples save=True conf=0.5 imgsz=640 device=0
 ```
 
 如果没有 GPU
 
 ```bash
-yolo detect predict model=runs/yolo26/train/weights/best.pt source=detect_test save=True conf=0.5 imgsz=640 device=cpu
+yolo detect predict model=runs/yolo26/train/weights/best.pt source=detection-samples save=True conf=0.5 imgsz=640 device=cpu
 ```
 
 查看结果目录

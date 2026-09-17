@@ -12,14 +12,14 @@
 | 4. 界面设计 | 2 分钟 | 主要页面设计，说明页面如何承接业务流程和用户操作 | `docs/course-deliverables/stage5-ui-design-docs.md`，`app/templates/`，`app/static/js/`，报告第 5 章 | 已归档 |
 | 5. 系统运行演示 | 4 分钟 | 演示供应商，会员，收银销售，库存扣减，财务流水，统计查询等完整闭环 | `run.py`，`app/routes/`，`app/services/`，`docs/course-deliverables/course-design-coverage.md` | 已归档 |
 | 6. 测试与质量管理 | 2 分钟 | 测试用例，单元测试，自动化功能测试截图，代码审查记录 | `tests/`，`docs/course-deliverables/test-case-design.md`，`docs/course-deliverables/code-review-record.md`，`reports/system-analysis-design/screenshots/` | 已归档 |
-| 7. 总结与问答 | 2 分钟 | 完成情况，后续计划，改进方案，以及老师追问时的证据定位 | `reports/system-analysis-design/超市管理系统_答辩PPT_20260602.pptx`，最终实验报告，本文档 | 已归档 |
+| 7. 总结与问答 | 2 分钟 | 完成情况，后续计划，改进方案，以及老师追问时的证据定位 | `reports/system-analysis-design/defense-presentation-20260602.pptx`，最终实验报告，本文档 | 已归档 |
 
 ## 答辩材料清单
 
 | 材料 | 路径 | 说明 |
 | --- | --- | --- |
-| 课程设计报告 | `reports/system-analysis-design/超市管理系统_系统分析与设计实验报告_20260515.docx` | 已补充答辩流程，四个一致性和演示验收说明 |
-| 答辩 PPT | `reports/system-analysis-design/超市管理系统_答辩PPT_20260602.pptx` | 8-10 页要求内，按 Excel 推荐答辩流程组织 |
+| 课程设计报告 | `reports/system-analysis-design/system-analysis-design-report-20260515.docx` | 已补充答辩流程，四个一致性和演示验收说明 |
+| 答辩 PPT | `reports/system-analysis-design/defense-presentation-20260602.pptx` | 8-10 页要求内，按 Excel 推荐答辩流程组织 |
 | PPT 源与质检记录 | `reports/system-analysis-design/ppt-defense/` | 包含 `outline.json`，构建脚本和 QA 结果 |
 | 可运行系统 | `run.py`，`app/`，`pyproject.toml` | `uv sync` 后执行 `uv run python run.py` |
 | 自动化测试源码 | `tests/` | 覆盖登录，商品，库存，收银，财务，公告，二期模块和异常路径 |

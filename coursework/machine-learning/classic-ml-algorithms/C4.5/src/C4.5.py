@@ -1,15 +1,6 @@
 # Author: Bohan Yu
 
-import csv
-import math
-import random
-import argparse
-import os
-from typing import List, Tuple, Dict, Optional
-from collections import Counter
-
-
-def load_wdbc_data(file_path: str) -> Tuple[List[List[float]], List[str], List[str]]:
+import argparseimport csvimport mathimport osimport randomfrom collections import Counterfrom typing import Dict, List, Optional, Tupledef load_wdbc_data(file_path: str) -> Tuple[List[List[float]], List[str], List[str]]:
     """Load the WDBC dataset from CSV and return features with M or B labels."""
     X = []
     y = []
@@ -25,7 +16,7 @@ def load_wdbc_data(file_path: str) -> Tuple[List[List[float]], List[str], List[s
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"数据文件未找到: {file_path}")
     
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding='utf-8') as f:
         reader = csv.reader(f)
         for row in reader:
             if not row or len(row) < 32:

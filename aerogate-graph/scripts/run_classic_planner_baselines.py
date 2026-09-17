@@ -11,20 +11,11 @@ import math
 import os
 import re
 import statistics
-import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from shared.runtime.paths import RESULTS_ROOT, ensure_project_on_path
-
-ROOT = ensure_project_on_path()
 
 from shared.core.collision_2d import GateObstacleMap2D, GatePostObstacle2D
 from shared.core.dynamic_gate_density_2d import (
@@ -35,9 +26,12 @@ from shared.core.dynamic_gate_density_2d import (
     live_gate_centers,
     resolved_corridor_half_width_m,
 )
-from single_internal_gate.configs.experiment_config import EXP2_SINGLE_INTERNAL_CONFIG
-from single_internal_gate.planners import create_planner
-from single_internal_gate.planners.interfaces import PlannerTask2D
+from shared.runtime.paths import RESULTS_ROOT
+from tasks.internal.configs.experiment_config import EXP2_SINGLE_INTERNAL_CONFIG
+from tasks.internal.planners import create_planner
+from tasks.internal.planners.interfaces import PlannerTask2D
+
+ROOT = Path(__file__).resolve().parents[1]
 
 CLASSIC_PLANNERS = ("astar", "theta_star", "rrt_star", "informed_rrt_star", "heuristic")
 STRONG_PLANNERS = ("ego_planner", "fast_planner")

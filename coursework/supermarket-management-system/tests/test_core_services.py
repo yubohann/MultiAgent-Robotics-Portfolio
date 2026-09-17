@@ -1,8 +1,6 @@
 from datetime import date
 from io import BytesIO
 
-from openpyxl import Workbook
-
 from app import db
 from app.models import Announcement, Inventory, InventoryLog, Product
 from app.services.announcements import (
@@ -15,6 +13,7 @@ from app.services.finance import get_reconciliation, save_reconciliation
 from app.services.inventory import set_inventory_quantity
 from app.services.products import create_product, import_products_from_excel
 from app.services.sales import get_sales_order_detail
+from openpyxl import Workbook
 
 
 def test_product_inventory_checkout_finance_and_announcement_flow(app, users, default_category):

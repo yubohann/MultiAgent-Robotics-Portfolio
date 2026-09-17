@@ -1,6 +1,6 @@
 # Observation ABI
 
-The observation ABI is the field-level contract for a formal episode, defined in `schemas/observation_abi_v1.schema.json`. `rivermark_benchmark.abi` validates the same rules in pure Python, so a reader can reject a payload before decoding it.
+The observation ABI is the field-level contract for a formal episode, defined in `schemas/observation_abi_v1.schema.json`. `rivermark_benchmark.data.abi` validates the same rules in pure Python, so a reader can reject a payload before decoding it.
 
 A file identity covers bytes, while the ABI fixes five facts about meaning.
 

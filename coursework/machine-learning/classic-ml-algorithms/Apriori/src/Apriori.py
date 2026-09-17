@@ -1,14 +1,9 @@
 # 作者：23计算1Bohan Yu 
 
-import csv
-import itertools
-import os
-import argparse
-
-def load_groceries_data(file_path):
+import argparseimport csvimport itertoolsimport osdef load_groceries_data(file_path):
     # Read basket data, one transaction per line with comma-separated items.
     transactions = []
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding='utf-8') as f:
         reader = csv.DictReader(f)
         baskets = {}
         for row in reader:

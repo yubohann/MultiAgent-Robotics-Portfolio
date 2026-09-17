@@ -6,13 +6,13 @@
   "phases": [
     {"phase_id": "P01", "kind": "asset_lock", "required_origin": "source_license_audit"},
     {"phase_id": "P02", "kind": "runtime_aba_reset", "required_origin": "real_runtime"},
-    {"phase_id": "P03", "kind": "flight_space_3d", "required_origin": "real_runtime"},
+    {"phase_id": "Geometry", "kind": "flight_space_3d", "required_origin": "real_runtime"},
     {"phase_id": "P04", "kind": "public_observation_contract", "required_origin": "real_runtime"},
     {"phase_id": "P05", "kind": "scene_split_freeze", "required_origin": "source_license_audit"},
     {"phase_id": "P06", "kind": "sensor_h15_pilot", "required_origin": "real_runtime"},
-    {"phase_id": "P07", "kind": "task_validity_matrix", "required_origin": "real_runtime"},
-    {"phase_id": "P08", "kind": "mechanism_pilot", "required_origin": "real_runtime"},
-    {"phase_id": "P09", "kind": "formal_protocol_freeze", "required_origin": "protocol_audit"},
+    {"phase_id": "Exploration", "kind": "task_validity_matrix", "required_origin": "real_runtime"},
+    {"phase_id": "Mechanism", "kind": "mechanism_pilot", "required_origin": "real_runtime"},
+    {"phase_id": "Formal", "kind": "formal_protocol_freeze", "required_origin": "protocol_audit"},
     {"phase_id": "P10", "kind": "formal_holdout_matrix", "required_origin": "real_runtime"}
   ],
   "fleet_size": 4,
@@ -59,6 +59,6 @@
     "min_vertical_opportunity_fraction": 0.05,
     "min_fixed_altitude_relative_auc_gain": 0.10
   },
-  "aerocity_bench_mode": "read_only",
+  "realised_qd_bench_mode": "read_only",
   "status": "protocol_only"
 }

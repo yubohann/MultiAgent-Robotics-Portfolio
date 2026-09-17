@@ -26,7 +26,7 @@ class SharedExperimentConfig:
     default_gate_post_collision_radius_m: float = 2.5
     default_gate_post_canopy_height_m: float = 8.0
 
-    drone_asset_file: Path = LOCAL_ASSETS_ROOT / "5_in_drone" / "5_in_drone.usd"
+    drone_asset_file: Path = LOCAL_ASSETS_ROOT / "five_in_drone" / "five_in_drone.usd"
     gate_asset_file: Path = LOCAL_ASSETS_ROOT / "gate" / "gate.usd"
     gate_layout_file: Path = LOCAL_ASSETS_ROOT / "gate_scene_layouts.py"
 

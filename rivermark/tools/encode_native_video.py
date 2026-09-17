@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 
 from rivermark_benchmark._identity import identity_file
-from rivermark_benchmark.frame_archive import ChunkedFrameArchive
+from rivermark_benchmark.data.frame_archive import ChunkedFrameArchive
 
 
 def _archive_path(capture_dir: Path, view: str) -> Path:

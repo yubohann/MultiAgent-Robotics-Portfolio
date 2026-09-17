@@ -6,7 +6,6 @@ import argparse
 import csv
 import json
 import math
-import sys
 from collections.abc import Iterable
 from dataclasses import asdict, fields, is_dataclass, replace
 from datetime import datetime
@@ -15,22 +14,20 @@ from typing import Any
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from multi_gate.configs import get_multi_experiment_config, normalize_multi_experiment_config_name
-from multi_gate.configs.experiment_config import FORMAL_MULTI_TEAM_SIZES
-from multi_gate.env.multi_gate_env import MultiGate2DEnv
-from multi_gate.graph_rl.graph_masac import GraphMASACAgent
-from multi_gate.training import (
+from shared.core.dynamic_gate_density_2d import post_clearance, swept_post_clearance
+from tasks.multi.configs import get_multi_experiment_config, normalize_multi_experiment_config_name
+from tasks.multi.configs.experiment_config import FORMAL_MULTI_TEAM_SIZES
+from tasks.multi.env.multi_gate_env import MultiGate2DEnv
+from tasks.multi.graph_rl.graph_masac import GraphMASACAgent
+from tasks.multi.training import (
     _load_checkpoint_metadata,
     _multi_episode_success_from_info,
     _multi_resume_compatibility_findings,
     _select_multi_env_class,
     validate_multi_checkpoint_compatibility,
 )
-from shared.core.dynamic_gate_density_2d import post_clearance, swept_post_clearance
+
+ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_OUTPUT_ROOT = ROOT / "results" / f"variable_team_size_eval_{datetime.now():%Y%m%d_%H%M%S}"
 EXPECTED_EXPERIMENT_ID = "multi_gate_dynamic_gate_density_8d_v1"

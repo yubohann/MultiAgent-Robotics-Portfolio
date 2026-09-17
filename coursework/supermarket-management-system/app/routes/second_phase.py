@@ -19,7 +19,6 @@ from app.services.second_phase import (
     upsert_system_setting,
 )
 
-
 PAGE_CONFIGS = {
     'members': {
         'title': '会员管理',

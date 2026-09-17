@@ -1,0 +1,2 @@
+[lint.per-file-ignores]
+"sim/rl/experiments/*.py" = ["N999"]

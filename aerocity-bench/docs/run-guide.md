@@ -6,7 +6,7 @@ Everything below runs from the `aerocity-bench` directory. Python 3.11 or newer 
 
 ```powershell
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_public_boundary.py tests/test_inspection_atlas.py tests/test_ordinary_v3.py -q
+python -m pytest tests/unit/test_public_boundary.py tests/pipeline/test_inspection_atlas.py tests/pipeline/test_ordinary_v3.py -q
 ```
 
 These three files cover the privacy scope, the inspection atlas and the ordinary-v3 release contracts, and they run on CPU with no simulator.
@@ -54,15 +54,15 @@ python -m aerocity_bench evaluate --run .\output\run-train-0 `
 External methods run as isolated JSONL processes with their own runtime and source locks under `external/`. Each adapter documents its arguments.
 
 ```powershell
-python tools\run_ortools_g2i_l0_smoke.py --help
-python tools\run_marvel_g2i_l0_smoke.py --help
-python tools\run_aco3d_g2i_l0_smoke.py --help
+python tools\smoke\run_ortools_g2i_l0_smoke.py --help
+python tools\smoke\run_marvel_g2i_l0_smoke.py --help
+python tools\smoke\run_aco3d_g2i_l0_smoke.py --help
 ```
 
 ## Quality gate
 
 ```powershell
-powershell -File tools\run_python_quality_gate.ps1
+powershell -File tools\quality\run_python_quality_gate.ps1
 ```
 
 ## Reading evidence flags

@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DRAWIO_ROOT = ROOT / "supermarket-management-diagrams-drawio-editable"
 REPORT_IMAGE_ROOT = ROOT / "reports" / "system-analysis-design" / "images"

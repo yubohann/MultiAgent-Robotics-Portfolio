@@ -1,13 +1,6 @@
 # Author: Bohan Yu
 
-import os
-import csv
-import math
-import random
-import argparse
-from collections import Counter
-
-class GaussianMixtureModel:
+import argparseimport csvimport mathimport osimport randomfrom collections import Counterclass GaussianMixtureModel:
     def __init__(self, n_clusters=2, max_iterations=100, tolerance=1e-4, seed=42):
         """Initialize the mixture with cluster count, iteration limit and tolerance."""
         self.n_clusters = n_clusters
@@ -148,7 +141,7 @@ class GaussianMixtureModel:
         self._initialize_parameters(X)
         self.log_likelihood_history = []
         
-        for iteration in range(self.max_iterations):
+        for _iteration in range(self.max_iterations):
 
             responsibilities = self._expectation_step(X)
             
@@ -265,7 +258,7 @@ def load_voting_records(file_path, handle_missing=True):
     feature_names = vote_names
     
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             reader = csv.reader(f)
             for row in reader:
 

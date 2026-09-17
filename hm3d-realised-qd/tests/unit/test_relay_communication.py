@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from aerocity_method.runtime.communication import (
+from realised_qd.runtime.communication import (
     RelayMessage,
     RelayMessageQueue,
     build_range_los_relay_graph,

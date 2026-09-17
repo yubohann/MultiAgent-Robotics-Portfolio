@@ -17,8 +17,8 @@
 
 ## 已归档报告
 
-- `reports/system-analysis-design/超市管理系统_系统分析与设计实验报告_20260515.docx`
-- `reports/system-analysis-design/超市管理系统_答辩PPT_20260602.pptx`
+- `reports/system-analysis-design/system-analysis-design-report-20260515.docx`
+- `reports/system-analysis-design/defense-presentation-20260602.pptx`
 - `reports/system-analysis-design/ppt-defense/`，PPT 源结构和质量检查记录。
 - `reports/system-analysis-design/images/`，57 张报告图片和 12 张模块级 UML 用例补充图。
 - `supermarket-management-diagrams-drawio-editable/`，draw.io 可编辑源文件。

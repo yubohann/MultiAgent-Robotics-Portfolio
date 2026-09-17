@@ -4,12 +4,12 @@ from dataclasses import replace
 
 import pytest
 
-from aerocity_method.archives.emitters import (
+from realised_qd.archives.emitters import (
     ArchiveAwareEmitter,
     DeterministicEmitter,
     RandomEmitter,
 )
-from aerocity_method.archives.qd import ArchiveSpec, DescriptorAxis, Elite, QDArchive
+from realised_qd.archives.qd import ArchiveSpec, DescriptorAxis, Elite, QDArchive
 
 
 @pytest.fixture

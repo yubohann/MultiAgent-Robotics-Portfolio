@@ -73,7 +73,7 @@
   "evaluation": {
     "primary_metric": "Explored-Free-Flight-Volume-AUC_time",
     "coverage_numerator": "deduplicated_evaluator_confirmed_free_flight_voxels_reached_by_real_source_bound_sensor_rays",
-    "coverage_denominator": "frozen_reachable_vehicle_clear_enclosed_free_flight_volume_from_p03",
+    "coverage_denominator": "frozen_reachable_vehicle_clear_enclosed_free_flight_volume_from_geometry",
     "time_integration": "trapezoidal_physical_simulation_time_with_t0_and_budget_samples",
     "required_report_fields": [
       "explored_free_flight_volume_auc_time",

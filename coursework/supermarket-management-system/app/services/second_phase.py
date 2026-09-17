@@ -3,7 +3,6 @@ from datetime import datetime
 from app import db
 from app.models import Employee, Member, Supplier, SystemSetting
 
-
 ACTIVE_STATUSES = {'active', 'inactive'}
 MEMBER_LEVELS = {'normal', 'silver', 'gold', 'vip'}
 SETTLEMENT_CYCLES = {'weekly', 'monthly', 'quarterly'}

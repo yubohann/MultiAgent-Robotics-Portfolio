@@ -1,6 +1,6 @@
-from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
 import random
+from datetime import datetime
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func
 

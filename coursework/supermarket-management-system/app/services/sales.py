@@ -1,6 +1,7 @@
+from sqlalchemy import func
+
 from app import db
 from app.models import Sale, SaleItem, User
-from sqlalchemy import func
 
 
 def get_sales_orders(page=1, per_page=10, search='', cashier_id=None, status=None, payment_method=None, start_date=None, end_date=None):

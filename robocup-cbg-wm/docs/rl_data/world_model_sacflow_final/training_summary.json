@@ -1,7 +1,7 @@
 {
   "algorithm": "object_centric_world_model_sac_flow_selfplay",
-  "policy_path": "/mnt/c/Users/Administrator/Desktop/\u4f5c\u54c1\u96c6/RoboCupVisionRL_IsaacLab_ROS2/isaaclab_sim/output/rl/world_model_sacflow_seed260707_rerun/policy.pt",
-  "curve_csv": "/mnt/c/Users/Administrator/Desktop/\u4f5c\u54c1\u96c6/RoboCupVisionRL_IsaacLab_ROS2/isaaclab_sim/output/rl/world_model_sacflow_seed260707_rerun/training_curve.csv",
+  "policy_path": "/mnt/c/Users/Administrator/Desktop/\u4f5c\u54c1\u96c6/RoboCupVisionRL_IsaacLab_ROS2/sim/output/rl/world_model_sacflow_seed260707_rerun/policy.pt",
+  "curve_csv": "/mnt/c/Users/Administrator/Desktop/\u4f5c\u54c1\u96c6/RoboCupVisionRL_IsaacLab_ROS2/sim/output/rl/world_model_sacflow_seed260707_rerun/training_curve.csv",
   "config": {
     "timesteps": 200000,
     "num_envs": 32,

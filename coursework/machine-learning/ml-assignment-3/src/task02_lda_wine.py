@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.preprocessing import StandardScaler
-
 from utils import load_wine, results_path
 
 plt.rcParams["font.sans-serif"] = ["SimHei"]

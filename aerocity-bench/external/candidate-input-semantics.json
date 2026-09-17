@@ -2,14 +2,14 @@
   "schema": "org.aerocity.bench.external-candidate-input-semantics.v1",
   "generated_on": "2026-08-03",
   "purpose": "Gate C candidate screening. This registry records input semantics and disqualifications before an adapter is written. It is not a result table or a claim that any listed repository is integrated.",
-  "g2_i_public_inputs": [
+  "g2i_public_inputs": [
     "public inspection atlas (coarse regions or full cells as a declared ablation)",
     "public mission sector and safe transit graph",
     "public starts and vehicle self state",
     "public flight and observation contract",
     "anonymous confirmation receipts"
   ],
-  "g2_i_forbidden_inputs": [
+  "g2i_forbidden_inputs": [
     "target coordinates or count",
     "target process or labels",
     "support sites and evaluator witnesses",
@@ -29,7 +29,7 @@
         "travel-cost matrix or graph",
         "route budget"
       ],
-      "g2_i_mapping": "Direct only as a routing implementation: public full-atlas cells are nodes, represented area is a public weight, and the public safe-transit graph supplies travel costs.",
+      "g2i_mapping": "Direct only as a routing implementation: public full-atlas cells are nodes, represented area is a public weight, and the public safe-transit graph supplies travel costs.",
       "missing_or_forbidden_inputs": [],
       "license_status": "verified",
       "integration_status": "development L0 closed; no formal score",
@@ -47,7 +47,7 @@
         "pairwise movement-cost model",
         "one sequential inspection tour"
       ],
-      "g2_i_mapping": "Direct for ordering only: the locked source-cost formula receives each drone's target-independent public sector cells. The public mission sector supplies the four-drone partition; shared CF2X execution supplies motion and OBSERVE.",
+      "g2i_mapping": "Direct for ordering only: the locked source-cost formula receives each drone's target-independent public sector cells. The public mission sector supplies the four-drone partition; shared CF2X execution supplies motion and OBSERVE.",
       "missing_or_forbidden_inputs": [
         "native MATLAB or Octave source-equivalence fixture",
         "upstream multi-UAV assignment implementation",
@@ -70,7 +70,7 @@
         "frontier candidates with clearance and visibility support",
         "ROS 1 map and planning graph"
       ],
-      "g2_i_mapping": "No semantics-preserving mapping. G2-I exposes target-agnostic inspection cells and coarse local occupancy, not the ray-built free-space observations that FUEL uses to create and reject frontiers.",
+      "g2i_mapping": "No semantics-preserving mapping. G2I exposes target-agnostic inspection cells and coarse local occupancy, not the ray-built free-space observations that FUEL uses to create and reject frontiers.",
       "missing_or_forbidden_inputs": [
         "rendered depth or sensor rays",
         "fine ray-built free-space map",
@@ -79,7 +79,7 @@
       "license_status": "verified GPL; isolated container required",
       "integration_status": "isolated ROS smoke reached GRAPH_READY_NO_ROUTE",
       "c_gate_eligible": false,
-      "disposition": "Exclude from G2-I. It remains a future G1-U exploration candidate only if a separately declared public sensor-stream profile is released."
+      "disposition": "Exclude from G2I. It remains a future G1-U exploration candidate only if a separately declared public sensor-stream profile is released."
     },
     {
       "candidate_id": "falcon",
@@ -92,7 +92,7 @@
         "coverage path and trajectory-planning environment",
         "vehicle state and map-specific geometry"
       ],
-      "g2_i_mapping": "No direct mapping demonstrated. Treating full public cells as a coverage map would be a new derived implementation, not a locked upstream integration.",
+      "g2i_mapping": "No direct mapping demonstrated. Treating full public cells as a coverage map would be a new derived implementation, not a locked upstream integration.",
       "missing_or_forbidden_inputs": [
         "verified upstream license",
         "demonstrated atlas-to-upstream map equivalence"
@@ -113,7 +113,7 @@
         "frontier and viewpoint generation",
         "ROS 1 asynchronous peer communication"
       ],
-      "g2_i_mapping": "No direct mapping demonstrated. Its frontier pipeline has different observation semantics from a predeclared public inspection atlas.",
+      "g2i_mapping": "No direct mapping demonstrated. Its frontier pipeline has different observation semantics from a predeclared public inspection atlas.",
       "missing_or_forbidden_inputs": [
         "fine online mapping observations",
         "verified repository-wide license closure"
@@ -134,14 +134,14 @@
         "two-dimensional field-of-view observations",
         "decentralized communication state"
       ],
-      "g2_i_mapping": "Only a declared two-dimensional transfer diagnostic is possible; a projection loses the three-dimensional inspection orientation and cannot claim comparable geometry-search performance.",
+      "g2i_mapping": "Only a declared two-dimensional transfer diagnostic is possible; a projection loses the three-dimensional inspection orientation and cannot claim comparable geometry-search performance.",
       "missing_or_forbidden_inputs": [
         "three-dimensional oriented inspection-cell semantics"
       ],
       "license_status": "verified at prior screen",
       "integration_status": "short transfer diagnostics only",
       "c_gate_eligible": false,
-      "disposition": "Retain only in a compatibility appendix. It cannot close Gate C or join the G2-I main table."
+      "disposition": "Retain only in a compatibility appendix. It cannot close Gate C or join the G2I main table."
     },
     {
       "candidate_id": "mav_voxblox_planning",
@@ -154,7 +154,7 @@
         "ESDF map",
         "specified goal pose"
       ],
-      "g2_i_mapping": "It can be a low-level trajectory-planning control comparison only after a separately audited public map profile exists. It does not select inspection regions or search for targets.",
+      "g2i_mapping": "It can be a low-level trajectory-planning control comparison only after a separately audited public map profile exists. It does not select inspection regions or search for targets.",
       "missing_or_forbidden_inputs": [
         "TSDF and ESDF map",
         "independent search or inspection-order policy"
@@ -177,16 +177,16 @@
         "energy cost matrix",
         "dynamic base-station variables"
       ],
-      "g2_i_mapping": "The public atlas can supply inspection-cell locations, but not its wind-farm terrain/energy-matrix semantics or dynamic-base decision variables. Replacing those parts would create a benchmark-owned derivative rather than run the locked upstream method.",
+      "g2i_mapping": "The public atlas can supply inspection-cell locations, but not its wind-farm terrain/energy-matrix semantics or dynamic-base decision variables. Replacing those parts would create a benchmark-owned derivative rather than run the locked upstream method.",
       "missing_or_forbidden_inputs": [
         "published peer-reviewed method version",
         "public terrain and energy-cost semantics equivalent to the upstream model",
-        "direct G2-I action-interface mapping"
+        "direct G2I action-interface mapping"
       ],
       "license_status": "MIT stated by repository; upstream README calls the paper a submitted manuscript",
       "integration_status": "GitHub screened only",
       "c_gate_eligible": false,
-      "disposition": "Do not integrate now. It is useful evidence that inspection routing exists, but not a validated G2-I external baseline."
+      "disposition": "Do not integrate now. It is useful evidence that inspection routing exists, but not a validated G2I external baseline."
     },
     {
       "candidate_id": "highstar",
@@ -200,7 +200,7 @@
         "voxel-graph motion primitives and convex-hull trajectory environment",
         "ROS 1 odometry and map topics"
       ],
-      "g2_i_mapping": "No semantics-preserving mapping. HighStar's published planner creates viewpoints from online unknown/free-space geometry, whereas G2-I publishes an inspection atlas and does not expose the ray-built map required to form those frontiers.",
+      "g2i_mapping": "No semantics-preserving mapping. HighStar's published planner creates viewpoints from online unknown/free-space geometry, whereas G2I publishes an inspection atlas and does not expose the ray-built map required to form those frontiers.",
       "missing_or_forbidden_inputs": [
         "online ray-built free-space and unknown-space map",
         "frontier-generation observations",
@@ -209,7 +209,7 @@
       "license_status": "no root SPDX license found in the locked upstream tree",
       "integration_status": "local source and README screened only",
       "c_gate_eligible": false,
-      "disposition": "Exclude from G2-I. Retain as a future G1-U candidate only if a separate public sensor-stream profile is frozen."
+      "disposition": "Exclude from G2I. Retain as a future G1-U candidate only if a separate public sensor-stream profile is frozen."
     },
     {
       "candidate_id": "epic",
@@ -223,7 +223,7 @@
         "frontier/viewpoint generation from unexplored geometry",
         "ROS 1 vehicle state and trajectory environment"
       ],
-      "g2_i_mapping": "No direct mapping demonstrated. Supplying the private city mesh or rendered LiDAR would violate G2-I information boundaries; deriving EPIC's mapping pipeline from atlas cells would replace its exploration core.",
+      "g2i_mapping": "No direct mapping demonstrated. Supplying the private city mesh or rendered LiDAR would violate G2I information boundaries; deriving EPIC's mapping pipeline from atlas cells would replace its exploration core.",
       "missing_or_forbidden_inputs": [
         "online LiDAR point-cloud stream",
         "ray-derived unexplored-space semantics",
@@ -232,7 +232,7 @@
       "license_status": "verified GPL; any future execution requires an isolated process or container",
       "integration_status": "local source and paper metadata screened only",
       "c_gate_eligible": false,
-      "disposition": "Exclude from G2-I and do not implement an adapter. It is relevant only to a separately specified G1-U LiDAR exploration track."
+      "disposition": "Exclude from G2I and do not implement an adapter. It is relevant only to a separately specified G1-U LiDAR exploration track."
     },
     {
       "candidate_id": "tu-darmstadt-3d-coverage-path-planning",
@@ -246,7 +246,7 @@
         "ground-robot body geometry and reachable start point",
         "sensor recording plugin and accumulated reconstruction"
       ],
-      "g2_i_mapping": "The task is academically close but not directly compatible. Converting the atlas into complete/target mesh models would invent a new input representation, and its ground-robot navigation and reconstruction loop are not the shared CF2X flight/OBSERVE contract.",
+      "g2i_mapping": "The task is academically close but not directly compatible. Converting the atlas into complete/target mesh models would invent a new input representation, and its ground-robot navigation and reconstruction loop are not the shared CF2X flight/OBSERVE contract.",
       "missing_or_forbidden_inputs": [
         "public complete and target mesh models",
         "ground-robot kinematics and mesh-navigation semantics",
@@ -255,7 +255,7 @@
       "license_status": "verified MIT at the locked upstream revision",
       "integration_status": "README, source contract, and paper metadata screened only",
       "c_gate_eligible": false,
-      "disposition": "Exclude from G2-I. Cite as related prior-mesh inspection work, not as a runnable CF2X baseline."
+      "disposition": "Exclude from G2I. Cite as related prior-mesh inspection work, not as a runnable CF2X baseline."
     },
     {
       "candidate_id": "rayfronts",
@@ -269,7 +269,7 @@
         "online semantic occupancy/frontier map",
         "ROS 2 sensor and waypoint topics"
       ],
-      "g2_i_mapping": "No G2-I geometry mapping. RayFronts uses RGB/depth-derived semantic ray frontiers and text prompts to reduce a semantic search volume; the geometry-search track deliberately withholds these modalities and target semantics.",
+      "g2i_mapping": "No G2I geometry mapping. RayFronts uses RGB/depth-derived semantic ray frontiers and text prompts to reduce a semantic search volume; the geometry-search track deliberately withholds these modalities and target semantics.",
       "missing_or_forbidden_inputs": [
         "continuous RGB/depth and intrinsics stream",
         "semantic target prompt and pretrained perception model",
@@ -278,7 +278,7 @@
       "license_status": "MIT root license observed in the local source snapshot; exact upstream revision and model/dependency provenance are not locked",
       "integration_status": "local README and source contract screened only",
       "c_gate_eligible": false,
-      "disposition": "Exclude from G2-I and Gate C. It is a relevant future perception-search candidate only after a separately frozen RGB-D profile and model-license audit."
+      "disposition": "Exclude from G2I and Gate C. It is a relevant future perception-search candidate only after a separately frozen RGB-D profile and model-license audit."
     },
     {
       "candidate_id": "raven",
@@ -292,7 +292,7 @@
         "global waypoint overwrite interface and local collision-avoidance stack",
         "optional language-vision model and downloaded pretrained weights"
       ],
-      "g2_i_mapping": "No semantics-preserving G2-I mapping. RAVEN's published system makes global semantic plans from camera-derived memory and optionally a language-vision model. Giving it these inputs would create a different perception-search task; removing them would remove its method core.",
+      "g2i_mapping": "No semantics-preserving G2I mapping. RAVEN's published system makes global semantic plans from camera-derived memory and optionally a language-vision model. Giving it these inputs would create a different perception-search task; removing them would remove its method core.",
       "missing_or_forbidden_inputs": [
         "continuous RGB/depth and camera intrinsics",
         "semantic prompt, semantic memory, and pretrained model weights",
@@ -301,7 +301,7 @@
       "license_status": "BSD-3-Clause root license observed in the local source snapshot; recursive submodules and pretrained model licenses are not closed",
       "integration_status": "local README and source contract screened only",
       "c_gate_eligible": false,
-      "disposition": "Exclude from G2-I and Gate C. Cite it as an ICRA 2026 perception-navigation reference; evaluate it only in a separately declared perception-search track."
+      "disposition": "Exclude from G2I and Gate C. Cite it as an ICRA 2026 perception-navigation reference; evaluate it only in a separately declared perception-search track."
     }
   ]
 }
