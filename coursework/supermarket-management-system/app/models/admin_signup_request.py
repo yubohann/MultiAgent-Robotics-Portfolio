@@ -4,7 +4,7 @@ from app import db
 
 
 class AdminSignupRequest(db.Model):
-    """管理员注册申请表"""
+    """Admin signup request table."""
     __tablename__ = 'admin_signup_requests'
 
     request_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

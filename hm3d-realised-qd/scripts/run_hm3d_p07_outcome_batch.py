@@ -1,11 +1,4 @@
-"""Run P07 train-outcome episodes with one fresh Isaac process per episode.
-
-The persistent collection script can aggregate several episodes in one Isaac
-process, but the installed IsaacLab build hangs on the second context.new_stage()
-inside the old SimulationContext stop callback. This batch runner keeps the same
-plan schema and manifest validation while moving the process boundary to one
-P07 worker per fresh Isaac process.
-"""
+"""Run P07 train-outcome episodes with one fresh Isaac process per episode."""
 
 from __future__ import annotations
 

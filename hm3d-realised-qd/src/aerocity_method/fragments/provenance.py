@@ -219,8 +219,7 @@ def evaluate_provenance(
         return _deny("MISSING_APPLIED_FRAGMENT", outcome.digest)
     if not applied.executed:
         return _deny("APPLIED_FRAGMENT_NOT_MARKED_EXECUTED", applied.digest)
-    # A guarded route can still be physically attempted and then time out.
-    # Prefer that runtime outcome to the pre-execution guard label so a
+    # Prefer a runtime timeout outcome over the pre-execution guard label, so a
     # calibration ledger cannot disguise a censored trace as merely rewritten.
     if dict(outcome.outcome_fields).get("transit_timeout", 0.0) > 0.0:
         return _deny("TRANSIT_TIMEOUT", outcome.digest)
@@ -240,9 +239,8 @@ def evaluate_provenance(
         or outcome.agent_id != planned.agent_id
     ):
         return _deny("EXECUTION_IDENTITY_MISMATCH", outcome.digest, planned.digest)
-    # These outcomes have more diagnostic value than a later timing mismatch.
-    # In particular, a deadline-truncated transit is a real attempted trace,
-    # not an absent action, but it must never enter replay.
+    # Failure outcomes keep diagnostic value over a later timing mismatch; a
+    # deadline-truncated transit is a real attempt that never enters replay.
     early_outcomes = dict(outcome.outcome_fields)
     if early_outcomes.get("collision", 0.0) > 0.0:
         return _deny("PHYSICAL_COLLISION", outcome.digest)
@@ -254,12 +252,9 @@ def evaluate_provenance(
         return _deny("STATIC_CLEARANCE_CONTRACT_VIOLATION", outcome.digest)
     if early_outcomes.get("inter_agent_separation_violation", 0.0) > 0.0:
         return _deny("INTER_AGENT_SEPARATION_VIOLATION", outcome.digest)
-    # Planned start/end are timing-model predictions.  Event-driven execution
-    # records the real applied window and may finish early without changing the
-    # command path, so replay eligibility is bound to the authorized token
-    # window instead of requiring the controller to match a predicted schedule.
-    # Timing-model error remains auditable through the calibrated transit
-    # contract and the recorded planned/actual durations.
+    # Replay eligibility binds to the authorized token window, because event-driven
+    # execution records the real applied window and may finish early; timing-model
+    # error stays auditable through the calibrated contract and planned/actual durations.
     token_window_start = token.issued_at
     token_window_end = token.issued_at + token.duration
     if (

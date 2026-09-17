@@ -4,7 +4,7 @@ from app import db
 
 
 class Member(db.Model):
-    """会员账户表"""
+    """Member account table."""
     __tablename__ = 'members'
 
     member_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

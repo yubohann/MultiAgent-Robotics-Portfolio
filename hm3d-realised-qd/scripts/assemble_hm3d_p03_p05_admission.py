@@ -1,10 +1,4 @@
-"""Bind measured HM3D cohort evidence into fail-closed P03--P05 artifacts.
-
-This assembler does not create measurements.  It validates the immutable
-Isaac/PhysX JSON files already produced for the stratified train/validation
-cohort, derives only aggregate fields required by the frozen preflight schema,
-and refuses to overwrite an artifact or evidence manifest.
-"""
+"""Bind measured HM3D cohort evidence into fail-closed P03 through P05 artifacts."""
 
 from __future__ import annotations
 
@@ -130,14 +124,7 @@ def build_p03_scene_row(
     vertical_counterfactual: dict[str, Any],
     replay: dict[str, Any],
 ) -> dict[str, Any]:
-    """Validate one real 3D scene without requiring a P04 observation run.
-
-    P03 establishes evaluator geometry before P04 can collect observations.
-    Keeping this construction independent of P04 avoids a circular admission
-    dependency.  The operational sensor is sparse range, so P03 proves the
-    collision-derived flight geometry, vertical pressure, and PhysX replay;
-    P04 separately proves the public range-outcome contract.
-    """
+    """Validate one real 3D scene without requiring a P04 observation run."""
 
     scene_id = flight.get("scene_id")
     if not isinstance(scene_id, str) or scene_id not in locked:
@@ -369,10 +356,9 @@ def main() -> int:
     expected_denominator_hash = evaluation_denominator_sha256(tuple(p03_rows))
     if next(iter(denominator_hashes)) != expected_denominator_hash:
         raise ValueError("observation ledgers do not bind the P03 evaluator denominator")
-    # Earlier independent calibration/replay probes have immutable data hashes but
-    # no command field.  Do not invent historical commands: this records the
-    # actual assembly command, while each new counterfactual carries its own
-    # runtime command and content digest.
+    # Historical probes carry immutable data hashes and no command field, so record
+    # the actual assembly command; each new counterfactual carries its own command
+    # and digest.
     p03_command_hash = _command_sha256([str(value) for value in sys.argv])
     p04_command_hash = canonical_sha256(
         sorted(row["runtime_command_sha256"] for row in observations)

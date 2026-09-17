@@ -89,9 +89,8 @@ def test_departure_witnesses_exclude_isolated_high_clearance_voxels() -> None:
     arrays = {
         "free_mask": np.ones((4, 1, 1), dtype=bool),
         "component_labels": np.ones((4, 1, 1), dtype=np.int32),
-        # With 0.25 m voxels and a 0.55 m route-sample requirement, a launch
-        # witness needs 0.675 m at both ends.  The last cell is safe to hold
-        # but has no qualifying first hop and must not become a reset point.
+        # With 0.25 m voxels and a 0.55 m route sample, the last cell is safe to hold
+        # but has no qualifying first hop.
         "collision_distance_m": np.asarray([[[0.80]], [[0.80]], [[0.80]], [[0.60]]]),
         "origin_center_m": np.asarray((0.0, 0.0, 0.0)),
         "resolution_m": np.asarray(0.25),

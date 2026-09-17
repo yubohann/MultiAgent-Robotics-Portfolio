@@ -160,10 +160,8 @@ class Mid360InputGuard(Node):
         imu_fresh = self._stream_is_fresh(self.last_imu_arrival, self.max_imu_silence_sec, now)
         valid = self.last_lidar_ok and self.last_imu_ok and lidar_fresh and imu_fresh
 
-        # Sensor callbacks can arrive hundreds of times per second. Publish a
-        # transition immediately, but let the timer carry changing counters
-        # during steady state so diagnostics do not add a second high-rate
-        # workload to the simulator.
+        # Publish transitions immediately, then let the timer carry changing
+        # counters so diagnostics stay off the high-rate sensor callback path.
         signature = (
             valid,
             self.last_lidar_ok,

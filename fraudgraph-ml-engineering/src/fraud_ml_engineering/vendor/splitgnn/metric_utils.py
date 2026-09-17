@@ -155,9 +155,8 @@ def find_best_threshold_metrics(
             precision_target=precision_target,
         )
         precision_shortfall = max(0.0, float(precision_target) - float(current["precision"]))
-        # Favor balanced classification quality because the mainline protocol
-        # reports macro-F1/gmean, and positive-class F1 alone tends to pick
-        # overly aggressive thresholds on heavily imbalanced splits.
+        # Favor balanced classification quality because the mainline protocol reports macro-F1
+        # and gmean while positive-class F1 alone picks aggressive thresholds on imbalanced splits.
         rank = (
             float(current["f1_macro"]),
             float(current["gmean"]),

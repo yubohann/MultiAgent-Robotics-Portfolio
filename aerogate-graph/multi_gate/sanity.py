@@ -35,8 +35,8 @@ def validate_dynamic_gate_density_environment(
         config=gate_cfg,
     )
 
-    # Keep this preflight renderer- and guidance-free; it only checks motion,
-    # kinematics, and collision behavior.
+    # Keep this preflight free of renderer and guidance dependencies so it checks only motion,
+    # kinematics and collision behavior.
     sanity_config = replace(
         experiment_config,
         reasoning=replace(

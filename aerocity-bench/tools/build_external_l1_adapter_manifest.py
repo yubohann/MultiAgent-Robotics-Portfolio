@@ -108,8 +108,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         template_file = args.command_template_file.resolve()
         if not template_file.is_file():
             raise ValueError("command template file must exist")
-        # ``utf-8-sig`` accepts both portable UTF-8 and Windows PowerShell's
-        # UTF-8 BOM output without treating the BOM as JSON content.
+        # ``utf-8-sig`` accepts both plain UTF-8 and PowerShell's UTF-8 BOM.
         command_input = template_file.read_text(encoding="utf-8-sig")
     else:
         command_input = args.command_template_json

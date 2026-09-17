@@ -180,9 +180,8 @@ class PublicCell:
     yaw_deg: float
     pitch_deg: float
     represented_area_m2: float
-    # A mission-sector capacity certificate permits direct scan motion inside
-    # one public inspection region only when the public coarse geometry also
-    # proves that the segment clears every building envelope.
+    # Certificate-authorized direct scan region; set only when public coarse
+    # geometry proves the in-region segment clears every building envelope.
     region_id: str = ""
 
 
@@ -311,9 +310,8 @@ class ORToolsInspectionPlanner:
             ),
             "return_reserve_s": float(capacity_certificate.get("return_reserve_s", 0.0)),
             "safe_sky_altitude_m": float(transit.get("safe_sky_altitude_m", 0.0)),
-            # The sector was admitted with these public, frozen transit rates.
-            # Vehicle speeds in the task contract are upper bounds; using them
-            # here silently overstates the work that fits before return.
+            # Certified transit rates: contract vehicle speeds are upper bounds,
+            # and using them here would overstate the work that fits.
             "horizontal_speed_mps": float(
                 capacity_certificate.get("horizontal_speed_mps", 0.0)
             ),
@@ -528,17 +526,15 @@ class ORToolsInspectionPlanner:
                 if is_return:
                     route.phase = "returned"
                 else:
-                    # Arriving inside the position tolerance does not imply a
-                    # CF2X has stopped.  Hold first, then consult only the
-                    # public velocity fields before starting an OBSERVE dwell.
+                    # Arriving within tolerance does not mean stopped; hold,
+                    # then check public velocity before starting the dwell.
                     route.phase = "settle"
                     return {"kind": "HOVER"}
             else:
                 return {
                     "kind": "WAYPOINT",
-                    # Waypoints command CF2X position and yaw only.  The
-                    # atlas pitch is a public bounded-camera command, not an
-                    # impossible body-hover attitude.
+                    # Waypoints command position and yaw only; atlas pitch is
+                    # a bounded-camera command, not body attitude.
                     "waypoint": _pose(target, target_yaw),
                     "sensor_pitch_deg": target_pitch,
                 }
@@ -546,8 +542,7 @@ class ORToolsInspectionPlanner:
             if self._observation_is_settled(observation):
                 route.phase = "observe"
                 route.observe_ticks_remaining = max(
-                    # The first accepted observation starts the dwell
-                    # interval.  It does not itself contribute a full
+                    # The first OBSERVE starts the dwell but contributes no full
                     # control period, so the endpoint needs one extra sample.
                     1, math.ceil(self.dwell_s / self.control_period_s) + 1,
                 )

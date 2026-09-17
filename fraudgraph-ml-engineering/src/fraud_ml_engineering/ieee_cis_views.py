@@ -698,8 +698,8 @@ def bundle_from_ieee_graph(
     relation_profile: str = "",
     history_len: int = 0,
 ) -> DatasetBundle:
-    # The graph returned by build_ieee_graph_view is already uniquely owned here.
-    # Re-cloning it can double RAM use for large IEEE graphs without adding safety.
+    # The graph returned by build_ieee_graph_view is already uniquely owned, and re-cloning it
+    # doubles RAM use for large IEEE graphs.
     working_graph = graph
     train_mask = working_graph.nodes[NODE_TYPE].data["train_mask"].bool()
     working_graph.nodes[NODE_TYPE].data["train_supervised_mask"] = train_mask.clone()

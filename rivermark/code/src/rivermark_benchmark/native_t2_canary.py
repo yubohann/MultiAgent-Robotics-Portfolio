@@ -1,12 +1,4 @@
-"""Public control and perception primitives for the native Isaac T2 canary.
-
-The module is deliberately CPU-only.  It contains neither Isaac imports nor a
-private-evaluator interface: Isaac capture supplies the synchronized sensor
-arrays and performs the physical step, while the independent evaluator owns
-the hidden target-to-observation mapping.  Keeping that separation explicit
-makes it impossible for the canary policy to obtain target truth through this
-module's API.
-"""
+"""Public control and perception primitives for the native Isaac T2 canary."""
 
 from __future__ import annotations
 

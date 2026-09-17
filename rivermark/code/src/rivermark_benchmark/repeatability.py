@@ -1,9 +1,4 @@
-"""Compare two independently validated, same-seed native Isaac captures.
-
-The report measures bounded run-to-run variation.  It does not require
-bitwise-identical RTX output and it does not admit either capture into the
-formal dataset.
-"""
+"""Compare two independently validated, same-seed native Isaac captures."""
 
 from __future__ import annotations
 

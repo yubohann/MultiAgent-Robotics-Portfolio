@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Generate frozen Mellinger-controller outputs from Bitcraze's C binding.
-
-Run this under WSL with the frozen ``crazyflie-firmware`` build directory on
-``PYTHONPATH``.  The resulting fixture constrains the Windows/Torch decision
-core; it does not claim that the two simulators share the same actuator model.
-"""
+"""Generate frozen Mellinger-controller outputs from the Bitcraze C binding."""
 
 from __future__ import annotations
 

@@ -360,11 +360,9 @@ def aggregate_measurement_records(
         for path in (layout_root, release_config, public_path, private_path):
             if not path.exists():
                 raise FileNotFoundError(f"L1 evidence source is missing: {path}")
-        # Calibration evidence is a denominator, not a success-only filter.
-        # The aggregation-only path still verifies every immutable binding,
-        # receipt chain, measured trace, and public/private boundary while
-        # retaining complete replays that ended in a planner or safety
-        # failure.  Formal runners keep the strict default validator.
+        # Calibration evidence is a denominator, not a success-only filter:
+        # failed replays are retained, but every binding, receipt, trace, and
+        # boundary check still runs.  Formal runners use the strict default.
         validation = validate_fleet_preflight_reports(
             public_path,
             private_path,

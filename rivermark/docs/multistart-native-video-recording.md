@@ -2,7 +2,7 @@
 
 Rivermark's City-Lite contract defines two public route families. Each family contains eight literal CF2X start poses, so one episode shows the swarm spread across the map. Family A covers the train condition, and family B is the mirrored validation condition.
 
-## Plan the batch
+## Plan the Batch
 
 Run from a clean checkout.
 

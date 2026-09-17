@@ -842,10 +842,8 @@ def test_routed_guard_shortened_polyline_keeps_the_original_first_point() -> Non
         allow_public_reroute=False,
     )
 
-    # The shortcut collapses the three-point polyline onto the legal direct
-    # leg, but the admitted command must still begin at the vehicle pose.
-    # Regressing to the final leg's GuardedPath would start the command at
-    # ``intermediate`` and send the vehicle across an unguarded gap.
+    # The admitted command must still begin at the vehicle pose; returning the final
+    # leg would start it at ``intermediate`` across an unguarded gap.
     assert guarded.legal is True
     assert guarded.path_m[0] == start
     assert guarded.path_m[-1] == end
@@ -853,14 +851,7 @@ def test_routed_guard_shortened_polyline_keeps_the_original_first_point() -> Non
 
 
 def test_line_profile_pass_through_to_rest_terminates_at_arrival() -> None:
-    """A corner pass-through leg must end with zero reference acceleration.
-
-    The pass-through boundary-speed profile (initial speed above zero) used to
-    keep returning the braking acceleration forever after arrival, which
-    pushed the vehicle away from the terminal waypoint and made it impossible
-    to satisfy the settle contract.  After ``duration_s`` the reference must
-    be stationary with zero acceleration.
-    """
+    """A corner pass-through leg must end with zero reference acceleration."""
 
     _, _, _, duration_s = _line_profile_state(
         distance_m=1.43,

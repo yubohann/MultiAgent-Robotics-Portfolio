@@ -1,15 +1,15 @@
-# 可复现实验包
+# Deterministic Replay Package
 
-## 环境版本
+## Environment Versions
 
-- 日期：2026-06-21
-- 操作系统：Microsoft Windows 11 专业版 `10.0.26100`
-- Shell：PowerShell
-- Python：`python`
-- Python 版本：`Python 3.13.5`
-- 项目根目录：`<gate_graph_2d_minimal>`
+- Date, 2026-06-21
+- OS, Microsoft Windows 11 Pro `10.0.26100`
+- Shell, PowerShell
+- Python, `python`
+- Python version, `Python 3.13.5`
+- Project root, `<gate_graph_2d_minimal>`
 
-## 依赖版本
+## Dependency Versions
 
 ```text
 numpy==1.26.4
@@ -22,22 +22,22 @@ gymnasium==1.2.3
 networkx==3.4.2
 ```
 
-## 测试命令
+## Test Command
 
 ```powershell
 cd <gate_graph_2d_minimal>
 python -m pytest tests
 ```
 
-预期输出：
+Expected output,
 
 ```text
 8 passed
 ```
 
-## 导入烟测命令
+## Import Smoke Command
 
-该仓库有部分历史文件带 UTF-8 BOM，因此烟测使用 `utf-8` 读取源码。
+Some historical files carry a UTF-8 BOM, and the smoke test reads source as `utf-8`.
 
 ```powershell
 cd <gate_graph_2d_minimal>
@@ -65,15 +65,15 @@ raise SystemExit(1 if failures else 0)
 '@ | python -
 ```
 
-预期输出：
+Expected output,
 
 ```text
 parsed=148 failures=0
 ```
 
-## 单机动态门评估入口
+## Single-Agent Dynamic Gate Scoring Entry
 
-需要提供训练好的 checkpoint。随机种子与示例视频一致时使用 `--seed 0`，动态门密度示例使用 `--gate-count 42`。
+A trained checkpoint is required. The seed and sample video pair with `--seed 0`, and the dynamic gate density sample uses `--gate-count 42`.
 
 ```powershell
 cd <gate_graph_2d_minimal>
@@ -89,9 +89,9 @@ python gate_density_single\scripts\run_gate_density_eval.py `
   --output-dir outputs\single_dynamic_gate42_seed0
 ```
 
-预期输出：`outputs\single_dynamic_gate42_seed0` 下生成 JSON/CSV 评估摘要，字段包含 `success`、`collision`、`timeout`、`done_reason`、`progress_distance_m`、`flight_time_s`、`actual_gate_motion_range_m`、`moving_gate_swept_clearance_m_min` 等。
+Expected output, `outputs\single_dynamic_gate42_seed0` holds JSON and CSV scoring summaries with fields such as `success`, `collision`, `timeout`, `done_reason`, `progress_distance_m`, `flight_time_s`, `actual_gate_motion_range_m`, `moving_gate_swept_clearance_m_min`.
 
-## 多机静态/动态评估入口
+## Multi-Agent Static and Dynamic Scoring Entry
 
 ```powershell
 cd <gate_graph_2d_minimal>
@@ -107,11 +107,11 @@ python multi_gate\scripts\run_paper_multi_gate_density_eval.py `
   --output-root outputs\paper_2d_repro
 ```
 
-预期输出：`outputs\paper_2d_repro` 下生成多机静态/动态结果 CSV/JSON，字段覆盖 `success_rate_pct`、`collision_rate_pct`、`path_length_m`、`flight_time_s`、`gate_post_radius_m`。
+Expected output, `outputs\paper_2d_repro` holds multi-agent static and dynamic CSV and JSON results with fields covering `success_rate_pct`, `collision_rate_pct`, `path_length_m`, `flight_time_s`, `gate_post_radius_m`.
 
-## 经典规划器基线入口
+## Classic Planner Baseline Entry
 
-该命令读取已有主方法结果目录，并输出规划器 rows、summary、comparison、audit、metric contract。动态门基线可固定速度/幅值以对齐主方法设置。
+This command reads a completed mainline results directory and writes planner rows, summary, comparison, audit and metric contract files. Dynamic gate baselines can pin speed and amplitude to match the mainline settings.
 
 ```powershell
 cd <gate_graph_2d_minimal>
@@ -126,7 +126,7 @@ python scripts\run_classic_planner_baselines.py `
   --output-dir outputs\planner_baseline_gate42_seed0
 ```
 
-预期输出：
+Expected output,
 
 - `planner_baseline_rows.jsonl`
 - `planner_baseline_summary.csv`
@@ -135,42 +135,42 @@ python scripts\run_classic_planner_baselines.py `
 - `planner_baseline_metric_contract.json`
 - `planner_baseline_run_manifest.json`
 
-## 随机种子
+## Seeds
 
-评估附件中已记录的主要种子：
+Recorded seeds in the artifact set,
 
-- 单机动态门 demo：`gate_count=42`，`seed=0`
-- 多机静态门 demo：`gate_count=60`，`team_size=8`，`seed=0`
-- 多机动态门 demo：`gate_count=36`，`team_size=8`，`seed=0`
-- 多机四指标图表数据：每个门密度 `episodes=3`
-- 单机规划器基线 CSV：每个门密度 `seed_count=10`
+- Single-agent dynamic gate demo, `gate_count=42`, `seed=0`
+- Multi-agent static gate demo, `gate_count=60`, `team_size=8`, `seed=0`
+- Multi-agent dynamic gate demo, `gate_count=36`, `team_size=8`, `seed=0`
+- Multi-agent four-metric figure data, `episodes=3` per gate density
+- Single-agent planner baseline CSV, `seed_count=10` per gate density
 
-## 关键结果摘要
+## Key Result Summary
 
-来自 `results/csv_json/single_dynamic_planner_baseline_eight_metrics.csv`：
+From `results/csv_json/single_dynamic_planner_baseline_eight_metrics.csv`,
 
-| 场景 | 方法 | seed 数 | 成功率 | 碰撞率 | 超时率 |
-|---|---:|---:|---:|---:|---:|
-| 单机动态 42 门 | ours_mainline | 10 | 1.0 | 0.0 | 0.0 |
-| 单机动态 42 门 | astar | 10 | 0.1 | 0.8 | 0.1 |
-| 单机动态 42 门 | theta_star | 10 | 0.0 | 0.9 | 0.1 |
-| 单机动态 42 门 | rrt_star | 10 | 0.0 | 0.0 | 1.0 |
-| 单机动态 42 门 | informed_rrt_star | 10 | 0.0 | 0.0 | 1.0 |
-| 单机动态 42 门 | heuristic | 10 | 0.0 | 0.0 | 1.0 |
+| Scene | Method | Seeds | Success rate | Collision rate | Timeout rate |
+| --- | --- | --- | --- | --- | --- |
+| Single-agent dynamic 42 gates | ours_mainline | 10 | 1.0 | 0.0 | 0.0 |
+| Single-agent dynamic 42 gates | astar | 10 | 0.1 | 0.8 | 0.1 |
+| Single-agent dynamic 42 gates | theta_star | 10 | 0.0 | 0.9 | 0.1 |
+| Single-agent dynamic 42 gates | rrt_star | 10 | 0.0 | 0.0 | 1.0 |
+| Single-agent dynamic 42 gates | informed_rrt_star | 10 | 0.0 | 0.0 | 1.0 |
+| Single-agent dynamic 42 gates | heuristic | 10 | 0.0 | 0.0 | 1.0 |
 
-来自 `results/csv_json/multi_static_dynamic_four_metrics_plot_data.csv`：
+From `results/csv_json/multi_static_dynamic_four_metrics_plot_data.csv`,
 
-| 场景 | 门数 | episodes | 成功率 | 碰撞率 | 路径长度 m | 飞行时间 s | 门柱半径 m |
-|---|---:|---:|---:|---:|---:|---:|---:|
+| Scene | Gates | Episodes | Success rate | Collision rate | Path length m | Flight time s | Gate post radius m |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | multi static | 60 | 3 | 100.0 | 0.0 | 66.5250 | 35.2667 | 0.14 |
 | multi dynamic | 36 | 3 | 100.0 | 0.0 | 67.0867 | 47.0000 | 0.24 |
 | multi dynamic | 60 | 3 | 100.0 | 0.0 | 66.6690 | 38.0333 | 0.24 |
 
-注意：同一 CSV 中单机动态 60 门主方法行标记为 `real_eval_failed`，成功率 `0.0`、碰撞率 `0.6`。该失败样本用于记录高密度压力边界，不应改写为成功结果。
+In the same CSV the single-agent dynamic 60-gate mainline row carries the `real_eval_failed` mark with success rate `0.0` and collision rate `0.6`. That row records the high-density stress limit and stays recorded as a failure sample.
 
-## 结果哈希核验
+## Result Hash Check
 
-全部附件文件的 SHA256 固化在 `results_manifest.json`。可用以下命令复核：
+The SHA256 of every artifact file is fixed in `results_manifest.json`. The command below rechecks them.
 
 ```powershell
 cd <gate_graph_2d_minimal>\evaluation_artifacts
@@ -193,7 +193,7 @@ raise SystemExit(1 if bad else 0)
 '@ | python -
 ```
 
-预期输出：
+Expected output,
 
 ```text
 checked=7 mismatches=0

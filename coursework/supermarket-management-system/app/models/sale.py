@@ -4,7 +4,7 @@ from app import db
 
 
 class Sale(db.Model):
-    """销售订单表"""
+    """Sales order table."""
     __tablename__ = 'sales'
 
     sale_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

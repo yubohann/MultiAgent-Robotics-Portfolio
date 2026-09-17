@@ -1,11 +1,4 @@
-"""Run a bounded, provenance-labelled baseline suite on the CPU pilot runtime.
-
-This module is preparation for the native Isaac baseline package.  It executes
-the existing public-policy runtime end to end, records a fixed evaluation
-contract, resource observations, and every failed attempt, but it deliberately
-does not claim Isaac, hardware, or benchmark evidence.  The report never
-stores evaluator-private target coordinates or the private truth digest.
-"""
+"""Run a bounded, provenance-labelled baseline suite on the CPU pilot runtime."""
 
 from __future__ import annotations
 

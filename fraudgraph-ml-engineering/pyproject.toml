@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "fraudgraph-ml-engineering"
 version = "0.1.0"
-description = "Reproducible graph-and-sequence fraud detection experiments across financial transaction datasets."
+description = "Deterministic graph-and-sequence fraud detection experiments across financial transaction datasets."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = "LicenseRef-Proprietary"
 license-files = ["LICENSE"]
-authors = [{ name = "Yu Bo Han" }]
+authors = [{ name = "Bohan Yu" }]
 dependencies = [
   "numpy==1.26.4",
   "scipy==1.13.1",
@@ -29,6 +29,10 @@ dependencies = [
 cpu = ["torch==2.3.1", "torchdata==0.7.1", "dgl==2.2.1"]
 cu121 = ["torch==2.3.1", "torchvision==0.18.1", "torchaudio==2.3.1", "torchdata==0.7.1", "dgl==2.2.1+cu121"]
 dev = ["pytest>=8.0", "ruff>=0.6", "build>=1.2"]
+
+[project.urls]
+Homepage = "https://github.com/yubohann/fraudgraph-ml-engineering"
+Repository = "https://github.com/yubohann/fraudgraph-ml-engineering"
 
 [project.scripts]
 fraud-ml-train = "fraud_ml_engineering.main:main"

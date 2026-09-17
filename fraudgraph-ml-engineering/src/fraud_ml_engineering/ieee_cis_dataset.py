@@ -811,8 +811,8 @@ def _build_ieee_event_tensors(
     channel_names = list(IEEE_EVENT_SEQUENCE_CHANNELS)
     channel_capacities = {source_name: 0 for source_name in channel_names}
     if history_slot_budget > 0:
-        # Distribute the reduced history budget across channels without exceeding
-        # the per-channel cap, so light profiles like history_len=6 remain valid.
+        # Distribute the reduced history budget across channels within the per-channel cap, so
+        # light profiles like history_len=6 stay valid.
         remaining_budget = int(history_slot_budget)
         for source_name in channel_names:
             if remaining_budget <= 0:
@@ -2076,8 +2076,8 @@ def _build_graph_payload(
 
 
 def _clone_graph_for_runtime(graph: dgl.DGLHeteroGraph) -> dgl.DGLHeteroGraph:
-    # The graph is already uniquely owned after cache load/build on this path.
-    # Re-cloning here only duplicates a large IEEE graph in memory.
+    # The graph is already uniquely owned after cache load or build, and re-cloning here
+    # duplicates a large IEEE graph in memory.
     return graph
 
 

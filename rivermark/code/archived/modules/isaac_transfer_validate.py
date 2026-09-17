@@ -1,11 +1,4 @@
-"""Independently validate a development-only SB3-to-Isaac control transfer.
-
-This validator deliberately imports neither Isaac Sim, Torch, Gymnasium, nor
-Stable-Baselines3.  It only replays the persisted public state-to-command ABI
-for a City-Lite control-wiring smoke capture.  A passing result is evidence of
-trace integrity, not Isaac training, physical training, a foundation-model
-integration, formal benchmark admission, or a dataset episode.
-"""
+"""Independently validate a development-only SB3-to-Isaac control transfer."""
 
 from __future__ import annotations
 

@@ -373,8 +373,8 @@ class NavMixin:
             linear_speed *= 0.25
         blocked = self._integrate_command(team, linear_speed, angular_speed, allow_push=risk >= PUSH_INTENT_THRESHOLD)
         if blocked and linear_speed <= 0.02 and distance > stop_radius:
-            # Differential-drive escape: when a corner/armor footprint rejects
-            # in-place rotation, back out slowly instead of staying locked.
+            # Differential-drive escape: back out slowly when a corner or armor
+            # footprint rejects in-place rotation.
             escape_speed = -0.11 * max(0.45, 1.0 - self._arena_footprint_margin(pose) / 0.16)
             escape_turn = 0.55 * angular_speed
             escaped = self._integrate_command(team, escape_speed, escape_turn, allow_push=False)
@@ -706,9 +706,9 @@ class NavMixin:
         for center, half_size in active_base_armor_blockers(self.armor, inflated=True):
             if abs(x - center[0]) < half_size[0] - eps and abs(y - center[1]) < half_size[1] - eps:
                 return True
-        # Pushable boxes are rigid contacts, not static walls. The global route
-        # planner may pass through them so the local integrator can solve a
-        # persistent push instead of declaring the rest of the arena unreachable.
+        # Pushable boxes are rigid contacts rather than static walls, so the
+        # global route planner may cross them and let the local integrator
+        # solve a persistent push.
         for target in self.targets:
             if target.knocked:
                 continue

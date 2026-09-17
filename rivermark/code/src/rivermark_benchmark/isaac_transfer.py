@@ -1,15 +1,4 @@
-"""Development-only SB3 state-only control transfer for Isaac City-Lite.
-
-This module deliberately has no Isaac, Torch, Gymnasium, or Stable-Baselines3
-imports at module import time.  An Isaac caller copies the four public rigid
-body arrays to CPU NumPy arrays, then this module derives the exact 8-D state
-used by the local state-only pilot and maps one authenticated SB3 action back
-to a bounded world-frame velocity/yaw command.
-
-It is a control-wiring pilot, not Isaac training, a formal benchmark method,
-or a dataset admission path.  It never accepts image, semantic, lidar, radar,
-language, evaluator, reward, target, or seed inputs.
-"""
+"""Development-only SB3 state-only control transfer for Isaac City-Lite."""
 
 from __future__ import annotations
 

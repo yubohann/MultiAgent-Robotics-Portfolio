@@ -2,17 +2,11 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-这是机器学习课程中的十个经典算法实现。算法核心仅使用 NumPy 或 Python 标准库编写，分类器与聚类器均为自行实现。
+**十个从零实现的经典机器学习算法，每个算法都有独立数据集，实验报告和可运行命令。**
 
-## 项目范围
+算法逻辑使用 NumPy 与 Python 标准库编写，从决策树桩到幂迭代，所有估计器都在项目内直接实现。
 
-| 项目 | 说明 |
-|---|---|
-| 作者 | Bohan Yu |
-| 课程 | 机器学习 |
-| 覆盖内容 | 监督学习，聚类，关联规则挖掘与图算法 |
-| 运行环境 | Python 3.8+ 与 NumPy |
-| 证据 | 分算法源码，公开数据集，实验报告与可运行脚本 |
+**状态。** 十个实现均可基于仓库内公开数据集运行，环境为 Python 3.8 或更高版本与 NumPy。
 
 ## 算法目录
 
@@ -29,15 +23,44 @@
 | 9 | [PageRank](PageRank/) | 图算法 | 示例网页图 | 阻尼因子的幂迭代 |
 | 10 | [SVM](SVM/) | 分类 | Iris | 多分类间隔优化 |
 
-## 目录与运行
+## 运行示例
 
-每个算法目录都保留 `src/`，`data/`，算法实验报告和可用的原始课程 PDF。从当前目录运行。
+在本目录下执行。
 
 ```bash
+python AdaBoost/src/AdaBoost.py -f AdaBoost/data/magic04.data
+python Apriori/src/Apriori.py -f Apriori/data/archive/Groceries_dataset.csv
+python C4.5/src/C4.5.py -f C4.5/data/wdbc.data
+python CART/src/CART.py -f CART/data/winequality-red.csv
+python EM/src/EM.py -f EM/data/house-votes-84.data
+python K-means/src/K-means.py -f K-means/data/iris.data
 python KNN/src/KNN.py -f KNN/data/iris.data
+python Naive_Bayes/src/Naive_Bayes.py
 python PageRank/src/PageRank.py --sample
+python SVM/src/SVM.py -f SVM/data/iris.data
 ```
 
-朴素贝叶斯使用的 20 Newsgroups 语料以部分副本形式提供。请传入本地数据路径或按项目文档中的数据加载方式执行。
+朴素贝叶斯从本地目录读取 20 Newsgroups 语料，目录缺失时会通过 scikit-learn 自动下载。
 
-相关的 PCA 和 LDA 课程作业与分类作业见父目录的 [Machine Learning Coursework](../README.md)。
+## 目录结构
+
+```text
+classic-ml-algorithms/
+  <algorithm>/
+    src/        # 算法实现与命令行入口
+    data/       # 公开数据集或元数据
+    README.md   # 分算法实验报告
+    *.pdf       # 可用的原始课程报告
+```
+
+## 说明
+
+- 每个算法都可以独立运行，并在各自目录中配有实验报告。
+- 分算法报告记录了课程实验的过程与结果。
+- 相关的 PCA，LDA 与分类器作业见父目录的 [Machine Learning Coursework](../README.md)。
+
+## 许可
+
+本项目以 Unlicense 协议进入公有领域，见 [LICENSE](LICENSE)。数据集来自公开来源，沿用各自原始条款。
+
+*Bohan Yu，机器学习课程作业。*

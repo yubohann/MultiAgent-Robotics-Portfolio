@@ -1,6 +1,5 @@
-"""Run single-drone gate-density evaluation across gate counts and yaw seeds.
-
-Uses one fixed single-agent checkpoint with a lightweight A* planner.
+"""Run single-drone gate-density scoring across gate counts and yaw seeds with one fixed checkpoint and
+a lightweight A* planner.
 """
 
 from __future__ import annotations
@@ -547,7 +546,7 @@ def _summarize_episode_metrics(metrics_list: list[dict[str, Any]], *, safety_shi
     else:
         summary["shield_note"] = "Local one-step gate-density action shield disabled for decomposition ablation."
     summary["morph_min_distance_m"] = None
-    summary["morph_note"] = "单机场景不适用"
+    summary["morph_note"] = "multi-vehicle scenarios only"
     return summary
 
 

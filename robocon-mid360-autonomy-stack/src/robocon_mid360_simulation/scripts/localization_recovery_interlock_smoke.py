@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Exercise fixed-map tracking loss and competition interlocks over ROS 2.
 
-This is a short contract test. Its odometry, pose validity, and map correction
-messages are explicitly synthetic; it never represents a physical localization
-or mechanism result.
+A short contract test whose odometry, pose validity and map correction
+messages are explicitly synthetic simulation inputs.
 """
 
 from __future__ import annotations
@@ -332,16 +331,16 @@ class RecoveryInterlockSmoke(Node):
         if self.phase == "VERIFY_RESUMED_ACTION":
             command = "navigate_to_pose_after_relocalization"
             if command not in self.command_sent and self.command_pub.get_subscription_count() > 0:
-                # This alias is recorded distinctly but dispatched as the
-                # normal navigation action through the ROS adapter contract.
+                # The alias is recorded distinctly and dispatched as the normal
+                # navigation action through the ROS adapter contract.
                 self.command_pub.publish(String(data="navigate_to_pose"))
                 self.command_sent.add(command)
                 self._write({"kind": "operator_command", "command": "navigate_to_pose"})
                 return
             resumed = self._decision_for("NavigateToPose")
             if resumed is not None and bool(resumed.get("accepted", False)):
-                # Preserve the resume decision under a unique key in the
-                # evidence file, because its ROS action is NavigateToPose.
+                # The resume decision is preserved under a unique evidence key
+                # whose ROS action remains NavigateToPose.
                 self.decisions.append({**resumed, "action": command})
                 self._finish("passed")
             return

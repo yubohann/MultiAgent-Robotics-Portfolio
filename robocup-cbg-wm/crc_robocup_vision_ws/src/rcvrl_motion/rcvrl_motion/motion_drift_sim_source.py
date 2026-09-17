@@ -27,12 +27,10 @@ class Pose2D:
 
 
 class MotionDriftSimSource(Node):
-    """Publish repeatable ROS2 motion/sensor topics for drift experiments.
+    """Publish repeatable motion and sensor topics so the recorder produces CSV samples.
 
-    This is a lightweight simulator for the Mini robot motion contracts found
-    in the original ROS1 workspaces. It is not a replacement for Gazebo or
-    IsaacLab physics; its job is to make the ROS2 recorder produce real CSV
-    samples when no hardware/simulator topics are already live.
+    The topics mirror the Mini robot contract from the original ROS1 workspaces
+    and stand in for hardware or Gazebo when no live source is available.
     """
 
     def __init__(self) -> None:

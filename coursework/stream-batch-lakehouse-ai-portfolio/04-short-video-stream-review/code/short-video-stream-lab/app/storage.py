@@ -1,8 +1,4 @@
-"""SQLite persistence layer for videos, events, settings, and local jobs.
-
-课堂版使用 SQLite 是为了让 Windows/Linux/macOS 学生机无需 Docker 也能完整运行。
-这里的四张表分别对应工业系统中的元数据表、审计日志、配置中心和消息队列。
-"""
+"""SQLite persistence layer for videos, events, settings, and local jobs."""
 
 import json
 import sqlite3
@@ -21,11 +17,7 @@ def now_iso() -> str:
 
 @contextmanager
 def connect() -> Any:
-    """Open one SQLite transaction and commit it when the caller exits normally.
-
-    所有数据库访问都通过这个上下文管理器完成，保证 row_factory、提交和关闭逻辑一致。
-    对学生来说，这相当于一个很小的 Repository/DAO 层。
-    """
+    """Open one SQLite transaction and commit it when the caller exits normally."""
     ensure_directories()
     connection = sqlite3.connect(DB_PATH)
     connection.row_factory = sqlite3.Row
@@ -37,14 +29,9 @@ def connect() -> Any:
 
 
 def init_db() -> None:
-    """Create the SQLite tables used by the demo website and pipeline.
-
-    `videos` 保存前端要展示的发布结果；`events` 是可观测事件流；
-    `settings` 保存当前选择的模型；`jobs` 模拟 Kafka/Pulsar 中待消费的任务。
-    """
+    """Create the SQLite tables used by the demo website and pipeline."""
     with connect() as connection:
-        # videos 是 Demo 网站的查询主表。tags/reasons/metrics 使用 JSON 字符串，
-        # 便于单机教学，不需要额外设计多张关系表。
+        # videos is the main query table, with tags, reasons and metrics stored as JSON strings.
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS videos (
@@ -65,7 +52,7 @@ def init_db() -> None:
             )
             """
         )
-        # settings 存放少量运行时配置，例如当前后台选择的理解模型。
+        # settings holds small runtime options such as the active understanding model.
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS settings (
@@ -75,8 +62,7 @@ def init_db() -> None:
             )
             """
         )
-        # events 记录每个视频进入、抽帧、理解、审核和发布的关键节点，
-        # 报告截图中的 `/api/events` 就来自这张表。
+        # events records the ingest, frame, understanding, moderation and publish milestones.
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS events (
@@ -89,8 +75,7 @@ def init_db() -> None:
             )
             """
         )
-        # jobs 是本实验的本地耐久队列。它保留 queued/running/done/failed 状态，
-        # 让课堂版具备和工业消息队列相似的异步处理语义。
+        # jobs is the durable local queue with queued, running, done and failed states.
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS jobs (
@@ -110,10 +95,7 @@ def init_db() -> None:
 
 
 def clear_db() -> None:
-    """Clear runtime state while keeping tables in place.
-
-    重置演示时只清空业务状态，不删除表结构；settings 不清空，避免学生切换的模型丢失。
-    """
+    """Clear runtime state while keeping tables in place."""
     init_db()
     with connect() as connection:
         connection.execute("DELETE FROM events")
@@ -127,11 +109,7 @@ def add_event(
     message: str,
     payload: dict | None = None,
 ) -> None:
-    """Append one observable event to the audit log.
-
-    事件日志是学生理解流式处理的入口：同一个视频会依次产生 ingest、queued、
-    worker、understanding、moderation、publish 等事件。
-    """
+    """Append one observable event to the audit log."""
     init_db()
     with connect() as connection:
         connection.execute(
@@ -144,11 +122,7 @@ def add_event(
 
 
 def upsert_video(record: dict) -> None:
-    """Insert or update the materialized video record shown by the website.
-
-    上传阶段先写入 `processing` 记录，worker 完成后再用同一个 id 更新为最终状态。
-    这就是前端能“先显示视频，再异步补摘要和标签”的关键。
-    """
+    """Insert or update the materialized video record shown by the website."""
     init_db()
     created_at = record.get("created_at") or now_iso()
     updated_at = now_iso()

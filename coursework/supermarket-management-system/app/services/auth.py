@@ -7,18 +7,7 @@ from app.models import AdminSignupRequest, User
 
 
 def register_user(username, password, confirm_password, role='cashier'):
-    """
-    用户注册
-
-    Args:
-        username: 用户名
-        password: 密码
-        confirm_password: 确认密码
-        role: 角色（cashier/admin）
-
-    Returns:
-        tuple: (success: bool, message: str)
-    """
+    """Register a user account."""
     username = (username or '').strip()
     role = (role or 'cashier').strip().lower()
 
@@ -83,16 +72,7 @@ def register_user(username, password, confirm_password, role='cashier'):
 
 
 def login_user(username, password):
-    """
-    用户登录
-
-    Args:
-        username: 用户名
-        password: 密码
-
-    Returns:
-        tuple: (success: bool, message: str, user: User or None)
-    """
+    """Log in a user and return the result tuple."""
     if not username or not password:
         return False, '用户名和密码不能为空', None
 
@@ -115,7 +95,7 @@ def login_user(username, password):
 
 
 def get_admin_signup_requests(status='pending'):
-    """获取管理员注册申请列表。"""
+    """Return the admin signup requests."""
     query = AdminSignupRequest.query
     if status in ('pending', 'approved', 'rejected'):
         query = query.filter_by(status=status)
@@ -123,7 +103,7 @@ def get_admin_signup_requests(status='pending'):
 
 
 def review_admin_signup_request(request_id, reviewer_id, decision, reject_reason=None):
-    """管理员审核注册申请。"""
+    """Review an admin signup request."""
     if decision not in ('approve', 'reject'):
         return False, '无效的审核操作'
 

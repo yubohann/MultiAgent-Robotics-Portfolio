@@ -25,11 +25,8 @@ def build_mlp(input_dim: int, hidden_dim: int, output_dim: int, depth: int = 2) 
 class FlowActor(nn.Module):
     """Velocity-reparameterized flow actor for bounded tactical actions.
 
-    This MVP keeps an analytically tractable Gaussian base distribution and
-    applies a small deterministic velocity field before tanh squashing. The
-    SAC update uses the base log-probability plus tanh correction as an
-    approximation, which is enough to replace the old Gaussian actor while
-    leaving room for exact CNF likelihood in a later research pass.
+    The SAC update uses the Gaussian base log-probability plus a tanh
+    correction, a tractable stand-in for exact CNF likelihood.
     """
 
     def __init__(
@@ -108,11 +105,10 @@ class CentralizedTwinQ(nn.Module):
 
 
 class ObjectWorldModel(nn.Module):
-    """Auxiliary object-centric dynamics model.
+    """Auxiliary object-centric dynamics model for one-step prediction.
 
-    The SAC critic is still trained from real transitions. This model learns
-    one-step object dynamics, rewards and termination so future iterations can
-    add TD-MPC2/Dreamer-style imagined rollouts without changing the data path.
+    The SAC critic trains on real transitions, and this model predicts object
+    state deltas, rewards and termination from the same data path.
     """
 
     def __init__(

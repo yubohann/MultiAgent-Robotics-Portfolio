@@ -12,8 +12,7 @@ from aerocity_bench.compiler import compile_g2_i_task_spec
 from aerocity_bench.ordinary_config import FORMAL_SPLITS, load_ordinary_config
 
 try:
-    # Package import is used by the regression suite; direct execution keeps
-    # working for the documented command-line workflow.
+    # Importable both as package code and from a direct tools/ execution.
     from tools.run_g2_i_l0_calibration import (
         MANIFEST_SCHEMA,
         _calibration_implementation_hash,

@@ -4,7 +4,7 @@ from app import db
 
 
 class Supplier(db.Model):
-    """供应商档案表"""
+    """Supplier profile table."""
     __tablename__ = 'suppliers'
 
     supplier_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

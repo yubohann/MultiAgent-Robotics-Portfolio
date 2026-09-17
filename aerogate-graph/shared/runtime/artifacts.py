@@ -96,7 +96,7 @@ def allocate_training_artifacts(track: str, run_name: str | None = None) -> Trai
 
 
 def allocate_replay_artifacts(track: str, run_name: str | None = None) -> ReplayArtifacts:
-    """Allocate replay output directories for one evaluation or smoke run."""
+    """Allocate replay output directories for one scoring or smoke run."""
 
     ensure_runtime_gate_post()
     resolved_run_name = run_name or default_run_name(f"{track}_replay")

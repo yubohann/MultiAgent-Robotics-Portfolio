@@ -36,7 +36,7 @@ SUPPORTED_DATASETS = ["amazon", "comp", "yelp"]
 
 
 def _ensure_runtime_dependencies() -> None:
-    """Validate inference dependencies at the boundary and provide an actionable remedy."""
+    """Validate inference dependencies up front and provide an actionable remedy."""
     if IMPORT_ERROR is None:
         return
     message = str(IMPORT_ERROR).lower()

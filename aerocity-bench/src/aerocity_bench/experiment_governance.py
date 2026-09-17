@@ -210,9 +210,8 @@ def _external_manifest_payload(
         "schema": EXTERNAL_EVIDENCE_MANIFEST_SCHEMA,
         "source_commit": _current_git_commit(root),
         "registry_path": "configs/experiment-governance-v1.json",
-        # Git worktrees may normalize line endings differently. Bind the JSON
-        # document canonically so a byte-only CRLF conversion cannot invalidate
-        # an otherwise identical release configuration.
+        # Git worktrees may normalize line endings; bind the JSON canonically so
+        # a byte-only CRLF conversion cannot invalidate an identical config.
         "registry_file_sha256": content_hash(read_json(source_registry)),
         "registry_content_hash": (
             registry.get("registry_hash") if isinstance(registry, dict) else None
@@ -314,8 +313,8 @@ def _load_external_evidence_resolver(
     external_root = evidence_root.resolve()
     if not external_root.is_dir():
         raise FileNotFoundError("external evidence root does not exist")
-    # Validate the entire bundle up front. A file that is not needed by the
-    # current check must not silently become mutable just because it is absent.
+    # Validate the whole bundle up front: an absent file must not stay mutable
+    # just because the current check does not need it.
     for relative, expected_hash in hashes.items():
         candidate = (external_root / relative).resolve()
         if external_root != candidate and external_root not in candidate.parents:

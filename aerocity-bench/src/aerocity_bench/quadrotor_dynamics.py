@@ -96,8 +96,8 @@ class QuadrotorDynamicsSpec:
             if _finite(value, f"motor_rate_limits_rad_s2[{index}") <= 0.0:
                 raise ValueError("motor rate limits must be positive")
 
-        # The X geometry must be non-degenerate.  This catches the historical
-        # bug where a controller used an unrelated 0.035 m arm length.
+        # Non-degenerate X geometry: a historical bug used an unrelated
+        # 0.035 m arm length.
         matrix = allocation_matrix(self)
         if abs(_determinant4(matrix)) <= 1.0e-12:
             raise ValueError("rotor geometry produces a singular allocation matrix")
@@ -268,8 +268,8 @@ def project_asset_spec() -> QuadrotorDynamicsSpec:
     spec = QuadrotorDynamicsSpec(
         model_id="cf2x-local-runtime-candidate-v1",
         provenance_status="parameter_audit_pending",
-        # The reviewed USD authors a 0.025 kg body and four 0.0008 kg prop
-        # links.  The reported mass is the sum of those five authored masses.
+        # Reviewed USD authors 0.025 kg body plus four 0.0008 kg prop links;
+        # the total is their sum.
         mass_kg=0.0282,
         inertia_diag_kg_m2=(1.6572e-5, 1.6656e-5, 2.9262e-5),
         rotor_joint_names=("m1_joint", "m2_joint", "m3_joint", "m4_joint"),
@@ -279,13 +279,11 @@ def project_asset_spec() -> QuadrotorDynamicsSpec:
             (-0.031, 0.031, 0.021),
             (0.031, 0.031, 0.021),
         ),
-        # The alternating winding is a candidate allocation convention.  It
-        # must be cross-checked with the native Multirotor allocation matrix
-        # and a yaw-response sweep before it can be frozen.
+        # Candidate allocation convention; cross-check against the native
+        # Multirotor allocation matrix and a yaw-response sweep before freezing.
         rotor_spin_directions=(1, -1, 1, -1),
         # Candidate values from a separately audited Crazyflie compatibility
-        # profile.  They are deliberately not promoted as properties of this
-        # USD asset and are never sufficient for a formal benchmark score.
+        # profile; not properties of this USD asset and insufficient for a score.
         thrust_coeff_n_per_rad2=2.88e-8,
         drag_coeff_nm_per_rad2=7.24e-10,
         max_rotor_speed_rad_s=2315.0,
@@ -307,9 +305,8 @@ def candidate_controller_spec() -> QuadrotorControllerSpec:
 
     controller = QuadrotorControllerSpec(
         provenance_status="parameter_audit_pending",
-        # Conservative values for preflight diagnostics only.  The formal L1
-        # executor uses the shared native thrust controller after its own
-        # allocation, contact and maneuver gates have passed.
+        # Preflight-diagnostic values only; the formal L1 executor uses the
+        # shared native thrust controller after its own gates.
         position_gain_s2=1.6,
         velocity_gain_s=1.2,
         attitude_gain_nm_per_rad=0.0018,
@@ -411,10 +408,9 @@ def motor_step(
         raw_rate = (target - now) / spec.motor_time_constants_s[index]
         max_rate = spec.motor_rate_limits_rad_s2[index]
         rate = min(max_rate, max(-max_rate, raw_rate))
-        # ``physics_dt_s`` can be much larger than a motor time constant.
-        # Clamp the Euler update to the interval between the old state and the
-        # reference, otherwise a rate-limited step can overshoot the target
-        # and alternate between two motor states on successive PhysX frames.
+        # Clamp the Euler update between the old state and the reference: with
+        # ``physics_dt_s`` above the motor time constant, a rate-limited step
+        # would otherwise overshoot and alternate states on successive frames.
         proposed = now + dt * rate
         if target >= now:
             next_speed = min(target, proposed)

@@ -2,17 +2,15 @@
 
 Rivermark is a toolchain for building and auditing a **multi-agent 3D stealth-search benchmark** in Isaac Sim. It runs eight physically simulated CF2X quadrotors inside a procedurally composed city scene, records synchronized multi-sensor data, and binds every capture to deterministic contracts.
 
-The project is organized around three ideas.
+The project follows three ideas.
 
 - **Determinism by construction.** Every scene, protocol, runtime, and source tree is pinned by SHA-256. Episodes are seeded deterministically, and a runtime lock fixes the software stack so a capture re-runs and compares.
 - **Data integrity before release.** Captures enter the formal dataset after an independent validator checks them and the provenance rules pass. Private target information stays on the scorer side.
 - **One ABI, many methods.** A single observation and action contract lets classical planners, RL and MARL, quality-diversity, and vision-language-action agents target the same scoring interface.
 
-## What a capture contains
+## What a Capture Contains
 
-Each episode is a synchronized multi-agent time series.
-
-For every retained frame it records these streams.
+Each episode is a synchronized multi-agent time series. Every retained frame records these streams.
 
 - onboard RGB and depth
 - native semantic segmentation as learning labels
@@ -30,4 +28,4 @@ Rivermark runs as a physics simulation with synthetic sensors through a CF2X dyn
 
 ## Status
 
-The toolchain is complete and deterministic on the CPU path, with 412 tests passing on a clean checkout. The formal dataset index starts empty and fills as cleared episodes pass admission.
+The toolchain is complete and deterministic on the CPU path, with a test suite that runs on a clean checkout. The formal dataset index starts empty and fills as cleared episodes pass admission.

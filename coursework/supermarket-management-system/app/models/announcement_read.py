@@ -4,7 +4,7 @@ from app import db
 
 
 class AnnouncementRead(db.Model):
-    """公告已读记录"""
+    """Announcement read records."""
     __tablename__ = 'announcement_reads'
 
     read_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

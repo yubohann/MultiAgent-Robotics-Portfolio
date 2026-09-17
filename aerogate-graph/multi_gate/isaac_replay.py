@@ -28,10 +28,8 @@ from shared.visualization.scene_isaaclab import (
 
 
 DEFAULT_GATE_USD = Path(__file__).resolve().parents[1] / "assets" / "gate" / "gate.usd"
-# Measured from assets/gate/gate.usd via IsaacLab BBoxCache. The prior code
-# passed scale to UsdFileCfg.func(), which IsaacLab ignores; the unscaled gate
-# rendered as roughly 2.13 m tall, making fixed-height drones at z=4 visibly
-# fly over the gates.
+# Native gate height is 2.1335 m measured from assets/gate/gate.usd through the IsaacLab BBoxCache.
+# The scale argument to UsdFileCfg.func() takes effect through this constant, and the unscaled gate rendered near 2.13 m tall.
 GATE_NATIVE_VISUAL_HEIGHT_M = 2.1335996309757235
 GATE_NATIVE_VISUAL_HALF_WIDTH_M = 2.0
 
@@ -922,10 +920,8 @@ def _set_camera_orthographic(camera_prim_path: str, *, orthographic_size_m: floa
     if not camera_prim or not camera_prim.IsValid():
         raise RuntimeError(f"Replay camera prim does not exist: {camera_prim_path}")
     camera = UsdGeom.Camera(camera_prim)
-    # This Isaac/Usd build does not expose orthographicSize on UsdGeom.Camera.
-    # Keep the camera in perspective mode and remove top-down parallax through
-    # the almost-vertical eye/target pair below instead of relying on a
-    # non-portable camera attribute.
+    # Perspective camera mode matches the attributes available in this Isaac and Usd build, and the
+    # almost-vertical eye and target pair below removes top-down parallax with a portable setup.
     camera.CreateProjectionAttr().Set(UsdGeom.Tokens.perspective)
 
 
@@ -1003,8 +999,8 @@ def _compute_top_global_camera_pose(
     span_y = max(max(y_values) - min(y_values), 16.0)
     framing_span = max(span_x, 1.8 * span_y, 42.0)
     height_m = max(58.0, 1.32 * framing_span)
-    # Keep the top camera almost vertical. Larger offsets made the tall gate
-    # frame project sideways over the drones and looked like clipping.
+    # Keep the top camera almost vertical so the tall gate frame stays clear of the drones,
+    # and larger offsets project it sideways like clipping.
     eye = (float(center_x), float(center_y - 0.001), float(fixed_height_m + height_m))
     target = (float(center_x), float(center_y), float(fixed_height_m))
     return eye, target
@@ -1045,7 +1041,7 @@ def _update_height_audit_camera(
     frame: dict[str, object],
     fixed_height_m: float,
 ) -> None:
-    """Use a low side camera so gate top/bottom and drone height are visually auditable."""
+    """Use a low side camera that keeps the gate opening and drone height visually auditable."""
 
     focus_x, focus_y = _resolve_height_audit_focus_xy(frame)
     eye = (

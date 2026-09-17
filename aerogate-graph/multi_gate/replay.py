@@ -28,7 +28,7 @@ DYNAMIC_GATE_POST_VISUAL_REPULSION_MARGIN_M = 0.76
 
 
 class HeuristicFormationReplayController:
-    """A simple slot follower used for deterministic multi-agent smoke replays."""
+    """A slot follower for deterministic multi-agent smoke replays."""
 
     def __init__(self, env: MultiGate2DEnv, *, compact_gate_mode: bool = False) -> None:
         self.env = env

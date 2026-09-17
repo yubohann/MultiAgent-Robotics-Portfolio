@@ -1,4 +1,4 @@
-"""Controller implementation for single-drone gate-density evaluation."""
+"""Controller for single-drone gate-density scoring."""
 
 from __future__ import annotations
 
@@ -463,10 +463,8 @@ class GateDensityController:
         clearance_m: float,
     ) -> np.ndarray:
         """Blend visible guidance with the planner under a safety check.
-
-        The planner keeps control when heading agreement is weak or the drone
-        is near the lateral bounds. Visible guidance can still trim speed or
-        trigger a replan.
+        The planner keeps control when heading agreement is weak or the drone sits near the lateral
+        bounds, and visible guidance can still trim speed or trigger a replan.
         """
 
         guidance = self._last_route_guidance or {}

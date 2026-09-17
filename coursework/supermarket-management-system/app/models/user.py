@@ -6,7 +6,7 @@ from app import db
 
 
 class User(db.Model):
-    """用户表"""
+    """User table."""
     __tablename__ = 'users'
 
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

@@ -57,8 +57,8 @@ class ActionDecision:
 
 class GameSupervisor:
     # These requests move the robot or release a ball toward a field-relative
-    # target. They must not cross the adapter boundary while localization is
-    # unlocked, even before the periodic safety monitor enters RECOVERY.
+    # target, so they cross the adapter boundary only while localization is
+    # locked, ahead of the periodic safety monitor entering RECOVERY.
     _LOCALIZATION_GATED_ACTIONS = {
         "NavigateToPose",
         "PreparePass",

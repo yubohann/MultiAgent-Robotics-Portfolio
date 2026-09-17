@@ -269,21 +269,21 @@ no_qd vs realised_qd，有无档案。每对同 seed 同起点，报告改选率
 
 ---
 
-## 10. 实现状态与差距清单，诚实
+## 10. 实现状态与差距清单
 
 | 组件 | 现状 | 差距 |
 |---|---|---|
-| 层1 候选池 + 意图多样性增强 | ✅ 已实现并验证 | 无 |
-| QD 档案，真实回执，| ✅ 已实现并验证 | 无 |
-| QD 选择器 + 意图审计 + 回退 | ✅ 已实现并验证 | 无 |
-| 意图→描述符预测器 | ✅ 存在，`_prediction`，| 需校准报告，不确定性校准，|
-| RB-SF-SAC 网络/训练器 | ⚠️ `rb_sf_sac.py` 存在，`sf_dim=0` 未启用 SF。single_rl 用的朴素 SAC | 启用 SF/LSTM 结构。写训练入口 |
-| RB-SF-SAC 接入在线选择 | ❌ 仍在实现中，`_select` 无该策略，| 新增 strategy + checkpoint 加载 |
-| QD×RL 接口，preference 特征，| ❌ 仍在实现中 | 按 §5.4(A) 实现 |
-| RFG 片段复用 | ⚠️ provenance/`reusable_fragment_count` 存在 | 复用收益计算，credit 入 QD/RL，负迁移撤销 |
-| 训练数据 ≥1000 transitions | ❌ 当前 301，00626，+60，00459，| 补采 |
-| 主表 ≥5 seeds + 统计检验 | ❌ 当前 3/2 seeds | 补跑 + 检验 |
-| 第 3 个 train 场景资格 | ❌ 待启动，00770 候选，| 补 P03–P06 + 审计 |
+| 层1 候选池 + 意图多样性增强 | 已实现并验证 | 无 |
+| QD 档案，真实回执，| 已实现并验证 | 无 |
+| QD 选择器 + 意图审计 + 回退 | 已实现并验证 | 无 |
+| 意图→描述符预测器 | 已存在，`_prediction`，| 需校准报告，不确定性校准，|
+| RB-SF-SAC 网络/训练器 | 部分实现，`rb_sf_sac.py` 存在，`sf_dim=0` 未启用 SF。single_rl 用的朴素 SAC | 启用 SF/LSTM 结构。写训练入口 |
+| RB-SF-SAC 接入在线选择 | 进行中，`_select` 无该策略，| 新增 strategy + checkpoint 加载 |
+| QD×RL 接口，preference 特征，| 进行中 | 按 §5.4(A) 实现 |
+| RFG 片段复用 | 部分实现，provenance/`reusable_fragment_count` 存在 | 复用收益计算，credit 入 QD/RL，负迁移撤销 |
+| 训练数据 ≥1000 transitions | 待补采，当前 301，00626，+60，00459，| 补采 |
+| 主表 ≥5 seeds + 统计检验 | 待补跑，当前 3/2 seeds | 补跑 + 检验 |
+| 第 3 个 train 场景资格 | 待启动，00770 候选，| 补 P03–P06 + 审计 |
 
 ---
 

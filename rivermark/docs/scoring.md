@@ -2,7 +2,7 @@
 
 Scoring happens where the public submission meets the private scorer. The repository ships the public side, the metric definitions, submission schema, and local validator, with hidden truth held separately.
 
-## Event-based confirmation
+## Event-Based Confirmation
 
 The active event contract is `search-event-submission.v3`. A candidate confirmation must bind a **source observation ID**. The scorer privately owns that observation's agent and timestamp, and accepts a target match when the source observation is scorer-attested as visible for that target. Guessed IDs, cross-agent claims, and stale timing count as false confirmations.
 
@@ -39,7 +39,7 @@ python -m rivermark_benchmark.evaluator .\submission.json `
 
 The local scorer enforces denial-of-service guards at 64 MiB per submission, 4096 episodes, and 100,000 samples per trace.
 
-## Threat model
+## Threat Model
 
 The design handles truth leakage through private-field rejection, split probing through enforced split binding, replay through duplicate-episode rejection, stale provenance through hash binding, metric manipulation through trace checks, resource exhaustion through caps, and result tampering through input hashing and detached signatures.
 

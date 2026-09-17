@@ -1,12 +1,6 @@
-"""Task 4 — kNN and an ID3 decision tree, both from scratch, on Wine.
-
-Two classifiers, no ML libraries for the algorithms themselves. They share
-the same preprocessing (stratified split, train-set standardization) and are
-compared on the same test set.
-"""
+"""Task 4, kNN and an ID3 decision tree from scratch on Wine."""
 
 # Author: Bohan Yu
-# Machine learning course, assignment 3
 
 from __future__ import annotations
 
@@ -24,9 +18,6 @@ def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return float((y_true == y_pred).mean())
 
 
-# --------------------------------------------------------------------------
-# kNN
-# --------------------------------------------------------------------------
 def knn_classify(x_train: np.ndarray, y_train: np.ndarray, x_test: np.ndarray, k: int) -> np.ndarray:
     """For each test point: find the k closest train points, majority vote."""
     distances = np.sqrt(((x_train[None] - x_test[:, None]) ** 2).sum(axis=2))
@@ -55,9 +46,6 @@ def run_knn(x_train, x_test, y_train, y_test) -> tuple[float, int]:
     return best_acc, best_k
 
 
-# --------------------------------------------------------------------------
-# ID3 decision tree
-# --------------------------------------------------------------------------
 def entropy(y: np.ndarray) -> float:
     _, counts = np.unique(y, return_counts=True)
     probs = counts / counts.sum()
@@ -93,7 +81,6 @@ def majority_vote(y: np.ndarray) -> int:
 
 
 def build_id3(x: np.ndarray, y: np.ndarray, used: set[int] | None = None):
-    # stop when all samples share a class, or when every feature is used up
     used = set() if used is None else set(used)
     if len(np.unique(y)) == 1:
         return int(y[0])

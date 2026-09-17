@@ -4,6 +4,24 @@
 
 FraudGraph ML Engineering is the research code behind a hybrid SplitGNN + Transformer fraud-detection workflow. It builds graph, relation-sequence and event-sequence views, trains a multimodal classifier and ships protocol scripts for smoke tests, ablations, tuning and reporting across eight public financial datasets.
 
+```mermaid
+flowchart LR
+  A["External benchmark assets"] --> B["Dataset adapters"]
+  B --> C["Graph and sequence construction"]
+  C --> D["Local data graphs cache"]
+  C --> E["SplitGNN graph encoder"]
+  C --> F["Transformer sequence encoder"]
+  E --> G["Fusion classifier"]
+  F --> G
+  G --> H["Training and scoring"]
+  H --> I["Local artifacts outputs"]
+  J["Experiment scripts and configs"] --> H
+  K["Inference and analysis tools"] --> D
+  K --> I
+```
+
+**Status.** `v0.1.0`. The hybrid pipeline, eight dataset adapters, protocol scripts, structural tests and quality gates ship in this repository. CUDA 12.1 support ships as a pinned dependency profile.
+
 ## Highlights
 
 - A deterministic hybrid training pipeline with graph, sequence and fusion branches.
@@ -47,6 +65,12 @@ python scripts/run_ieee_splitgnn_tuning.py --help
 
 Record run provenance before long experiments with `scripts/record_run_manifest.py`, documented in [docs/experiment-manifest.md](docs/experiment-manifest.md). Consolidate completed results through [docs/comparison-report-schema.md](docs/comparison-report-schema.md). Protocol details live in [docs/research-protocol.md](docs/research-protocol.md) and [docs/experiment-catalog.md](docs/experiment-catalog.md).
 
+## Repository evidence
+
+- Structural tests cover the CLI contract, repository contract, protocol helpers, artifact records and report validation on CPU.
+- `scripts/validate_repository.py` checks required files, configuration inventory, compilation, internal imports, source hygiene and version metadata.
+- GitHub Actions runs the validator, structural tests, compilation, package build and an installed-wheel CLI smoke test on Python 3.10 and 3.12.
+
 ## Quality gates
 
 ```powershell
@@ -62,6 +86,13 @@ GitHub Actions runs the validator, structural tests, compilation, package build 
 
 - Dataset adapters preserve dataset-specific constraints, for example Ethereum Ponzi and DeFi rug-pull tasks pair with separately sourced negative sets.
 - Reported figures pair with their dataset, environment, seed and protocol artifacts.
+
+## Documentation
+
+- [docs/research-protocol.md](docs/research-protocol.md), scoring and provenance rules.
+- [docs/experiment-catalog.md](docs/experiment-catalog.md), research questions mapped to executable protocols.
+- [docs/experiment-manifest.md](docs/experiment-manifest.md) and [docs/comparison-report-schema.md](docs/comparison-report-schema.md), run provenance and report schemas.
+- [docs/data-and-reproduction.md](docs/data-and-reproduction.md), dataset layout and determinism scope.
 
 ## License and attribution
 

@@ -1,9 +1,4 @@
-"""Fail-closed formal preflight for HM3D-derived multi-UAV experiments.
-
-The module audits evidence; it does not launch Habitat, Isaac, training, or a
-holdout run.  Unit tests can prove that malformed evidence is rejected, but
-only artifacts explicitly produced by a real runtime may close runtime gates.
-"""
+"""Fail-closed formal preflight for HM3D-derived multi-UAV experiments."""
 
 from __future__ import annotations
 
@@ -126,13 +121,7 @@ def _integer(value: Any, name: str, *, minimum: int = 0) -> int:
 
 
 def _one_sided_sign_test_p_value(wins: int, losses: int) -> float:
-    """Return an exact, conservative paired sign-test p-value.
-
-    Ties have no directional evidence and are excluded.  This deliberately
-    simple test makes the P08 gate auditable without assuming normal AUC
-    differences or trusting a reported p-value that cannot be recomputed from
-    the paired records.
-    """
+    """Return an exact, conservative paired sign-test p-value."""
 
     observations = wins + losses
     if observations < 1:
@@ -1126,11 +1115,9 @@ def _validate_p08(
         by_variant[variant] = row
     if tuple(by_variant) != protocol.mechanism_variants:
         raise ValueError("P08 variants must use the frozen order and complete set")
-    # P08 is a validation-side mechanism diagnostic, not a second formal
-    # leaderboard.  It must execute every adjacent control under the common
-    # contract, but it must not use an arbitrary validation gain as permission
-    # to freeze the protocol.  Effect sizes remain in the immutable record and
-    # are interpreted together with the frozen P10 holdout matrix.
+    # P08 is a validation-side mechanism diagnostic, not a second leaderboard; it
+    # exercises adjacent controls under the common contract and leaves effect sizes
+    # to the frozen P10 holdout matrix.
     if payload["recurrent_history_selector_exercised"] is not True:
         raise ValueError("P08 recurrent history selector was not exercised")
     require_sha256(payload["fragment_outcome_schema_sha256"], "fragment outcome schema hash")

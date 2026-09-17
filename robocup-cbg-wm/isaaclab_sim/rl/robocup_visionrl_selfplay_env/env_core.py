@@ -286,11 +286,9 @@ class RoboCupVisionRLSelfPlayEnvCore(gym.Env):
             target_name = self.selected_target_name.get(team)
             shot_attempt = self.last_shot_attempt.get(team, {})
             if target_name and str(target_name).endswith("BaseTarget") and shot_attempt.get("reason") == "base_cap_failed":
-                # A failed base cap lottery means this normal-hit bucket cannot
-                # legally win an early base in this episode. Force one- and
-                # two-hit rushes to improve the success window, but allow a
-                # three-hit attack to retry after cooldown because it is already
-                # the intended high-probability tempo.
+                # A failed base cap lottery rules out certain early base wins in
+                # this bucket, so force one- and two-hit rushes to retry and let
+                # a three-hit attack retry after cooldown at its intended tempo.
                 normal_hits = self._normal_hits_against(team)
                 required_hits = min(4, normal_hits + 1) if normal_hits < BASE_RUSH_PREFERRED_NORMAL_HITS else normal_hits
                 self.base_retry_min_normal_hits[team] = max(

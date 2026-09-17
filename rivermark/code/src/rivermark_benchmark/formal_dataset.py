@@ -1,18 +1,4 @@
-"""Fail-closed formal dataset admission, indexing, and integrity tooling.
-
-This module deliberately does *not* turn a pilot recording into a formal
-benchmark episode.  It accepts only a capture that already has a separately
-produced formal-capture receipt, whose exact receipt hash has been approved by
-the release operator.  The operator approval is the local trust root: a JSON
-file can prove content integrity, but cannot prove that an untrusted process
-actually captured data in Isaac Lab or on hardware.
-
-The public release projection is intentionally smaller than a capture
-directory.  It contains policy-visible data, eligible learning labels, and
-opaque evaluator commitments, but never evaluator-private payloads.  Invalid
-captures are recorded in ``quarantine/`` without deleting or modifying their
-source directory.
-"""
+"""Fail-closed formal dataset admission, indexing, and integrity tooling."""
 
 from __future__ import annotations
 

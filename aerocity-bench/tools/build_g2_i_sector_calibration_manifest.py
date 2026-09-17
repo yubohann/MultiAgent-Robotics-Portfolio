@@ -75,8 +75,8 @@ def build_manifest(
                             config.raw["fleet"],
                         )
                         support_sites = derive_support_sites_v3(city, config)
-                        # Freeze the sector and prove all paired process instances
-                        # can be sampled before admitting the ancestor.
+                        # Prove every paired process instance can be sampled
+                        # before admitting the ancestor.
                         for episode_index in range(3):
                             sample_episode_v3(
                                 config,
@@ -140,8 +140,8 @@ def build_manifest(
         write_json(output_path.resolve(), manifest)
         return manifest
     except Exception:
-        # This is a development manifest.  Remove only the exact temporary
-        # input directory just created; no prior evidence directory is touched.
+        # Development manifest: remove only the temporary input directory just
+        # created, never prior evidence.
         if input_root.exists():
             shutil.rmtree(input_root)
         raise

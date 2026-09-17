@@ -1,4 +1,4 @@
-"""Utilities for shutting down Isaac Sim without hanging the parent workflow."""
+"""Utilities for shutting down Isaac Sim so the parent workflow keeps running."""
 
 from __future__ import annotations
 
@@ -13,10 +13,8 @@ def close_simulation_app_with_timeout(
     wait_for_replicator: bool = True,
     skip_cleanup: bool = False,
 ) -> bool:
-    """Close Isaac Sim in a daemon thread and bail out if shutdown stalls.
-
-    Returns ``True`` when the close finished within ``timeout_s`` and ``False``
-    when the caller should continue because shutdown timed out.
+    """Close Isaac Sim in a daemon thread and return ``True`` when the close finishes inside
+    ``timeout_s``.
     """
     if simulation_app is None:
         return True

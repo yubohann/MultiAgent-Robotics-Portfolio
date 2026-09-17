@@ -1,9 +1,4 @@
-"""FastAPI web service for the short-video review demo.
-
-这个文件负责把后端 pipeline 暴露成网站和 JSON API：
-上传视频、选择本地模型、查看队列状态、查看事件日志、读取发布结果。
-耗时的视频理解不在请求线程里同步完成，而是交给 LocalReviewWorker 异步处理。
-"""
+"""FastAPI web service for the short-video review demo."""
 
 import time
 from contextlib import asynccontextmanager
@@ -29,8 +24,7 @@ from .storage import add_event, clear_db, list_events, list_videos, stats
 
 
 ensure_directories()
-# 应用进程内共享一个 pipeline 和一个 worker。课堂版这样最简单；
-# 工业环境通常会把 API 服务和 worker 拆成不同进程或不同容器。
+# One pipeline and one worker are shared inside the application process.
 pipeline = ShortVideoPipeline()
 worker = LocalReviewWorker(pipeline)
 ollama_client = OllamaVLMClient()
@@ -62,11 +56,7 @@ class ModelSelectionRequest(BaseModel):
 
 
 def _models_payload() -> dict:
-    """Build model metadata for the frontend selector.
-
-    除了注册表中的静态信息，还会查询 Ollama 本机已下载模型，
-    让界面能提示“已下载/未下载”。
-    """
+    """Build model metadata for the frontend selector."""
     candidates = list_model_candidates()
     try:
         local_names = ollama_client.list_local_models()
@@ -203,11 +193,7 @@ async def api_upload(
     video: UploadFile = File(...),
     title: str | None = Form(default=None),
 ):
-    """Accept a browser upload, show it immediately, then enqueue model work.
-
-    关键点：请求返回前只做文件保存、processing 记录写入和任务入队；
-    真正耗时的理解/审核由 worker 后台执行，避免用户等待模型完成。
-    """
+    """Accept a browser upload, show it immediately, then enqueue model work."""
     if not video.filename:
         raise HTTPException(status_code=400, detail="missing video file")
 
@@ -219,7 +205,7 @@ async def api_upload(
     safe_name = f"{int(time.time())}-{original_name}"
     target = INCOMING_DIR / safe_name
     try:
-        # 先保存到 incoming，保留上传原始物；pipeline 会复制一份到可公开访问的 media。
+        # Keep the raw upload in incoming while the pipeline publishes a copy under media.
         target.write_bytes(await video.read())
         pending_record = pipeline.ingest_video(
             target,

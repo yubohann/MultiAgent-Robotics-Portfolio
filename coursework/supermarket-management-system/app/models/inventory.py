@@ -4,7 +4,7 @@ from app import db
 
 
 class Inventory(db.Model):
-    """库存表"""
+    """Inventory table."""
     __tablename__ = 'inventory'
 
     product_id = db.Column(db.Integer, db.ForeignKey('products.product_id', ondelete='CASCADE'), primary_key=True)

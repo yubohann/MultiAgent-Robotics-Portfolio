@@ -1,10 +1,4 @@
-"""Fail-closed runtime safety checks for City-Lite Isaac CF2X captures.
-
-The functions in this module deliberately do not import Isaac Sim or Torch.
-That keeps the physical guard testable before Kit starts and makes the capture
-loop's safety decision depend on the same frozen geometry contracts used by
-independent validation.
-"""
+"""Fail-closed runtime safety checks for City-Lite Isaac CF2X captures."""
 
 from __future__ import annotations
 

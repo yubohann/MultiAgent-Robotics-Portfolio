@@ -1,8 +1,4 @@
-"""End-to-end pipeline for ingestion, understanding, moderation, and publishing.
-
-pipeline 是后端业务主线：上传服务先调用 `ingest_video` 写入可播放的 processing 记录，
-队列 worker 再调用 `complete_video` 完成模型理解、审核、封面和最终状态更新。
-"""
+"""End-to-end pipeline for ingestion, understanding, moderation, and publishing."""
 
 import hashlib
 import re
@@ -46,10 +42,7 @@ class ShortVideoPipeline:
         source: str = "local",
         simulate_stream: bool = True,
     ) -> dict:
-        """Process one video synchronously; scripts use this for one-shot verification.
-
-        Web 上传路径不会直接调用此方法，因为网站需要先展示视频再异步理解。
-        """
+        """Process one video synchronously; scripts use this for one-shot verification."""
         pending_record = self.ingest_video(video_path, title=title, source=source)
         return self.complete_video(pending_record, simulate_stream=simulate_stream)
 
@@ -60,11 +53,7 @@ class ShortVideoPipeline:
         title: str | None = None,
         source: str = "local",
     ) -> dict:
-        """Persist the playable video immediately, before expensive model work starts.
-
-        这是“两阶段可见”设计的第一阶段：复制媒体文件、写入 processing 记录、
-        记录进入事件。此时前端已经可以播放真实视频，摘要和标签仍为空。
-        """
+        """Persist the playable video immediately, before expensive model work starts."""
         video_path = video_path.expanduser().resolve()
         if not video_path.exists():
             raise FileNotFoundError(video_path)
@@ -74,7 +63,7 @@ class ShortVideoPipeline:
         media_name = f"{video_id}-{_slug(video_path.stem)}{video_path.suffix.lower() or '.mp4'}"
         media_path = MEDIA_DIR / media_name
 
-        # 先写事件再复制文件，方便报告中看到“收到短视频”的最早时间点。
+        # Write the event before copying files so the ingest timestamp stays accurate.
         add_event(
             video_id,
             "ingest",
@@ -106,7 +95,7 @@ class ShortVideoPipeline:
                 "brightness": {"avg": 0},
                 "motion": {"avg": 0},
                 "model": {
-                    # backend=pending 是前端判断“只给摘要/标签显示 loading”的依据。
+                    # backend=pending tells the frontend to show loading placeholders.
                     "selected_id": "",
                     "selected_name": "等待后台理解",
                     "backend": "pending",
@@ -124,11 +113,7 @@ class ShortVideoPipeline:
         *,
         simulate_stream: bool = True,
     ) -> dict:
-        """Run understanding, moderation, tagging, and final publication update.
-
-        这是“两阶段可见”设计的第二阶段，由本地 worker 异步执行。
-        任意异常都会进入 fail-closed 分支，把视频标记为 rejected，避免失败后误发布。
-        """
+        """Run understanding, moderation, tagging, and final publication update."""
         video_id = record["id"]
         title = record["title"]
         media_name = record["media_file"]
@@ -137,7 +122,7 @@ class ShortVideoPipeline:
         thumbnail_path = MEDIA_DIR / thumbnail_name
 
         try:
-            # 多模态理解返回统一结构，内部可能是 Ollama VLM，也可能是 baseline/fallback。
+            # The understanding layer returns one shape whether it ran the VLM or the baseline.
             analysis = self.model.analyze(
                 media_path,
                 title=title,
@@ -168,7 +153,7 @@ class ShortVideoPipeline:
                 },
             )
             try:
-                # 封面只是展示增强，不是发布决策所必需的产物。
+                # The thumbnail is presentation-only and never blocks publication.
                 create_thumbnail(media_path, thumbnail_path)
             except FFmpegError as exc:
                 add_event(
@@ -180,7 +165,7 @@ class ShortVideoPipeline:
                 thumbnail_name = ""
 
             record = {
-                # 用最终审核结果覆盖 processing 记录，前端轮询后会只更新文字区域和状态。
+                # Overwrite the processing record with the final result for the polling frontend.
                 "id": video_id,
                 "title": title,
                 "source": record["source"],
@@ -203,7 +188,7 @@ class ShortVideoPipeline:
             add_event(video_id, "publish", publish_message, {"status": moderation["status"]})
             return record
         except Exception as exc:
-            # 内容平台通常采用 fail-closed：模型或审核失败时宁可阻断发布，也不静默放行。
+            # Moderation follows fail-closed so an analysis failure blocks publication.
             add_event(
                 video_id,
                 "failed",

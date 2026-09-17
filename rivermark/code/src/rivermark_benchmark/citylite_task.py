@@ -1,12 +1,4 @@
-"""Public-geometry observability checks for private City-Lite targets.
-
-The evaluator owns target coordinates, but their difficulty label is not
-trusted metadata.  This module reconstructs conservative onboard-camera
-witnesses from a frozen public route and checks their frustum and line of
-sight against the same structural AABBs used by the runtime safety guard.
-Native semantic frames remain the final evidence that a rendered target was
-actually observable in Isaac.
-"""
+"""Public-geometry observability checks for private City-Lite targets."""
 
 from __future__ import annotations
 

@@ -1,10 +1,4 @@
-"""Independently validate a raw eight-agent Isaac capture.
-
-The validator never imports Isaac, trusts no capture self-report, and does not
-issue formal benchmark admission. It reopens every bound file, audits the
-numeric contracts, and writes a hash-bound validation receipt beside the raw
-capture only when all required checks pass.
-"""
+"""Independently validate a raw eight-agent Isaac capture."""
 
 from __future__ import annotations
 

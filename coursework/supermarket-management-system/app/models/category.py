@@ -4,7 +4,7 @@ from app import db
 
 
 class Category(db.Model):
-    """分类表"""
+    """Category table."""
     __tablename__ = 'categories'
 
     category_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

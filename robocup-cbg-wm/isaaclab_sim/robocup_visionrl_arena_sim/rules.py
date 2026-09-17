@@ -39,8 +39,8 @@ def target_name_from_path(target_path: str) -> str:
 
 
 def inward_45deg_target_yaws() -> dict[str, float]:
-    # yaw is the target face normal. The visible target plane is yaw + 90 deg,
-    # which puts each corner target at 45 deg to both adjacent wall planes.
+    # yaw is the target face normal, so the visible target plane at yaw + 90 deg
+    # puts each corner target at 45 deg to both adjacent wall planes.
     return {
         "T01_NorthMiddle": -math.pi / 4.0,
         "T02_NorthEast": -3.0 * math.pi / 4.0,
@@ -151,8 +151,8 @@ def base_attack_pose_quality(team: str, target_path: str, fire_xy: tuple[float, 
         return 0.0
     angle_quality = (off_axis - min_off_axis) / max(max_off_axis - min_off_axis, 1e-6)
     corner_quality = 1.0 - base_distance / max(corner_radius, 1e-6)
-    # Early base rushes are allowed, but only through narrow off-axis lanes
-    # around the grounded armor. More removed armor widens the acceptable angle.
+    # Early base rushes pass through narrow off-axis lanes around the grounded
+    # armor, and each removed plate widens the acceptable angle.
     return max(0.0, min(1.0, (0.38 + 0.37 * angle_quality + 0.25 * corner_quality) * side_quality))
 
 

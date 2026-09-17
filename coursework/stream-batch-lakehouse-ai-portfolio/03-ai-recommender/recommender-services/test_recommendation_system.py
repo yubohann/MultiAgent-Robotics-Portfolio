@@ -32,7 +32,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
         ])
 
     def test_1_simple_deepfm_init(self):
-        """测试1: 简易DeepFM初始化"""
+        """Test 1, simple DeepFM initialization."""
         print("\n" + "="*80)
         print("🧪 测试1: 简易DeepFM初始化")
         print("="*80)
@@ -51,7 +51,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
             return False
 
     def test_2_simple_deepfm_training(self):
-        """测试2: 简易DeepFM模型训练"""
+        """Test 2, simple DeepFM training."""
         print("\n" + "="*80)
         print("🧪 测试2: 简易DeepFM模型训练")
         print("="*80)
@@ -83,7 +83,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
             return False
 
     def test_3_recommendation_generation(self):
-        """测试3: 推荐结果生成"""
+        """Test 3, recommendation generation."""
         print("\n" + "="*80)
         print("🧪 测试3: 推荐结果生成")
         print("="*80)
@@ -121,7 +121,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
             return False
 
     def test_4_no_interacted_items_in_recommendation(self):
-        """测试4: 推荐结果不包含已交互商品"""
+        """Test 4, recommendations exclude already interacted items."""
         print("\n" + "="*80)
         print("🧪 测试4: 推荐结果不包含已交互商品")
         print("="*80)
@@ -155,7 +155,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
             return False
 
     def test_5_different_users_get_different_recommendations(self):
-        """测试5: 不同用户获得不同推荐"""
+        """Test 5, different users receive different recommendations."""
         print("\n" + "="*80)
         print("🧪 测试5: 不同用户获得不同推荐")
         print("="*80)
@@ -197,7 +197,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
             return False
 
     def test_6_recommendation_algorithms_import(self):
-        """测试6: 推荐算法模块导入"""
+        """Test 6, recommendation algorithm imports."""
         print("\n" + "="*80)
         print("🧪 测试6: 推荐算法模块导入")
         print("="*80)
@@ -224,7 +224,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
             return False
 
     def test_7_content_based_recommendation(self):
-        """测试7: 基于内容的推荐"""
+        """Test 7, content-based recommendation."""
         print("\n" + "="*80)
         print("🧪 测试7: 基于内容的推荐")
         print("="*80)
@@ -258,7 +258,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
             return False
 
     def test_8_hybrid_recommendation(self):
-        """测试8: 混合推荐"""
+        """Test 8, hybrid recommendation."""
         print("\n" + "="*80)
         print("🧪 测试8: 混合推荐")
         print("="*80)

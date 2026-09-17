@@ -128,9 +128,8 @@ def generate_launch_description() -> LaunchDescription:
         gzserver,
         state1,
         state2,
-        # Gazebo Classic serializes /spawn_entity handling. Starting both heavy
-        # RGB-D + Livox models together can leave the first request blocked on
-        # WSL, so make the two physical spawns deterministic and sequential.
+        # Gazebo Classic serializes /spawn_entity, so the two heavy models
+        # spawn sequentially and requests keep moving under WSL.
         TimerAction(period=6.0, actions=[spawn1]),
         TimerAction(period=32.0, actions=[spawn2]),
         gzclient,

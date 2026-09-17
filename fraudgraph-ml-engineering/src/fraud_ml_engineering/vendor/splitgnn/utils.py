@@ -95,7 +95,7 @@ def parse_args() -> argparse.Namespace:
 
 
 class EarlyStop:
-    """Simple early stopper."""
+    """Early stopping helper."""
 
     def __init__(self, early_stop: int, if_more: bool = True) -> None:
         self.best_eval = 0

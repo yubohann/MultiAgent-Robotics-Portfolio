@@ -2,7 +2,9 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-This assignment builds a compact classical-machine-learning pipeline around the UCI Iris and Wine datasets, covering preprocessing, dimensionality reduction, from-scratch classification, scoring, and visualization.
+**Four classical machine learning tasks on the UCI Iris and Wine datasets, running end to end from preprocessing to saved figures.**
+
+The assignment builds a compact pipeline that covers preprocessing, dimensionality reduction, from-scratch classification, scoring and visualization on a fixed split.
 
 ## Scope
 
@@ -12,7 +14,9 @@ This assignment builds a compact classical-machine-learning pipeline around the 
 | Course | Machine Learning, Assignment 3 |
 | Datasets | UCI Iris and Wine |
 | Shared protocol | Stratified 70 to 30 split with seed 42 and training-set-only standardization |
-| Dependencies | NumPy, pandas, scikit-learn, and matplotlib |
+| Dependencies | NumPy, pandas, scikit-learn and matplotlib |
+
+**Status.** All four tasks complete, with figures, projections and comparison summaries saved under `results/`.
 
 ## Tasks and Saved Outputs
 
@@ -20,7 +24,7 @@ This assignment builds a compact classical-machine-learning pipeline around the 
 |---:|---|---|---|
 | 1 | PCA on Wine | scikit-learn baseline workflow | 2D projection and explained-variance output |
 | 2 | LDA on Wine | scikit-learn baseline workflow | One-dimensional discriminative projection |
-| 3 | kNN on Iris | From scratch implementation with vectorized Euclidean distance and voting | Odd-`k` accuracy sweep |
+| 3 | kNN on Iris | From scratch implementation with vectorized Euclidean distance and voting | Odd `k` accuracy sweep |
 | 4 | kNN and ID3 on Wine | From scratch kNN and mean-threshold ID3 | Shared-test-set comparison |
 
 ## Results Preview
@@ -34,14 +38,14 @@ This assignment builds a compact classical-machine-learning pipeline around the 
   <a href="results/knn_accuracy_vs_k.png"><img src="results/knn_accuracy_vs_k.png" alt="Iris kNN accuracy versus k" width="72%" /></a>
 </p>
 
-The saved Iris sweep selects `k=7` with test accuracy `0.9556` for the fixed split. The saved Wine comparison reports `0.9231` for both the selected kNN configuration and the mean-threshold ID3 tree. These values describe the checked-in split and artifacts for this coursework experiment.
+The saved Iris sweep selects `k=7` at `0.9556` test accuracy for the fixed split. The saved Wine comparison reports `0.9231` for both the selected kNN configuration and the mean-threshold ID3 tree. These values describe the checked-in split and artifacts for this coursework experiment.
 
 ## Design Choices
 
-- `src/utils.py` centralizes loading, stratified splitting, and train-only standardization.
-- The from-scratch kNN implementation uses vectorized pairwise distances rather than a nested Python loop.
-- Only odd `k` values are evaluated, so votes always resolve.
-- The ID3 implementation uses an information-gain split with a per-feature mean threshold. This is a documented coursework simplification of the continuous-feature tree search.
+- `src/utils.py` centralizes loading, stratified splitting and train-only standardization.
+- The from-scratch kNN implementation computes vectorized pairwise distances in NumPy.
+- The sweep covers odd `k` values, so votes always resolve.
+- The ID3 implementation uses an information-gain split with a per-feature mean threshold, a documented coursework simplification of continuous-feature tree search.
 
 ## Layout
 
@@ -65,3 +69,7 @@ python task04_knn_id3_wine.py
 ```
 
 The task scripts regenerate their corresponding files in `results/`. See the parent [Machine Learning Coursework index](../README.md) for the companion from-scratch algorithm collection.
+
+The Iris and Wine datasets come from UCI and keep their original terms.
+
+*Bohan Yu, Machine Learning Assignment 3.*

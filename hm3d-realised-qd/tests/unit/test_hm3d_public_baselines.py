@@ -588,8 +588,8 @@ def test_geometric_recovery_resolves_sorted_synthetic_frontier_and_has_zero_gain
             PublicAgentPose("uav0", (0.0, 0.0, 1.0), 1.0, 1),
             PublicAgentPose("uav1", (0.6, 0.0, 1.0), 1.0, 1),
         ),
-        # IDs intentionally sort after the synthetic collision-recovery ID.
-        # The candidate builder must resolve the post-sort index by ID.
+        # IDs sort after the synthetic collision-recovery ID; the builder must resolve
+        # the post-sort index by ID.
         frontiers=(
             PublicFrontier("z-away-uav0", (-1.0, 0.0, 1.0), 1.0, 0.0),
             PublicFrontier("z-away-uav1", (2.0, 0.0, 1.0), 1.0, 0.0),
@@ -863,8 +863,7 @@ def test_frontier_score_counts_a_public_frontier_cluster_once_per_team() -> None
     diverse = _manifest_for_assignment(state, (0, 2), guard, candidate_index=1)
     assert len(set(cluster_ids(duplicate))) == 1
     assert len(set(cluster_ids(diverse))) == 2
-    # Reverse the old lexical preference deliberately. The public objective,
-    # rather than generation order, must retain the distinct-cluster option.
+    # The public objective, not generation order, must retain the distinct-cluster option.
     duplicate = replace(duplicate, candidate_id="zzz-duplicate")
     diverse = replace(diverse, candidate_id="aaa-diverse")
 
@@ -922,8 +921,8 @@ def test_frontier_pool_rejects_a_settled_endpoint_alias_but_not_short_observatio
 
     state = _state(
         frontiers=(
-            # This represents a snapped/repeated observation endpoint: high
-            # nominal gain, but still inside the settled-position tolerance.
+            # Snapped/repeated observation endpoint: high nominal gain, still inside
+            # the settled-position tolerance.
             PublicFrontier("micro", (0.01, 0.0, 1.0), 100.0, 0.0),
             PublicFrontier("uav0-long", (1.0, 0.0, 1.0), 1.0, 0.0),
             PublicFrontier("uav1-long", (4.0, 0.0, 2.0), 1.0, 0.0),
@@ -1135,9 +1134,8 @@ def test_task_reservation_hysteresis_prefers_forward_route_inside_material_margi
         task_reservations=(reservation,),
         frontiers=(
             PublicFrontier("forward", (2.0, 0.0, 1.0), 1.0, 0.0),
-            # The reverse task has a slightly higher raw gain, but remains
-            # inside the frozen reservation switch margin after its reversal
-            # cost is applied.
+            # Slightly higher raw gain, but inside the frozen switch margin after the
+            # reversal cost.
             PublicFrontier("reverse-slightly-better", (0.0, 0.0, 1.0), 1.3, 0.0),
         ),
     )
@@ -1485,8 +1483,7 @@ def test_public_frontier_viewpoint_kind_is_explicit_and_task_consistent() -> Non
         ).viewpoint_kind
         == "route_progress"
     )
-    # Legacy outcome routes used the default field value. Preserve that call
-    # shape while serializing the distinct recovery semantics explicitly.
+    # Legacy call shape with the distinct recovery semantics serialized explicitly.
     backtrack = PublicFrontier(
         "backtrack",
         (1.0, 0.0, 1.0),
@@ -1532,8 +1529,8 @@ def _transit_viewpoint_kinds(manifest) -> dict[str, str]:
 def test_primary_candidate_keeps_continuous_route_prefixes_with_observations() -> None:
     state = _state(
         frontiers=(
-            # Deliberately poor gain/time scores: a route prefix is still a
-            # valid primary exploration action when it is public and guarded.
+            # Deliberately poor gain and time; a public guarded route prefix is still
+            # a valid primary exploration action.
             PublicFrontier("a-observation-uav0", (2.0, 0.0, 1.0), 0.01, 0.0),
             PublicFrontier("b-observation-uav1", (5.0, 0.0, 2.0), 0.01, 0.0),
             PublicFrontier(
@@ -1671,18 +1668,16 @@ def test_delivered_frontier_provenance_does_not_lock_task_assignment():
         if fragment.type_signature.fragment_type == "transit"
     )
 
-    # The source field records who observed a public frontier; it is not a
-    # permanent ownership constraint.  Cross-agent proposals remain in the
-    # common denominator so every selector can allocate the same tasks.
+    # The source field records who observed a frontier, not permanent ownership;
+    # cross-agent proposals stay in the common denominator.
     assert any(
         (fragment.agent_id == "uav1" and fragment.path[-1][0] == 1.0)
         or (fragment.agent_id == "uav0" and fragment.path[-1][0] == 4.0)
         for _, fragment in transits
     )
 
-    # Cross-agent proposals pass through the same runtime guard before the
-    # team pool is formed.  The blocked uav0 -> x=4 edge cannot leak into an
-    # executable assignment, while legal cross-agent assignments remain.
+    # Cross-agent proposals pass the same runtime guard; the blocked uav0 edge
+    # cannot leak into an executable assignment.
     assert not any(
         fragment.agent_id == "uav0" and fragment.path[-1][0] == 4.0
         for _, fragment in transits
@@ -1822,14 +1817,7 @@ def test_four_agent_assignment_search_is_bounded_with_many_legal_frontiers() -> 
 
 
 def test_common_pool_preserves_a_jointly_legal_long_route_extreme() -> None:
-    """A bounded pool must expose a legal long option beside short gain rows.
-
-    The route is intentionally low-gain and appears after many high-gain
-    frontiers.  Before the route-extreme reservation, ``candidate_limit=2``
-    filled with short assignments even though the four-agent long matching
-    was individually and jointly legal.  Every selector receives this same
-    row; no selector-specific route is synthesized here.
-    """
+    """A bounded pool must expose a legal long option beside short gain rows."""
 
     agent_count = 4
     context = PublicMethodContext(
@@ -1911,13 +1899,7 @@ def test_common_pool_preserves_a_jointly_legal_long_route_extreme() -> None:
 
 
 def test_common_pool_prefers_separated_long_route_extreme_over_closer_winner() -> None:
-    """Route-extreme enumeration must not spend slots on jointly illegal endpoints.
-
-    The longest individual matching can place all four endpoints close together
-    and therefore fail the endpoint separation contract.  The bounded enumerator
-    should still expose a slightly shorter long-route matching whose endpoints
-    are separated.
-    """
+    """Route-extreme enumeration must not spend slots on jointly illegal endpoints."""
 
     agent_count = 4
     context = PublicMethodContext(
@@ -2184,12 +2166,7 @@ def test_common_pool_route_extreme_can_be_disabled_for_differential_audit() -> N
 
 
 def test_partial_active_route_extreme_recovers_when_all_agent_routes_jointly_illegal() -> None:
-    """All-agent routes can be jointly unsafe while two/three long routes are safe.
-
-    The pool must keep maximal-participation rows first, then explicitly add
-    partial-active long-route rows labelled as waiting for team completion.
-    It must not silently downgrade to three short collision-avoidance holds.
-    """
+    """All-agent routes can be jointly unsafe while two or three long routes are safe."""
 
     agent_count = 4
     context = PublicMethodContext(

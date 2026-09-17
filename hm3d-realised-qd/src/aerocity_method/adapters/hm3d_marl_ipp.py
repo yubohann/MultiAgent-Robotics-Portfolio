@@ -1,10 +1,4 @@
-"""MARL-IPP controlled transfer on the public HM3D team-candidate interface.
-
-The adapter imports the authors' ``AttentionNet`` directly from a pinned
-source checkout.  It replaces the target-mapping environment and reward with
-the common HM3D candidate graph and outcome-backed exploration return.  It is
-therefore a controlled transfer, not an original-task reproduction.
-"""
+"""MARL-IPP controlled transfer on the public HM3D team-candidate interface."""
 
 from __future__ import annotations
 

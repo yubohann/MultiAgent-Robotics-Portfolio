@@ -12,7 +12,7 @@ db = SQLAlchemy()
 
 
 def _setup_logging(app):
-    """配置应用日志，输出到 app.log。"""
+    """Configure application logging to app.log."""
     base_dir = app.config.get('BASE_DIR', app.root_path)
     log_file = app.config.get('LOG_FILE') or os.path.join(base_dir, 'log', 'app.log')
     if not os.path.isabs(log_file):
@@ -113,14 +113,12 @@ def create_app(test_config=None):
         )
         db.create_all()
         
-        # 初始化默认数据
         if app.config.get('INIT_DEFAULT_DATA', True):
             _init_default_users()
             _init_default_categories()
             _init_second_phase_defaults()
             _init_seed_data_if_empty(app)
 
-    # 注册路由
     from app.routes import register_routes
     register_routes(app)
 
@@ -128,10 +126,9 @@ def create_app(test_config=None):
 
 
 def _init_default_users():
-    """初始化默认用户"""
+    """Create the default users."""
     from app.models import User
     
-    # 检查是否已有管理员
     if not User.query.filter_by(username='admin').first():
         admin = User(
             username='admin',
@@ -143,7 +140,6 @@ def _init_default_users():
         db.session.add(admin)
         db.session.commit()
     
-    # 检查是否已有收银员
     if not User.query.filter_by(username='cashier01').first():
         cashier = User(
             username='cashier01',
@@ -157,7 +153,7 @@ def _init_default_users():
 
 
 def _init_default_categories():
-    """初始化默认分类"""
+    """Create the default categories."""
     from app.models import Category
     
     default_categories = [
@@ -177,7 +173,7 @@ def _init_default_categories():
 
 
 def _init_second_phase_defaults():
-    """初始化会员、员工、供应商和系统参数演示数据。"""
+    """Create demo data for members, employees, suppliers and system parameters."""
     from app.models import Employee, Member, Supplier, SystemSetting
 
     if not Member.query.filter_by(member_no='M1001').first():
@@ -227,7 +223,7 @@ def _init_second_phase_defaults():
 
 
 def _init_seed_data_if_empty(app):
-    """在演示数据库为空时导入 SQL 种子数据。"""
+    """Load SQL seed data when the demo database is empty."""
     from app.models import Product
 
     if Product.query.count() > 0:

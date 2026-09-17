@@ -1,34 +1,34 @@
-# Gate Graph 2D Minimal 评估附件报告
+# Gate Graph 2D Minimal Scoring Artifact Report
 
-生成日期：2026-06-21
+Generated on 2026-06-21
 
-项目目录：`gate_graph_2d_minimal`
+Project directory, `gate_graph_2d_minimal`
 
-## 1. 目录目的
+## 1. Purpose
 
-本报告说明 `gate_graph_2d_minimal` 的复现实验材料结构。目录仅保留 gate-only 实验，不包含树、森林或无关 Markdown 历史文档。重点覆盖动态门柱、单机/多机、静态/动态、Graph-FlashSAC、action/safety shield 和经典规划器基线。
+This report describes the deterministic replay material for `gate_graph_2d_minimal`. The directory keeps gate-only experiments and covers dynamic gate posts, single-agent and multi-agent runs, static and dynamic scenes, Graph-FlashSAC, action and safety shields, and classic planner baselines.
 
-## 2. 组件与代码位置
+## 2. Components and Code Locations
 
-| 组件 | 主要代码位置 |
-|---|---|
-| 图观测构建 | `single_gate/env/observation_single.py`，`multi_gate/env/observation_multi.py`，`multi_gate/env/observation_runtime.py`，`multi_gate/graph_rl/graph_policy.py` |
-| Graph-FlashSAC actor/critic | `single_gate/graph_rl/graph_sac.py`，`single_gate/graph_rl/graph_flashsac.py`，`multi_gate/graph_rl/graph_masac.py`，`multi_gate/graph_rl/graph_flashsac.py` |
-| 动态门任务契约 | `shared/core/dynamic_gate_density_2d.py`，`gate_density_single/core/gate_layout.py`，`multi_gate/env/dynamic_gate_runtime.py` |
-| action shield / safety shield | `gate_density_single/core/action_shield.py`，`multi_gate/env/safety_shields.py`，`shared/core/collision_2d.py` |
-| 单机/多机统一评估 | `gate_density_single/scripts/run_gate_density_eval.py`，`multi_gate/scripts/run_paper_multi_gate_density_eval.py`，`scripts/run_classic_planner_baselines.py` |
-| 训练与压力边界复核 | `multi_gate/imitation.py`，`multi_gate/dagger.py`，`multi_gate/training.py`，`gate_density_single/scripts/train_gate_density_imitation.py` |
+| Component | Main code locations |
+| --- | --- |
+| Graph observation construction | `single_gate/env/observation_single.py`, `multi_gate/env/observation_multi.py`, `multi_gate/env/observation_runtime.py`, `multi_gate/graph_rl/graph_policy.py` |
+| Graph-FlashSAC actor and critic | `single_gate/graph_rl/graph_sac.py`, `single_gate/graph_rl/graph_flashsac.py`, `multi_gate/graph_rl/graph_masac.py`, `multi_gate/graph_rl/graph_flashsac.py` |
+| Dynamic gate task contract | `shared/core/dynamic_gate_density_2d.py`, `gate_density_single/core/gate_layout.py`, `multi_gate/env/dynamic_gate_runtime.py` |
+| Action shield and safety shield | `gate_density_single/core/action_shield.py`, `multi_gate/env/safety_shields.py`, `shared/core/collision_2d.py` |
+| Single-agent and multi-agent scoring | `gate_density_single/scripts/run_gate_density_eval.py`, `multi_gate/scripts/run_paper_multi_gate_density_eval.py`, `scripts/run_classic_planner_baselines.py` |
+| Training and stress limit review | `multi_gate/imitation.py`, `multi_gate/dagger.py`, `multi_gate/training.py`, `gate_density_single/scripts/train_gate_density_imitation.py` |
 
-## 3. 可复现环境
+## 3. Deterministic Environment
 
-已核验环境：
+Verified environment,
 
-- Windows 11 专业版 `10.0.26100`
+- Windows 11 Pro `10.0.26100`
 - PowerShell
 - Python `3.13.5`
-- Python 路径：`python`
+- Python path, `python`
 
-核心依赖：
+Core dependencies,
 
 ```text
 numpy==1.26.4
@@ -41,25 +41,25 @@ gymnasium==1.2.3
 networkx==3.4.2
 ```
 
-## 4. 测试与烟测
+## 4. Tests and Smoke Test
 
-测试命令：
+Test command,
 
 ```powershell
 cd <gate_graph_2d_minimal>
 python -m pytest tests
 ```
 
-预期结果：`8 passed`。
+Expected result, `8 passed`.
 
-导入烟测使用 `utf-8-sig` 解析所有 Python 文件，预期 `parsed=183 failures=0`。
+The import smoke test parses every Python file as `utf-8-sig` with expected output `parsed=183 failures=0`.
 
-## 5. 关键实验结果
+## 5. Key Experimental Results
 
-单机动态 42 门基线对比，来自 `results/csv_json/single_dynamic_planner_baseline_eight_metrics.csv`：
+Single-agent dynamic 42-gate baseline comparison from `results/csv_json/single_dynamic_planner_baseline_eight_metrics.csv`,
 
-| 方法 | seed 数 | 成功率 | 碰撞率 | 超时率 |
-|---|---:|---:|---:|---:|
+| Method | Seeds | Success rate | Collision rate | Timeout rate |
+| --- | --- | --- | --- | --- |
 | ours_mainline | 10 | 1.0 | 0.0 | 0.0 |
 | astar | 10 | 0.1 | 0.8 | 0.1 |
 | theta_star | 10 | 0.0 | 0.9 | 0.1 |
@@ -67,19 +67,19 @@ python -m pytest tests
 | informed_rrt_star | 10 | 0.0 | 0.0 | 1.0 |
 | heuristic | 10 | 0.0 | 0.0 | 1.0 |
 
-多机静态/动态结果，来自 `results/csv_json/multi_static_dynamic_four_metrics_plot_data.csv`：
+Multi-agent static and dynamic results from `results/csv_json/multi_static_dynamic_four_metrics_plot_data.csv`,
 
-| 场景 | 门数 | episodes | 成功率 | 碰撞率 | 路径长度 m | 飞行时间 s | 门柱半径 m |
-|---|---:|---:|---:|---:|---:|---:|---:|
+| Scene | Gates | Episodes | Success rate | Collision rate | Path length m | Flight time s | Gate post radius m |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | multi static | 60 | 3 | 100.0 | 0.0 | 66.5250 | 35.2667 | 0.14 |
 | multi dynamic | 36 | 3 | 100.0 | 0.0 | 67.0867 | 47.0000 | 0.24 |
 | multi dynamic | 60 | 3 | 100.0 | 0.0 | 66.6690 | 38.0333 | 0.24 |
 
-保留压力边界：单机动态 60 门主方法行在原始 CSV 中为 `real_eval_failed`，成功率 `0.0`、碰撞率 `0.6`。该记录用于说明高密度动态门压力边界，不应改写为成功结果。
+Stress limit record, the single-agent dynamic 60-gate mainline row in the raw CSV carries `real_eval_failed` with success rate `0.0` and collision rate `0.6`. The record documents the high-density dynamic gate stress limit.
 
-## 6. 评估附件
+## 6. Artifacts
 
-原始指标：
+Raw metrics,
 
 - `results/csv_json/single_dynamic_planner_baseline_eight_metrics.csv`
 - `results/csv_json/single_dynamic_planner_baseline_availability.csv`
@@ -89,11 +89,11 @@ python -m pytest tests
 - `results/csv_json/multi_static_dynamic_four_metrics_plot_data.csv`
 - `results/csv_json/multi_static_dynamic_four_metrics_manifest.json`
 
-当前代码包不随附实验图片或 MP4 视频；只保留原始 CSV/JSON 指标、replay manifest 和 validation summary。大型视频输出应作为外部 artifact 管理。
+The source package carries raw CSV and JSON metrics, replay manifests and validation summaries. Large MP4 video outputs live as external artifacts.
 
-全部附件的来源路径、大小、SHA256 见 `evaluation_artifacts/results_manifest.json`。
+Source paths, sizes and SHA256 values for every artifact live in `evaluation_artifacts/results_manifest.json`.
 
-## 7. 哈希核验
+## 7. Hash Check
 
 ```powershell
 cd <gate_graph_2d_minimal>\evaluation_artifacts
@@ -114,8 +114,8 @@ raise SystemExit(1 if bad else 0)
 '@ | python -
 ```
 
-预期结果：`checked=7 mismatches=0`。
+Expected result, `checked=7 mismatches=0`.
 
-## 8. 结论
+## 8. Conclusion
 
-`gate_graph_2d_minimal` 当前保留了可复现环境说明、原始结果、基线对比和 SHA256 完整性清单。后续发布前应重新核对 `results_manifest.json` 与实际附件是否一致。
+`gate_graph_2d_minimal` retains the environment description, raw results, baseline comparison and the SHA256 integrity list. A release refresh rechecks `results_manifest.json` against the shipped artifact set.

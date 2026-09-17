@@ -1,15 +1,4 @@
-"""Target-free joint candidates for the HM3D P07 weak-baseline matrix.
-
-This module is deliberately a clean-room implementation.  It borrows the
-useful *protocol* lesson from ``md_qd_swarm`` -- all methods must face the
-same public state, action authority, guard and outcome contract -- without
-importing City-Lite routes, controllers, targets or performance evidence.
-
-The module does not execute a flight and cannot produce a P07 result.  It
-builds a common set of high-level multi-UAV waypoint candidates.  A separate
-Isaac/CF2X runtime must authorize and execute one selected candidate before a
-real execution outcome or exploration score can exist.
-"""
+"""Target-free joint candidates for the HM3D P07 weak-baseline matrix."""
 
 from __future__ import annotations
 
@@ -55,21 +44,16 @@ Point3 = tuple[float, float, float]
 BASELINE_STRATEGIES = frozenset({"random", "frontier_3d", "auction"})
 TRANSIT_TIMING_SCHEMA_VERSION = "hm3d-kinematic-transit-timing-v4"
 PUBLIC_CANDIDATE_POOL_SOURCE = PUBLIC_CANDIDATE_POOL_SCHEMA_VERSION
-# Route-access quality credit for the shared candidate authority. It is bounded
-# so a long route is preferred only when its public gain is otherwise close.
+# Bounded route-access credit, so a long route wins only when public gain is close.
 PUBLIC_ROUTE_CONTINUITY_BONUS_MIN_M = 2.0
 PUBLIC_ROUTE_CONTINUITY_BONUS_RAMP_M = 5.0
 PUBLIC_ROUTE_CONTINUITY_BONUS_MAX = 0.10
-# A region-access view is a committed public-route prefix into an under-explored
-# region, not a local observation.  The frontier selector uses a bounded
-# progression credit so a legal 3 m+ access route is not always erased by a
-# slightly higher-gain micro-observation that stops immediately.
+# A region-access view is a committed route prefix into an under-explored region;
+# the bounded credit keeps a legal 3 m+ access route ahead of a micro-observation.
 PUBLIC_REGION_ACCESS_CREDIT_REFERENCE_M = 3.0
 PUBLIC_REGION_ACCESS_CREDIT_MAX = 0.50
-# Execution-mileage preference weight for the transparent gain selector.
-# 0.02 / metre gives a 16 m team route ~0.32 credit, the same order as one
-# cluster-gain unit, so a completeable long access route can beat a myopic
-# short viewpoint when observed gains are close.  Frozen protocol constant.
+# Execution-mileage weight, frozen. 0.02 per metre gives a 16 m route ~0.32
+# credit, one cluster-gain unit, so a completeable access route beats a myopic view.
 PUBLIC_EXECUTION_MILEAGE_PREFERENCE_WEIGHT = 0.02
 
 
@@ -151,26 +135,15 @@ def _segment_boundary_duration_s(
 
 @dataclass(frozen=True, slots=True)
 class ConservativeTransitTimingModel:
-    """Executor-aligned timing plus outcome-validated terminal and turn margins.
-
-    The previous model divided distance by a short-route average speed. That
-    folded acceleration, braking and settling into every metre and made longer
-    candidates artificially slow. This contract uses the same rest-to-rest
-    triangular/trapezoidal limits as the executor, then adds one terminal
-    convergence margin and an additional margin for each intermediate
-    waypoint. The executor requires a settled stop at every waypoint, but a
-    terminal convergence delay must not be charged twice on a two-segment
-    route.
-    """
+    """Executor-aligned timing plus outcome-validated terminal and turn margins."""
 
     calibration_id: str
     cruise_speed_mps: float
     max_accel_mps2: float
     terminal_tracking_margin_s: float
     intermediate_waypoint_settle_margin_s: float = 0.0
-    # The calibration artifact currently contains completed routes with at
-    # most this many line segments.  Longer public polylines are still legal,
-    # but their unobserved controller residual must be reserved explicitly.
+    # Calibrated completed-route segment count; longer polylines are legal but
+    # reserve their unobserved controller residual explicitly.
     calibrated_max_segment_count: int = 2
     uncovered_segment_reserve_s: float = 0.0
     intermediate_waypoint_requires_settle: bool = True
@@ -267,8 +240,7 @@ class ConservativeTransitTimingModel:
                 _distance(path[0], point) <= 1.0e-9
                 for point in path[1:]
             ):
-                # An explicit hold has no traversed segment, but the executor
-                # still converges to the terminal waypoint before observing.
+                # A hold has no traversed segment but still converges before observing.
                 return self.terminal_tracking_margin_s
             return self.continuous_polyline_seconds(path)
         segment_count = len(path) - 1
@@ -369,9 +341,8 @@ class ConservativeTransitTimingModel:
     def from_dict(cls, payload: Mapping[str, Any]) -> ConservativeTransitTimingModel:
         if not isinstance(payload, Mapping):
             raise TypeError("transit timing model payload must be a mapping")
-        # v4 artifacts must bind the route-length extrapolation contract. Do
-        # not silently restore the old zero-reserve behavior when a stale
-        # artifact is loaded into the active runner.
+        # v4 artifacts bind the route-length extrapolation contract, so a stale
+        # artifact cannot restore zero-reserve behavior in the active runner.
         if "calibrated_max_segment_count" not in payload:
             raise ValueError("transit timing model omits calibrated_max_segment_count")
         if "uncovered_segment_reserve_s" not in payload:
@@ -435,29 +406,22 @@ class PublicFrontier:
     information_gain: float
     traversal_risk: float
     source_agent_id: str | None = None
-    # A outcome-backed return is a recovery action, not a public information-
-    # gain frontier. It remains in the common candidate authority so every
-    # selector receives the same safe way to leave a locally unsupported pose.
+    # An outcome-backed return is a recovery action, kept in the common candidate
+    # authority so every selector can leave a locally unsupported pose safely.
     task_kind: str = "explore"
     exclusive_agent_id: str | None = None
-    # Observation poses are the primary frontier actions. Route-progress and
-    # region-access rows are public, guarded alternatives that keep a corridor
-    # or vertical access route when the endpoint-only observation is short.
+    # Observation poses are primary; route-progress and region-access rows keep a
+    # corridor or vertical route when the endpoint-only observation is short.
     viewpoint_kind: str = "observation"
-    # A full route produced from the current shared sparse belief, keyed by
-    # public agent ID.  This is an action proposal rather than a static-map
-    # clearance certificate: the runtime guard still checks every segment
-    # after selection.  Keeping it here prevents candidate construction from
-    # discarding a public access route and silently recomputing a different
-    # endpoint-only route later in the same decision.
+    # Full route from the current shared sparse belief, keyed by public agent ID.
+    # The runtime guard still checks every segment; keeping the route here stops
+    # a later endpoint-only recomputation in the same decision.
     access_paths_m: tuple[tuple[str, tuple[Point3, ...]], ...] = ()
-    # Extractor-local cluster provenance is public and audit-only. It is not a
-    # stable task identity: extraction order can change as public outcomes
-    # arrive.
+    # Extractor-local cluster provenance, audit-only; extraction order changes as
+    # public outcomes arrive, so it is not a stable task identity.
     frontier_cluster_id: str = ""
-    # These values are derived from the current public frontier cluster. They
-    # associate a newly extracted frontier with a short-lived, outcome-backed
-    # task reservation without retaining a stale manifest or private geometry.
+    # Derived from the current public frontier cluster to associate a new frontier
+    # with a short-lived task reservation.
     task_anchor_m: Point3 | None = None
     task_normal_unit: Point3 | None = None
 
@@ -480,8 +444,8 @@ class PublicFrontier:
         if self.task_kind == "explore" and self.exclusive_agent_id is not None:
             raise ValueError("ordinary exploration frontier cannot be exclusive")
         viewpoint_kind = self.viewpoint_kind
-        # Keep existing outcome-backtrack call sites source-compatible while
-        # serializing their distinct action semantics explicitly.
+        # Keep outcome-backtrack call sites source-compatible while serializing
+        # their distinct action semantics.
         if self.task_kind == "backtrack" and viewpoint_kind == "observation":
             viewpoint_kind = "outcome_backtrack"
         if self.task_kind == "explore" and viewpoint_kind not in {
@@ -492,10 +456,8 @@ class PublicFrontier:
             raise ValueError("ordinary exploration frontier has an invalid viewpoint kind")
         if self.task_kind == "backtrack" and viewpoint_kind not in {
             "outcome_backtrack",
-            # A current-public-map route can be used as a one-agent geometric
-            # escape when the fleet is already inside the planning envelope.
-            # It is still a backtrack/recovery action and never an exploration
-            # frontier; the runtime joint guard remains the authority.
+            # A current-map route as a one-agent geometric escape inside the
+            # planning envelope; still a backtrack action, joint guard still the authority.
             "collision_avoidance_recovery",
         }:
             raise ValueError(
@@ -569,13 +531,7 @@ class PublicFrontier:
 
 @dataclass(frozen=True, slots=True)
 class PublicTaskReservation:
-    """A public, outcome-backed task association retained across decisions.
-
-    The reservation owns no stale action. At every later decision the runner
-    extracts fresh frontiers from current public outcomes, matches their public
-    anchor/normal to this reservation, regenerates an access route from the
-    current pose, and submits it to the unchanged static and joint guards.
-    """
+    """A public, outcome-backed task association retained across decisions."""
 
     agent_id: str
     source_decision_id: str
@@ -692,13 +648,7 @@ class PublicTaskReservation:
 
 @dataclass(frozen=True, slots=True)
 class PublicSearchState:
-    """Strictly public input shared by every ranked P07 method.
-
-    ``frontiers`` may only originate from the frozen sparse-range observation
-    schedule.  The state contains no target identity, target distance, full
-    mesh or evaluator ESDF.  The runtime safety guard remains evaluator-side;
-    it receives a candidate after selection, not as a policy feature.
-    """
+    """Strictly public input shared by every ranked P07 method."""
 
     context: PublicMethodContext
     agents: tuple[PublicAgentPose, ...]
@@ -707,12 +657,11 @@ class PublicSearchState:
     decision_duration_s: float
     transit_timing_model: ConservativeTransitTimingModel
     observe_dwell_s: float
-    # Isolated unit fixtures retain the development contract default; every
-    # real P07 worker passes the hash-bound communication-contract value.
+    # Development default for isolated unit fixtures; real P07 workers pass the
+    # hash-bound communication-contract value.
     communication_range_m: float = 10.0
-    # A public execution outcome may retain a short-lived task association for
-    # the next decision. It never bypasses fresh frontier extraction, routing,
-    # static clearance or joint safety admission.
+    # Short-lived task association from a public outcome; fresh extraction,
+    # routing and both guards still apply.
     task_reservations: tuple[PublicTaskReservation, ...] = ()
 
     def __post_init__(self) -> None:
@@ -817,11 +766,9 @@ class GuardedPath:
 PathGuard = Callable[[str, tuple[Point3, ...]], GuardedPath]
 JointManifestGuard = Callable[[CandidateFragmentManifest], str | None]
 _HOLD_ASSIGNMENT = -1
-# Candidate generation must not feed a joint guard routes that are already
-# known to occupy the same physical tube. The runtime guard remains the
-# admission authority; this pre-filter only avoids spending the whole bounded
-# pool on obvious simultaneous-route collisions. It matches the physical
-# CF2X minimum separation in hm3d_cf2x_execution.
+# Route-tube pre-filter: keep the bounded pool from filling with simultaneous-route
+# collisions before the joint guard, which remains the admission authority.
+# Matches the physical CF2X minimum separation in hm3d_cf2x_execution.
 _PUBLIC_ROUTE_TUBE_SEPARATION_M = 0.50
 
 
@@ -888,13 +835,7 @@ def _assignment_joint_prefilter(
     assignment: tuple[int, ...],
     agents: Sequence[Any],
 ) -> tuple[str | None, float, float]:
-    """Return the shared joint-guard reason that would reject this assignment.
-
-    The runtime joint guard remains the admission authority.  This pre-filter
-    only mirrors its frozen route-tube, endpoint and translated-trajectory
-    contracts so the bounded public pool does not fill its slots with
-    assignments that can never be admitted.
-    """
+    """Return the shared joint-guard reason that would reject this assignment."""
 
     routes: list[TimedPolyline | TimedStationary] = []
     paths_by_agent: dict[str, tuple[Point3, ...]] = {}
@@ -945,50 +886,38 @@ def _assignment_joint_prefilter(
     return None, tube_separation, endpoint_separation
 
 
-# This remains the outcome-backed recovery and route-prefix floor. It is not
-# an eligibility threshold for ordinary observation frontiers: a short, legal
-# doorway or vertical observation can carry genuine public information gain.
+# Recovery and route-prefix floor. Ordinary observation frontiers keep short legal
+# doorway or vertical moves with genuine public gain.
 MINIMUM_MEANINGFUL_EXPLORATION_PATH_M = 0.50
-# A public route whose *endpoint* is inside the executor's settled-position
-# tolerance is an alias of the current command, not an exploration target.
-# This is deliberately an endpoint identity test, not a universal route-length
-# target or an incentive to fly farther. It must remain aligned with the v6
-# CF2X waypoint settle tolerance through the runner regression test.
+# Endpoint identity test against the executor settled-position tolerance: an
+# aliased command is not an exploration target. Kept aligned with the v6 CF2X
+# waypoint settle tolerance by the runner regression test.
 PUBLIC_ENDPOINT_ALIAS_TOLERANCE_M = 0.03
-# A reservation only associates frontiers extracted from public outcomes. It
-# is deliberately a local identity radius, not a target path-length setting.
+# Local identity radius for associating frontiers extracted from public outcomes.
 PUBLIC_TASK_RESERVATION_ASSOCIATION_RADIUS_M = 1.00
-# Opposite frontier normals close to the same wall are distinct tasks. A
-# missing normal keeps association possible for compatibility with simple
-# public fixtures and outcome sources that cannot estimate one.
+# Opposite normals on the same wall are distinct tasks; a missing normal keeps
+# association possible for simple public fixtures.
 PUBLIC_TASK_RESERVATION_MIN_NORMAL_ALIGNMENT = 0.0
-# Replanning away from a still-revalidated public task needs a frozen material
-# public-gain advantage. This is a soft selection term only; routing and all
-# safety authorities remain unchanged.
+# Frozen public-gain advantage required to replan away from a still-revalidated
+# task; a soft selection term only.
 PUBLIC_TASK_RESERVATION_SWITCH_MARGIN_GAIN = 0.20
-# This is the same opportunity definition used by the P07 outcome summary.
-# It is a selection tie-break only, never a route-length target or safety rule.
+# Same opportunity definition as the P07 outcome summary; a selection tie-break only.
 PUBLIC_VERTICAL_OPPORTUNITY_THRESHOLD_M = 0.50
 _MINIMUM_TEAM_ASSIGNMENT_SEARCH_BUDGET = 128
 _TEAM_ASSIGNMENT_SEARCH_BUDGET_PER_OUTPUT = 32
-# A traffic reservation is an executor-enforced earliest departure, not an
-# idealized timing hint. The executor also waits for the predecessor's measured
-# settled completion before releasing the delayed vehicle.
+# Executor-enforced earliest departure, not a timing hint; the delayed vehicle
+# also waits for the predecessor's measured settled completion.
 TRAFFIC_RESERVATION_RELEASE_MARGIN_S = 0.25
 _TRAFFIC_RESERVATION_ASSIGNMENT_LIMIT_MULTIPLIER = 2
 _TRAFFIC_RESERVATION_CHAIN_VARIANTS_PER_ASSIGNMENT = 4
 
-# A pool that meets the numeric feasibility floor can still be degenerate:
-# four "moving" rows may share one long route while the other vehicles move
-# only a few centimetres. This is a shared task-validity criterion, not a
-# selector preference or safety relaxation.
+# Task-validity floor against degenerate pools where four "moving" rows share one
+# long route; not a selector preference or safety relaxation.
 PUBLIC_TEAM_LONG_ROUTE_MIN_AGENT_PATH_M = 1.0
 PUBLIC_TEAM_LONG_ROUTE_MIN_ACTIVE_AGENTS = 2
 PUBLIC_TEAM_LONG_ROUTE_MIN_TEAM_PATH_M = 4.0
-# Route-extreme ranking preference only. The runtime joint guard remains the
-# admission authority; this value mirrors the frozen 0.95 m endpoint margin so
-# the bounded enumerator does not spend its slots on four long routes that can
-# never pass the endpoint separation contract.
+# Ranking preference mirroring the frozen 0.95 m endpoint margin, so the bounded
+# enumerator skips four long routes that cannot pass endpoint separation.
 _PUBLIC_ROUTE_EXTREME_ENDPOINT_SEPARATION_M = 0.95
 
 
@@ -1013,13 +942,7 @@ def _terminal_path_heading(path_m: Sequence[Point3]) -> Point3 | None:
 
 
 def is_non_alias_exploration_path(path_m: Sequence[Point3]) -> bool:
-    """Accept a real endpoint change without imposing a route-length target.
-
-    The guard may snap a request to the current settled point. Such a command
-    cannot be credited as an observation transit. A short path to another
-    public endpoint remains legal and is evaluated normally by the guard,
-    joint safety, execution outcome, and no-gain cooldown.
-    """
+    """Accept a real endpoint change; a snapped settled-point request earns no transit."""
 
     path = tuple(path_m)
     if len(path) < 2:
@@ -1041,14 +964,7 @@ def _current_public_access_path(
     agent: PublicAgentPose,
     frontier: PublicFrontier | None,
 ) -> tuple[tuple[Point3, ...], bool]:
-    """Use an access route only when it is anchored at this decision state.
-
-    ``PublicFrontier`` routes are built from the current public belief by the
-    runner.  The state check here is intentionally repeated at the common
-    candidate boundary: a stale path from a previous robot pose must never be
-    replayed as though it were a current plan.  Falling back to the endpoint
-    request lets the runtime's public router revalidate it instead.
-    """
+    """Use an access route only when it is anchored at this decision state."""
 
     if frontier is None:
         return (agent.position_m, agent.position_m), False
@@ -1079,9 +995,8 @@ def _public_gain_proxy(frontier: PublicFrontier | None) -> float:
     if frontier is None or frontier.task_kind != "explore":
         return 0.0
     gain = frontier.information_gain * (1.0 - frontier.traversal_risk)
-    # A bounded route-access credit prevents equal-gain micro-observation views
-    # from erasing a committed corridor/vertical route. It is a common candidate
-    # quality hint, not a safety authority or a selector-only bonus.
+    # Bounded route-access credit so equal-gain micro-observations cannot erase a
+    # committed corridor route; a common quality hint only.
     longest_access_m = 0.0
     for _agent_id, path in frontier.access_paths_m:
         if len(path) < 2:
@@ -1107,9 +1022,8 @@ def _frontier_cluster_key(frontier: PublicFrontier | None) -> str:
 
     if frontier is None or frontier.task_kind != "explore":
         return ""
-    # Older callers may not yet provide extractor cluster provenance.  Their
-    # frontier ID is still a stable public unit and must not collapse unrelated
-    # views into one artificial cluster.
+    # Fall back to the frontier ID, a stable public unit, when cluster provenance
+    # is unavailable.
     return frontier.frontier_cluster_id or frontier.frontier_id
 
 
@@ -1170,14 +1084,7 @@ def _task_reservation_features(
     frontier: PublicFrontier | None,
     guarded_path_m: Sequence[Point3],
 ) -> tuple[bool, float, float, float, float]:
-    """Return task match, association evidence, heading and switch cost.
-
-    Holds and outcome backtracks deliberately receive no reservation privilege.
-    A normal candidate has already been freshly routed and guarded before this
-    helper ranks it. A matched task continues only when its first path heading
-    is not a reversal; a new task remains selectable after a fixed material
-    public-gain margin rather than being permanently locked out.
-    """
+    """Return task match, association evidence, heading and switch cost."""
 
     matched, anchor_distance, normal_alignment = task_reservation_matches_frontier(
         reservation,
@@ -1234,14 +1141,7 @@ def _cyclic_assignments(
 
 
 def _shared_assignments(state: PublicSearchState, limit: int) -> tuple[tuple[int, ...], ...]:
-    """Build method-neutral team assignments over every delivered public frontier.
-
-    ``source_agent_id`` records which vehicle produced a sparse-range outcome;
-    it is provenance, not task ownership.  Once that outcome is admitted to the
-    public map, every selector must be able to assign any vehicle to its
-    frontier.  Candidate guards, timing and team separation decide whether the
-    resulting route is legal.
-    """
+    """Build method-neutral team assignments over every delivered public frontier."""
 
     if limit < 1:
         raise ValueError("candidate_limit must be positive")
@@ -1337,11 +1237,7 @@ def outcome_calibrated_path_length_budget_m(
     observe_dwell_s: float,
     transit_timing_model: ConservativeTransitTimingModel,
 ) -> float:
-    """Return the reachable path length while preserving the sensing dwell.
-
-    The calibrated tracking margin is part of transit time. Outcome timestamp
-    tolerance is audit slack, not physical flight time, so it is not deducted.
-    """
+    """Return the reachable path length while preserving the sensing dwell."""
 
     duration = finite_number(decision_duration_s, "decision_duration_s")
     dwell = finite_number(observe_dwell_s, "observe_dwell_s")
@@ -1360,13 +1256,7 @@ def _public_candidate_intent(
     *,
     spatial_reference_m: float,
 ) -> tuple[float, float, float]:
-    """Describe a *publicly intended* mode without treating it as realised.
-
-    These values serve only to make the candidate emitter cover different
-    possibilities and to index historical outcome evidence.  They must never
-    be used as QD archive coordinates: guard rewriting, dynamics and sensing
-    can make the realised descriptor different.
-    """
+    """Describe a publicly intended mode for emitter coverage and history indexing."""
 
     total_length_m = 0.0
     vertical_length_m = 0.0
@@ -1394,11 +1284,10 @@ def _public_candidate_intent(
     mean_pair_distance_m = 0.0 if not pair_distances else sum(pair_distances) / len(pair_distances)
     endpoint_dispersion_intent = min(1.0, max(0.0, mean_pair_distance_m / reference))
 
-    # A formation that sends every vehicle in the same direction can have
-    # balanced path lengths and still observe the same corridor.  Directional
-    # complementarity instead measures the public planned displacement vectors
-    # before execution; its only authority is to retrieve outcome-backed
-    # history.  The realised archive uses observation complementarity below.
+    # Directional complementarity over planned public displacement vectors: a
+    # same-direction formation can balance path lengths and still observe one
+    # corridor. It only retrieves outcome-backed history; the realised archive
+    # uses observation complementarity below.
     directions: list[Point3] = []
     for path in paths_m:
         start, end = path[0], path[-1]
@@ -1467,10 +1356,8 @@ def _manifest_for_assignment(
         zip(state.agents, assignment, strict=True)
     ):
         holding = frontier_index == _HOLD_ASSIGNMENT
-        # A stationary fragment is never presented as a relay task merely
-        # because matching ran out of distinct public viewpoints.  The current
-        # common candidate authority does not allocate explicit relay jobs;
-        # this label keeps that limitation auditable in every manifest.
+        # A stationary fragment stays a hold even when matching runs out of
+        # distinct viewpoints; the label keeps relay-job allocation auditable.
         hold_reason = ""
         if holding:
             hold_reason = (
@@ -1530,16 +1417,15 @@ def _manifest_for_assignment(
             admission_reasons.append(guarded.reason or "static_path_rejected")
         if not within_window:
             admission_reasons.append("decision_window_exceeded")
-        # Planned observation duration is the minimum valid dwell. The executor
-        # owns the actual completion timestamp and immediately returns once the
-        # whole team has completed transit plus dwell; the remaining episode
-        # budget is a deadline, never an instruction to hover until it expires.
+        # Minimum valid dwell. The executor owns the completion timestamp and
+        # returns once the team finishes transit plus dwell; the remaining budget
+        # is a deadline, not a hover instruction.
         observation_end_s = minimum_observation_end_s
         endpoint = guarded.path_m[-1]
         endpoints.append(endpoint)
         guarded_paths.append(guarded.path_m)
-        # Delay consumes common physical budget and hover energy. It is part
-        # of the public effort hint, not a hidden planner-side correction.
+        # Delay consumes common physical budget and hover energy, so it enters
+        # the public effort hint.
         total_cost += travel_s + reservation_delay_s
         expected_public_gain_proxy = _public_gain_proxy(frontier)
         cluster_key = _frontier_cluster_key(frontier)
@@ -1592,9 +1478,8 @@ def _manifest_for_assignment(
             ),
             ("safety_recovery_agent_id", collision_avoidance_recovery_agent_id or ""),
         )
-        # Emit the task-association evidence for every normal frontier decision,
-        # including the first one. This makes reservation preservation and
-        # release auditable without an unrecorded scoring rule.
+        # Task-association evidence for every normal frontier decision, so
+        # reservation preservation and release stay auditable.
         common_features += (
             ("task_reservation_active", reservation is not None),
             ("task_reservation_matched", task_reservation_matched),
@@ -1767,16 +1652,7 @@ def _collision_avoidance_fallback_assignments(
     *,
     candidate_limit: int,
 ) -> tuple[tuple[tuple[int, ...], tuple[int, ...]], ...]:
-    """Derive bounded one-agent safety fallbacks from normal joint assignments.
-
-    Individual reachability cannot establish that two CF2X routes can occupy a
-    narrow corridor concurrently.  The joint guard is the authority on that
-    question.  If it rejects the entire normal pool, holding one otherwise
-    movable vehicle is a valid collision-avoidance action; labelling it as
-    ``no_reachable_viewpoint`` would be false.  Do not construct these rows
-    until the caller has established that the primary pool lacks enough safe
-    candidates, so a safety fallback cannot dilute a healthy four-agent pool.
-    """
+    """Derive bounded one-agent safety fallbacks from normal joint assignments."""
 
     if candidate_limit < 1:
         raise ValueError("collision-avoidance fallback candidate limit must be positive")
@@ -1792,9 +1668,8 @@ def _collision_avoidance_fallback_assignments(
             fallback_tuple = tuple(fallback)
             if fallback_tuple in seen:
                 continue
-            # A fallback must still command at least one real task.  An
-            # all-hold team is neither an exploration action nor a useful
-            # candidate for a selector comparison.
+            # A fallback still commands one real task; an all-hold team is no
+            # exploration action.
             if all(index == _HOLD_ASSIGNMENT for index in fallback_tuple):
                 continue
             seen.add(fallback_tuple)
@@ -1811,16 +1686,7 @@ def _outcome_backtrack_conflict_recovery_assignments(
     *,
     candidate_limit: int,
 ) -> tuple[tuple[int, ...], ...]:
-    """Offer an owned outcome reversal only after joint traffic deadlock.
-
-    A stationary collision-avoidance hold can itself occupy the only safe
-    corridor.  A completed own-agent path provides a stronger alternative:
-    its reverse endpoint and geometry have execution outcome authority, and
-    the regular path guard still validates the current connector.  This stage
-    never makes recovery a normal gain-seeking action; it is reached only when
-    the maximal-participation pool and its stationary safety fallbacks both
-    failed the common joint guard.
-    """
+    """Offer an owned outcome reversal only after joint traffic deadlock."""
 
     if candidate_limit < 1:
         raise ValueError("outcome-backtrack recovery candidate limit must be positive")
@@ -1877,15 +1743,7 @@ def _collision_avoidance_envelope_recovery_assignments(
     *,
     candidate_limit: int,
 ) -> tuple[tuple[tuple[int, ...], str], ...]:
-    """Offer one-agent outcome-backed exits after ordinary admission is exhausted.
-
-    The caller's joint guard is still the authority for the physical and
-    planning envelopes.  This generator merely makes the narrow recovery
-    shape explicit: one owner follows a prior safe route in reverse while all
-    other agents remain stationary.  It cannot become a gain-seeking team
-    candidate because it is reached only after normal, reservation, hold and
-    ordinary backtrack variants have all been rejected.
-    """
+    """Offer one-agent outcome-backed exits after ordinary admission is exhausted."""
 
     if candidate_limit < 1:
         raise ValueError("collision-avoidance recovery candidate limit must be positive")
@@ -1921,14 +1779,7 @@ def _nonconverging_recovery_path(
     *,
     stationary_positions_m: Sequence[Point3],
 ) -> bool:
-    """Return whether every segment is non-converging to every stationary UAV.
-
-    For a straight segment, the dot product between the relative position and
-    displacement is the derivative of half the squared separation.  Requiring
-    it to be non-negative on every segment proves that the moving vehicle does
-    not reduce distance to any stationary neighbour.  The runtime guard still
-    checks the sampled continuous path against the physical separation.
-    """
+    """Return whether every segment is non-converging to every stationary UAV."""
 
     path = tuple(path_m)
     if len(path) < 2 or not stationary_positions_m:
@@ -1954,15 +1805,7 @@ def _collision_avoidance_geometric_recovery_candidates(
     *,
     candidate_limit: int,
 ) -> tuple[tuple[PublicSearchState, tuple[int, ...], str], ...]:
-    """Build explicit one-agent escapes from the current public route graph.
-
-    Outcome-backed reverse paths are unavailable at cold start and can be too
-    short after a later decision.  In that case, reuse a freshly generated
-    public access route only as a recovery candidate when its guarded geometry
-    is monotone away from every other current pose.  The returned temporary
-    state contains synthetic ``backtrack`` frontiers so the normal manifest
-    schema records the recovery role without granting public gain.
-    """
+    """Build explicit one-agent escapes from the current public route graph."""
 
     if candidate_limit < 1:
         raise ValueError("geometric recovery candidate limit must be positive")
@@ -2024,9 +1867,8 @@ def _collision_avoidance_geometric_recovery_candidates(
                     ),
                 )
             )
-            # PublicSearchState sorts frontiers by ID in __post_init__. Keep
-            # the stable synthetic ID here and resolve its final tuple index
-            # only after constructing the sorted recovery state.
+            # Keep the synthetic ID; PublicSearchState sorts frontiers by ID in
+            # __post_init__, so resolve the tuple index after recovery state construction.
             rows.append((synthetic[-1].frontier_id, agent.agent_id))
             if len(rows) >= maximum_rows:
                 break
@@ -2067,20 +1909,7 @@ def _traffic_reservation_variants(
     *,
     candidate_limit: int,
 ) -> tuple[tuple[dict[str, float], dict[str, str]], ...]:
-    """Offer bounded, common delayed-departure alternatives for bottlenecks.
-
-    This routine does not infer a hidden corridor graph. Every pair is derived
-    from the same guarded public paths exposed to every selector. A later joint
-    guard must still prove full scheduled separation, while the executor makes
-    the predecessor's *measured* settled arrival a second release condition.
-
-    A single delayed agent behind one predecessor is enough for a two-vehicle
-    crossing, but a corridor used by three or more vehicles needs a serial
-    departure chain. The chain metadata keeps every delayed agent's immediate
-    predecessor, so the executor only waits for that one settled arrival while
-    the joint guard can verify the transitive schedule through predecessor
-    edges.
-    """
+    """Offer bounded delayed-departure alternatives for bottlenecks."""
 
     if candidate_limit < 1:
         raise ValueError("traffic reservation candidate limit must be positive")
@@ -2107,8 +1936,8 @@ def _traffic_reservation_variants(
                 continue
             frontier = state.frontiers[frontier_index]
             if frontier.task_kind == "backtrack":
-                # Outcome reversal is already a recovery protocol. Do not
-                # stack a second traffic protocol on it.
+                # Outcome reversal is already a recovery protocol; skip the
+                # second traffic protocol.
                 continue
             guarded, _ = _guarded_public_path(state, guard, agent, frontier)
             if guarded.legal:
@@ -2201,12 +2030,7 @@ def _waiting_hold_overrides_for_partial_route(
     guard: PathGuard,
     assignment: tuple[int, ...],
 ) -> dict[str, str] | None:
-    """Return team-completion hold labels for a jointly useful partial route.
-
-    A partial-active route is a deliberate resource allocation, not a missing
-    viewpoint.  This helper labels the held agents only when the moving agents
-    already form a meaningful multi-agent route.
-    """
+    """Return team-completion hold labels for a jointly useful partial route."""
 
     if _HOLD_ASSIGNMENT not in assignment:
         return None
@@ -2242,20 +2066,7 @@ def _feasibility_first_assignments(
     include_partial_route_extreme: bool = False,
     require_joint_prefilter: bool = False,
 ) -> tuple[tuple[tuple[int, ...], ...], tuple[tuple[int, ...], ...]]:
-    """Build a bounded, diverse set of assignments from individually legal edges.
-
-    A bounded list of geometric assignments can be entirely infeasible even
-    when a valid matching exists elsewhere in the public frontier graph.  The
-    shared action authority therefore checks every public robot--frontier edge
-    first and includes a guarded stationary observation edge.  It then retains
-    public utility and descriptor extremes plus deterministic legal matchings.
-
-    Materialising every distinct team permutation is not acceptable: with four
-    vehicles and F frontiers it grows as P(F, 4), even though the public output
-    contains only ``candidate_limit`` rows.  The fixed search budget is shared
-    by every selector and depends only on that output limit, never on a method
-    score or evaluator truth.
-    """
+    """Build a bounded, diverse set of assignments from individually legal edges."""
 
     if candidate_limit < 1:
         raise ValueError("candidate_limit must be positive")
@@ -2282,10 +2093,8 @@ def _feasibility_first_assignments(
                 + state.observe_dwell_s
                 > state.decision_start_s + state.decision_duration_s + 1.0e-9
             ):
-                # Any guarded route is at least as long as the direct Euclidean
-                # segment.  Rejecting an impossible lower bound avoids an
-                # expensive routed collision query without removing a feasible
-                # edge from the shared candidate graph.
+                # A guarded route is at least the direct Euclidean length, so an
+                # impossible lower bound skips an expensive routed query.
                 continue
             guarded, _ = _guarded_public_path(state, guard, agent, frontier)
             guarded_edges[(agent_index, frontier_index)] = guarded
@@ -2295,11 +2104,9 @@ def _feasibility_first_assignments(
                 + state.observe_dwell_s
                 <= state.decision_start_s + state.decision_duration_s + 1.0e-9
             )
-            # A guard may snap a nominal frontier request onto the current
-            # settled point. That is not an exploration action and cannot
-            # inherit a remote frontier's gain. Ordinary observation routes
-            # otherwise retain short legal doorway/vertical moves; the 0.50 m
-            # floor remains only for outcome-backed recovery routes.
+            # A snapped request at the settled point is no exploration action and
+            # inherits no frontier gain. Short doorway and vertical moves stay
+            # legal; the 0.50 m floor covers recovery routes only.
             eligible_progress = (
                 is_non_alias_exploration_path(guarded.path_m)
                 if frontier.task_kind == "explore"
@@ -2311,10 +2118,8 @@ def _feasibility_first_assignments(
                     legal_exploration.append(frontier_index)
                 else:
                     legal_backtrack.append(frontier_index)
-        # Recovery has no planning gain and may only rescue an agent that has
-        # no ordinary, meaningful exploration edge in the current public map.
-        # This keeps it from displacing normal exploration or becoming a
-        # selector-specific shortcut.
+        # Recovery is a rescue for an agent with no meaningful public-map edge,
+        # so it cannot displace normal exploration.
         legal = legal_exploration if legal_exploration else legal_backtrack
         hold = guard(agent.agent_id, (agent.position_m, agent.position_m))
         guarded_edges[(agent_index, _HOLD_ASSIGNMENT)] = hold
@@ -2382,16 +2187,7 @@ def _feasibility_first_assignments(
         )[0]
 
     def observation_priority(frontier_index: int) -> int:
-        """Keep every continuously supported exploration view in one tier.
-
-        ``route_progress`` and ``region_access`` are public-map route
-        alternatives, not synthetic recovery actions. Treating them as a
-        fallback after complete observations made the matcher discard the only
-        continuous route through a corridor whenever four short observation
-        poses existed. All three view kinds therefore participate in the same
-        exploration tier; the route guard and joint guard still decide physical
-        admissibility.
-        """
+        """Keep every continuously supported exploration view in one tier."""
 
         if frontier_index == _HOLD_ASSIGNMENT:
             return 0
@@ -2438,9 +2234,8 @@ def _feasibility_first_assignments(
         lambda agent, frontier: -edge_distance(agent, frontier),
     ]
     if include_route_extreme:
-        # Keep a route-length extreme in the bounded matching search.  This
-        # is only a candidate-pool objective: the common guard, joint safety
-        # certificate and physical deadline remain the admission authority.
+        # Route-length extreme as a candidate-pool objective only; the common
+        # guard, joint certificate and physical deadline remain the authority.
         objectives_list.append(lambda agent, frontier: edge_distance(agent, frontier))
     objectives_list.extend(
         [
@@ -2491,9 +2286,8 @@ def _feasibility_first_assignments(
         for agent_index, legal_choices in enumerate(choices)
     )
 
-    # Reserve bounded-search slots for route-length extremes.  Without this
-    # reservation, the gain-density-first DFS can consume the entire
-    # deterministic budget before it reaches a legal long-route matching.
+    # Reserved bounded-search slots for route-length extremes; the
+    # gain-density-first DFS would otherwise consume the deterministic budget.
     normal_assignment_limit = max(
         1, assignment_limit - (1 if include_route_extreme else 0)
     )
@@ -2521,14 +2315,10 @@ def _feasibility_first_assignments(
 
     extend((), frozenset())
     if not assignments:
-        # A long receding-horizon episode can reach a decision where no
-        # non-trivial team matching survives the joint guard (e.g. agents
-        # dispersed into separate rooms with tube-conflicting routes).  A
-        # crash here would terminate the whole episode and discard every
-        # collected receipt.  Fall back to the weakest legal team action:
-        # one explorer per best legal edge with the rest holding, then a
-        # shared stationary hold.  These rows are still ranked and joint
-        # guarded like any other candidate.
+        # When no non-trivial matching survives the joint guard, for example
+        # agents in separate rooms with tube-conflicting routes, fall back to the
+        # weakest legal team action instead of ending the episode. Rows are still
+        # ranked and joint guarded.
         fallback_assignments: list[tuple[int, ...]] = []
         for agent_index, ordered in enumerate(ordered_choices):
             non_hold = tuple(
@@ -2552,12 +2342,9 @@ def _feasibility_first_assignments(
     route_extreme_assignments: list[tuple[int, ...]] = []
     partial_route_extreme_assignments: list[tuple[int, ...]] = []
     if include_route_extreme:
-        # Search the same individually guarded edge graph with a bounded
-        # per-agent K-choice product.  This is deliberately independent of any
-        # selector score or evaluator truth.  It prevents a public long-route
-        # Pareto extreme from disappearing behind the gain-density DFS prefix
-        # and, unlike an unbounded DFS, can compare endpoint separation before
-        # a route reaches the joint guard.
+        # Bounded per-agent K-choice product over the guarded edge graph, free of
+        # selector score and evaluator truth. It keeps a public long-route Pareto
+        # extreme visible and checks endpoint separation before the joint guard.
         route_extreme_per_agent_k = 6
         route_extreme_pool_count = max(4, candidate_limit * 2)
         route_choices_by_agent: list[tuple[int, ...]] = []
@@ -2793,9 +2580,8 @@ def _feasibility_first_assignments(
         observation_count = sum(
             observation_priority(index) for index in assignment if index != _HOLD_ASSIGNMENT
         )
-        # Negative count preserves ascending ``min`` sorting for primary
-        # exploration-view assignments while keeping a required route prefix
-        # visible when the public matching graph has too few distinct views.
+        # Negative count keeps primary exploration views ascending under ``min``
+        # while a required route prefix stays visible.
         return (
             float(hold_count),
             float(-observation_count),
@@ -2813,10 +2599,9 @@ def _feasibility_first_assignments(
         if assignment not in ordered:
             ordered.append(assignment)
 
-    # A hold is a safety/fallback action, not a synthetic QD diversity mode.
-    # Keep the largest feasible active fleet first, then provide descriptor
-    # contrast only within that same participation level.  This guarantees an
-    # all-four-active option survives whenever four compatible jobs exist.
+    # A hold is a safety action, not a QD diversity mode. Prefer the largest
+    # feasible active fleet, then descriptor contrast within that level, so an
+    # all-four-active option survives when four compatible jobs exist.
     minimum_hold_count = min(int(metrics[row][0]) for row in assignments)
     maximum_exploration_view_count = max(
         -int(metrics[row][1])
@@ -2861,11 +2646,9 @@ def _feasibility_first_assignments(
         append_once(assignment)
     primary_set = frozenset(primary_assignments)
     primary_ordered_list = [assignment for assignment in ordered if assignment in primary_set]
-    # Route extremes are common action-authority rows, not frontier_3d or RL
-    # hints.  Insert them after the existing primary row so candidate_limit=1
-    # retains legacy single-row behavior, while every normal comparison pool
-    # (limit >= 2) receives the same long-route options before admission is
-    # filled by short gain-density rows.
+    # Route extremes are common action-authority rows. Inserted after the primary
+    # row so candidate_limit=1 keeps legacy behavior while comparison pools see
+    # long-route options before gain-density rows fill admission.
     if include_route_extreme and route_extreme_assignments:
         insertion_index = 1 if primary_ordered_list else 0
         for route_assignment in route_extreme_assignments[
@@ -2892,14 +2675,7 @@ def build_public_candidate_pool(
     include_route_extreme: bool = True,
     require_joint_prefilter: bool = False,
 ) -> tuple[CandidateFragmentManifest, ...]:
-    """Build the shared P07 action authority before any baseline ranks it.
-
-    ``minimum_feasible_candidates`` is a protocol guard, not a selection
-    preference.  A shared pool with one legal row makes every ranked method
-    select that row, so it cannot support a task-validity comparison.  The
-    caller must therefore request at least two legal choices for a P07 pilot
-    that intends to compare selectors.
-    """
+    """Build the shared P07 action authority before any baseline ranks it."""
 
     if not callable(guard):
         raise ValueError("guard must be callable")
@@ -2996,9 +2772,8 @@ def build_public_candidate_pool(
             rejected.append(manifest)
 
     assignment_indices = {assignment: index for index, assignment in enumerate(assignments)}
-    # Complete observations and public route prefixes are both normal
-    # exploration actions. Keep the maximal-participation tier first, then use
-    # other public variants only when it cannot provide strategy headroom.
+    # Complete observations and route prefixes are both normal exploration
+    # actions; keep the maximal-participation tier first.
     for assignment in primary_assignments:
         evaluate(
             assignment,
@@ -3012,15 +2787,10 @@ def build_public_candidate_pool(
         if len(admitted) >= candidate_limit:
             break
 
-    # Intent-diversity enhancement.  The candidate-intent richness audit that
-    # QD strategies enforce rejects pools whose feasible candidates collapse
-    # onto a few planned-descriptor cells, which can happen at a constrained
-    # first decision even though more feasible assignments exist.  Evaluate the
-    # remaining feasible assignments and keep a coverage-prioritised subset:
-    # every distinct intent cell is retained with its best-quality row, and the
-    # remaining budget fills with the highest-quality rows.  This changes only
-    # which legal rows appear in the shared action authority; it cannot relax
-    # the guard, joint safety, timing or diversity contracts.
+    # Intent-diversity enhancement for pools whose feasible candidates collapse
+    # onto few planned-descriptor cells. Keep each distinct intent cell with its
+    # best-quality row and fill the rest with top rows; guard, joint safety,
+    # timing and diversity contracts stay unchanged.
     if joint_guard is not None:
         cells = tuple(
             HM3D_CANDIDATE_INTENT_SPEC.cell(tuple(candidate.planned_descriptor))
@@ -3100,9 +2870,8 @@ def build_public_candidate_pool(
             ):
                 break
 
-    # Numeric feasibility can be satisfied without any candidate that gives two
-    # vehicles meaningful routes. When that happens, bounded delayed-departure
-    # variants are the normal joint-safety rescue, not a selector hint.
+    # When numeric feasibility has no two-vehicle meaningful routes, bounded
+    # delayed-departure variants are the normal joint-safety rescue.
     if (
         joint_guard is not None
         and minimum_multi_agent_route_candidates > 0
@@ -3153,11 +2922,9 @@ def build_public_candidate_pool(
             if len(admitted) >= candidate_limit:
                 break
 
-    # If every immediate joint plan is unsafe, allow one route to reserve a
-    # later departure behind a real predecessor. This preserves multi-agent
-    # work in a narrow corridor when the scheduled route certificate passes.
-    # It is generated before stationary holding, so safety does not needlessly
-    # turn a solvable traffic conflict into an idle vehicle.
+    # When every immediate joint plan is unsafe, let one route reserve a later
+    # departure behind a real predecessor; generated before stationary holding so
+    # a solvable traffic conflict does not become an idle vehicle.
     if len(admitted) < minimum_feasible_candidates and joint_guard is not None:
         reservation_index = len(assignments) + candidate_limit * 8
         for assignment in assignments[
@@ -3181,10 +2948,8 @@ def build_public_candidate_pool(
             if len(admitted) >= candidate_limit:
                 break
 
-    # Only a joint-route conflict can trigger this second stage.  It preserves
-    # normal maximal-participation candidates whenever they are safe, while
-    # avoiding a hard episode failure when a narrow corridor cannot carry all
-    # individually legal paths at once.
+    # Triggered by a joint-route conflict only; preserves normal candidates when
+    # safe and avoids episode failure on a narrow corridor.
     if len(admitted) < minimum_feasible_candidates and joint_guard is not None:
         for fallback_index, (assignment, held_agent_indices) in enumerate(
             _collision_avoidance_fallback_assignments(
@@ -3205,10 +2970,8 @@ def build_public_candidate_pool(
             if len(admitted) >= candidate_limit:
                 break
 
-    # A hold at a contested endpoint may still violate the same separation
-    # envelope.  At that point an own outcome-backed reversal is the only
-    # permitted yielding move: it is a real trajectory, not an invented route
-    # or an unlabelled stationary action.
+    # When a hold at a contested endpoint still violates separation, an own
+    # outcome-backed reversal is the only permitted yielding move.
     if len(admitted) < minimum_feasible_candidates and joint_guard is not None:
         for recovery_index, assignment in enumerate(
             _outcome_backtrack_conflict_recovery_assignments(
@@ -3222,11 +2985,9 @@ def build_public_candidate_pool(
             evaluate(assignment, candidate_index=recovery_index)
             if len(admitted) >= candidate_limit:
                 break
-    # The ordinary outcome backtrack may still be rejected because all routes
-    # start slightly inside the *planning* envelope.  Only then expose the
-    # one-moving-agent recovery shape.  Its stricter physical, stationarity,
-    # non-convergence and endpoint-restoration contract is evaluated by the
-    # runtime joint guard; the metadata keeps it out of exploration/QD/OGFR.
+    # When the ordinary backtrack is rejected inside the planning envelope, expose
+    # the one-moving-agent recovery shape. The joint guard evaluates its stricter
+    # contract and the metadata keeps it out of exploration and QD replay.
     if len(admitted) < minimum_feasible_candidates and joint_guard is not None:
         for recovery_index, (assignment, recovery_agent_id) in enumerate(
             _collision_avoidance_envelope_recovery_assignments(
@@ -3249,11 +3010,9 @@ def build_public_candidate_pool(
             )
             if len(admitted) >= candidate_limit:
                 break
-    # Cold-start or short-outcome states may not have a usable reverse route.
-    # Reuse only a freshly guarded public route whose geometry monotonically
-    # increases separation from every stationary neighbour.  The temporary
-    # state marks the route as a recovery backtrack, so it cannot earn public
-    # information gain or enter QD/OGFR replay.
+    # When no usable reverse route exists, reuse only a freshly guarded public
+    # route that monotonically increases separation from stationary neighbours.
+    # The temporary recovery-backtrack state earns no public gain and no QD replay.
     if len(admitted) < minimum_feasible_candidates and joint_guard is not None:
         for recovery_index, (recovery_state, assignment, recovery_agent_id) in enumerate(
             _collision_avoidance_geometric_recovery_candidates(
@@ -3542,10 +3301,8 @@ def _select_frontier_3d_candidate(
     )
     if vertical_equivalent:
         candidates = vertical_equivalent
-    # A legal cross-height public edge is valuable when the ordinary public
-    # score is already within the frozen continuity margin.  Giving it
-    # priority only inside this subset prevents an unproductive vertical
-    # detour from beating a materially better public assignment.
+    # A legal cross-height edge gets priority inside the frozen continuity margin
+    # only, so an unproductive vertical detour cannot beat a better assignment.
     return max(
         candidates,
         key=lambda manifest: _frontier_3d_selection_key(
@@ -3640,8 +3397,8 @@ def fixed_altitude_frontiers(
             task_kind=frontier.task_kind,
             exclusive_agent_id=frontier.exclusive_agent_id,
             viewpoint_kind=frontier.viewpoint_kind,
-            # Projection changes the endpoint, so reusing the old 3D access
-            # route would violate the current-belief anchoring contract.
+            # Projection changes the endpoint; the old 3D access route cannot be
+            # reused under the current-belief anchoring contract.
             access_paths_m=(),
             frontier_cluster_id=frontier.frontier_cluster_id,
             task_anchor_m=frontier.task_anchor_m,

@@ -433,9 +433,8 @@ def review_camera_pose(
         (math.hypot(position[0] - center[0], position[1] - center[1]) for position in positions),
         default=0.0,
     )
-    # Start markers are a compact four-UAV audit group.  Prefer a local camera so
-    # each identity remains readable; fall back to city-scale rings only when
-    # nearby candidates intersect authoritative colliders.
+    # Prefer a local camera so each four-UAV marker group stays readable; use
+    # city-scale rings only when nearby candidates hit authoritative colliders.
     camera_z = max(center[2] + 5.0, min(14.0, maximum_height * 0.25))
     radii = (
         max(8.0, horizontal_spread * 3.5),

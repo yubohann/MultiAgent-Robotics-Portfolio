@@ -4,7 +4,7 @@ from app import db
 
 
 class SystemSetting(db.Model):
-    """系统参数表"""
+    """System setting table."""
     __tablename__ = 'system_settings'
 
     setting_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

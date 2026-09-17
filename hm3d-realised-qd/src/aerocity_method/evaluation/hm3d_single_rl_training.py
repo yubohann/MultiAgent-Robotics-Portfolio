@@ -1,10 +1,4 @@
-"""Fail-closed training ingestion for the ordinary P07 single-RL baseline.
-
-This module intentionally trains only the archive-free, fragment-free weak
-baseline.  It consumes every decision-level transition emitted by an actual
-CF2X rollout, rather than one episode aggregate attached to the first action.
-The actor still receives only target-free public candidate features.
-"""
+"""Fail-closed training ingestion for the ordinary P07 single-RL baseline."""
 
 from __future__ import annotations
 
@@ -161,9 +155,8 @@ def sample_from_p07_training_record(
         for field, expected in public_schema_fields().items():
             if emitted.get(field) != decision.get(field) or emitted.get(field) != expected:
                 raise ValueError("training transition public-task schema differs from execution")
-        # The top-level public context is the pre-bootstrap audit anchor.  Training is
-        # decision-level, so its first state is bound to decisions[0], after bootstrap
-        # observations and communication have updated the public belief.
+        # The top-level public context is the pre-bootstrap audit anchor; the first
+        # training state is decisions[0], after bootstrap updates the public belief.
         selection = _mapping(decision.get("selection"), f"decisions[{index}].selection")
         execution = _mapping(decision.get("execution"), f"decisions[{index}].execution")
         if emitted.get("selected_candidate_id") != selection.get("selected_candidate_id"):

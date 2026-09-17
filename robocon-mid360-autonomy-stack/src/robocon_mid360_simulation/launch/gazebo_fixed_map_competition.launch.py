@@ -1,8 +1,7 @@
 """Run the Gazebo localization and competition safety chain together.
 
-This launch file is an integration profile for ``gazebo_simulation`` evidence.
-It deliberately keeps the synthetic action executor and target gate explicit;
-they are adapters for exercising ROS contracts, not physical hardware.
+This integration profile carries ``gazebo_simulation`` evidence with an
+explicit synthetic action executor and target gate as ROS contract adapters.
 """
 
 from ament_index_python.packages import get_package_share_directory

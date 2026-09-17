@@ -1276,7 +1276,7 @@ class PrototypeReliabilityScorer(nn.Module):
             prototype_margin = second_distance - nearest_distance
         else:
             second_distance = sorted_distances[:, 0]
-            # A single available prototype cannot provide a meaningful margin signal.
+            # Margin scoring starts at two available prototypes.
             prototype_margin = torch.zeros_like(nearest_distance)
         if conflict_score is None:
             conflict_score = torch.zeros_like(confidence)

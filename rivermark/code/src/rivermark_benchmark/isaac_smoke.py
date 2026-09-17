@@ -1,9 +1,4 @@
-"""Bounded target-free native Isaac smoke for the public City-Lite runtime.
-
-The smoke loads the same City-Lite authority, eight physical CF2X assets, and
-sensor constructors as the capture path. It writes only a small receipt: no
-episode, target, video, or reusable sensor payload is produced.
-"""
+"""Bounded target-free native Isaac smoke for the public City-Lite runtime."""
 
 from __future__ import annotations
 

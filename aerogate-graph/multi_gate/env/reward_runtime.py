@@ -1,4 +1,4 @@
-"""Extracted method helpers for :mod:`multi_gate.env.multi_gate_env`."""
+"""Extracted method helpers for ``multi_gate.env.multi_gate_env``."""
 
 from __future__ import annotations
 
@@ -226,11 +226,8 @@ def _any_gate_post_collision(
         ):
             return True
     if self._dynamic_gate_enabled and self._dynamic_gates:
-        # Align swept dynamic-gate collision with the same interval as the
-        # drone kinematics: previous drone positions at t, current positions
-        # at t+dt, gate posts at t and t+dt. Using next_frame after
-        # _step_count has already advanced shifts the gate one frame ahead
-        # and makes eval/replay disagree.
+        # Swept dynamic-gate collision spans t to t+dt for drones and gate posts to match drone kinematics.
+        # Reading next_frame after _step_count advances shifts the gate one frame ahead of scoring and replay.
         start_posts_xy = (
             np.asarray(dynamic_gate_start_posts_xy, dtype=np.float32)
             if dynamic_gate_start_posts_xy is not None

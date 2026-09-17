@@ -1,11 +1,4 @@
-"""Create a standalone, development-only Isaac pilot evidence bundle.
-
-This module deliberately has no path into formal candidate packing or dataset
-admission.  It projects only hash-bound, independently validated MP4 evidence
-into a new external directory.  Raw capture and validation receipts are used
-for verification but are never copied, which keeps evaluator/private material
-outside the public bundle.
-"""
+"""Create a standalone, development-only Isaac pilot evidence bundle."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Gate-based task suites for experiment-1 external generalization and experiment-2 internal evaluation."""
+"""Gate-based task suites for experiment-1 external generalization and experiment-2 internal scoring."""
 
 from __future__ import annotations
 

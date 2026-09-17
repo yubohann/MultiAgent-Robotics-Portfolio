@@ -1,11 +1,4 @@
-"""Private, aggregate-only diagnosis for a failed native target-visibility gate.
-
-This module exists to answer one narrow question after a failed Isaac run:
-did a target fail because the *recorded* onboard cameras never had a usable
-view, or because a target that should have been visible was absent from native
-semantic pixels?  It is deliberately not a sampler and never produces target
-coordinates, evaluator IDs, seeds, or image crops.
-"""
+"""Private, aggregate-only diagnosis for a failed native target-visibility gate."""
 
 from __future__ import annotations
 

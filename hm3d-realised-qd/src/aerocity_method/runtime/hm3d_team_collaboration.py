@@ -39,12 +39,7 @@ def _path_length_m(path: Sequence[Point3]) -> float:
 def _translation_normalised_arc_samples(
     path: Sequence[Point3], *, sample_count: int
 ) -> tuple[Point3, ...]:
-    """Remove the start translation and resample geometry by normalized arc length.
-
-    Arc-length sampling removes controller timing differences, but deliberately
-    does not rotate or scale a route. Two vehicles flying the same curve at
-    different world positions therefore remain comparable as translated copies.
-    """
+    """Remove the start translation and resample geometry by normalized arc length."""
 
     if sample_count < 3:
         raise ValueError("trajectory audit requires at least three resampled points")
@@ -174,14 +169,7 @@ def audit_translation_invariant_team_trajectories(
     ),
     resample_count: int = DEFAULT_RESAMPLE_COUNT,
 ) -> TeamTrajectoryDiversityAudit:
-    """Reject moving explorer paths that become the same after translation.
-
-    Non-explorers and explorers below the movement threshold are excluded from
-    pairwise copy detection. This audit does not infer why an agent is
-    stationary: execution outcomes own relay, collision and controller-failure
-    attribution. Fewer than two moving explorers is reported as unobservable
-    rather than fabricated as either diverse or duplicated.
-    """
+    """Reject moving explorer paths that become the same after translation."""
 
     if len(paths_by_agent) < 2:
         raise ValueError("team trajectory audit requires at least two agents")

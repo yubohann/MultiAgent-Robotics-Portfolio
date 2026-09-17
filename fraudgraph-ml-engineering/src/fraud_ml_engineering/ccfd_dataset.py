@@ -710,8 +710,8 @@ def _build_graph_payload(
 
 
 def _clone_graph_for_runtime(graph: dgl.DGLHeteroGraph) -> dgl.DGLHeteroGraph:
-    # The loader already owns a fresh graph instance from disk/build cache,
-    # so cloning here only duplicates memory with no runtime benefit.
+    # The loader already owns a fresh graph instance from the disk and build cache, so cloning
+    # here duplicates memory only.
     return graph
 
 

@@ -1,11 +1,4 @@
-"""Fail-closed assembly of the target-free HM3D P07 exploration matrix.
-
-P07 compares public methods on the same scene, reset, candidate pool, sensor
-entitlement and time budget.  The evaluator may own the complete collision
-field, but a worker record may expose only aggregate exploration metrics and
-outcome identities. Records carrying fields from a retired task contract are
-deliberately rejected by this module.
-"""
+"""Fail-closed assembly of the target-free HM3D P07 exploration matrix."""
 
 from __future__ import annotations
 

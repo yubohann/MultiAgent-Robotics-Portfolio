@@ -1,44 +1,29 @@
-# 活动文档索引
+# HM3D Realised-QD 文档
 
-下列文件为当前有效说明。
+当前文档集覆盖方法设计，正式结果与研究范围。历史过程材料已从本目录移除，需要追溯时见 git 历史。
 
-1. [HM3D QD+RL 大实验整改训练与公平计分执行方案](HM3D_QD_RL大实验整改训练与公平评测执行方案_2026-08-05.md)，当前主合同，包含 P0 门槛，v6/v1 执行结果 schema，控制器冻结，训练/基线公平预算和正式结果范围。
-2. [四机完整论文实验执行计划](四机快速实验执行计划_2026-08-03.md)，四机真实执行，执行结果，QD 实时更新和候选级 RL 运行顺序。具体冲突以主合同为准。
-3. [HM3D 无目标三维协作探索权威计划](HM3D无目标三维协作探索权威计划_2026-08-02.md)，任务，协议，P01 到 P10 状态和正式冻结范围。
-4. [QD 有效性与丰富性闭环](HM3D_QD有效性与丰富性闭环_2026-08-03.md) QD 进入正式主实验前的可证伪检查。
-5. [P0 裁决与根因修复记录](P0裁决与根因修复记录_2026-08-07.md)，当前协议的根因审查与修复记录。
-6. [主方法严格设计](主方法严格设计_realised_QD_RFG_RB_SF_SAC_2026-08-08.md) realised-QD，RFG 与 RB-SF-SAC 的当前方法合同。
-7. [P10 主表结果](P10主表结果_2026-08-08.md)，当前主表汇总与结果范围。
-8. [论文实验结果汇总](论文实验结果汇总_2026-08-08.md)，实验记录与论文级汇总入口。
+| 从这里开始 | 文档 |
+|---|---|
+| 组件级结果表，基线对照与机制消融，2026-08-08 | [P10 主表结果](P10主表结果_2026-08-08.md) |
+| 论文级冻结记录，主张，实验体系与数据规模 | [论文实验结果汇总](论文实验结果汇总_2026-08-08.md) |
+| realised-QD，RB-SF-SAC 与 RFG 的方法合同与差距清单 | [主方法严格设计](主方法严格设计_realised_QD_RFG_RB_SF_SAC_2026-08-08.md) |
 
-历史性的母论文重跑和路线讨论材料保留在归档资料中，作为文献参照。
-
-当前任务是无目标的在线三维协作探索，正式传感器是 `sparse_range_3d`，`physics_only` 只用于 H15 吞吐对照。
-
-上述索引覆盖当前有效说明。历史材料已归档到 `../archive/2026-08-03_retired_contracts/`。本目录保留的旧路线讨论仅作文献追溯，后续整理时归档，索引与主合同冲突时以主合同为准。
-
-真实运行和 HM3D 单元测试统一使用
-`C:\Users\Administrator\anaconda3\envs\env_isaaclab\python.exe`。
-Inkscape 自带 Python，裸 `python` 和裸 `pytest` 仅用于临时排查。
-
-## Repository Map
+## 目录范围
 
 ```text
-src/aerocity_method/  contracts, public adapters, realised-QD, RL, runtime, safety, and evaluation
-configs/              HM3D protocols, experiment manifests, and external-method contracts
-scripts/              public assembly, audit, training, replay, and Isaac launch wrappers
-tests/                unit, property, leakage, performance, and integration contracts
-manifests/            versioned protocol and evidence bindings
-docs/                 active research plans; historical material remains in archive/
+src/aerocity_method/  contracts, adapters, realised-QD, RL, runtime, safety, scoring
+configs/              HM3D protocols, experiment manifests and external-method contracts
+scripts/              assembly, audit, training, replay and Isaac launch wrappers
+tests/                unit, property, leakage, performance and integration contracts
+assets/               demo captures used by the READMEs
+archive/              retired pre-freeze material and superseded selection code
+debug/                engineering findings, hypotheses and eliminated options
+reason/               dated split and outcome decision rounds
+docs/                 this documentation set
 ```
 
-`datasets/`, `private_eval/`, `reports/`, `results/`, `figures/`, IsaacLab
-scene trees, checkpoints, external checkouts, and generated caches are local
-research material. `.gitignore` and the release instructions define the public
-source scope, which holds code, contracts, and documentation.
+HM3D 资产，Isaac 内容，检查点，私有计分数据与原始运行输出保存在本地工作区，公开源码树只包含代码，合同与文档。
 
-## GitHub Metadata
-
-- Recommended repository name, `hm3d-realised-qd`
-- Recommended description, `Outcome-grounded quality-diversity and reinforcement learning for target-free multi-UAV exploration in HM3D-derived 3D environments.`
-- Suggested topics, `hm3d`, `multi-uav`, `quality-diversity`, `reinforcement-learning`, `3d-exploration`, `multi-agent-systems`, `isaaclab`, `robotics`
+真实运行与 HM3D 单元测试统一使用
+`C:\Users\Administrator\anaconda3\envs\env_isaaclab\python.exe`。
+Inkscape 自带 Python，裸 `python` 与裸 `pytest` 只用于临时排查。

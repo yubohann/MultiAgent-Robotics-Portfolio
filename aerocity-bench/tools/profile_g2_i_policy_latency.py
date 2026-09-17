@@ -330,9 +330,8 @@ def profile_policy_latency(
         raise ValueError("latency profile repeat count must be positive")
     host_before = host_snapshot()
     foreign_before = foreign_isaac_processes()
-    # Keep this lookup aligned with ``L0FleetRuntime.step``.  The clock block
-    # controls the overrun policy, while the deadline itself is a top-level
-    # execution-contract field.
+    # Aligned with ``L0FleetRuntime.step``: the clock block owns the overrun
+    # policy, while the deadline is a top-level execution-contract field.
     deadline_s = float(config.raw["execution_contract"]["planning_deadline_s"])
     replicates = [
         _run_profile_replicate(

@@ -10,7 +10,7 @@ A file hash covers bytes, while the ABI fixes five facts about meaning.
 4. **Calibration.** Intrinsics, distortion model, and the closed extrinsic equation `T_world_camera = T_world_body * T_body_camera` are recorded. A sensor marked `unavailable` keeps that declared status, and proxies are rejected.
 5. **Hash binding.** A canonical JSON hash ties the ABI document to a manifest or release receipt. Changing a unit, shape, timing rule, or calibration changes the hash.
 
-## Fidelity labels
+## Fidelity Labels
 
 ABI 1.1 requires every stream to declare a `fidelity` label, one of `simulator_consistent`, `noise_modeled`, or `hardware_calibrated`, plus a list of error sources outside its model, such as lens distortion, rolling shutter, multipath, thermal drift, packet loss, and hardware clock error. Fidelity labels describe evidence provenance.
 

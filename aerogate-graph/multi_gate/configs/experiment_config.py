@@ -336,7 +336,7 @@ class MultiFailureReplayConfig:
 
 @dataclass(frozen=True)
 class MultiSizeInvarianceConfig:
-    """Variable-size policy settings and bucketed evaluation defaults."""
+    """Variable-size policy settings and bucketed scoring defaults."""
 
     enabled: bool = True
     team_size_sampling_mode: str = "uniform_buckets"
@@ -606,12 +606,8 @@ def build_dynamic_gate_density_8d_config() -> MultiExperimentConfig:
         formation_line_collapse_terminal_penalty=-120.0,
     )
     observation_config = MultiGraphObservationConfig(
-        # Keep the graph tensor shape compatible with the rt8 demo8 formation
-        # handoff checkpoint: node_features=(85, 18), action_mask=(34,).
-        # Dynamic gate-density stages need more lookahead gate posts than the
-        # original empty-formation handoff. Reducing the graph-only agent node
-        # budget from 34 to 30 keeps max_nodes at 85 while exposing 16 obstacle
-        # nodes; action_mask remains 34 via max_agents_soft.
+        # Keep the rt8 demo8 handoff tensor shape of 85 nodes and 18 features with an action mask of 34,
+        # and expose 16 obstacle nodes from a 30-node agent budget while max_nodes stays 85.
         nearest_obstacle_count=16,
         lookahead_waypoint_count=6,
         guidance_node_count=2,

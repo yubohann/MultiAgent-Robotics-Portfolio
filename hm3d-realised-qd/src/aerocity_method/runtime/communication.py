@@ -1,10 +1,4 @@
-"""Public range/LOS relay-graph accounting for multi-UAV execution.
-
-The graph deliberately contains only measured vehicle positions and a
-collision-world line-of-sight predicate.  It has no target, evaluator, or
-global-map privilege.  A direct peer edge is not confused with a multi-hop
-relay path, which matters whenever aircraft occupy different rooms or floors.
-"""
+"""Public range and LOS relay-graph accounting for multi-UAV execution."""
 
 from __future__ import annotations
 
@@ -111,14 +105,7 @@ def build_range_los_relay_graph(
     maximum_range_m: float,
     line_of_sight_clear: LineOfSight,
 ) -> RelayGraphSnapshot:
-    """Build an undirected public relay graph from range-limited LOS links.
-
-    The caller owns the geometry query.  This keeps the function deterministic
-    and unit-testable while making it impossible for this layer to read target
-    truth.  A link exactly at the range boundary is valid; a zero-length pair
-    is rejected as a duplicated vehicle pose rather than silently treated as a
-    perfect communication edge.
-    """
+    """Build an undirected public relay graph from range-limited LOS links."""
 
     if not math.isfinite(maximum_range_m) or maximum_range_m <= 0.0:
         raise ValueError("maximum relay range must be finite and positive")
@@ -190,12 +177,7 @@ def build_range_los_relay_graph(
 
 @dataclass(frozen=True, slots=True)
 class RelayMessage:
-    """One public, source-timestamped shared-state update.
-
-    A payload digest is intentionally used in place of a payload object.  The
-    mission runtime owns public mapping content; the network layer neither
-    interprets it nor has a path to evaluator-private target truth.
-    """
+    """One public, source-timestamped shared-state update carried as a payload digest."""
 
     message_id: str
     sender_id: str
@@ -296,13 +278,7 @@ class RelayMessageOutcome:
 
 @dataclass(slots=True)
 class RelayMessageQueue:
-    """Deterministic range/LOS relay delivery with delay, loss and stale-age proof.
-
-    A queued update becomes deliverable only after the frozen latency and only
-    when a currently measured relay route exists.  If the graph remains
-    partitioned until its TTL expires, the failure is recorded rather than
-    inferred away.  This is a simple packet-level contract, not an RF claim.
-    """
+    """Deterministic range/LOS relay delivery with delay, loss and stale-age proof."""
 
     agent_ids: tuple[str, ...]
     base_latency_s: float

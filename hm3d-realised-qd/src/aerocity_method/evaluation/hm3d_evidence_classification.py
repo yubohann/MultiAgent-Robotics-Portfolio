@@ -1,10 +1,4 @@
-"""Classify P07 runtime evidence by field and permitted downstream use.
-
-One runtime file can remain useful for controller calibration while being
-ineligible for coverage, QD, or RL claims.  This module keeps those decisions
-explicit and prevents a single defect from either discarding all evidence or
-silently contaminating training.
-"""
+"""Classify P07 runtime evidence by field and permitted downstream use."""
 
 from __future__ import annotations
 
@@ -188,8 +182,7 @@ def _public_schema_reasons(payload: Mapping[str, Any]) -> list[str]:
 def _real_execution_reasons(payload: Mapping[str, Any]) -> list[str]:
     reasons: list[str] = []
     # A failed worker can still provide valid controller, trajectory, speed,
-    # collision and sensor evidence.  Completion is deliberately checked by
-    # _successful_execution_reasons for score/training uses instead of here.
+    # collision and sensor evidence; completion is checked separately for score use.
     if payload.get("status") not in {
         "P07_EXECUTION_SMOKE_COMPLETE",
         "P07_EXECUTION_SMOKE_FAILED",
@@ -224,13 +217,7 @@ def _real_execution_reasons(payload: Mapping[str, Any]) -> list[str]:
 def _successful_execution_reasons(
     payload: Mapping[str, Any], physical_reasons: Sequence[str]
 ) -> list[str]:
-    """Return reasons a real execution cannot enter score or learning data.
-
-    This is intentionally stricter than _real_execution_reasons.  A legacy
-    record may claim COMPLETE while its terminal outcome contains a failure;
-    the outcome remains useful for engineering diagnostics but is rejected
-    from coverage, QD, replay and formal comparisons.
-    """
+    """Return reasons a real execution cannot enter score or learning data."""
 
     reasons = list(physical_reasons)
     if payload.get("status") != "P07_EXECUTION_SMOKE_COMPLETE":
@@ -250,9 +237,8 @@ def _successful_execution_reasons(
 
     stationarity = _mapping(payload.get("stationarity_supervision"))
     if stationarity is None:
-        # A successful status without the episode-level stationarity audit is
-        # an incomplete/legacy outcome.  It may still support dynamics
-        # diagnostics, but it cannot cross the score or replay boundary.
+        # A successful status without the episode-level stationarity audit supports
+        # dynamics diagnostics only and cannot cross the score or replay boundary.
         reasons.append("STATIONARITY_SUPERVISION_MISSING")
     elif stationarity.get("status") != (
         "EPISODE_STATIONARITY_SUPERVISION_ADMITTED"

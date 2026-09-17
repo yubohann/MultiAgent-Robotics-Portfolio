@@ -292,10 +292,7 @@ def build_switch_snapshots() -> list[FormationDemoSwitchSnapshot]:
 
 
 def build_morph_transition_specs() -> list[FormationDemoMorphTransitionSpec]:
-    """Return conflict-aware per-drone slot-return plans at P2-P5.
-
-    The terminal P6 has no downstream formation, so it is excluded.
-    """
+    """Return conflict-aware per-drone slot-return plans for P2 through P5 ahead of the terminal P6."""
 
     transitions: list[FormationDemoMorphTransitionSpec] = []
     for waypoint_index in range(1, len(WAYPOINTS) - 1):

@@ -15,9 +15,8 @@ from .target_gate import TargetObservation, parse_observation
 def normalize_synthetic_truth(value: str | dict[str, object]) -> tuple[TargetObservation, str]:
     """Validate an explicitly synthetic truth message before forwarding it.
 
-    This adapter must never be confused with a camera model or a detector.  It
-    only permits a declared synthetic source and preserves that identity in the
-    resulting observation.
+    The adapter accepts a declared synthetic source only and preserves that
+    identity in the resulting observation.
     """
 
     payload = json.loads(value) if isinstance(value, str) else value

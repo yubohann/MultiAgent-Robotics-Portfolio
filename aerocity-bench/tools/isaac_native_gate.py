@@ -829,9 +829,9 @@ def main() -> int:
         checks=checks,
         input_bindings=input_bindings,
     )
-    # This historical capability probe intentionally uses DynamicCuboid and
-    # direct velocity writes.  Keep the executor identity in the signed report
-    # so no later paper table can mistake it for the formal quadrotor backend.
+    # This capability probe uses DynamicCuboid and direct velocity writes; the
+    # signed report names the executor so it cannot be mistaken for the formal
+    # quadrotor backend.
     report["vehicle_execution_model"] = "dynamic_cuboid_kinematic_capability_probe"
     report["quadrotor_dynamics_contract"] = {
         "status": "not_connected",

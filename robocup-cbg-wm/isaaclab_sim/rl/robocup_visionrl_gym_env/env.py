@@ -42,10 +42,11 @@ from .constants import (
 from .geometry import active_base_armor_blockers, base_attack_pose_quality, base_hit_success_cap, inward_45deg_target_yaws, laser_accuracy_from_geometry, laser_origin_from_pose, normalized_laser_dwell_factor, robot_pushable_collision, route_pose, segment_intersects_aabb, shooting_range_limits, wrap_angle
 
 class RoboCupVisionRLGymEnv(gym.Env):
-    """Fast 2D rule environment for validating tactics before IsaacLab replay.
+    """2D rule environment for validating tactics before IsaacLab replay.
 
-    Action: [linear_velocity, angular_velocity, fire_gate], each in [-1, 1].
-    Observation: normalized robot states, armor counts, target flags, nearest target vector, base vector.
+    Action is [linear_velocity, angular_velocity, fire_gate], each in [-1, 1].
+    Observation is normalized robot states, armor counts, target flags, the
+    nearest target vector and the base vector.
     """
 
     metadata = {"render_modes": []}

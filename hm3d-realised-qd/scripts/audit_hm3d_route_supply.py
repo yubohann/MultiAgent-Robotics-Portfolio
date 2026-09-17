@@ -1,10 +1,4 @@
-"""Audit where public exploration route length disappears in an immutable outcome.
-
-This tool is deliberately outcome-only.  It does not reconstruct a belief,
-modify an episode, or infer evaluator truth.  Its job is to distinguish a
-short-route selector outcome from a shortage of individually or jointly legal
-public FREE-space routes before changing the candidate generator.
-"""
+"""Audit where public exploration route length disappears in an immutable outcome."""
 
 from __future__ import annotations
 
@@ -15,10 +9,8 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 
-# A guarded path length is only an executable public route after the route
-# guard has proved connectivity.  Disconnected opportunities intentionally
-# retain a geometric fallback length for diagnosis, but that value must never
-# be reported as route supply.
+# A guarded length is executable route supply only after the guard proved
+# connectivity; disconnected opportunities keep a diagnostic fallback length.
 _CONNECTED_PUBLIC_ROUTE_STATUSES = frozenset(
     {
         "revalidated_public_access_plan",
@@ -60,12 +52,7 @@ def _decision_edges(decision: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...
 
 
 def _longest(edges: Iterable[Mapping[str, Any]], *, field: str) -> float:
-    """Return the longest present numeric route field.
-
-    A disconnected opportunity intentionally serializes no guarded route
-    length.  Treating that absence as malformed data or as a zero-metre route
-    would erase the distinction this audit exists to expose.
-    """
+    """Return the longest present numeric route field."""
 
     return max(
         (

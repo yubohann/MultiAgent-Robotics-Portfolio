@@ -1,9 +1,4 @@
-"""Receipt-bound audit for a frozen development capture cohort.
-
-This module is deliberately read-only. It summarizes independently validated
-development captures without admitting episodes, copying payloads, or exposing
-evaluator-private paths and target coordinates.
-"""
+"""Receipt-bound audit for a frozen development capture cohort."""
 
 from __future__ import annotations
 

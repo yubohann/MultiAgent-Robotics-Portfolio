@@ -717,8 +717,8 @@ class PolicyReplayController(StrategyTeamController):
     """Motor-level replay of the learned high-level policy.
 
     The policy layer selects the next opponent target from a self-play style
-    tactical sequence. The inherited controller still performs differential
-    drive tracking, acceleration limiting, costmap avoidance, aiming, and
+    tactical sequence, while the inherited controller performs differential
+    drive tracking, acceleration limiting, costmap avoidance, aiming and
     shooter gating.
     """
 

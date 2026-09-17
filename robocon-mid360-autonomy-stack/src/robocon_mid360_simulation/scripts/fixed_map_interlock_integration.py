@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Exercise the real Gazebo localization chain and supervisor interlock.
 
-The driver publishes only operator/perception/peer inputs and a controlled
-Gazebo pause fault. FAST-LIO2, the mapper, fixed-map ICP, and localization
-contract publish the pose and lock signals observed here.
+The driver publishes operator, perception and peer inputs plus a controlled
+Gazebo pause fault, while FAST-LIO2, the mapper, fixed-map ICP and the
+localization contract publish the pose and lock signals observed here.
 """
 
 from __future__ import annotations
@@ -29,9 +29,9 @@ class FixedMapInterlockIntegration(Node):
         super().__init__(
             "fixed_map_interlock_integration",
             parameter_overrides=[
-                # The driver must keep ticking while Gazebo is intentionally
-                # paused to exercise LOST and recovery. Sensor/estimator nodes
-                # remain on simulation time; this orchestration node uses wall time.
+                # Wall time keeps this driver ticking while Gazebo is paused to
+                # exercise LOST and recovery, while sensor and estimator nodes
+                # stay on simulation time.
                 Parameter("use_sim_time", Parameter.Type.BOOL, False)
             ],
         )
@@ -174,8 +174,8 @@ class FixedMapInterlockIntegration(Node):
 
     def _publish_inputs(self) -> None:
         self.teammate_safe_pub.publish(Bool(data=True))
-        # The boolean is a local safety signal; the expiring envelope is the
-        # peer heartbeat consumed by the supervisor's transport monitor.
+        # The boolean is a local safety signal and the expiring envelope is the
+        # peer heartbeat consumed by the supervisor transport monitor.
         self.heartbeat_sequence += 1
         now_ns = time.time_ns()
         heartbeat = {
@@ -196,9 +196,8 @@ class FixedMapInterlockIntegration(Node):
             String(data=json.dumps(heartbeat, separators=(",", ":")))
         )
         # Carry the safety assertion through the same ordered transport as the
-        # heartbeat.  Under a loaded Gazebo graph this avoids relying on the
-        # separate Bool callback alone; the supervisor still requires both the
-        # fresh safety assertion and the fresh heartbeat.
+        # heartbeat so a loaded Gazebo graph keeps its ordering, and the
+        # supervisor still requires a fresh assertion plus a fresh heartbeat.
         teammate_safe = dict(heartbeat)
         teammate_safe["message_type"] = "teammate_safe"
         self.team_message_pub.publish(
@@ -391,9 +390,9 @@ class FixedMapInterlockIntegration(Node):
             ) == "TRACKING"
             if recovered:
                 # The localization contract publishes readiness asynchronously
-                # after odometry/map recovery.  Do not send preflight in the
-                # same tick as TRACKING: the supervisor may still hold the
-                # previous false readiness sample and would enter FAULT.
+                # after odometry and map recovery, so preflight waits one tick
+                # past TRACKING and the supervisor never sees the older false
+                # readiness sample.
                 self._set_phase("WAITING_FOR_RECOVERY_PREFLIGHT")
             return
         if self.phase == "WAITING_FOR_RECOVERY_PREFLIGHT":

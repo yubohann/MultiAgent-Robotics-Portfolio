@@ -1,8 +1,4 @@
-"""Orchestrate baseline analysis, preprocessing, local VLM, and fallback behavior.
-
-这是视频理解层的门面：pipeline 不直接关心当前选的是 Qwen、Gemma、MiniCPM 还是 baseline，
-只调用本服务并获得统一结构的 caption、tags、risk、metrics 和 keyframes。
-"""
+"""Orchestrate baseline analysis, preprocessing, local VLM, and fallback behavior."""
 
 from pathlib import Path
 import re
@@ -136,11 +132,7 @@ class MultimodalUnderstandingService:
         emit_event: EventCallback | None = None,
         simulate_delay_sec: float = 0.03,
     ) -> dict:
-        """Analyze one video with the active model and return a unified result.
-
-        执行顺序是：记录模型选择 -> baseline 抽样指标 -> 关键帧预处理 -> VLM 调用。
-        baseline 始终先运行，因为即使 VLM 成功，它的 metrics 也会参与审核策略。
-        """
+        """Analyze one video with the active model and return a unified result."""
         candidate = get_active_model()
         if emit_event:
             emit_event(
@@ -159,11 +151,11 @@ class MultimodalUnderstandingService:
         preprocess = self.preprocessor.prepare(video_path, video_id=video_id or "unknown", emit_event=emit_event)
 
         if candidate.mode == "local_baseline":
-            # 用户主动选择 baseline 时，不视为模型故障；backend 标记为 local_baseline。
+            # An explicit baseline choice is tagged local_baseline rather than treated as a failure.
             return self._merge_local(local, preprocess, candidate, fallback_reason="")
 
         try:
-            # 远程云模型已被移除；这里所有 VLM 候选都通过本地 Ollama 权重运行。
+            # Every VLM candidate runs on local Ollama weights.
             vlm_payload = self.local_vlm_client.analyze_video(
                 candidate=candidate,
                 title=title,
@@ -185,7 +177,7 @@ class MultimodalUnderstandingService:
         except OllamaModelError as exc:
             if not ALLOW_LOCAL_MODEL_FALLBACK:
                 raise
-            # fallback 是课堂可运行性的保护网；报告中仍应说明它不是 SOTA 模型能力。
+            # Fallback keeps the classroom demo runnable.
             if emit_event:
                 emit_event(
                     video_id,
@@ -249,11 +241,7 @@ class MultimodalUnderstandingService:
         candidate: ModelCandidate,
         payload: dict,
     ) -> dict:
-        """Merge VLM semantic output with deterministic local metrics.
-
-        VLM 更擅长语义摘要、OCR 和动作描述；baseline 更稳定地提供亮度、运动、闪烁等数值。
-        合并后同一套审核策略就能同时利用两类信号。
-        """
+        """Merge VLM semantic output with deterministic local metrics."""
         tags = list(dict.fromkeys([_zh_tag(tag) for tag in [*_as_list(payload.get("tags")), *local["tags"]] if _zh_tag(tag)]))
         summary = _zh_summary(str(payload.get("summary") or ""), local["caption"])
         timeline = _normalize_timeline(payload.get("timeline"))

@@ -463,10 +463,9 @@ def compile_method_task_spec(
     if not collider_ceilings:
         raise ValueError("city must contain physical colliders before compiling a task spec")
     body_margin = float(vehicle["radius_m"]) + float(vehicle["minimum_clearance_m"])
-    # This is an aggregate public geometry contract, not target truth.  It gives
-    # G1 methods a provably safe sky corridor without exposing exact building
-    # placement.  The extra half metre covers serialized geometry and controller
-    # tracking error; any generator height-envelope change must update this hash.
+    # Aggregate public contract, not target truth: a provably clear sky corridor
+    # above every collider.  The extra 0.5 m covers serialized geometry and
+    # controller tracking error.
     safe_sky_altitude = max(collider_ceilings) + body_margin + 0.5
     maximum_safe_altitude = float(city["flight_bounds"]["maximum"][2]) - body_margin
     if safe_sky_altitude > maximum_safe_altitude + 1.0e-9:
@@ -551,7 +550,7 @@ def write_compiled_public_v3(city: dict[str, Any], public_dir: Path, lock: Asset
     public_dir.mkdir(parents=True, exist_ok=True)
     write_json(public_dir / "cityspec.json", public_cityspec_v3(city))
     write_json(public_dir / "coarse_prior.json", compile_coarse_prior(city))
-    # This catalogue is diagnostic/training metadata. A formal G1 container never mounts it.
+    # Diagnostic/training metadata; a formal G1 container never mounts it.
     write_json(public_dir / "developer_view_catalogue.json", compile_public_catalogue(city))
     compile_scene(city, public_dir, lock)
 

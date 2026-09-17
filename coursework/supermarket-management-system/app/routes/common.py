@@ -4,7 +4,7 @@ from flask import flash, jsonify, redirect, request, session, url_for
 
 
 def login_required(f):
-    """登录验证装饰器"""
+    """Require a logged-in session."""
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -17,7 +17,7 @@ def login_required(f):
 
 
 def role_required(*roles):
-    """角色验证装饰器。"""
+    """Require one of the given roles."""
 
     def decorator(f):
         @wraps(f)
@@ -45,10 +45,10 @@ def role_required(*roles):
 
 
 def cashier_required(f):
-    """仅收银员可访问。"""
+    """Allow cashiers only."""
     return role_required('cashier')(f)
 
 
 def admin_required(f):
-    """仅管理员可访问。"""
+    """Allow administrators only."""
     return role_required('admin')(f)

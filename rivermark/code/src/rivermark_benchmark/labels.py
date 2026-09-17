@@ -1,11 +1,4 @@
-"""Validate the versioned Rivermark object/obstacle/landmark label ABI.
-
-The ontology is a contract for future label payloads, not a source of labels.
-Public validation accepts only the learning-label partition and rejects private
-evaluator vocabulary before a record can be written to a public projection.
-Cross-frame validation keeps an instance identity bound to one class for the
-whole episode and rejects duplicate observations in a frame.
-"""
+"""Validate the versioned Rivermark object/obstacle/landmark label ABI."""
 
 from __future__ import annotations
 

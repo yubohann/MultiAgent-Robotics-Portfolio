@@ -1,9 +1,4 @@
-"""Public contracts for HM3D multi-UAV online exploration.
-
-These contracts are deliberately independent from evaluator geometry.  They
-carry hashes, public map summaries, guarded trajectories, and execution
-outcomes, but never complete meshes, private ESDFs, or truth coverage maps.
-"""
+"""Public contracts for HM3D multi-UAV online exploration."""
 
 from __future__ import annotations
 

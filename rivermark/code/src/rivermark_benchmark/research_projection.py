@@ -1,12 +1,4 @@
-"""Dependency-light Zarr v2 projection for verified Rivermark episodes.
-
-The native capture format is deliberately retained as evidence.  This module
-projects selected NPZ streams into ordinary Zarr v2 arrays so researchers can
-open only the modalities they need with a standard chunked-array interface.
-Projection is fail-closed: the source episode must already pass the formal
-candidate/release verifier, and unsupported stream encodings are reported
-instead of being silently omitted.
-"""
+"""Dependency-light Zarr v2 projection for verified Rivermark episodes."""
 
 from __future__ import annotations
 

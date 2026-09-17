@@ -1,10 +1,4 @@
-"""Audit the P01-P10 HM3D formal-experiment preflight.
-
-Exit codes:
-  0: preventive contract passed, formal start is ready, or formal results are ready
-  2: contract exists but required real-runtime evidence is incomplete
-  8: malformed protocol or evidence manifest
-"""
+"""Audit the P01 through P10 HM3D formal preflight, exit 0 pass, 2 incomplete, 8 malformed."""
 
 # ruff: noqa: E402
 

@@ -2,7 +2,7 @@ from app import db
 
 
 class SaleItem(db.Model):
-    """销售明细表"""
+    """Sales order item table."""
     __tablename__ = 'sale_items'
 
     item_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

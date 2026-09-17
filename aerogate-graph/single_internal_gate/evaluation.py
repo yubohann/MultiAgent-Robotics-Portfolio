@@ -1,4 +1,4 @@
-"""Planner-only evaluation metrics for experiment 2."""
+"""Planner-only scoring metrics for experiment 2."""
 
 from __future__ import annotations
 

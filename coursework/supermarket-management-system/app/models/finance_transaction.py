@@ -4,7 +4,7 @@ from app import db
 
 
 class FinanceTransaction(db.Model):
-    """财务流水（收入/支出）"""
+    """Finance transactions for income and expense."""
     __tablename__ = 'finance_transactions'
 
     transaction_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

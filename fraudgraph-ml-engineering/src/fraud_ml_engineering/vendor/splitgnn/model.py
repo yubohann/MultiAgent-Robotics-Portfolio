@@ -32,7 +32,7 @@ def calculate_theta2(d):
 
 
 def sample_balanced_index(pos_index, neg_index):
-    """Draw a balanced subset so one side does not dominate the edge loss."""
+    """Draw a balanced subset so both classes contribute evenly to the edge loss."""
     if len(pos_index) == 0 or len(neg_index) == 0:
         return None
     sample_size = min(len(pos_index), len(neg_index))
@@ -103,7 +103,7 @@ class PolyConv(nn.Module):
             hs_n = []
             transh = self.transh(feat)
 
-            # Important: each theta branch must start from the original features.
+            # Each theta branch starts from the original features.
             for theta in self._theta:
                 cur_feat = base_feat
                 h_o = theta[0] * cur_feat

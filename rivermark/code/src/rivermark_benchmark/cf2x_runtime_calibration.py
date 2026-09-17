@@ -1,13 +1,4 @@
-"""Fail-closed native Isaac calibration probe for the Rivermark CF2X asset.
-
-The capture configuration contains a CF2X allocation and motor-response
-assumption.  This module turns that assumption into an auditable, native Isaac
-observation before any T2 policy is allowed to command a vehicle.  It retains
-no City-Lite payload, sensor frame, target, or formal episode data.
-
-Isaac imports intentionally occur only after all resource, source, runtime-lock,
-and exclusive-AppLauncher gates have passed.
-"""
+"""Fail-closed native Isaac calibration probe for the Rivermark CF2X asset."""
 
 from __future__ import annotations
 

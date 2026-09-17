@@ -4,7 +4,7 @@ from app import db
 
 
 class FinancePeriodClose(db.Model):
-    """月度财务关账快照"""
+    """Monthly finance period close snapshots."""
     __tablename__ = 'finance_period_closings'
 
     close_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

@@ -48,7 +48,7 @@ def _project_module_weights(module: nn.Module, bound: float) -> None:
 
 
 class GraphEncoder(nn.Module):
-    """Simple message-passing encoder over fixed-size graph observations."""
+    """Message-passing encoder over fixed-size graph observations."""
 
     def __init__(
         self,

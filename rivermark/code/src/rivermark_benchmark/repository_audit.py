@@ -1,12 +1,4 @@
-"""Fail-closed audits for artifacts that must never enter Git history.
-
-The audit inspects the Git index rather than the working tree. Ignored local
-captures therefore remain usable for development, while a force-added capture,
-asset, model, prompt, or oversized file is rejected before a release commit.
-The default audit inspects the current Git index.  The explicit history audit
-walks all ref-reachable objects, including paths that were later deleted.  It
-does not rewrite history or delete any artifact.
-"""
+"""Fail-closed audits for artifacts that must never enter Git history."""
 
 from __future__ import annotations
 

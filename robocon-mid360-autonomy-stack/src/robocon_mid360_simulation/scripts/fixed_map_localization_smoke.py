@@ -231,8 +231,8 @@ class FixedMapSmoke(Node):
         message = PoseWithCovarianceStamped()
         message.header.stamp = self.get_clock().now().to_msg()
         message.header.frame_id = "map"
-        # The frozen map was built from this same Gazebo origin. This is a
-        # controlled initial-pose test, not a claim about a physical pose.
+        # The frozen map was built from this same Gazebo origin, so this is a
+        # controlled initial-pose check in simulation coordinates.
         message.pose.pose.position.x = 0.0
         message.pose.pose.position.y = 0.0
         message.pose.pose.position.z = 0.0

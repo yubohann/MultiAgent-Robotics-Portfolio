@@ -1,9 +1,4 @@
-"""Public sparse 3D occupancy belief for HM3D exploration.
-
-The evaluator may own a complete mesh or ESDF.  This module only stores voxels
-that were produced by public sensor outcomes.  Replaying the same outcome is
-idempotent, which is required for outcome-grounded replay and fragment reuse.
-"""
+"""Public sparse 3D occupancy belief for HM3D exploration."""
 
 from __future__ import annotations
 
@@ -26,13 +21,7 @@ _STATE_NAMES = {UNKNOWN: "unknown", FREE: "free", OCCUPIED: "occupied"}
 def public_free_voxel_transition(
     before: Iterable[VoxelKey], after: Iterable[VoxelKey]
 ) -> tuple[frozenset[VoxelKey], frozenset[VoxelKey]]:
-    """Return newly public-free voxels and prior free voxels revised away.
-
-    Public occupancy fusion is not monotone in the FREE state: a later
-    occupied observation is allowed to override an earlier free ray.  The
-    decision ledger therefore has to compare the fused maps on both sides of
-    the execution boundary instead of counting only this segment's raw rays.
-    """
+    """Return newly public-free voxels and prior free voxels revised away."""
 
     before_keys = frozenset(tuple(int(value) for value in key) for key in before)
     after_keys = frozenset(tuple(int(value) for value in key) for key in after)
@@ -177,12 +166,9 @@ class SparseVoxelBelief:
         if current == OCCUPIED and state == FREE:
             return
         if current == FREE and state == OCCUPIED:
-            # A sparse ray can graze an obstacle edge and report an occupied
-            # terminal inside a voxel that an earlier pass-through ray already
-            # proved free and that the continuous PhysX route guard physically
-            # admitted. Exploration knowledge is monotone: a confirmed-free
-            # voxel stays free so the explored-volume metric cannot shrink.
-            # The exact static guard remains the authority for route safety.
+            # A confirmed-free voxel stays free when a later grazing ray reports an
+            # occupied terminal, because the continuous PhysX guard already admitted
+            # the route; explored volume never shrinks.
             return
         self._states[frozen_key] = state
 

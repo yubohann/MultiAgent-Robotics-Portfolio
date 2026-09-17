@@ -69,8 +69,8 @@ PUSH_INTENT_THRESHOLD = 0.48
 PUSH_STEP_M = 0.060
 PUSH_ROBOT_RECOIL_M = 0.014
 PUSH_CLEARANCE_MARGIN = 0.025
-# Match the IsaacLab rendered wheel/body footprint so strict replay catches the
-# same red-box overlap that is visible in video.
+# Match the IsaacLab rendered wheel and body footprint so strict replay catches
+# the same red-box overlap visible in video.
 ROBOT_PUSHABLE_VISUAL_HALF_EXTENTS = (ROBOT_LENGTH * 0.5 + 0.110, ROBOT_WIDTH * 0.5 + 0.087)
 DRAW_TIMEOUT_PENALTY = 14.0
 NORMAL_TARGET_CONTACT_RADIUS = 0.035

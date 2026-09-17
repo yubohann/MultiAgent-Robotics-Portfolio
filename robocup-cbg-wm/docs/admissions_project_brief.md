@@ -2,9 +2,9 @@
 
 ## Project Summary
 
-Object-Centric World-Model Flow RL for Multi-Agent Robotics is a ROS2 and IsaacLab project built around a RoboCup-style adversarial visual navigation task. The system combines real robot software infrastructure, simulation replay, rule-level reinforcement learning, object-centric state modeling, and auditable scoring artifacts.
+Object-Centric World-Model Flow RL for Multi-Agent Robotics is a ROS2 and IsaacLab project built around a RoboCup-style adversarial visual navigation task. The system combines real robot software infrastructure, simulation replay, rule-level reinforcement learning, object-centric state modeling and auditable scoring artifacts.
 
-The main validated scenario is a two-robot yellow-vs-blue match. Each robot must navigate, identify opponent targets, push physical-style red boxes, respect base blockers, satisfy laser range and dwell-time constraints, and avoid illegal hits or penetration. The learning stack uses an object-centric world model with SAC Flow and PolicyFlow-style self-play and rule-aware action shielding.
+The main validated scenario is a two-robot yellow-versus-blue match. Each robot must navigate, identify opponent targets, push physical-style red boxes, respect base blockers, satisfy laser range and dwell-time constraints, and avoid illegal hits or penetration. The learning stack uses an object-centric world model with SAC Flow and PolicyFlow-style self-play and rule-aware action shielding.
 
 ## Why It Is Relevant for Graduate Applications
 
@@ -15,7 +15,7 @@ This project demonstrates work across several research and engineering layers.
 | Robotics systems | ROS2 Jazzy workspace, Nav2 integration, launch files, robot descriptions, behavior orchestration and shooter services |
 | Simulation | IsaacLab replay scene, differential-drive robot behavior, pushable obstacles, base blockers and target interaction |
 | Learning | Object-centric state representation, world-model-assisted SAC Flow and PolicyFlow-style self-play and residual expert behavior |
-| Safety and rules | Action shielding, legal target ownership, line-of-sight, laser dwell time, range gates, collision and penetration audits |
+| Safety and rules | Action shielding, legal target ownership, line of sight, laser dwell time, range gates, collision and penetration audits |
 | Scoring | Multi-seed scoring runs, strict replay audit, JSON and CSV metrics, replay videos, GIFs and generated figures |
 | Sim2Real | ROS2 deployment contract and 1v1 real-robot experiment coverage |
 
@@ -51,10 +51,9 @@ This extension is published as simulation-stage evidence with an IsaacLab tactic
 
 Primary evidence.
 
-- `docs/large_scale_50v50_plan.md`
-- `docs/large_scale_50v50_curriculum_plan.md`
-- `docs/large_scale_50v50_report.md`
-- `docs/rl_data/large_scale_50v50/`
+- `docs/rl_data/large_scale_curriculum/curriculum_summary.json`
+- `docs/rl_data/large_scale_50v50/eval_summary.json`
+- `docs/figures/large_scale_50v50/`
 - `docs/media/large_scale_50v50_isaaclab_replay.mp4`
 
 ## What I Would Emphasize in an Application
@@ -79,7 +78,7 @@ For a fast review, follow these steps.
 2. Open `docs/capabilities.md` for the capability list and measured evidence.
 3. Inspect `docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.json`.
 4. Watch the three-view replay GIFs or MP4s under `docs/media/`.
-5. If interested in scaling, read `docs/large_scale_50v50_report.md`.
+5. If interested in scaling, read `docs/rl_data/large_scale_50v50/eval_summary.json` and the figures under `docs/figures/large_scale_50v50/`.
 
 ## Suggested Application Description
 

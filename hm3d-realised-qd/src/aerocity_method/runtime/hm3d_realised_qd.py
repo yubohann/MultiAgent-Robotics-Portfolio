@@ -1,10 +1,4 @@
-"""Outcome-grounded QD descriptors and richness audits for HM3D exploration.
-
-The descriptor deliberately contains behaviour, not outcome quality.  Every
-input is available to the method after execution: applied trajectories and
-public sparse-range outcomes.  Evaluator mesh, ESDF and denominator voxels are
-not accepted here.
-"""
+"""Outcome-grounded QD descriptors and richness audits for HM3D exploration."""
 
 from __future__ import annotations
 
@@ -44,26 +38,20 @@ HM3D_REALISED_QD_ARCHIVE_SPEC = ArchiveSpec(
         DescriptorAxis("public_observation_complementarity", 0.0, 1.0, 4),
     )
 )
-# A 4 x 4 x 4 grid has 64 nominal cells.  Six occupied cells only establish
-# that an archive is not constant; they do not give an online selector enough
-# independent outcome modes to claim a repertoire.  These floors are fixed
-# before validation and deliberately describe admission, not performance.
+# Archive admission floors fixed before validation: six outcome modes establish a
+# non-constant archive, not a repertoire. Admission, not performance.
 MINIMUM_OUTCOME_ARCHIVE_ENTRIES_FOR_SELECTION = 6
 MINIMUM_REALISED_QD_OUTCOMES_FOR_ADMISSION = 12
 MINIMUM_REALISED_QD_JOINT_CELLS = 6
 MINIMUM_REALISED_QD_SHANNON_EFFECTIVE_CELLS = 4.0
 MAXIMUM_REALISED_QD_AXIS_ABSOLUTE_CORRELATION = 0.90
 MINIMUM_REALISED_QD_AXIS_CORRELATION_DETERMINANT = 0.10
-# A rich repertoire is useful only when the current public map contains a
-# detectable reason to select one of its modes.  These fixed floors keep the
-# selector from manufacturing a QD intervention after the public exploration
-# deficits have already vanished.
+# The selector needs a detectable public-map reason to pick a mode; these floors
+# stop a QD intervention after the deficits vanish.
 MINIMUM_PUBLIC_EXPLORATION_NEED_STRENGTH = 0.15
 MINIMUM_QD_NEED_ALIGNMENT_IMPROVEMENT = 0.0
-# A selected mode is only trusted on validation when its realised response is
-# within the uncertainty declared before execution.  This is an accountability
-# check for a selected QD intervention, not a task-performance threshold; the
-# paired AUC test in P08 remains the evidence for task benefit.
+# Accountability check on a selected QD intervention, not a task threshold; the P08
+# paired AUC remains the task evidence.
 MINIMUM_QD_NEED_REALISATION_FIDELITY_RATE = 0.0
 HM3D_QD_CALIBRATION_INTENT_MODES = (
     "vertical_low",
@@ -92,12 +80,9 @@ HM3D_CANDIDATE_INTENT_SPEC = ArchiveSpec(
 )
 QD_PUBLIC_VALUE_BACKBONE_ID = "public-quality-hint-per-cost-v1"
 
-# The deployed archive remains three-dimensional.  These four pre-registered
-# families let train-only calibration falsify the current hand-picked axes
-# instead of treating them as correct by construction.  They deliberately
-# differ only in the vertical and team-allocation coordinate: complementarity
-# is kept in every family because it is the direct public evidence of whether
-# agents observed overlapping space.
+# The deployed archive stays three-dimensional. These pre-registered families let
+# train-only calibration falsify the current axes; they differ only in the vertical
+# and team-allocation coordinate, keeping complementarity in every family.
 HM3D_QD_DESCRIPTOR_FAMILIES: tuple[tuple[str, tuple[str, str, str]], ...] = (
     (
         "v4_motion_dispersion_complementarity",
@@ -136,13 +121,7 @@ HM3D_CURRENT_QD_DESCRIPTOR_FAMILY_ID = "v4_motion_dispersion_complementarity"
 
 
 def qd_selector_backbone_sha256(*, utility_slack: float) -> str:
-    """Identify the common public value layer used by a QD comparison.
-
-    P08 has to prove that no-QD, planned-QD and realised-QD faced the same
-    candidate value signal.  The current development worker uses transparent
-    public gain/cost hints; a trained RB-SF-SAC provider can replace it later,
-    but must emit a different, shared digest for all three controls.
-    """
+    """Identify the common public value layer shared by all three P08 QD controls."""
 
     slack = finite_number(utility_slack, "QD utility_slack")
     if not 0.0 <= slack <= 1.0:
@@ -181,15 +160,7 @@ def _checked_descriptor(values: Sequence[float], label: str) -> tuple[float, flo
 
 @dataclass(frozen=True, slots=True)
 class PublicExplorationNeed:
-    """Current exploration deficit computed only from public sparse-range state.
-
-    The three coordinates deliberately use the same semantic order as the
-    realised-QD descriptor: vertical exploration, team spatial separation,
-    and duplicate-observation reduction.  They are a *selection context*, not
-    an archive coordinate and not an evaluator score.  This prevents the
-    archive from being filled merely because a behaviour is rare when that
-    behaviour is irrelevant to the map state currently visible to the method.
-    """
+    """Current exploration deficit computed only from public sparse-range state."""
 
     vertical_exploration_deficit: float
     spatial_dispersion_deficit: float
@@ -232,14 +203,7 @@ class PublicExplorationNeed:
         return self.strength >= MINIMUM_PUBLIC_EXPLORATION_NEED_STRENGTH
 
     def alignment(self, descriptor: Sequence[float]) -> float:
-        """Return deficit-weighted fulfilment by a predicted realised mode.
-
-        A zero deficit is a zero *priority*, not a request to repeat the
-        opposite behaviour.  For example, after a team has already separated
-        spatially, the selector must not prefer a compact formation simply to
-        match a zero-valued coordinate.  Only dimensions with a public
-        exploration deficit contribute to the score.
-        """
+        """Return deficit-weighted fulfilment by a predicted realised mode."""
 
         mode = _checked_descriptor(descriptor, "predicted realised descriptor")
         total_priority = sum(self.values)
@@ -271,15 +235,7 @@ def public_exploration_need_from_public_belief(
     spatial_reference_m: float,
     height_band_m: float = 1.0,
 ) -> PublicExplorationNeed:
-    """Derive a current QD demand vector without evaluator-side geometry.
-
-    ``belief`` and per-agent voxel sets are both reconstructed from delivered
-    sparse-range outcomes.  No scene mesh, ESDF, floor annotation, target, or
-    remaining-free-volume denominator appears in this calculation.  The
-    result is intentionally conservative: an absent public observation gives
-    a high deficit, while already broad, non-overlapping public evidence makes
-    QD abstain rather than continue filling behaviour cells for its own sake.
-    """
+    """Derive a current QD demand vector from delivered sparse-range outcomes only."""
 
     if not isinstance(belief, SparseVoxelBelief):
         raise TypeError("public exploration need requires a SparseVoxelBelief")
@@ -312,8 +268,8 @@ def public_exploration_need_from_public_belief(
             sum((point[0] - mean_x) ** 2 + (point[1] - mean_y) ** 2 for point in centers)
             / len(centers)
         )
-        # A radius of half the public communication reference is already
-        # sufficient evidence that the observed map is not one local cluster.
+        # Half the public communication reference is enough evidence that the map is
+        # not one local cluster.
         spatial_coverage = _clamp_unit(2.0 * radial_spread / reference)
         spatial_deficit = 1.0 - spatial_coverage
     else:
@@ -446,13 +402,7 @@ def _per_agent_public_free_voxels(
 
 @dataclass(frozen=True, slots=True)
 class OutcomeQDFeatureVector:
-    """All pre-registered outcome-only candidates for the three QD axes.
-
-    This is deliberately a *diagnostic feature vector*, not a four- or
-    five-dimensional archive.  Calibration may compare the fixed three-axis
-    families below, but deployment must still freeze exactly one family before
-    validation.  Every value is derived from post-execution public evidence.
-    """
+    """All pre-registered outcome-only candidates for the three QD axes."""
 
     vertical_motion_ratio: float
     public_vertical_observation_span: float
@@ -518,12 +468,7 @@ class OutcomeQDFeatureVector:
 def descriptor_values_for_qd_family(
     features: OutcomeQDFeatureVector, family_id: str
 ) -> tuple[float, float, float]:
-    """Return one pre-registered three-axis descriptor family.
-
-    The returned tuple has no implicit archive semantics.  Callers must bind
-    its family ID and the axis names into their immutable train artifact before
-    a selector is allowed to use it.
-    """
+    """Return one pre-registered three-axis descriptor family."""
 
     for registered_family_id, axis_names in HM3D_QD_DESCRIPTOR_FAMILIES:
         if family_id == registered_family_id:
@@ -540,18 +485,7 @@ def outcome_qd_feature_vector_from_public_outcomes(
     resolution_m: float,
     spatial_reference_m: float,
 ) -> OutcomeQDFeatureVector:
-    """Measure all pre-registered descriptor candidates from public outcomes.
-
-    ``vertical_motion_ratio`` exposes realised climbing effort, while
-    ``public_vertical_observation_span`` requires that execution actually
-    created observations at separated heights and therefore cannot be raised
-    by vertical oscillation in empty space.  ``team_spatial_dispersion`` and
-    ``public_unique_contribution_balance`` are intentionally both recorded:
-    the former is geometric separation; the latter measures whether each
-    member supplied a comparable amount of non-overlapping public evidence.
-    Train calibration decides whether either is redundant with observation
-    complementarity.  Neither evaluator geometry nor unseen voxels are read.
-    """
+    """Measure all pre-registered descriptor candidates from public outcomes."""
 
     require_identifier(scene_id, "scene_id")
     ids = tuple(sorted(set(agent_ids)))
@@ -658,19 +592,7 @@ def realised_descriptor_from_public_outcomes(
     resolution_m: float,
     spatial_reference_m: float,
 ) -> RealisedQDDescriptor:
-    """Measure realised behaviour only from public post-execution evidence.
-
-    ``vertical_motion_ratio`` captures actual vertical travel rather than the
-    difference between team endpoints.  ``team_spatial_dispersion`` measures
-    the separation of the agents' public observed-free-voxel centroids relative
-    to the frozen public communication radius.  The old ``d / (d + 1 m)``
-    transform saturated in ordinary indoor rooms.  The third axis,
-    ``public_observation_complementarity``, is the mean pairwise Jaccard
-    dissimilarity of per-agent public free-voxel sets.  A drone with no public
-    contribution receives zero complementarity, so an idle drone cannot look
-    diverse merely because its footprint is empty.  No evaluator geometry is
-    read by any axis.
-    """
+    """Measure realised behaviour only from public post-execution evidence."""
 
     features = outcome_qd_feature_vector_from_public_outcomes(
         scene_id=scene_id,
@@ -714,14 +636,7 @@ def public_free_footprint_from_range_outcomes(
     range_outcomes: Sequence[PublicRangeRayOutcome],
     resolution_m: float,
 ) -> frozenset[VoxelKey]:
-    """Return the fragment's public, newly observed free-voxel footprint.
-
-    This is intentionally not an evaluator coverage score.  It is the union
-    of the free voxels that the method itself can reconstruct from this
-    fragment's delivered sparse-range outcomes.  P08 uses it only to test
-    whether different QD cells actually stand for distinguishable exploration
-    behaviours, rather than for three arbitrary scalar coordinates.
-    """
+    """Return the fragment's newly observed public free-voxel footprint."""
 
     _, _, per_agent_free = _per_agent_public_free_voxels(
         scene_id=scene_id,
@@ -748,14 +663,7 @@ def _normalise_public_footprint(values: Sequence[Sequence[int]], label: str) -> 
 
 @dataclass(frozen=True, slots=True)
 class RealisedQDFootprintSeparationAudit:
-    """Check that realised-QD cells denote distinct public observation modes.
-
-    Archive occupancy alone is a weak test: unrelated scalar descriptors can
-    fill many cells even when all candidate fragments observe the same local
-    space.  This audit compares Jaccard dissimilarity of public free-voxel
-    footprints inside and across realised archive cells.  It does not look at
-    the evaluator's mesh, ESDF, or final coverage denominator.
-    """
+    """Check that realised-QD cells denote distinct public observation modes."""
 
     sample_count: int
     minimum_footprint_voxel_count: int
@@ -803,12 +711,7 @@ def audit_realised_qd_footprint_separation(
     minimum_different_cell_pairs: int = 12,
     minimum_footprint_separation_margin: float = 0.05,
 ) -> RealisedQDFootprintSeparationAudit:
-    """Fail closed when QD cell labels do not separate public footprints.
-
-    The small 0.05 floor is an *admission* effect-size floor on a [0, 1]
-    Jaccard scale, selected before validation data.  It is deliberately not a
-    replacement for the paired task-level effect test in P08.
-    """
+    """Fail closed when QD cell labels do not separate public footprints."""
 
     rows = tuple(descriptors)
     if len(rows) != len(public_free_footprints):
@@ -879,14 +782,7 @@ def audit_realised_qd_footprint_separation(
 
 @dataclass(frozen=True, slots=True)
 class RealisedQDReproducibilityAudit:
-    """Audit repeatability of outcome-grounded cells in train-only replays.
-
-    A rich archive can still be unusable if the same legal public candidate
-    moves between unrelated cells whenever PhysX, communication timing, or
-    the controller is replayed.  This audit deliberately uses only repeated
-    candidate-manifest identities and their realised public descriptors.  It
-    neither reads evaluator geometry nor reuses validation outcomes.
-    """
+    """Audit repeatability of outcome-grounded cells across train-only replays."""
 
     repeated_manifest_group_count: int
     repeated_pair_count: int
@@ -927,14 +823,7 @@ def audit_realised_qd_reproducibility(
     minimum_cell_stability_rate: float = 0.70,
     maximum_mean_normalized_descriptor_l2: float = 0.25,
 ) -> RealisedQDReproducibilityAudit:
-    """Reject a train archive whose cells are not repeatable under replay.
-
-    A manifest SHA-256 binds one public context and guarded candidate.  A
-    repeated group contains two or more independent real executions of that
-    exact public candidate.  Pairwise cell stability is intentionally checked
-    before P08: a selector can abstain on local uncertainty later, but it must
-    not begin with a globally non-repeatable repertoire.
-    """
+    """Reject a train archive whose cells fail to repeat on independent replays."""
 
     if spec != HM3D_REALISED_QD_ARCHIVE_SPEC:
         raise ValueError("reproducibility audit requires the frozen realised-QD spec")
@@ -1000,14 +889,7 @@ def audit_realised_qd_reproducibility(
 
 @dataclass(frozen=True, slots=True)
 class RealisedQDModeContrastAudit:
-    """Verify that each frozen calibration intent controls its stated axis.
-
-    Archive richness can be faked when all three descriptor coordinates rise
-    and fall together.  The train-only calibration deliberately asks the
-    emitter for a low and high public intent on every axis.  Each pair must
-    produce a one-cell realised contrast on that pair's intended axis across
-    independent train scenes.  This tests controllability, not task reward.
-    """
+    """Verify that each frozen calibration intent controls its stated axis across train scenes."""
 
     sample_count: int
     mode_sample_counts: tuple[tuple[str, int], ...]
@@ -1068,14 +950,7 @@ def audit_realised_qd_calibration_mode_contrasts(
     maximum_pairwise_contrast_cosine: float = 0.90,
     minimum_contrast_matrix_absolute_determinant: float = 0.20,
 ) -> RealisedQDModeContrastAudit:
-    """Fail closed unless low/high train calibrations separate each QD axis.
-
-    A gap is measured in frozen archive-cell coordinates, rather than by an
-    arbitrary raw-value threshold.  One cell is the smallest contrast that
-    can influence the MAP-Elites archive used by the selector.  The three
-    high-minus-low effect vectors must also be non-collinear: otherwise the
-    archive has nominally three axes but only one controllable behaviour.
-    """
+    """Fail closed unless low and high calibrations separate each QD axis by one cell."""
 
     if spec != HM3D_REALISED_QD_ARCHIVE_SPEC:
         raise ValueError("mode-contrast audit requires the frozen realised-QD spec")
@@ -1275,14 +1150,7 @@ def audit_realised_qd_richness(
         MINIMUM_REALISED_QD_AXIS_CORRELATION_DETERMINANT
     ),
 ) -> RealisedQDRichnessAudit:
-    """Reject a sparse, dominated, or effectively one-dimensional archive.
-
-    The archive is intentionally only three-dimensional: adding a fourth
-    axis would multiply the sparse 64-cell grid to 256 cells.  Instead, this
-    audit requires adequate *real* outcome support and rejects a history whose
-    three reported axes vary only along the same line.  It remains an
-    admission test, not evidence that QD outperforms no-QD.
-    """
+    """Reject a sparse, dominated or effectively one-dimensional outcome archive."""
 
     if (
         minimum_samples < 1
@@ -1409,15 +1277,7 @@ class QDDescriptorFamilyScreen:
 
 @dataclass(frozen=True, slots=True)
 class QDDescriptorFamilyCrossSceneSupportAudit:
-    """Reject a descriptor that is rich only because of one train scene.
-
-    HM3D scenes differ sharply in vertical opportunity and room topology.  A
-    pooled archive can consequently appear non-collinear when one building
-    contributes all climbing behaviour and another contributes all horizontal
-    separation.  That is not a reusable team repertoire.  This low-cost audit
-    asks every selected train scene to support all three axes before a family
-    can compete; task reward remains deliberately absent from the test.
-    """
+    """Reject a descriptor family that is rich in only one train scene."""
 
     scene_count: int
     scene_sample_counts: tuple[tuple[str, int], ...]
@@ -1457,13 +1317,7 @@ def audit_qd_descriptor_family_cross_scene_support(
     minimum_axis_bins_per_scene: int = 2,
     minimum_joint_cells_per_scene: int = 3,
 ) -> QDDescriptorFamilyCrossSceneSupportAudit:
-    """Require each axis to be supported in every train calibration scene.
-
-    The floor is intentionally lower than the pooled 12-outcome admission:
-    this is a portability check, not a separate performance experiment.  It
-    catches the specific failure where one scene creates apparent three-axis
-    variety while the other scene contributes a constant descriptor.
-    """
+    """Require each axis to be supported in every train calibration scene."""
 
     rows = tuple(descriptors)
     scenes = tuple(scene_ids)
@@ -1525,13 +1379,7 @@ def audit_pre_registered_qd_descriptor_families(
     public_free_footprints: Sequence[Sequence[Sequence[int]]],
     scene_ids: Sequence[str],
 ) -> QDDescriptorFamilyScreen:
-    """Screen the fixed QD families without opening a higher-dimensional archive.
-
-    This is a train-only *falsification* step.  It cannot establish task gain,
-    and it never reads validation outcomes.  It does make the current v4
-    family fail closed when an already pre-registered outcome-only alternative
-    provides a richer, less redundant and semantically separable repertoire.
-    """
+    """Screen the fixed QD families on train data without opening a higher-dimensional archive."""
 
     rows = tuple(features)
     scenes = tuple(scene_ids)
@@ -1553,9 +1401,8 @@ def audit_pre_registered_qd_descriptor_families(
             and footprint_separation.status == "QD_FOOTPRINT_SEPARATION_ADMITTED"
             and cross_scene_support.status == "QD_DESCRIPTOR_FAMILY_CROSS_SCENE_ADMITTED"
         )
-        # The score only ranks already-admitted families.  It rewards even
-        # support across cells, effective independent dimensions and semantic
-        # footprint separation; it has no task reward or validation term.
+        # Ranks already-admitted families only: even cell support, effective
+        # dimensions and footprint separation; no task reward or validation term.
         score = None
         if admitted:
             score = (
@@ -1605,12 +1452,7 @@ def audit_pre_registered_qd_descriptor_families(
 
 @dataclass(frozen=True, slots=True)
 class CandidateIntentRichnessAudit:
-    """Pre-execution audit of the public modes offered to a QD selector.
-
-    ``planned_descriptor`` is called *intent* here to prevent a category error:
-    it may index historical outcome evidence, but it must never be placed in a
-    realised-QD archive as though it were the executed behaviour.
-    """
+    """Pre-execution audit of the public behaviour modes offered to a QD selector."""
 
     feasible_candidate_count: int
     axis_occupied_bin_counts: tuple[int, int, int]
@@ -1647,13 +1489,7 @@ def audit_public_candidate_intent_richness(
     minimum_joint_cells: int = 6,
     minimum_joint_shannon_effective_cells: float = 4.0,
 ) -> CandidateIntentRichnessAudit:
-    """Reject an emitter that offers only one public behaviour mode.
-
-    This audit assesses candidate *availability*, not performance.  It avoids
-    mistaking a selector that always sees the same behaviour for a failed QD
-    algorithm.  The later realised-descriptor audit remains authoritative for
-    archive admission.
-    """
+    """Reject an emitter that offers only one public behaviour mode."""
 
     if (
         minimum_feasible_candidates < 2
@@ -1702,15 +1538,7 @@ def audit_public_candidate_intent_richness(
 
 @dataclass(frozen=True, slots=True)
 class ValueProtectedCandidateDiversityAudit:
-    """Check whether QD has a legitimate choice among near-value candidates.
-
-    A candidate pool may be globally varied while every alternative behaviour
-    is much worse than the public value-best action.  A conservative selector
-    must not select those alternatives merely to fill an archive.  This audit
-    therefore measures diversity only inside the same value-protected set used
-    by the QD selectors; it is an opportunity diagnostic, never a realised
-    archive coordinate.
-    """
+    """Check whether QD has a legitimate choice among near-value candidates."""
 
     feasible_candidate_count: int
     value_protected_candidate_count: int
@@ -1747,14 +1575,7 @@ def audit_value_protected_candidate_diversity(
     minimum_value_protected_candidates: int = 2,
     minimum_value_protected_joint_cells: int = 2,
 ) -> ValueProtectedCandidateDiversityAudit:
-    """Audit whether QD can choose behaviour without sacrificing public value.
-
-    The utility band exactly matches :class:`PlannedQDSelector` and
-    :class:`OutcomeGroundedQDSelector`: QD may only break ties within
-    ``utility_slack`` of the observed public utility range.  A failed audit is
-    recorded for failure attribution; the online selector safely abstains to
-    the value-best candidate instead of making the episode invalid.
-    """
+    """Audit whether QD can choose within the utility slack without losing public value."""
 
     if spec != HM3D_CANDIDATE_INTENT_SPEC or len(spec.axes) != 3:
         raise ValueError("value-protected QD audit needs the frozen intent schema")
@@ -1885,17 +1706,7 @@ def audit_intent_realised_alignment(
     scene_ids: Sequence[str] | None = None,
     minimum_scene_count: int = 2,
 ) -> IntentRealisedAlignmentAudit:
-    """Require evidence that emitted public modes survive real execution.
-
-    Correlation alone can be high because both fields drift with time or scene
-    scale.  We therefore also require a leave-one-out nearest-intent predictor
-    to beat the global realised-descriptor mean.  This verifies the property
-    the selector actually needs: public intent must carry some out-of-sample
-    information about realised behaviour.  When ``scene_ids`` is supplied,
-    the stronger leave-one-scene-out check prevents a descriptor that only
-    tracks one building's scale from entering the train archive.  The later
-    paired P08 result, not this admission audit, establishes task-level benefit.
-    """
+    """Require that emitted public intents carry out-of-sample information."""
 
     if minimum_samples < 2 or not 0.0 < minimum_axis_correlation <= 1.0:
         raise ValueError("invalid intent-realised alignment threshold")
@@ -2175,13 +1986,7 @@ class PlannedQDSelection:
 
 
 class PlannedQDSelector:
-    """Planned-intent archive control used only to test outcome grounding.
-
-    This control reproduces the category error that the proposed mechanism is
-    intended to avoid: it records a candidate's intended descriptor before it
-    is executed.  It must therefore remain an explicit P08 diagnostic and
-    never be exposed as the realised-QD method or a P10 ranked row.
-    """
+    """Planned-intent archive control used only to test outcome grounding."""
 
     def __init__(
         self,
@@ -2207,7 +2012,7 @@ class PlannedQDSelector:
         public_cost: float,
         source_id: str,
     ) -> None:
-        """Admit an intended mode without looking at its realised outcome."""
+        """Record an outcome-backed history row without retaining a trajectory."""
 
         descriptor = _checked_descriptor(intent, "planned candidate intent")
         quality = finite_number(public_quality, "planned public_quality")
@@ -2312,13 +2117,7 @@ class PlannedQDSelector:
 
 
 class OutcomeGroundedQDSelector:
-    """Select current candidates using a conservative outcome-derived mode model.
-
-    It records a candidate's public *intent* before execution and only learns
-    its realised outcome afterwards.  Consequently old manifests are never
-    replayed from the archive, and a guard-rewritten or failed plan cannot
-    occupy an archive cell merely because it was intended to do so.
-    """
+    """Select current candidates using a conservative outcome-derived mode model."""
 
     def __init__(
         self,
@@ -2375,17 +2174,7 @@ class OutcomeGroundedQDSelector:
         execution_outcome_sha256: str,
         execution_feasible: bool,
     ) -> AdmissionDecision:
-        """Admit one *executed* candidate into both the predictor and archive.
-
-        The archive is deliberately updated here rather than by a parallel
-        caller.  This makes it impossible for the online realised-QD selector
-        to learn from a outcome while accidentally leaving its novelty archive
-        empty.  ``execution_outcome_sha256`` is the immutable digest of the
-        real executor outcome, never a planned route digest.  A collision,
-        out-of-bounds, clearance violation, or incomplete fragment ledger
-        sets ``execution_feasible`` false and is excluded from both the
-        predictor and archive.
-        """
+        """Admit one executed candidate into the predictor and archive."""
 
         if not candidate.feasible:
             raise ValueError("infeasible candidates cannot train the realised-QD selector")
@@ -2429,12 +2218,7 @@ class OutcomeGroundedQDSelector:
         public_cost: float,
         execution_outcome_sha256: str,
     ) -> None:
-        """Record a outcome-backed history row without retaining a trajectory.
-
-        This narrower method exists for loading an already-admitted train
-        archive.  It must still carry the executor-outcome digest: a planned
-        descriptor alone is not an experience.
-        """
+        """Record an outcome-backed history row without retaining a trajectory."""
 
         self._experiences.append(
             OutcomeGroundedQDExperience(
@@ -2542,10 +2326,9 @@ class OutcomeGroundedQDSelector:
                 uncertainty_abstentions += 1
                 continue
             need_alignment = public_exploration_need.alignment(prediction)
-            # QD is only permitted to move away from the public-value optimum
-            # when the predicted realised mode has a material advantage for a
-            # current, outcome-derived exploration deficit.  Otherwise an
-            # archive novelty bonus would merely fill cells.
+            # QD may leave the public-value optimum only for a material predicted
+            # advantage on a current outcome-derived deficit; novelty alone would
+            # merely fill cells.
             if (
                 not public_exploration_need.active
                 or need_alignment < base_need_alignment + MINIMUM_QD_NEED_ALIGNMENT_IMPROVEMENT

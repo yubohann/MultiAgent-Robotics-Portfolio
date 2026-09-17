@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Generate frozen Lee-controller outputs from Bitcraze's official C binding.
-
-Run this script under WSL from the frozen crazyflie-firmware ``build``
-directory, where ``cffirmware.py`` and ``_cffirmware*.so`` are importable.
-The generated JSON is consumed by the Windows/Torch differential unit test.
-"""
+"""Generate frozen Lee-controller outputs from the Bitcraze official C binding."""
 
 from __future__ import annotations
 

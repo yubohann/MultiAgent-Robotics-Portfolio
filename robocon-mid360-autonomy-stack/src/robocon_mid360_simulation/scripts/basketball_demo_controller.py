@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Deterministic two-robot basketball demonstration controller.
 
-This is a Gazebo simulation demonstrator: robot motion is driven through the
-normal chassis command topics and the visible ball is scripted through Gazebo's
-SetEntityState service so that the complete pass and shot remain repeatable.
+Robot motion goes through the normal chassis command topics, and the visible
+ball is scripted through the Gazebo SetEntityState service so the pass and shot
+stay repeatable.
 """
 
 from __future__ import annotations
@@ -51,18 +51,17 @@ class BasketballDemoController(Node):
         self.last_dribble_cycle = {"robot1": -1, "robot2": -1}
         self.final_hold_started: float | None = None
         self.set_state = self.create_client(SetEntityState, "/gazebo/set_entity_state")
-        # Gazebo service calls are asynchronous.  Do not enqueue a new entity
-        # teleport while the previous one is still pending; queued requests
-        # are rendered out of order under WSL and appear as visible jumps.
+        # Gazebo service calls are asynchronous, so a new ball teleport waits
+        # for the pending future and requests render in order.
         self.ball_state_future = None
         self.create_subscription(ModelStates, "/gazebo/model_states", self._models, 10)
         self.robot1_cmd = self.create_publisher(Twist, "/robot1/cmd_vel_chassis", 10)
         self.robot2_cmd = self.create_publisher(Twist, "/robot2/cmd_vel_chassis", 10)
         self.event_pub = self.create_publisher(String, "/robocon/demo/events", 10)
         self.score_pub = self.create_publisher(Int32, "/robocon/demo/score", 10)
-        # 20 Hz gives the scripted ball enough intermediate poses to remain
-        # visually continuous while the service-future guard prevents request
-        # buildup when Gazebo is under a dense LiDAR load.
+        # 20 Hz gives the scripted ball enough intermediate poses to stay
+        # visually continuous, and the service-future guard prevents request
+        # buildup during dense LiDAR load.
         self.timer = self.create_timer(0.05, self._tick)
         self._emit("INTRO", "demo_started", {"duration_sec": self.duration})
 
@@ -95,9 +94,8 @@ class BasketballDemoController(Node):
         request = SetEntityState.Request()
         request.state = EntityState()
         request.state.name = "basketball"
-        # Copy the pose into the request. Reusing the mutable member while a
-        # service request is in flight can serialize a later pose and create
-        # visible jumps in the pass or shot trajectory.
+        # Copy the pose into the request so an in-flight service never
+        # serializes a later pose and jumps the pass or shot trajectory.
         request.state.pose = Pose()
         request.state.pose.position.x = self.ball_pose.position.x
         request.state.pose.position.y = self.ball_pose.position.y
@@ -170,9 +168,9 @@ class BasketballDemoController(Node):
         return "SHOT_SUCCESS"
 
     def _tick(self) -> None:
-        # A launch can take longer than the shell's initial sleep under WSL.
-        # Do not begin the evidence timeline until both real Gazebo entities,
-        # the ball, and the state service exist.
+        # The launch can outlast the shell's initial sleep under WSL, so the
+        # evidence timeline starts once both robots, the ball and the state
+        # service are live.
         required = {"robocon25_robot1", "robocon25_robot2", "basketball"}
         if self.start_time is None:
             if not required.issubset(self.models) or not self.set_state.service_is_ready():
@@ -300,9 +298,9 @@ class BasketballDemoController(Node):
     def _finish(self) -> None:
         if self.final_hold_started is None or time.monotonic() - self.final_hold_started < 1.0:
             return
-        # A dense Gazebo ray workload can delay the final service response.
-        # Hold for a bounded grace period, then finish with both the observed
-        # model pose and the commanded target recorded in the manifest.
+        # A dense Gazebo ray workload can delay the final service response, so
+        # hold for a bounded grace period before the manifest records both the
+        # observed model pose and the commanded target.
         if (self.ball_state_future is not None and not self.ball_state_future.done()
                 and time.monotonic() - self.final_hold_started < 5.0):
             return

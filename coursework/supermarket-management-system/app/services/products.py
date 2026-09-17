@@ -7,15 +7,7 @@ from app.services.inventory import set_inventory_quantity
 
 
 def import_products_from_csv(file_content):
-    """
-    从 CSV 导入商品
-
-    Args:
-        file_content: CSV 文件内容（字节）
-
-    Returns:
-        tuple: (success_count: int, error_count: int, errors: list)
-    """
+    """Import products from a CSV file and return success and error counts."""
     success_count = 0
     error_count = 0
     errors = []
@@ -91,15 +83,7 @@ def import_products_from_csv(file_content):
 
 
 def import_products_from_excel(file_content):
-    """
-    从 Excel 导入商品
-
-    Args:
-        file_content: Excel 文件内容（字节）
-
-    Returns:
-        tuple: (success_count: int, error_count: int, errors: list)
-    """
+    """Import products from an Excel file and return success and error counts."""
     try:
         from openpyxl import load_workbook
 
@@ -182,19 +166,7 @@ def import_products_from_excel(file_content):
 
 
 def get_products(page=1, per_page=20, search='', category_id=None, status=None):
-    """
-    获取商品列表
-
-    Args:
-        page: 页码
-        per_page: 每页数量
-        search: 搜索关键词
-        category_id: 分类ID
-        status: 状态
-
-    Returns:
-        dict: {total, pages, items}
-    """
+    """Return a filtered and paginated product list."""
     query = Product.query.outerjoin(Category).outerjoin(Inventory)
 
     if search:
@@ -257,15 +229,7 @@ def get_products(page=1, per_page=20, search='', category_id=None, status=None):
 
 
 def create_product(data):
-    """
-    创建商品
-
-    Args:
-        data: 商品数据字典
-
-    Returns:
-        tuple: (success: bool, message: str)
-    """
+    """Create a product."""
     try:
         if Product.query.filter_by(product_code=data['product_code']).first():
             return False, '商品编码已存在'
@@ -304,16 +268,7 @@ def create_product(data):
 
 
 def update_product(product_id, data):
-    """
-    更新商品
-
-    Args:
-        product_id: 商品ID
-        data: 更新数据
-
-    Returns:
-        tuple: (success: bool, message: str)
-    """
+    """Update a product."""
     try:
         product = Product.query.get(product_id)
         if not product:
@@ -367,7 +322,7 @@ def update_product(product_id, data):
 
 
 def offline_product(product_id):
-    """下架商品（软删除）"""
+    """Take a product off the shelf with a soft delete."""
     try:
         product = Product.query.get(product_id)
         if not product:
@@ -382,7 +337,7 @@ def offline_product(product_id):
 
 
 def online_product(product_id):
-    """上架商品"""
+    """Put a product back on the shelf."""
     try:
         product = Product.query.get(product_id)
         if not product:
@@ -397,7 +352,7 @@ def online_product(product_id):
 
 
 def delete_product(product_id):
-    """删除商品（真删除）"""
+    """Delete a product permanently."""
     try:
         product = Product.query.get(product_id)
         if not product:
@@ -416,6 +371,6 @@ def delete_product(product_id):
 
 
 def get_categories():
-    """获取所有分类"""
+    """Return all categories."""
     categories = Category.query.filter_by(parent_id=0).order_by(Category.sort_order).all()
     return [{'id': c.category_id, 'name': c.category_name} for c in categories]

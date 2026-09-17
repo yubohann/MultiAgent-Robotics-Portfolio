@@ -9,8 +9,21 @@ description = "Outcome-grounded quality-diversity and reinforcement learning for
 readme = "README.md"
 requires-python = ">=3.11"
 license = "LicenseRef-Proprietary"
-authors = [{ name = "AeroCity method workspace owner" }]
+authors = [{ name = "Bohan Yu" }]
+keywords = ["hm3d", "multi-uav", "quality-diversity", "reinforcement-learning", "3d-exploration", "multi-agent-systems", "isaaclab", "robotics"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = ["numpy>=1.26"]
+
+[project.urls]
+Homepage = "https://github.com/yubohann/MultiAgent-Robotics-Portfolio/tree/main/hm3d-realised-qd"
+Upstream = "https://github.com/yubohann/hm3d-realised-qd"
 
 [project.optional-dependencies]
 rl = ["torch>=2.1"]

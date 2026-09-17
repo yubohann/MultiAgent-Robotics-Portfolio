@@ -1763,9 +1763,8 @@ def load_splitgnn_dataset(
     _apply_label_scarcity(graph, label_fraction=label_fraction, seed=seed)
     _apply_active_learning_feedback(graph, active_learning_feedback_path, dataset_name=dataset_name)
 
-    # Keep the full train pool in client subgraphs, but only stratify the
-    # supervised subset. Unlabeled nodes must not use hidden ground-truth
-    # labels during client assignment.
+    # Keep the full train pool in client subgraphs, and stratify only the supervised subset.
+    # Unlabeled nodes keep ground-truth labels out of client assignment.
     train_mask = graph.nodes[node_type].data["train_mask"].bool()
     train_supervised_mask = graph.nodes[node_type].data["train_supervised_mask"].bool() & train_mask
     train_unlabeled_mask = graph.nodes[node_type].data["train_unlabeled_mask"].bool() & train_mask

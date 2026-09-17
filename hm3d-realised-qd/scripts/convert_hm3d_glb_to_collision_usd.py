@@ -1,14 +1,4 @@
-"""Convert one official HM3D GLB to a static triangle-mesh collision USD.
-
-This is intentionally separate from the archived visual-preview converter. The
-latter creates review-only visual USD files for videos; this tool creates a
-separate candidate for physical-runtime admission and verifies that every
-converted mesh has collision enabled and a PhysX triangle-mesh collider.
-
-Successful conversion is necessary but not sufficient for P02/P03.  A real
-CF2X reset and collision replay must still be recorded before the asset can
-authorize flight-space or experiment evidence.
-"""
+"""Convert one official HM3D GLB to a static triangle-mesh collision USD."""
 
 from __future__ import annotations
 
@@ -132,7 +122,7 @@ def _inspect_static_triangle_mesh_collision(usd_path: Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    # Omniverse modules are imported after SimulationApp creation.
+    # Omniverse imports follow SimulationApp creation.
     from isaaclab.sim.converters import MeshConverter, MeshConverterCfg
     from isaaclab.sim.schemas import CollisionPropertiesCfg, TriangleMeshPropertiesCfg
 

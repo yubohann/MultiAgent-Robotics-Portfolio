@@ -15,12 +15,11 @@ from .actions import ActionDeduplicator, ACTION_NAMES, ActionFeedback, ActionReq
 
 @dataclass
 class SyntheticMechanismPlant:
-    """Minimal deterministic plant model used only by the synthetic profile.
+    """Deterministic plant model for the synthetic profile.
 
-    A request is never considered successful merely because time elapsed.  Each
-    transition validates the previous simulated sensor state and returns the
-    state evidence that made the transition legal.  It is deliberately not an
-    emulation of a physical mechanism.
+    Each transition validates the previous simulated sensor state and returns
+    the evidence that made the move legal, and the model stays a synthetic
+    stand-in for a physical mechanism.
     """
 
     healthy: bool = True
@@ -66,7 +65,8 @@ class SyntheticMechanismPlant:
         if action == "CollectBall":
             if not self.pass_executed:
                 return False, "pass-executed evidence is false", self.evidence()
-            # This is a modeled arrival event, not a delay-based acknowledgement.
+            # The arrival event is modeled directly and carries no delay-based
+            # acknowledgement.
             self.receipt_confirmed = True
             self.ball_present = True
             return True, "synthetic receipt sensor asserted", self.evidence()

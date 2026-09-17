@@ -116,55 +116,39 @@ CF2X_THRUSTER_TAU_INC_RANGE_S = (0.04, 0.06)
 CF2X_THRUSTER_TAU_DEC_RANGE_S = (0.02, 0.03)
 CONTACT_HARD_FAIL_N = 0.01
 FLIGHT_CLEARANCE_M = 0.30
-# A guarded geometric centreline is not the physical CF2X root trace.  Reserve
-# a measured 0.20 m tracking envelope above the non-negotiable 0.30 m physical
-# contract; the real root trace is still checked at every physics step. A
-# later short-route outcome reached 0.165 m line deviation even with the
-# overdamped tracker, so the arrival tolerance alone was not a safe envelope.
-# The
-# previous implementation added a second 0.15 m terminal reserve on top of a
-# 0.15 m tracking reserve.  That required 0.60 m from every wall even though
-# only one of sixteen pre-registered indoor reset poses met it, making a four-
-# vehicle episode impossible before any method selected an action.
+# Tracking reserve above the 0.30 m physical contract, sized from a measured
+# 0.165 m line deviation under the overdamped tracker. A former double reserve
+# required 0.60 m from every wall, which no pre-registered reset pose could meet.
+# The real root trace is still checked at every physics step.
 TRACKING_CLEARANCE_MARGIN_M = 0.20
 PLANNED_CONTINUOUS_CLEARANCE_M = FLIGHT_CLEARANCE_M + TRACKING_CLEARANCE_MARGIN_M
-# ``CF2X_MIN_INTER_AGENT_SEPARATION_M`` is the physical root-to-root
-# requirement.  A joint candidate, however, is evaluated on ideal reference
-# paths while two physical vehicles can each use the tracked-path envelope.
-# Reserve both envelopes before command issuance.  This is deliberately
-# separate from static-mesh clearance: it prevents two individually safe
-# tracks from converging in a corridor.
+# Physical root-to-root separation. Joint candidates are evaluated on ideal
+# reference paths, so two tracking envelopes are reserved here before command
+# issuance; static-mesh clearance stays separate.
 CF2X_MIN_INTER_AGENT_SEPARATION_M = 0.50
 TRACKING_INTER_AGENT_SEPARATION_MARGIN_M = 2.0 * TRACKING_CLEARANCE_MARGIN_M
 PLANNED_INTER_AGENT_SEPARATION_M = (
     CF2X_MIN_INTER_AGENT_SEPARATION_M + TRACKING_INTER_AGENT_SEPARATION_MARGIN_M
 )
-# A route whose terminal clearance exceeds the continuous 0.90 m envelope by
-# numerical dust can leave the next decision with no recoverable planning
-# margin after ordinary tracking error.  This is a command-admission reserve,
-# not a relaxation of the physical or continuous separation contracts.
+# Command-admission reserve for numerical dust above the continuous 0.90 m
+# envelope; the physical and continuous separation contracts stay unchanged.
 PLANNED_INTER_AGENT_ENDPOINT_MARGIN_M = 0.05
 PLANNED_INTER_AGENT_ENDPOINT_SEPARATION_M = (
     PLANNED_INTER_AGENT_SEPARATION_M + PLANNED_INTER_AGENT_ENDPOINT_MARGIN_M
 )
-# Physical execution needs one legal team action.  Strategy headroom is audited
-# separately: killing an otherwise safe episode merely because only one action
-# remains confounds task feasibility with selector identifiability.
+# Physical execution needs one legal team action; selector headroom is audited
+# separately.
 P07_MINIMUM_EXECUTABLE_CANDIDATES = 1
 ROUTE_CLEARANCE_SAMPLE_STEP_M = 0.10
 REQUIRED_ROUTE_SAMPLE_CLEARANCE_M = required_segment_sample_clearance_m(
     PLANNED_CONTINUOUS_CLEARANCE_M,
     ROUTE_CLEARANCE_SAMPLE_STEP_M,
 )
-# The Lipschitz sampling reserve applies only between discrete interior
-# samples.  Start and terminal points are queried exactly, so adding another
-# half-sample reserve there would reject a 0.40 m-clear endpoint at 0.45 m.
+# The Lipschitz sampling reserve applies between discrete interior samples only;
+# start and terminal points are queried exactly.
 REQUIRED_TERMINAL_CLEARANCE_M = PLANNED_CONTINUOUS_CLEARANCE_M
-# The 1 m coarse grid used by ``_grid_route`` is too sparse to certify HM3D
-# corridors: the lattice frequently misses the exact-clearance centreline, so
-# every connector fails.  This local fallback uses a finer lattice and still
-# checks every edge with the same shared line guard.  It is evaluator-side
-# route construction only; it never relaxes the frozen clearance contract.
+# The 1 m grid route misses the exact-clearance centreline in HM3D corridors.
+# This evaluator-side fallback uses a finer lattice with the same shared line guard.
 FINE_CLEARANCE_ROUTE_RESOLUTION_M = 0.25
 FINE_CLEARANCE_ROUTE_LOCAL_MARGIN_M = 1.25
 FINE_CLEARANCE_ROUTE_MAX_GRID_POINTS = 20000
@@ -175,58 +159,40 @@ FINE_CLEARANCE_ROUTE_START_CANDIDATE_LIMIT = 24
 STATIC_QUERY_DYNAMIC_HIT_ADVANCE_M = 0.01
 STATIC_QUERY_MAX_DYNAMIC_HITS = 32
 MAX_PHYSICS_WAYPOINT_SPAN_M = 2.0
-# ``0.30 m/s`` was only a low-speed arrival condition, not a true stop.  On
-# 00803's certified right-angle route the v7 executor switched with 0.277 m/s
-# of lateral residual velocity and left the 0.30 m physical-clearance tube.
-# A rest-to-rest reference must therefore wait for an actual near-rest state.
+# Rest-to-rest references wait for a near-rest state. The former 0.30 m/s arrival
+# condition switched with 0.277 m/s lateral residual and left the physical-clearance tube.
 WAYPOINT_SETTLE_SPEED_MPS = 0.05
-# A 0.10 m outcome-agreement tolerance is acceptable for a final accounting
-# record, but it is too large to start a new rest-to-rest segment in a narrow
-# corridor.  A route admitted with a 0.30 m physical clearance can otherwise
-# leave its certified centreline at a corner before the next reference starts.
+# Restarting a rest-to-rest segment needs tighter agreement than the 0.10 m final
+# accounting tolerance, or a corner exit can leave the certified centreline.
 WAYPOINT_SETTLE_POSITION_TOLERANCE_M = 0.03
-# RACER's conservative configuration uses 1.0 m/s and 0.8 m/s^2.  These are
-# trajectory limits, not feedback-authority limits: FUEL/RACER/FALCON publish
-# time-indexed position, velocity and acceleration references to an SO(3)
-# tracker.  Conflating both limits caused the first faster-controller probe to
-# overshoot every 0.54 m route because the tracker could not correct lag.
+# RACER-style 1.0 m/s and 0.8 m/s^2 trajectory limits for time-indexed SO(3)
+# references. Conflating them with feedback authority overshot every 0.54 m route.
 CF2X_MAX_REFERENCE_SPEED_MPS = 1.0
 CF2X_MAX_REFERENCE_ACCELERATION_MPS2 = 0.8
-# marker2
-# marker
-# Mature waypoint explorers replan from non-static states and keep a route
-# alive while an agent passes an intermediate viewpoint. This is not a
-# terminal tracking relaxation: the final waypoint still requires the
-# calibrated settle condition, and the static/fleet guards remain unchanged.
+# Intermediate waypoints keep a pass-through speed. The final waypoint still
+# requires the calibrated settle condition; the static and fleet guards are unchanged.
 CF2X_WAYPOINT_PASS_THROUGH_SPEED_MPS = 0.35
-# The reference profile supplies the planned acceleration.  The feedback loop
-# uses a critically damped position/velocity pair (kp=4, kd=4) and has its own
-# authority; it must be able to remove a 0.1 m terminal error inside a 2 s
-# decision without changing the planner's 1.0 m/s speed contract.
+# The reference profile supplies planned acceleration; the critically damped
+# feedback pair (kp=4, kd=4) removes terminal error within one decision.
 CF2X_POSITION_ERROR_GAIN_PER_S2 = 4.0
 CF2X_VELOCITY_ERROR_GAIN_PER_S = 7.0
 CF2X_MAX_FEEDBACK_ACCELERATION_MPS2 = 3.0
-# This version labels the execution/timing ABI, independently of the frozen
-# SO(3) control law identifier below.  Any profile change requires fresh timing
-# calibration and cannot be mixed with earlier outcome evidence.
+# Execution and timing ABI label, independent of the SO(3) control law below.
+# Profile changes require fresh timing calibration.
 CF2X_SPEED_PROFILE_ID = "time-parameterized-trapezoid-so3-guarded-v8"
 CF2X_ATTITUDE_CONTROL_ID = "force-rate-limited-yaw-so3-v2"
 CF2X_DEFAULT_CONTROLLER_ID = "isaac-so3-feedback-v6"
 CF2X_MAXIMUM_TILT_RAD = 0.25
-# FUEL's public exploration configuration limits its independently planned
-# heading reference to 10 deg/s.  A direct jump to the route bearing can put a
-# 180-degree yaw error into the SO(3) tracker at the first physics step and
-# consume all attitude authority before translation begins.
+# FUEL-style 10 deg/s heading limit. A direct jump to the route bearing can put a
+# 180-degree yaw error into the SO(3) tracker before translation begins.
 CF2X_MAX_YAW_RATE_DEG_S = 10.0
 CONTROLLER_TRACKING_TELEMETRY_HZ = 20.0
 FLIGHT_CONTROL_BOUNDARY_MARGIN_M = 0.40
-# This bounds outcome agreement with a scheduled fragment.  It is deliberately
-# independent of the decision horizon: a 50 s budget does not authorize a
-# several-second timing error to become reusable OGFR supervision.
+# Outcome agreement bound for a scheduled fragment, independent of the decision
+# horizon so a long budget cannot authorize reusable OGFR supervision with a timing error.
 OUTCOME_TIME_TOLERANCE_S = 0.25
-# A delayed corridor entry must start after the predecessor's planned arrival
-# plus this release margin, then wait again for that predecessor's measured
-# settled arrival. Keep the value aligned with the common candidate authority.
+# Delayed corridor entry starts after the predecessor planned arrival plus this
+# margin, then waits for the measured settled arrival; aligned with the candidate authority.
 TRAFFIC_RESERVATION_MINIMUM_RELEASE_MARGIN_S = 0.25
 CF2X_EXECUTION_BACKEND_ID = "isaac-physx-cf2x-waypoint-executor-v1"
 CF2X_EXECUTION_EVIDENCE_CLASS = "real_isaac_physx_cf2x"
@@ -283,8 +249,7 @@ def _route_corner_speed_mps(path_m: Sequence[tuple[float, float, float]]) -> flo
     shortest_segment_m = min(segment_lengths)
     if shortest_segment_m <= 0.0:
         if all(length <= 0.0 for length in segment_lengths):
-            # Explicit cold-start hold: no traversed segment, so the corner
-            # pass-through speed is zero and only terminal settling applies.
+            # Cold-start hold: no traversed segment, so only terminal settling applies.
             return 0.0
         raise ValueError("pass-through route contains a zero-length segment")
     geometry_bounded_speed_mps = math.sqrt(
@@ -667,22 +632,13 @@ def _transit_timing_controller_tracking_profile(
     *,
     physics_dt_s: float | None = None,
 ) -> dict[str, object]:
-    """Return the v2 calibration ABI, not the complete outcome provenance.
-
-    Outcomes deliberately retain source licence and adaptation prose so that a
-    controller result remains auditable.  Transit calibration, however,
-    records only the controller fields which its validator accepts.  Comparing
-    that reduced calibration ABI to a complete outcome profile made every
-    Bitcraze Mellinger calibration fail before physics started.  Keep the two
-    representations explicit: this function is the sole runtime producer of
-    the reduced ABI used to validate a timing calibration.
-    """
+    """Return the reduced v2 calibration ABI accepted by the timing validator."""
 
     profile = _controller_tracking_profile(controller_id, physics_dt_s=physics_dt_s)
     profile.pop("source_license", None)
     if controller_id == BITCRAZE_MELLINGER_CONTROLLER_ID:
-        # The calibration validator records the immutable source revision and
-        # mixer identity; explanatory prose has no effect on transit timing.
+        # Calibration records the immutable source revision and mixer identity;
+        # explanatory prose has no effect on transit timing.
         profile.pop("adaptation_scope", None)
     return profile
 
@@ -724,14 +680,7 @@ def _scheduled_observation_completed(
     minimum_dwell_s: float,
     final_physics_timestamp_s: float,
 ) -> bool:
-    """Complete sensing at the shared decision boundary, not after a new timer.
-
-    Transit timing is deliberately conservative.  Starting a full planned
-    dwell again when a vehicle arrives early shortens the episode by the
-    prediction slack.  The physical executor instead observes until the
-    absolute fragment boundary while still requiring the calibrated minimum
-    dwell.  A sub-step horizon remainder is never claimed as simulated time.
-    """
+    """Complete sensing at the shared decision boundary."""
 
     boundary_s = min(planned_end_s, final_physics_timestamp_s)
     return (
@@ -756,16 +705,7 @@ def _sparse_range_sampling_phase(
     reservation_waiting: bool,
     team_awaiting: bool = False,
 ) -> Literal["transit", "dwell"] | None:
-    """Return the eligible physical sensing phase for one realised CF2X tick.
-
-    Sparse range sensing is available while a vehicle moves and while it
-    completes its required observation dwell. A traffic reservation is neither
-    motion nor observation activity, so it cannot generate repeated evidence
-    while holding position.  While the team is still awaiting a slower
-    vehicle (the synchronous hold), a completed fast vehicle keeps sampling
-    in place: the waiting time produces information instead of being idle,
-    which is the same dwell sensing contract the H15 entitlement allows.
-    """
+    """Return the eligible physical sensing phase for one realised CF2X tick."""
 
     if failed or reservation_waiting:
         return None
@@ -801,14 +741,7 @@ def _finalize_fragment_pair_into(
     last_sensor_source_id: str | None,
     rolling: bool,
 ) -> None:
-    """Append the realised transit + observation samples of one fragment pair.
-
-    Shared by the synchronous finalisation at window end and by the async
-    per-agent roll (on_agent_complete), so rolled pairs produce the exact
-    same provenance fields as synchronous pairs.  ``rolling`` only affects
-    the observation source binding: a rolled pair always has a sensor source
-    (its dwell completed inside the window).
-    """
+    """Append the realised transit and observation samples of one fragment pair."""
 
     if transit_completed or collision or out_of_bounds:
         ledger.append(
@@ -902,14 +835,7 @@ def _finalize_fragment_pair_into(
 
 
 class CandidateHeadroomError(ValueError):
-    """Fail closed with evaluator-only counts for candidate-pool diagnosis.
-
-    A P07 selector comparison needs two legal common candidates.  Merely
-    recording that the condition failed conceals whether the issue is the
-    finite decision budget, static flight admission, or synchronized fleet
-    separation.  These counters are an immutable engineering denominator;
-    they never become policy-visible features or task rewards.
-    """
+    """Fail closed with evaluator-only counts for candidate-pool diagnosis."""
 
     def __init__(self, message: str, admission_audit: dict[str, int]) -> None:
         super().__init__(message)
@@ -1028,22 +954,13 @@ def _build_conservative_clearance_field(
 
 @dataclass(slots=True)
 class _EvaluatorStaticClearance:
-    """Admit public routes from the exact evaluator collision geometry.
-
-    The 0.25 m ESDF is intentionally a cheap lower-bound prefilter.  Its full
-    voxel-diagonal uncertainty can reject a valid indoor CF2X corridor, so a
-    failed lower bound falls back to exact nearest-triangle distance on the
-    *same* collision USD supplied to PhysX.  Neither field is exposed to a
-    candidate strategy; only the guard's legal/infeasible result is public.
-    """
+    """Admit public routes from the exact evaluator collision geometry."""
 
     field: ConservativeVoxelClearance
     collision_mesh: Any
     _exact_cache_m: dict[tuple[float, float, float], float] = field(default_factory=dict)
-    # `trimesh` backs ``triangles_tree`` with a native rtree index. On the
-    # required Windows stack it is not safe to query that index concurrently.
-    # Keep the mesh and its exact-distance cache as one serialized evaluator
-    # transaction; this affects neither the points checked nor their values.
+    # trimesh rtree queries are serialized on the Windows stack, so the mesh and
+    # its exact-distance cache form one evaluator transaction.
     _exact_query_lock: Any = field(default_factory=threading.RLock, init=False, repr=False)
     esdf_admission_count: int = 0
     exact_fallback_count: int = 0
@@ -1066,11 +983,8 @@ class _EvaluatorStaticClearance:
     _face_cell_index_build_wall_s: float = 0.0
     _face_cell_index_query_count: int = 0
 
-    # ``trimesh.proximity.closest_point`` has a substantial per-call overhead for
-    # HM3D meshes.  Execution traces are already materialized in memory, so use a
-    # larger bounded batch while retaining a cap to avoid an unbounded temporary
-    # array on unusually long episodes.  This changes only query batching, not
-    # which trace poses are checked or the distance/caching semantics.
+    # Batch size for exact closest-point queries on materialized traces; a cap
+    # bounds temporary memory on long episodes.
     _EXACT_QUERY_CHUNK_SIZE: ClassVar[int] = 512
     _LOCAL_MESH_MARGIN_M: ClassVar[float] = 0.7
     _LOCAL_MESH_CELL_M: ClassVar[float] = 0.25
@@ -1083,14 +997,12 @@ class _EvaluatorStaticClearance:
     ) -> tuple[float, ...]:
         import numpy as np
 
-        # Do not narrow this critical section to only `closest_point`: concurrent
-        # cache misses can otherwise build/read the shared native rtree and race
-        # before a later call is serialized.
+        # Keep the whole cache path in the critical section; concurrent misses can
+        # race the shared native rtree.
         with self._exact_query_lock:
             keys = tuple(tuple(round(value, 9) for value in point) for point in points)
             missing = tuple(key for key in dict.fromkeys(keys) if key not in self._exact_cache_m)
-            # ``closest_point`` has substantial Python/rtree setup cost per call. Batch only
-            # evaluator-side grid points and cap chunks so a dense HM3D room cannot spike memory.
+            # Batch evaluator-side grid points in capped chunks to bound memory.
             for offset in range(0, len(missing), self._EXACT_QUERY_CHUNK_SIZE):
                 chunk = missing[offset : offset + self._EXACT_QUERY_CHUNK_SIZE]
                 query_started = time.perf_counter()
@@ -1284,13 +1196,7 @@ class _EvaluatorStaticClearance:
     def exact_static_distances_m(
         self, points: tuple[tuple[float, float, float], ...]
     ) -> tuple[float, ...]:
-        """Return evaluator-only distances to the static HM3D collision mesh.
-
-        This deliberately bypasses the ESDF admission shortcut: execution
-        telemetry needs a measured mesh distance, not a Boolean planning
-        decision. The collision mesh is the same immutable USD derivative
-        used to create the static PhysX world, and never reaches a strategy.
-        """
+        """Return evaluator-only distances to the static HM3D collision mesh."""
 
         return self._exact_distances_m(points)
 
@@ -1305,9 +1211,8 @@ class _EvaluatorStaticClearance:
             return False
         if not math.isfinite(float(sampled)) or not math.isfinite(float(margin)):
             return False
-        # ESDF sampled distance is to an occupied voxel centre. The exact mesh
-        # distance is at most one voxel diagonal farther, so it cannot meet a
-        # stricter requirement when this upper bound is already too small.
+        # Sampled distance is to a voxel centre, so the exact mesh distance can only
+        # be larger; the sampled value is a valid upper bound.
         return float(sampled) + float(margin) + 1.0e-12 < float(required_clearance_m)
 
     def admits(self, point: tuple[float, float, float], required_clearance_m: float) -> bool:
@@ -1434,16 +1339,7 @@ def _first_static_scene_hit(
     *,
     endpoint_margin_m: float = 0.05,
 ) -> dict[str, Any] | None:
-    """Return the first non-agent collider hit on a finite segment.
-
-    PhysX exposes one closest-hit query for the full stage.  Once CF2X assets
-    have spawned, a ray that starts at an agent root commonly exits that
-    agent's own body before reaching the immutable HM3D collision mesh.  The
-    high-level route and radio-LOS contracts are static-geometry queries, so
-    agent collider hits are advanced past and audited instead of being treated
-    as walls.  Dynamic safety remains enforced by synchronized separation and
-    real PhysX contacts during execution.
-    """
+    """Return the first non-agent collider hit on a finite segment."""
 
     distance = math.dist(source, target)
     if distance <= 1.0e-9:
@@ -1879,9 +1775,8 @@ def _multirotor_cfg(robot_asset: Path, dt_s: float) -> Any:
             rot=(1.0, 0.0, 0.0, 0.0),
             lin_vel=(0.0, 0.0, 0.0),
             ang_vel=(0.0, 0.0, 0.0),
-            # The episode starts already airborne at rest. Match the actuator's
-            # internal state to that frozen hover equilibrium so independent
-            # motor rise constants do not create an artificial reset torque.
+            # Start at the frozen hover equilibrium so independent motor rise
+            # constants create no artificial reset torque.
             rps={name: CF2X_INITIAL_ROTOR_RPS for name in THRUSTER_NAMES},
         ),
         actuators={
@@ -1932,20 +1827,15 @@ class IsaacCF2XExecutionBackend:
     minimum_observation_dwell_s: float = 1.0
     event_driven_action_completion: bool = True
     controller_id: str = CF2X_DEFAULT_CONTROLLER_ID
-    # Optional per-agent rolling continuation: when a vehicle finishes its
-    # transit+observe pair inside the physical execution window, this
-    # callback is invoked with (agent_id, timestamp_s).  It returns the next
-    # (transit, observe) fragment pair or None to wait.  The vehicle then
-    # keeps flying the next pair in the same simulation window, so fast
-    # vehicles never idle behind a slow one (async completion).  When None,
-    # the executor behaves exactly as before (synchronous team completion).
+    # Optional per-agent rolling continuation. A vehicle that finishes its
+    # transit+observe pair inside the window keeps flying the next callback pair
+    # instead of idling; None restores synchronous team completion.
     on_agent_complete: (
         Callable[[str, float, tuple[float, float, float]], tuple[FragmentInstance, FragmentInstance] | None]
         | None
     ) = None
-    # This observer is deliberately opt-in and audit-only.  It records already
-    # realised root states after PhysX steps; it never supplies data to the
-    # controller, planner, public belief, safety guard, or reward path.
+    # Opt-in audit-only observer of realised root states after PhysX steps; it
+    # supplies no controller, planner, belief, guard or reward path.
     visualization_trace_sample_hz: float | None = None
     backend_id: str = CF2X_EXECUTION_BACKEND_ID
     evidence_class: str = CF2X_EXECUTION_EVIDENCE_CLASS
@@ -1971,15 +1861,7 @@ class IsaacCF2XExecutionBackend:
     def _communication_graph(
         self, positions: list[tuple[float, float, float]]
     ) -> RelayGraphSnapshot:
-        """Measure a range-limited relay graph against static HM3D geometry.
-
-        A direct edge ends just before the receiver position so that endpoint
-        precision does not turn the receiver itself into an apparent wall.
-        CF2X collider hits are skipped because the communication contract does
-        not model airframe RF shadowing; walls remain authoritative blockers.
-        The resulting graph is still public runtime telemetry, never target
-        truth or a hidden global map.
-        """
+        """Measure a range-limited relay graph against static HM3D geometry."""
 
         def line_of_sight_clear(
             source: tuple[float, float, float], target: tuple[float, float, float]
@@ -2188,9 +2070,8 @@ class IsaacCF2XExecutionBackend:
                     reconnection_count += 1
             else:
                 if current_disconnect_started_s is None:
-                    # A sampled graph cannot locate the partition inside the
-                    # preceding interval. Use its lower bound so the recorded
-                    # duration is conservative without claiming continuous RF.
+                    # Use the interval lower bound; a sampled graph cannot locate
+                    # the partition inside the preceding interval.
                     current_disconnect_started_s = max(0.0, timestamp_s - communication_interval_s)
                 if previous_relay_connected is True:
                     partition_event_count += 1
@@ -2524,9 +2405,8 @@ class IsaacCF2XExecutionBackend:
                     waypoint = routes[index][0].path[transit_waypoint_index[index]]
                     error = math.dist(position, waypoint)
                     speed_mps = float(linear_speeds[index].item())
-                    # The route-level plan keeps moving through intermediate
-                    # corners at a geometry-bounded pass-through speed. Only the
-                    # terminal waypoint requires the calibrated settle condition.
+                    # Route plan passes intermediate corners at the geometry-bounded
+                    # pass-through speed; only the terminal waypoint settles.
                     terminal_segment = (
                         transit_waypoint_index[index] + 1
                         >= len(routes[index][0].path)
@@ -2604,15 +2484,9 @@ class IsaacCF2XExecutionBackend:
                                 position,
                             )
                             if next_pair is not None:
-                                # Roll this vehicle onto its next pair inside
-                                # the same physical window.  The finished pair
-                                # is finalised into the outcome ledger first,
-                                # then the per-agent execution state resets so
-                                # the next pair starts from the measured pose.
-                                # Static clearance is queried now (the batch
-                                # clearance pass runs only after the loop), and
-                                # the next segment starts from the measured
-                                # speed, not from rest.
+                                # Roll this vehicle onto its next pair: finalise the
+                                # finished pair, reset the per-agent state, then start
+                                # the next segment from the measured pose and speed.
                                 roll_trace = tuple(transit_traces[index])
                                 roll_distances = (
                                     self.static_clearance_oracle.exact_static_distances_m(
@@ -2674,10 +2548,8 @@ class IsaacCF2XExecutionBackend:
                                 transit_release_s[index] = timestamp
                                 waypoint_transitions[index] = []
                                 rolling_agent_decision_count[index] += 1
-            # Sparse range is a real (non-rendering) public sensor profile.
-            # The evaluator retains source-bound pose outcomes; the shared-map
-            # payload is a public digest so this network layer never reads task
-            # truth or evaluator geometry.
+            # Sparse range as a real public sensor profile; the shared-map payload
+            # is a public digest, so this layer reads no task truth.
             for index, position in enumerate(positions):
                 team_awaiting = not all(
                     failed[other] or observation_end[other] is not None
@@ -2704,12 +2576,8 @@ class IsaacCF2XExecutionBackend:
                 )
                 range_distances = []
                 for direction_index, direction in enumerate(self.sparse_range_directions):
-                    # Public sparse range is an environment sensor. A raw
-                    # closest-hit query also sees CF2X bodies spawned in the
-                    # same PhysX stage, making paired runs sensitive to tiny
-                    # hover/contact differences. Skip dynamic P07Agents hits
-                    # here; dynamic safety remains measured by contacts and
-                    # synchronized separation below.
+                    # Skip dynamic P07Agent hits so paired runs stay comparable;
+                    # safety remains measured by contacts and synchronized separation.
                     target = tuple(
                         position[axis] + direction[axis] * self.sparse_range_max_m
                         for axis in range(3)
@@ -2778,10 +2646,8 @@ class IsaacCF2XExecutionBackend:
                 longest_disconnected_duration_s,
                 final_timestamp_s - current_disconnect_started_s,
             )
-        # A PhysX scene query after vehicle spawn can hit a CF2X's own collider
-        # at zero distance. Measure all actual root poses against only the
-        # immutable static HM3D collision mesh instead. Query after collection
-        # so the same evaluator batch/cache used at admission remains efficient.
+        # Measure root poses against the immutable static HM3D mesh only; a query
+        # after spawn can otherwise hit the vehicle's own collider at zero distance.
         actual_trace_clearance_m: list[float] = []
         static_trace_clearance_by_agent: dict[str, dict[str, object]] = {}
         for index, (transit, _) in enumerate(routes):
@@ -2846,11 +2712,8 @@ class IsaacCF2XExecutionBackend:
                 rolling=True,
             )
         samples.extend(sample_ledger)
-        # The task has synchronous team decisions.  Sensor frames still arrive
-        # at 10 Hz, but each UAV transmits one source-bound map delta only after
-        # completing its decision fragment.  This avoids treating every ray as
-        # an independent network packet while preserving real range/LOS/relay
-        # admission for the next public belief.
+        # Synchronous team decisions: at 10 Hz sensing, each UAV transmits one
+        # source-bound map delta after finishing its decision fragment.
         fusion_agent_id = self.agent_order[0]
         segment_delta_senders = tuple(
             agent_id for agent_id in self.agent_order if source_observation_ids_by_agent[agent_id]
@@ -3212,13 +3075,7 @@ def _clearance_guard_diagnostic(
     points: tuple[tuple[float, float, float], ...],
     required_clearance_m: float,
 ) -> dict[str, object]:
-    """Describe one rejected clearance check without changing its authority.
-
-    Candidate selection still receives only the guard's legal/infeasible
-    result.  The exact mesh distances below are evaluator-side outcome
-    diagnostics used to distinguish an invalid reset from a bad observation
-    endpoint or an unsafe public-route interior.
-    """
+    """Describe one rejected clearance check without changing its authority."""
 
     exact_distance_query = getattr(clearance_oracle, "exact_static_distances_m", None)
     distances: tuple[float, ...] = ()
@@ -3256,10 +3113,8 @@ def _line_guard(
     delta = tuple(end[index] - start[index] for index in range(3))
     distance = math.sqrt(sum(value * value for value in delta))
     if distance <= 1.0e-6:
-        # A hold begins at measured post-execution state. Normal tracking error
-        # may place it inside the planning reserve while it still satisfies the
-        # frozen physical flight-clearance contract. Requiring the larger
-        # new-command margin here can remove the safest recovery action.
+        # A hold starts from measured state inside the planning reserve; requiring
+        # the new-command margin here can remove the safest recovery action.
         if not all(clearance_oracle.admits_many((start,), FLIGHT_CLEARANCE_M)):
             if diagnostic_sink is not None:
                 diagnostic_sink(
@@ -3299,9 +3154,8 @@ def _line_guard(
         return GuardedPath(legal=False, path_m=path_m, reason="segment_blocked")
     sample_count = max(1, math.ceil(distance / ROUTE_CLEARANCE_SAMPLE_STEP_M))
     internal_sample_clearance_m = REQUIRED_ROUTE_SAMPLE_CLEARANCE_M
-    # The first point is measured state, not a newly commanded waypoint. It
-    # must remain physically safe at FLIGHT_CLEARANCE_M. The new endpoint and
-    # internal samples retain the stricter planning/tracking reserve.
+    # The first point is measured state, kept at FLIGHT_CLEARANCE_M; new endpoints
+    # and internal samples keep the stricter planning reserve.
     interior_samples = tuple(
         tuple(start[axis] + sample_index / sample_count * delta[axis] for axis in range(3))
         for sample_index in range(1, sample_count)
@@ -3439,21 +3293,10 @@ def _routed_guard(
         | None
     ) = None,
 ) -> GuardedPath:
-    """Guard every supplied path segment, then a bounded public-receiver polyline.
+    """Guard every supplied path segment, then a bounded public-receiver polyline."""
 
-    HM3D receiver positions can lie in separate rooms.  A direct segment is
-    not a valid high-level flight command in that case, but a short polyline
-    through other public receivers can be.  The route is still accepted only when every
-    segment passes the same runtime PhysX ray guard.  The bounded search is a
-    smoke-test convenience, not a policy-visible planner.
-    """
-
-    # ``path_m`` can already be a public-free-space polyline.  Guarding only
-    # its first and last point would certify a direct chord while handing the
-    # executor unchecked intermediate waypoints.  Those waypoints are real
-    # rest-to-rest commands, so every adjacent pair must satisfy the exact
-    # same endpoint and swept-clearance contract before the full path is
-    # exposed to a candidate selector.
+    # A supplied public-free-space polyline is guarded end to end. Every adjacent
+    # pair is a real rest-to-rest command, so guarding the chord alone is insufficient.
     supplied_polyline_legal = True
     failed_reason = ""
     last_segment: GuardedPath | None = None
@@ -3489,12 +3332,8 @@ def _routed_guard(
                 diagnostic_sink,
                 segment_cache=segment_cache,
             )
-        # Preserve a one-leg guard's useful audit reason, notably
-        # ``stationary_hold`` for a measured safe recovery pose.  The
-        # admitted path must remain the guarded polyline: substituting
-        # ``last_segment`` here replaces a whole shortened route with only
-        # its final leg, which would start the command far from the actual
-        # vehicle pose.  Keep the polyline and inherit the reason only.
+        # Keep the guarded polyline and inherit the audit reason only; substituting
+        # last_segment would start the command far from the actual vehicle pose.
         if len(path_m) == 2 and last_segment is not None:
             admitted_path = GuardedPath(
                 legal=True,
@@ -3617,15 +3456,7 @@ def _shortcut_guarded_polyline(
         | None
     ) = None,
 ) -> tuple[tuple[float, float, float], ...]:
-    """Remove grid turns only when the existing full clearance guard approves.
-
-    The grid search deliberately expands a six-connected 1 m lattice, which
-    creates many right-angle turns even inside a clear corridor.  Those turns
-    make physical execution much slower than the high-level distance model.
-    This is a conservative simplifier: every replacement segment is submitted
-    to the exact same ray plus swept-clearance guard used to admit the original
-    route.  It cannot tunnel through geometry or relax the CF2X envelope.
-    """
+    """Remove grid turns only when the existing full clearance guard approves."""
 
     if len(path_m) <= 2:
         return path_m
@@ -3654,13 +3485,7 @@ def _shortcut_guarded_polyline(
 def _densify_for_physics_tracking(
     path_m: tuple[tuple[float, float, float], ...],
 ) -> tuple[tuple[float, float, float], ...]:
-    """Bound controller target separation without altering guarded geometry.
-
-    A collision-free centreline does not prove that the current CF2X waypoint
-    controller can track a long segment without cutting a corner.  The added
-    points are collinear samples of already guarded segments; this neither
-    forms a new shortcut nor relaxes the 0.30 m clearance condition.
-    """
+    """Bound controller target separation with collinear samples of guarded segments."""
 
     if len(path_m) < 2:
         return path_m
@@ -3694,21 +3519,7 @@ def _within_control_bounds(
     bounds_min: tuple[float, float, float] | None,
     bounds_max: tuple[float, float, float] | None,
 ) -> bool:
-    """Keep newly commanded waypoints away from a component's outer edge.
-
-    The route guard protects against geometry, whereas the component bounds
-    protect the flight-space admission.  A public view on the component edge
-    left no room for position tolerance and momentum in the r17 smoke.  This
-    is an admission constraint, not an execution-time clipping rule.
-
-    The first path point is the measured post-execution state, not a waypoint
-    selected by the current method.  Tracking error can place it a few
-    millimetres outside the tightened command set while it remains inside the
-    frozen flight-space bounds.  Rejecting that state also rejects the safest
-    recovery action, a stationary hold.  Require the measured start only to
-    remain in the physical flight-space bounds; apply the control margin to
-    every newly commanded point.
-    """
+    """Keep newly commanded waypoints away from a component's outer edge."""
 
     if bounds_min is None or bounds_max is None:
         return True
@@ -3883,15 +3694,7 @@ def _fine_clearance_grid_route(
         | None
     ) = None,
 ) -> tuple[tuple[tuple[float, float, float], ...], dict[str, object]] | None:
-    """Find a local collision-checked route on a fine exact-clearance lattice.
-
-    The coarse 1 m grid frequently misses an indoor corridor centreline.
-    This fallback searches only a small box around the requested public
-    route, prefilters vertices with the same evaluator clearance oracle,
-    and rechecks every lattice edge with the shared _line_guard.  The
-    route is still submitted to _admit_trackable_path by the caller, so
-    control-boundary and physics-waypoint constraints are not bypassed.
-    """
+    """Find a local collision-checked route on a fine exact-clearance lattice."""
     import heapq
 
     if not math.isfinite(resolution_m) or resolution_m <= 0.0:
@@ -4054,23 +3857,7 @@ def _select_smoke_positions(
     minimum_feasible_candidates: int,
     position_order_offset: int = 0,
 ) -> tuple[tuple[tuple[float, float, float], ...], tuple[tuple[float, float, float], ...]]:
-    """Select public views with the requested guard- and budget-feasible headroom.
-
-    The evaluator receiver audit gives valid public poses, not a route plan.  Using
-    the first and last poses as waypoints made the old smoke fail closed on
-    ordinary walls.  We search only the public pose set and ask the same
-    runtime line guard and decision-time budget used by candidate construction
-    to validate every start-to-frontier edge.  Physical execution requires one
-    legal simultaneous assignment; callers that need selector-identifiability
-    headroom may request more.  The candidate
-    builder still retains other infeasible assignments in its failure
-    denominator. A
-    recorded enumeration offset is available only to collect distinct,
-    public-route transit calibration probes; it is not a policy feature and
-    must stay at its frozen default in comparable P07 baseline episodes. This
-    does not add a planner or inspect targets; it merely prevents a
-    deliberately impossible engineering smoke.
-    """
+    """Select public views with the requested guard- and budget-feasible headroom."""
 
     if len(positions) < FORMAL_FLEET_SIZE + candidate_limit:
         raise ValueError("not enough public view positions for the formal fleet")
@@ -4089,10 +3876,8 @@ def _select_smoke_positions(
         frontier: tuple[float, float, float],
     ) -> GuardedPath | None:
         admission_audit["leg_attempts"] += 1
-        # A guarded route cannot be shorter than its straight-line lower bound.
-        # Rejecting this case before ray queries preserves the time budget and
-        # avoids constructing a full flight grid for a physically impossible
-        # smoke-test assignment.
+        # A guarded route is at least its straight-line lower bound, so the
+        # impossible case is rejected before any ray queries.
         if (
             transit_timing_model.estimate_seconds((start, frontier)) + observe_dwell_s
             > decision_duration_s
@@ -4183,11 +3968,8 @@ def _select_smoke_positions(
                     if len(ordered_frontiers) != candidate_limit:
                         raise RuntimeError("candidate-frontier construction lost a public position")
                     return starts, tuple(positions[index] for index in ordered_frontiers)
-                # Candidate 0 is the admitted assignment.  Candidate 1 in the
-                # shared cyclic pool shifts every destination by one frontier.
-                # When the pool has room, find a new final frontier; when it is
-                # exactly fleet-sized, test its cyclic wraparound.  No private
-                # evaluator state or learned policy participates in this search.
+                # Candidate 0 is the admitted assignment; candidate 1 shifts every
+                # destination by one frontier in the shared cyclic pool.
                 if candidate_limit == FORMAL_FLEET_SIZE:
                     continuation_indices = (selected_frontier_indices[0],)
                 else:

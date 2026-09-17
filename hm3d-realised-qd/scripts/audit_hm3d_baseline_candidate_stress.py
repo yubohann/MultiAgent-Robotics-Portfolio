@@ -1,10 +1,4 @@
-"""Stress-audit HM3D baseline candidates without fabricating performance claims.
-
-The synthetic states in this script test interface compatibility, legality
-masking, numerical stability, vertical sensitivity, and selector separation.
-They are not simulator rollouts and therefore cannot qualify a method for a
-paper result table.  Real HM3D/CF2X/PhysX episodes remain mandatory.
-"""
+"""Stress-audit HM3D baseline candidates on synthetic interface states before real episodes."""
 
 from __future__ import annotations
 
@@ -385,9 +379,8 @@ def _learning_stress(
             _single_probabilities,
             "random_initialization_for_interface_stress_only",
         ),
-        # MARVEL remains a two-dimensional architecture reference.  Keep this
-        # synthetic interface audit separate from runnable HM3D baselines so
-        # its label cannot be mistaken for a formal P07 strategy.
+        # MARVEL is a two-dimensional architecture reference; keep this synthetic
+        # audit separate from runnable HM3D baselines.
         "marvel_supplementary_reference": (
             MarvelSupplementaryReferencePolicy(MarvelSupplementaryReferenceConfig(), seed=20260804),
             _marvel_probabilities,

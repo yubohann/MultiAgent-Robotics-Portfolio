@@ -54,7 +54,7 @@ DEFAULT_CLEAN_SWEPT_CLEARANCE_M = 0.12
 
 
 class JsonWriter:
-    """Small JSON/CSV writer with numpy-safe conversion."""
+    """Small writer for JSON and CSV files with numpy-safe conversion."""
 
     @staticmethod
     def clean(value: Any) -> Any:

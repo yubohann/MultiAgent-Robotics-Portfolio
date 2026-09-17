@@ -1,11 +1,4 @@
-"""Continuation curriculum from demo8 formation morphing to dynamic gates.
-
-This runner deliberately starts from the validated 8-drone demo8 checkpoint
-that can execute line/triangle/rectangle/diamond/circle route morphing.  The
-curriculum keeps C0 as a no-training preservation gate, then progressively
-adds static and moving gates while making obstacle avoidance the primary task
-and rejecting one/two-lane line-collapse as a hard formation-shape failure.
-"""
+"""Dynamic-gate continuation curriculum over the validated 8-drone demo8 checkpoint."""
 
 from __future__ import annotations
 
@@ -321,7 +314,7 @@ def _stages() -> tuple[DynamicGateCurriculumStage, ...]:
 
 
 def _uses_dynamic_task_layout(stage: DynamicGateCurriculumStage) -> bool:
-    """Use the straight dynamic-gate task layout even for paper eval's 0-gate baseline."""
+    """Use the straight dynamic-gate task layout for the paper scoring 0-gate baseline too."""
 
     return int(stage.gate_count) > 0 or str(stage.name).startswith("E2D2_")
 
@@ -532,7 +525,8 @@ def _promotion_gate_failure(summary: dict[str, Any] | None, config: Any, stage: 
     gate = config.evaluation_gate
     if not bool(getattr(gate, "enabled", False)):
         return None
-    # Use graduated thresholds based on gate count: harder for low gates, relaxed for high gates
+    # Graduate thresholds by gate count, stricter at low gate counts and relaxed at high gate
+    # counts.
     gc = int(stage.gate_count) if stage is not None else 0
     if gc <= 1:
         min_success, max_gate_post = 1.0, 0.0

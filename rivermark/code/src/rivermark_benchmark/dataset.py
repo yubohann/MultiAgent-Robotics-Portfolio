@@ -1,10 +1,4 @@
-"""Collect and load hash-bound public-only pilot data for learned baselines.
-
-The collector uses the same closed-loop runtime and passive ``EpisodeRecorder``
-as demos.  Its output is intentionally pilot data, not a formal release.  The
-loader verifies every episode manifest and every referenced payload hash before
-it exposes tensors to a trainer.  It never reads evaluator-private truth.
-"""
+"""Collect and load hash-bound public-only pilot data for learned baselines."""
 
 from __future__ import annotations
 

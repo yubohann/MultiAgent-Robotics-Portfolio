@@ -105,9 +105,8 @@ class TransformerSequenceEncoder(nn.Module):
             valid_mask = torch.ones((x.size(0), x.size(1)), dtype=torch.bool, device=x.device)
         else:
             valid_mask = token_mask.bool()
-        # Keep the self token as an anchor, but let a weighted attention pool
-        # recover informative relation context for denser graphs such as
-        # Archive / IEEE variants.
+        # Keep the self token as an anchor and let a weighted attention pool recover
+        # informative relation context for denser graphs such as Archive and IEEE variants.
         scores = self.pool_score(x).squeeze(-1)
         scores = scores + torch.log(token_weights.clamp(min=1e-4))
         scores = scores.masked_fill(~valid_mask, -1e4)

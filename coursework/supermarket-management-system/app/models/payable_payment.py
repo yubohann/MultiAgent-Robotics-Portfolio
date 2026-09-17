@@ -4,7 +4,7 @@ from app import db
 
 
 class PayablePayment(db.Model):
-    """应付款支付记录"""
+    """Payable payment records."""
     __tablename__ = 'payable_payments'
 
     payment_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

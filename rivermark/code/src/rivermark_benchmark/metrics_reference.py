@@ -1,10 +1,4 @@
-"""Independent pure-Python reference for the public Search3D metric.
-
-This module intentionally does not import :mod:`numpy` or call the production
-implementation.  It is used only to cross-check the versioned metric on the
-small public fixture; the production metric definition remains in
-``rivermark_benchmark.metrics``.
-"""
+"""Independent pure-Python reference for the public Search3D metric."""
 
 from __future__ import annotations
 

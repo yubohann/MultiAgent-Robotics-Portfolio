@@ -1,10 +1,4 @@
-"""Audit a converted HM3D collision USD as a conservative 3-D flight-space candidate.
-
-The script reads the converted static collision mesh, checks its provenance against
-the original GLB and derives a bounded voxel ESDF.  It intentionally does not close
-the formal HM3D P03 phase: controller counterfactuals, sparse-range ray consistency
-and runtime collision replay remain separate evidence requirements.
-"""
+"""Audit a converted HM3D collision USD as a conservative 3-D flight-space candidate."""
 
 from __future__ import annotations
 
@@ -171,9 +165,8 @@ def _load_and_validate_manifest(
 def _vertical_statistics(arrays: dict[str, Any], minimum_voxels: int) -> dict[str, Any]:
     free = np.asarray(arrays["free_mask"], dtype=bool)
     counts = np.bincount(np.argwhere(free)[:, 2], minlength=free.shape[2])
-    # Treat a few staircase or reconstruction slivers differently from a
-    # substantial floor band.  This matches build_enclosed_esdf's 5% rule
-    # while retaining an explicit absolute lower bound for small scenes.
+    # Treat staircase or reconstruction slivers differently from a substantial floor
+    # band; matches build_enclosed_esdf's 5% rule with an absolute floor for small scenes.
     substantial_threshold = max(
         minimum_voxels,
         int(math.ceil(float(counts.max()) * 0.05)),

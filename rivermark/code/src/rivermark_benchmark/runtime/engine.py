@@ -1,11 +1,4 @@
-"""Deterministic, closed-loop multi-UAV pilot runtime.
-
-This module is deliberately small enough to run without Isaac Sim, but it is
-not a post-processing mock.  Every policy action advances a fixed controller,
-then generates RGB-D, semantic, LiDAR, radar, IMU, state, and communication
-packets at that simulated timestamp.  It is a kinematic engineering pilot;
-the Isaac Lab bridge is a separate, fail-closed backend.
-"""
+"""Deterministic, closed-loop multi-UAV pilot runtime."""
 
 from __future__ import annotations
 

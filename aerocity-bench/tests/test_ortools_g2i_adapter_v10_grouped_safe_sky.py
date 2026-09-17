@@ -45,9 +45,8 @@ def test_v10_public_probe_keeps_every_assigned_cell_for_the_two_previously_empty
     module = _load_adapter()
     episode, task = _ancestor_00_public_inputs()
 
-    # This probe deliberately uses the frozen public canonical order.  It
-    # validates route topology without requiring the separate OR-Tools wheel
-    # used by the production process boundary.
+    # Use the frozen canonical order so the route topology is testable without
+    # the separate OR-Tools wheel used by the production process boundary.
     monkeypatch.setattr(
         module.GroupedSafeSkyORToolsPlanner,
         "_solve_local_group",

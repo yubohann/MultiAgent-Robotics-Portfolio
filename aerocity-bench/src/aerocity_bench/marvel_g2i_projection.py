@@ -63,8 +63,8 @@ def _pose(position: tuple[float, float, float], yaw_deg: float) -> dict[str, Any
 def _require_public(value: object, *, path: str = "$") -> None:
     """Reject fields that an external method must never receive."""
 
-    # Reuse the benchmark-wide rule.  In particular, the three explicit
-    # ``*_public: false`` sentinels document withheld facts and are not leaks.
+    # Benchmark-wide rule; the explicit ``*_public: false`` sentinels document
+    # withheld facts and are not leaks.
     try:
         assert_public_fields(value, path=path)
     except ValueError as exc:

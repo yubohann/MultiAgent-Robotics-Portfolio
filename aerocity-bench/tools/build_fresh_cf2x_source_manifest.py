@@ -56,10 +56,8 @@ def build(
     )
     if output.exists():
         raise FileExistsError(f"refusing to overwrite source manifest: {output}")
-    # The B-gate manifest builder resolves source inputs relative to this
-    # manifest.  Keep the serialized paths relative to the output location,
-    # rather than to ``layouts_root``: callers commonly keep the manifest one
-    # directory above the materialized layouts.
+    # Paths are relative to the output location, not ``layouts_root``, because
+    # the B-gate builder resolves inputs relative to this manifest.
     manifest_root = output.parent
     records: list[dict[str, str]] = []
     for ancestor_dir in sorted(layouts_root.glob("ancestor-*")):

@@ -1,14 +1,4 @@
-"""Run reproducible source and model probes for external baseline candidates.
-
-This audit deliberately separates three claims:
-
-1. an upstream repository is present and auditable;
-2. its original neural core can execute on this machine;
-3. it is suitable for the four-CF2X HM3D exploration protocol.
-
-Passing (1) or (2) never implies (3).  The JSON report records the evidence so
-the paper-facing baseline decision does not depend on repository titles.
-"""
+"""Run deterministic source and model probes for external baseline candidates."""
 
 from __future__ import annotations
 

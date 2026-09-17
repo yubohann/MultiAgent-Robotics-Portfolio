@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use AeroCityBench in your work, please cite this repository."
+title: "AeroCityBench"
+abstract: "Open benchmark for 3D multi-UAV search under urban topology, target-process and fleet-resilience shifts."
+authors:
+  - family-names: "Yu"
+    given-names: "Bohan"
+version: "0.2.0.dev0"
+date-released: "2026-09-17"
+url: "https://github.com/yubohann/MultiAgent-Robotics-Portfolio/tree/main/aerocity-bench"

@@ -103,10 +103,9 @@ def audit_generated_city(
     if any(int(site["surrounding_collider_count"]) < 1 for site in support_sites):
         errors.append("support_site_without_structural_context")
 
-    # Sampling every development episode checks that the complete task contract
-    # remains executable.  The report must not retain *any* target or support
-    # cardinality: target totals and legal-site counts are evaluator-private
-    # task information, even when no coordinates are written.
+    # Sampling every episode proves the task contract stays executable; the
+    # report keeps no target or support cardinality, which is evaluator-private
+    # even without coordinates.
     episode_count = config.episodes(split)
     for episode_index in range(episode_count):
         episode = sample_episode_v3(config, city, support_sites, episode_index)
@@ -134,10 +133,8 @@ def audit_generated_city(
             "structural_details": dict(sorted(structural_counts.items())),
             "episodes": episode_count,
         },
-        # A city supplied directly to this function has already been accepted
-        # by its caller.  The resumable generator below replaces this with the
-        # actual retry count, keeping the public audit schema stable without
-        # exposing individual admission failures.
+        # A caller-supplied city was already accepted; the resumable generator
+        # below replaces this zero with the real retry count.
         "generation_rejections_before_acceptance": 0,
         "error_categories": sorted(set(errors)),
     }
@@ -162,10 +159,9 @@ def audit_development_layout(
     if max_attempts < 1:
         raise ValueError("max_attempts must be positive")
 
-    # Generation rejection text is intentionally not reported.  It can contain
-    # scene-specific observability/admission details that a user should not be
-    # able to mine from a supposedly private-safe audit receipt.  The bounded
-    # retry count still makes host cost and admission instability observable.
+    # Rejection text is withheld: it can leak scene-specific
+    # observability/admission details.  The bounded retry count keeps host cost
+    # and admission instability observable.
     rejection_count = 0
     for attempt in range(max_attempts):
         try:
@@ -275,8 +271,8 @@ def _cohort_receipt_view(
     if report["generator_version"] != generator_version:
         raise ValueError(f"scene audit generator mismatch: {split}/{index}")
 
-    # This is deliberately an allow-list.  The cohort summary cannot acquire a
-    # private target field merely because a future individual receipt grows.
+    # Allow-list by design: a growing individual receipt cannot add a private
+    # target field to the cohort summary.
     return {
         "split": split,
         "index": index,

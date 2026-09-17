@@ -1,9 +1,4 @@
-"""Public HM3D exploration candidate generation.
-
-The candidate generator consumes only public beliefs, public frontier clusters
-and public vehicle states.  It does not know target coordinates, private ESDFs
-or future evaluator coverage.
-"""
+"""Public HM3D exploration candidate generation."""
 
 from __future__ import annotations
 

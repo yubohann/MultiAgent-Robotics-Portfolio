@@ -1,13 +1,4 @@
-"""Admission wrapper for training HM3D exploration candidate selectors.
-
-STATUS (2026-08-08): admission audit only.  This script validates that the
-protocol / P07 summary / training manifest entitle the project to train a
-candidate selector; it does NOT yet train RB-SF-SAC or the QD selector.
-The actual RB-SF-SAC training entry (Recurrent Belief-State Shared-Frontier
-SAC, QD x RL interface, RFG credit) is an open gap listed in
-docs/主方法严格设计_realised_QD_RFG_RB_SF_SAC_2026-08-08.md section 10.
-Do not treat READY_TO_TRAIN_SELECTOR as a trained checkpoint.
-"""
+"""Admission wrapper for training HM3D exploration candidate selectors."""
 
 from __future__ import annotations
 

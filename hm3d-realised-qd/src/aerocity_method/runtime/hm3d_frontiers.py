@@ -18,10 +18,8 @@ _NEIGHBORS_6: tuple[VoxelKey, ...] = (
     (0, 0, -1),
 )
 
-# Public range rays are not restricted to axis-aligned sensor directions.  A
-# route graph that follows received free space therefore needs the full local
-# voxel neighbourhood.  Frontier extraction deliberately continues to use
-# ``_NEIGHBORS_6`` below: face adjacency is the intended frontier topology.
+# Full 26-neighbourhood for route graphs over received free space; frontier extraction
+# keeps face adjacency as its intended topology.
 _NEIGHBORS_26: tuple[VoxelKey, ...] = tuple(
     (delta_x, delta_y, delta_z)
     for delta_x in (-1, 0, 1)
@@ -126,12 +124,7 @@ def extract_frontier_clusters(
     *,
     config: FrontierExtractionConfig | None = None,
 ) -> tuple[FrontierCluster, ...]:
-    """Return public free/unknown frontier clusters.
-
-    A vertical frontier is not a separate special case here: unknown cells
-    above or below free cells contribute to the same 6-neighbor criterion and
-    appear in the cluster normal/height band.
-    """
+    """Return public free/unknown frontier clusters."""
 
     cfg = config or FrontierExtractionConfig()
     candidates = {key for key in belief.free_keys() if _is_frontier_free(belief, key)}

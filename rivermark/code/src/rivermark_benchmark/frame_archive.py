@@ -1,9 +1,4 @@
-"""Bounded-memory frame storage for large Isaac sensor streams.
-
-Each frame is a separate compressed member of an NPZ-compatible ZIP archive.
-That keeps capture, validation, and video encoding from materializing an
-entire RGB-D sequence in private process memory.
-"""
+"""Bounded-memory frame storage for large Isaac sensor streams."""
 
 from __future__ import annotations
 

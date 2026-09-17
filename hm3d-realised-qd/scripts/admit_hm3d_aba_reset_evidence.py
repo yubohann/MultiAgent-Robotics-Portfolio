@@ -1,10 +1,4 @@
-"""Admit independently recorded HM3D A-B-A reset probes after P01 asset lock.
-
-The script does not run Isaac Sim.  It verifies the original real-runtime
-probe files, binds their scene/asset hashes to a P01 asset lock, and writes a
-P02 preflight artifact.  This keeps an existing measured A-B-A run auditable
-without relabelling it as a fresh simulator execution.
-"""
+"""Admit independently recorded HM3D A-B-A reset probes against a P01 asset lock."""
 
 # ruff: noqa: E402
 

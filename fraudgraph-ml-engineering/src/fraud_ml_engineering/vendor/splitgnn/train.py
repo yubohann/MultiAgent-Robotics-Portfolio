@@ -1,12 +1,4 @@
-"""原始 SplitGNN 训练脚本。
-
-总说明：
-1. 读取 YAML 配置和预处理后的图数据。
-2. 训练 SplitGNN，并依据验证集的 AUC / G-Mean 保存最优模型。
-3. 在测试集上评估并导出预测结果。
-
-当前主项目的 hybrid 训练不直接调用这个脚本，但仍复用其中的配置和评估习惯。
-"""
+"""Original SplitGNN training script driven by YAML configs and preprocessed graphs."""
 
 import os
 import time
@@ -30,7 +22,7 @@ warnings.filterwarnings('ignore')
 random.seed(42)
 
 if __name__ == '__main__':
-    # 解析命令行参数并设置随机种子。
+    # Parse CLI arguments and set the random seed.
     args = parse_args()
     setup_seed(args.seed)
     requested_device = str(args.cuda).lower()
@@ -61,7 +53,7 @@ if __name__ == '__main__':
         except Exception as e:
             print(f'Failed to enable TensorBoard logging: {e}')
             writer = None
-    # 载入数据集，并把节点特征归一化到更稳定的尺度。
+    # Load the dataset and normalize node features to a stable scale.
     dataset = dgl.load_graphs(dataset_path)[0][0]
     features = dataset.ndata['feature'].numpy()
     if args.dataset == 'amazon':
@@ -71,7 +63,7 @@ if __name__ == '__main__':
     dataset.ndata['feature'] = features
     dataset = dataset.to(device)
     
-    # 进入训练阶段。
+    # Start training.
     print('Start training model...')
     model = SplitGNN(args, dataset)
     model = model.to(device)
@@ -93,7 +85,7 @@ if __name__ == '__main__':
             writer.add_scalar('train/loss', float(loss.item()), e)
         
         with torch.no_grad():
-            # 在验证集上评估，并用 AUC / G-Mean 两套标准保存 checkpoint。
+            # Score on the validation split and save checkpoints by validation AUC and G-Mean.
             model.eval()
             valid_mask = dataset.ndata['valid_mask'].bool()
             valid_labels = dataset.ndata['label'][valid_mask].cpu().numpy()
@@ -131,7 +123,7 @@ if __name__ == '__main__':
             if do_stop:
                 break
     print('End training')
-    # 使用“验证 AUC 最优模型”进行一次测试。
+    # Run one test pass with the best validation AUC model.
     print('Test model...')
     model = torch.load(model_path, map_location=device)
     with torch.no_grad():
@@ -160,7 +152,7 @@ if __name__ == '__main__':
             writer.add_scalar('test_best_auc/recall', float(recall), test_step)
             writer.add_scalar('test_best_auc/threshold', float(test_metrics['threshold']), test_step)
         
-    # 再使用“验证 G-Mean 最优模型”进行一次测试。
+    # Run one test pass with the best validation G-Mean model.
     model = torch.load(gmodel_path, map_location=device)
     with torch.no_grad():
         model.eval()

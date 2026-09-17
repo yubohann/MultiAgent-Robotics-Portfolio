@@ -4,7 +4,7 @@ from sqlalchemy import func
 
 
 def get_dashboard_overview():
-    """获取首页概览统计"""
+    """Return the dashboard overview statistics."""
     today_start = db.func.date(db.func.datetime('now', 'localtime'))
 
     total_products = Product.query.count()
@@ -31,7 +31,7 @@ def get_dashboard_overview():
 
 
 def get_sales_overview(period='month'):
-    """获取销售概览统计数据"""
+    """Return the sales overview statistics."""
     now = db.func.datetime('now', 'localtime')
     if period == 'today':
         start_date = db.func.date(now)
@@ -90,7 +90,7 @@ def get_sales_overview(period='month'):
 
 
 def get_sales_trend(days=30):
-    """获取每日销售趋势数据"""
+    """Return the daily sales trend."""
     now = db.func.datetime('now', 'localtime')
     start_date = db.func.date(db.func.datetime(now, f'-{days} days'))
 
@@ -119,7 +119,7 @@ def get_sales_trend(days=30):
 
 
 def get_top_products(limit=10, period='month', sort_by='quantity'):
-    """获取热销/滞销商品排行"""
+    """Return product rankings for best sellers and slow movers."""
     now = db.func.datetime('now', 'localtime')
     if period == 'today':
         start_date = db.func.date(now)
@@ -176,7 +176,7 @@ def get_top_products(limit=10, period='month', sort_by='quantity'):
 
 
 def get_category_distribution(period='month'):
-    """获取商品分类销售占比"""
+    """Return the sales share per product category."""
     now = db.func.datetime('now', 'localtime')
     if period == 'today':
         start_date = db.func.date(now)

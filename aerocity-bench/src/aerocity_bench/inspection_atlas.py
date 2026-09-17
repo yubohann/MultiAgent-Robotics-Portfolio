@@ -57,11 +57,9 @@ _SAMPLING_POLICY = {
     "calibration_status": "frozen",
 }
 
-# Density conditions are explicit public calibration candidates.  They keep the
-# same geometry, sensor, and safety semantics, changing only the footprint
-# sampling fraction.  An arbitrary caller-supplied dictionary is never
-# accepted: otherwise a nominal-atlas validator could silently bless a custom
-# evaluation denominator.
+# Density conditions keep the same geometry, sensor, and safety semantics,
+# changing only the footprint sampling fraction.  Arbitrary caller-supplied
+# dictionaries are rejected so a validator cannot bless a custom denominator.
 _SAMPLING_POLICY_CANDIDATES = {
     str(_SAMPLING_POLICY["policy_id"]): _SAMPLING_POLICY,
     "g2-i-geometric-sampling-density-sparse-v1": {
@@ -78,9 +76,8 @@ _SAMPLING_POLICY_CANDIDATES = {
     },
 }
 
-# Normalized object keys which would turn the public atlas into an evaluator
-# projection.  The check is intentionally recursive so a future serializer
-# cannot hide a prohibited field inside a pose, graph node, or metadata block.
+# Normalized object keys that would turn the public atlas into an evaluator
+# projection; the check is recursive so a nested field cannot hide from it.
 _PRIVATE_KEY_TOKENS = frozenset(
     {
         "target",
@@ -245,9 +242,8 @@ def _inspection_parameters(
     if not 0.0 < horizontal_fov <= 180.0 or not 0.0 < vertical_fov <= 180.0:
         raise ValueError("inspection-atlas field of view must lie in (0, 180]")
 
-    # These dimensionless factors are a versioned calibration candidate in the
-    # public atlas.  They are deliberately not described as physical truths;
-    # the formal gate remains closed until method-independent calibration.
+    # Versioned calibration candidate, not a physical truth: the formal gate
+    # stays closed until method-independent calibration.
     clearance_buffer = float(sampling_policy["clearance_buffer_m"])
     range_fraction = float(sampling_policy["nominal_standoff_range_fraction"])
     spacing_fraction = float(sampling_policy["footprint_spacing_fraction"])
@@ -716,10 +712,9 @@ def _transit_graph(
     for region in regions:
         lower = _vector(region["bounds"]["minimum"], 3, "region.bounds.minimum")
         upper = _vector(region["bounds"]["maximum"], 3, "region.bounds.maximum")
-        # Region bounds can touch the city boundary even when every admitted
-        # inspection cell has a valid standoff.  Keep the public transit
-        # waypoint inside the same body-plus-buffer envelope used by cell
-        # admission instead of emitting an unreachable route node.
+        # Clamp the transit waypoint into the same body-plus-buffer envelope
+        # used by cell admission: region bounds may touch the city boundary
+        # even when every admitted cell has a valid standoff.
         center_x = min(max((lower[0] + upper[0]) / 2.0, x_min), x_max)
         center_y = min(max((lower[1] + upper[1]) / 2.0, y_min), y_max)
         nodes.append(
@@ -750,10 +745,9 @@ def _transit_graph(
         key=lambda item: (item[0], item[1]),
     )
 
-    # A nearest-neighbour graph is not guaranteed to be connected.  Build a
-    # deterministic minimum spanning backbone first, then retain local edges
-    # for useful route alternatives.  Nodes at the same projection connect to
-    # a common non-zero-distance neighbour instead of introducing zero edges.
+    # Nearest-neighbour edges alone may not connect the graph: build a
+    # deterministic spanning backbone, then add local edges for route
+    # alternatives (same-projection nodes never share a zero-length edge).
     parent = {str(node["node_id"]): str(node["node_id"]) for node in nodes}
 
     def find(node_id: str) -> str:
@@ -787,9 +781,8 @@ def _transit_graph(
             ),
             key=lambda item: (item[0], item[1]),
         )
-        # Facades and roofs of one component can share a sky projection.  A
-        # zero-length edge conveys no transfer cost and would violate the
-        # public graph invariant, so retain only distinct public waypoints.
+        # Skip zero-length edges: facades and roofs of one component can share
+        # a sky projection, and a zero edge would violate the graph invariant.
         for _distance_m, other_id in [item for item in candidates if item[0] > 1.0e-9][:3]:
             edge_pairs.add(tuple(sorted((str(node["node_id"]), other_id))))
     edges = [
@@ -837,10 +830,9 @@ def compile_inspection_atlas(
     for building in sorted(city["buildings"], key=lambda item: str(item["id"])):
         components = sorted(building["components"], key=lambda item: str(item["id"]))
         for component in components:
-            # Architectural detail is intentionally excluded because it is not
-            # a public inspection surface in v1.  Do not consult the legacy
-            # target-layer flag here: target eligibility must not decide what a
-            # public method is asked to inspect.
+            # Architectural detail is not a public inspection surface in v1.
+            # Membership must not consult the legacy target-layer flag:
+            # target eligibility never decides what a method inspects.
             if component.get("structural_role") is not None:
                 continue
             roof = _roof_region(component, inspection_geometry_hash, ordinal, parameters)
@@ -860,10 +852,9 @@ def compile_inspection_atlas(
             if region is not None:
                 regions.append(region)
     for obstacle in sorted(city["obstacles"], key=lambda item: str(item["id"])):
-        # Obstacles are publicly declared physical debris/barriers.  As above,
-        # never use the legacy target-layer support_domain flag to decide atlas
-        # membership.  The private target process may later select none, one,
-        # or many of these public regions.
+        # Obstacles are public debris/barriers; membership never uses the
+        # legacy target-layer support_domain flag.  The private target process
+        # may later select none, one, or many of these regions.
         region = _rubble_region(obstacle, inspection_geometry_hash, ordinal, parameters)
         ordinal += 1
         if region is not None:
@@ -1044,8 +1035,7 @@ def compile_public_mission_sector(
     period_s = _finite_number(execution_contract["control_period_s"], "control_period_s")
     dwell_s = _finite_number(observe["continuous_dwell_s"], "observe.continuous_dwell_s")
     dwell_charge_s = (math.ceil(dwell_s / period_s) + 1) * period_s
-    # These conservative reference speeds match the transparent public
-    # inspector and stay below the task's vehicle caps.
+    # Reference speeds of the transparent public inspector, below the vehicle caps.
     horizontal_speed = min(1.5, _finite_number(vehicle["horizontal_speed_mps"], "horizontal speed"))
     vertical_speed = min(1.0, _finite_number(vehicle["vertical_speed_mps"], "vertical speed"))
     if min(duration_s, period_s, dwell_s, horizontal_speed, vertical_speed) <= 0.0:
@@ -1082,9 +1072,8 @@ def compile_public_mission_sector(
         upper = _vec3(region["bounds"]["maximum"], "region maximum")
         return tuple((low + high) / 2.0 for low, high in zip(lower, upper, strict=True))  # type: ignore[return-value]
 
-    # Seed the public task with structural and altitude diversity.  This is a
-    # task-domain prior, not a target-process realization: the same selection
-    # is produced after arbitrary target metadata changes.
+    # Seed the public task with structural and altitude diversity; this is a
+    # task-domain prior, invariant to target metadata.
     selected_regions: list[dict[str, Any]] = []
     available = list(regions)
     altitude_bands = sorted({str(region["altitude_band"]) for region in available})
@@ -1132,12 +1121,10 @@ def compile_public_mission_sector(
     assigned: dict[str, list[dict[str, Any]]] = {drone_id: [] for drone_id in start_positions}
     selected_cell_ids: set[str] = set()
     selected_region_ids: set[str] = set()
-    # Hidden-target search is a partial-coverage task, not an instruction to
-    # exhaust every public obligation.  The capacity certificate is nevertheless
-    # a hard per-vehicle execution bound: route motion, discrete dwell, return
-    # motion, and the declared reserve must fit inside the episode duration.
-    # Earlier development used 1.35x here, which admitted 405-second lower
-    # bounds into a 300-second episode; that candidate is retired.
+    # Hidden-target search is partial coverage, but the capacity certificate is
+    # still a hard per-vehicle bound: motion, dwell, return, and reserve must fit
+    # the episode duration.  A retired 1.35x candidate admitted 405-second lower
+    # bounds into a 300-second episode.
     capacity_fraction = 1.0
     capacity_limit_s = duration_s * capacity_fraction
     maximum_cells_per_region = 96
@@ -1309,9 +1296,8 @@ def compile_public_mission_sector(
         "frozen_before_sampling": True,
         "selected_region_ids": sorted(selected_region_ids),
         "selected_cell_ids": sorted(selected_cell_ids),
-        # The assignment is public workload metadata, not target metadata.  It
-        # makes the capacity certificate independently recomputable instead of
-        # trusting a caller-supplied per-drone time claim.
+        # Public workload metadata, not target metadata: it lets the capacity
+        # certificate be recomputed without trusting a per-drone time claim.
         "cell_assignment_by_drone": {
             drone_id: [str(cell["cell_id"]) for cell in assigned[drone_id]]
             for drone_id in sorted(assigned)

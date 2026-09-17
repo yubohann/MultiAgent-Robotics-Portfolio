@@ -29,12 +29,8 @@ DEFAULT_IMAGE = "aerocity-external-fuel:662dd23c7b52"
 def _docker_bind_path(path: Path) -> str:
     """Map a resolved Windows path through WSL's standard fixed-drive mount.
 
-    ``wslpath`` can print a localized diagnostic before its result on hosts
-    with a degraded WSL NAT service.  That diagnostic is outside the tool's
-    control and previously made a valid Docker invocation fail during strict
-    Unicode decoding.  The benchmark only supports the standard `/mnt/<drive>`
-    mapping for this local smoke, so derive that path without parsing WSL
-    process output.
+    ``wslpath`` can print a localized diagnostic before its result, which made
+    Docker fail during strict decoding; derive ``/mnt/<drive>`` directly instead.
     """
 
     resolved = path.resolve()

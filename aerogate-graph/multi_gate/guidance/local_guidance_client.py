@@ -12,7 +12,7 @@ from urllib import error, request
 
 
 class LocalGuidanceClientError(RuntimeError):
-    """Raised when the local guidance service cannot satisfy one request."""
+    """Raised when the local guidance service rejects one request."""
 
 
 @dataclass(frozen=True)

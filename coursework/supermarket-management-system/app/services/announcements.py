@@ -17,7 +17,7 @@ def _format_announcement(announcement, is_read):
 
 
 def get_announcements_for_user(user_id, role, limit=10):
-    """获取用户可见公告列表。"""
+    """Return announcements visible to the current user."""
     limit = max(1, min(int(limit or 10), 50))
 
     announcements = (
@@ -45,7 +45,7 @@ def get_announcements_for_user(user_id, role, limit=10):
 
 
 def get_unread_announcement_count(user_id, role):
-    """获取用户未读公告数。"""
+    """Return the unread announcement count for the current user."""
     count = (
         db.session.query(db.func.count(Announcement.announcement_id))
         .outerjoin(
@@ -64,7 +64,7 @@ def get_unread_announcement_count(user_id, role):
 
 
 def mark_announcement_read(user_id, role, announcement_id):
-    """标记单条公告已读。"""
+    """Mark one announcement as read."""
     announcement = Announcement.query.filter_by(announcement_id=announcement_id, is_published=1).first()
     if not announcement:
         return False, '公告不存在'
@@ -86,7 +86,7 @@ def mark_announcement_read(user_id, role, announcement_id):
 
 
 def mark_all_announcements_read(user_id, role):
-    """将当前用户可见公告全部标记为已读。"""
+    """Mark every visible announcement as read."""
     visible_rows = (
         db.session.query(Announcement.announcement_id)
         .filter(Announcement.is_published == 1)
@@ -125,7 +125,7 @@ def mark_all_announcements_read(user_id, role):
 
 
 def get_admin_announcements(limit=100):
-    """管理员查看公告列表。"""
+    """Return the announcement list for administrators."""
     return (
         Announcement.query
         .order_by(Announcement.created_at.desc())
@@ -135,7 +135,7 @@ def get_admin_announcements(limit=100):
 
 
 def create_announcement(title, content, created_by, level='normal', target_role='all', is_published=1):
-    """创建公告。"""
+    """Create an announcement."""
     title = (title or '').strip()
     content = (content or '').strip()
     level = (level or 'normal').strip().lower()
@@ -177,7 +177,7 @@ def create_announcement(title, content, created_by, level='normal', target_role=
 
 
 def set_announcement_publish_status(announcement_id, is_published):
-    """设置公告发布状态。"""
+    """Set the publish status of an announcement."""
     announcement = db.session.get(Announcement, announcement_id)
     if not announcement:
         return False, '公告不存在'

@@ -1,10 +1,4 @@
-"""Public, redacted accounting for every collection attempt.
-
-The ledger is an append-only JSONL control-plane artifact.  It contains
-counts and non-sensitive failure categories, never evaluator truth or local
-source paths.  It is intentionally independent from the formal dataset index:
-failed attempts remain countable without becoming training episodes.
-"""
+"""Public, redacted accounting for every collection attempt."""
 
 from __future__ import annotations
 

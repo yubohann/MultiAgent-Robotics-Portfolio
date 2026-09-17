@@ -247,7 +247,7 @@ class GraphMASACAgent:
         enabled: bool,
         failure_replay_ratio: float,
     ) -> None:
-        """Apply failure-aware replay settings without changing the dataclass shape."""
+        """Apply failure-aware replay settings while keeping the dataclass shape."""
 
         self._failure_replay_enabled = bool(enabled)
         self._failure_replay_ratio = float(np.clip(failure_replay_ratio, 0.0, 1.0))

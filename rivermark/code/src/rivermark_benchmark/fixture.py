@@ -1,9 +1,4 @@
-"""Generate a tiny, explicit CPU-only pilot fixture.
-
-The fixture is a derived loader smoke sample.  It is intentionally generated
-from the existing kinematic pilot path, never enters ``rivermark/``, and cannot
-be described as native Isaac data or a formal benchmark episode.
-"""
+"""Generate a tiny, explicit CPU-only pilot fixture."""
 
 from __future__ import annotations
 

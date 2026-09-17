@@ -348,10 +348,8 @@ class ExternalL1AdapterManifest:
             raise ValueError("external L1 upstream Git HEAD differs from the declared revision")
         unexpected_worktree_entries = []
         for entry in worktree_state.splitlines():
-            # Python writes bytecode next to imported upstream modules.  Those
-            # cache files are not executable source and are the only untracked
-            # entries tolerated; tracked modifications and every other
-            # untracked file remain a hard failure.
+            # Python writes bytecode next to imported upstream modules; only
+            # __pycache__/*.pyc is tolerated, every other entry is a failure.
             path = entry[3:].replace("\\", "/") if entry.startswith("?? ") else ""
             bytecode_cache = entry.startswith("?? ") and "/__pycache__/" in f"/{path}"
             if not (bytecode_cache and path.endswith(".pyc")):
@@ -990,9 +988,8 @@ class ExternalProcessPlannerBridge:
             if self._process.poll() is not None:
                 return
             if os.name == "nt":
-                # An external ROS/planner launcher can retain children after
-                # its Python parent exits.  The PID was created by this bridge,
-                # so a tree kill remains scoped to the owned adapter attempt.
+                # A launcher can retain children after its Python parent exits;
+                # this bridge owns the PID, so the tree kill stays scoped.
                 try:
                     subprocess.run(
                         ["taskkill", "/PID", str(self._process.pid), "/T", "/F"],

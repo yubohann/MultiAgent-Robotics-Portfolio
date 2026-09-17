@@ -1,10 +1,4 @@
-"""Select evaluator-only sparse-range receiver positions from admitted P03 geometry.
-
-This preparation step deliberately has no camera dependency.  It rebuilds the
-frozen collision-derived ESDF only to select spread-out calibration positions;
-the positions and the ESDF remain evaluator-side.  The eventual method receives
-only the real range outcomes measured by ``run_hm3d_public_observation_admission``.
-"""
+"""Select evaluator-only sparse-range receiver positions from admitted P03 geometry."""
 
 # ruff: noqa: E402
 
@@ -125,9 +119,8 @@ def main() -> int:
         raise ValueError("flight-space collision USD differs from calibration input")
     if not isinstance(flight.get("flight_space"), dict):
         raise ValueError("flight-space audit lacks ESDF payload")
-    # P03 persists this hash with the flight-space audit's canonicalizer.  Use
-    # that exact implementation rather than treating a serialization change as
-    # a geometry change.
+    # Reuse the flight-space audit canonicalizer; a serialization change is not a
+    # geometry change.
     expected_flight_hash = _flight_space_sha256(flight["flight_space"])
     if flight.get("flight_space_manifest_hash") != expected_flight_hash:
         raise ValueError("flight-space audit hash is invalid")

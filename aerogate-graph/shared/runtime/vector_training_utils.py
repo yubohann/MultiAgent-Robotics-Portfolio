@@ -87,7 +87,7 @@ def should_checkpoint_now(
     transitions_collected: int,
     next_checkpoint_transition: int | None,
 ) -> bool:
-    """Return whether the current collector pass crossed a checkpoint boundary."""
+    """Return whether the current collector pass crossed a checkpoint interval."""
 
     return bool(next_checkpoint_transition is not None and transitions_collected >= next_checkpoint_transition)
 

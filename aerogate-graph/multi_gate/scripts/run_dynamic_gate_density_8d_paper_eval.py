@@ -1,9 +1,5 @@
-"""Paper E2D dynamic gate-density evaluation for the multi_gate 8-drone line.
-
-This script evaluates a fixed checkpoint on the paper gate-count axis
-0,6,12,...,60.  It reuses the same curriculum stage builder used for training
-so evaluation sees the same dynamic gate layout, live centers, velocity
-observation, action shield, and collision logic.
+"""Paper E2D dynamic gate-density scoring for the multi_gate 8-drone line on the paper gate-count axis
+0,6,12,...,60.
 """
 
 from __future__ import annotations

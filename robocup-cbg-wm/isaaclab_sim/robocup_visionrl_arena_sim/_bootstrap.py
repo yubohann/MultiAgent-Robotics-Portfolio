@@ -1,14 +1,6 @@
 from __future__ import annotations
 
-"""IsaacLab scene for the RoboCup VisionRL portfolio project.
-
-Run from the local IsaacLab checkout:
-
-    isaaclab.bat -p <this_file.py> --enable_cameras
-
-The scene is metric and keeps the robot/sensor dimensions aligned with the
-ROS2 description in rcvrl_description/urdf/robocup_visionrl_robot.urdf.xacro.
-"""
+"""IsaacLab scene for the RoboCup VisionRL portfolio project."""
 
 import argparse
 import math
@@ -53,7 +45,7 @@ parser.add_argument(
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
-# Live camera streams require Replicator. Keep them opt-in because this PC's
+# Live camera streams require Replicator and stay opt-in because the local
 # Isaac Sim 5.1 build can hang during headless shutdown after semantic camera use.
 if (args_cli.enable_sensor_streams or args_cli.record_video) and not args_cli.no_sensor_streams:
     args_cli.enable_cameras = True

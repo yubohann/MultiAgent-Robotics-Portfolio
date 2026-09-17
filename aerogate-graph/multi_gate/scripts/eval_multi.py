@@ -1,4 +1,4 @@
-"""Evaluation entry for the multi-agent Graph-FlashSAC experiment."""
+"""Scoring entry for the multi-agent Graph-FlashSAC experiment."""
 
 from __future__ import annotations
 

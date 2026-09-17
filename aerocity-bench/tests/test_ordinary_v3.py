@@ -1787,10 +1787,8 @@ def test_g2_i_atlas_inspector_consumes_only_public_cells_and_fits_l0_bracket(
     ]
     assert result["budget_ledger"]["out_of_bounds_actions"] == 0
     assert result["coverage_denominators"]["inspection_atlas_cells"] > 0
-    # One sensor-valid OBSERVE may cover multiple neighboring surface cells.
-    # Credit is therefore bounded by the public denominator, not by the number
-    # of drones or OBSERVE actions; the risk-gate tests separately falsify
-    # wrong-yaw, wrong-pitch, blocked-LOS, and insufficient-dwell credit.
+    # One OBSERVE may cover several neighboring cells, so credit is bounded by
+    # the public denominator, not by drone or action counts.
     assert (
         0
         < result["inspection_cell_count_trace"][-1][1]
@@ -1870,9 +1868,8 @@ def test_public_sweep_route_has_an_explicit_budget_audit(
         item["total_required_lower_bound_s"] <= audit["episode_duration_s"]
         for item in audit["by_drone"].values()
     )
-    # This is intentionally a sparse coverage diagnostic, not an exhaustive
-    # facade sweep.  One G1-screened scan pose per drone leaves execution
-    # margin for the candidate CF2X controller inside the frozen 300 s task.
+    # Sparse diagnostic: one G1-screened scan pose per drone leaves execution
+    # margin for the candidate CF2X controller in the frozen 300 s task.
     assert all(item["observe_pose_count"] == 1 for item in audit["by_drone"].values())
     assert all(
         min(policy.observe_indices[drone_id]) > 0
@@ -1912,9 +1909,8 @@ def test_public_sweep_route_has_an_explicit_budget_audit(
 
 
 def test_route_budget_motion_lower_bound_allows_concurrent_horizontal_and_vertical_motion() -> None:
-    # The audit rejects only routes that cannot fit even with simultaneous
-    # horizontal and vertical references. Summing these terms would overstate
-    # the lower bound and unfairly reject an otherwise compatible method.
+    # The audit counts horizontal and vertical motion concurrently; summing them
+    # would overstate the lower bound and reject a compatible method.
     assert _anisotropic_motion_lower_bound_s(
         ((0.0, 0.0, 0.0), (6.0, 8.0, 10.0)),
         horizontal_speed_mps=1.0,

@@ -4,7 +4,7 @@ from app import db
 
 
 class Product(db.Model):
-    """商品表"""
+    """Product table."""
     __tablename__ = 'products'
 
     product_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

@@ -53,7 +53,7 @@ class GateDensityLayoutProfile:
 
 
 def _layout_profile(layout_version: str) -> GateDensityLayoutProfile:
-    """Resolve geometry/rule knobs for each layout without mixing tables."""
+    """Resolve geometry and rule knobs for each layout from its own table."""
 
     version = str(layout_version or GATE_LAYOUT_VERSION)
     base = GateDensityLayoutProfile(
@@ -306,7 +306,7 @@ def _enforce_gate_non_overlap(
     min_clearance_m: float = GATE_GATE_CLEARANCE_MARGIN_M,
     iterations: int = DYNAMIC_GATE_NON_OVERLAP_ITERATIONS,
 ) -> tuple[tuple[float, float], ...]:
-    """Project moving gate centers so their post collision disks do not overlap."""
+    """Project moving gate centers apart so post collision disks stay disjoint."""
 
     if len(gate_centers_xy) <= 1:
         return gate_centers_xy
@@ -479,8 +479,8 @@ def _generate_gate_layout(
             y = _clip(lane_bias + center_wave + local_bias + rng.uniform(-0.07, 0.07), (-1.65, 1.65))
             centers.append((float(x), float(y)))
             if random_yaw:
-                # Keep the yaw continuous but biased toward cross-corridor
-                # Gates, so moving posts actively open and close passages.
+                # Keep the yaw continuous and biased toward cross-corridor gates so moving
+                # posts actively open and close passages.
                 base_yaw = 0.62 * math.pi if idx % 2 == 0 else -0.62 * math.pi
                 yaw = base_yaw + 0.24 * math.sin(1.8 * idx + 0.4 * seed) + rng.uniform(-0.20, 0.20)
                 yaw = math.atan2(math.sin(yaw), math.cos(yaw))
@@ -621,8 +621,8 @@ def _moving_gate_centers(
             "irregular_centerline_v6_large_motion_dynamic",
             "irregular_centerline_v7_large_arena_dynamic",
         }:
-            # Mix three motion families: lateral sweep, diagonal drift, and
-            # anti-phase motion that opens and closes passages for replanning.
+            # Mix three motion families, lateral sweep, diagonal drift and anti-phase motion
+            # that opens and closes passages for replanning.
             mode = idx % 3
             if mode == 0:
                 dy = float(amplitude_m) * math.sin(omega_t + phase)

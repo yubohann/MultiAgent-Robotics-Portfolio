@@ -1,11 +1,4 @@
-"""Bounded, Isaac-free provenance hints for local OpenUSD assets.
-
-The scanner is deliberately evidence-only.  It fingerprints a USD file and
-looks for plain-text external-reference markers such as NVIDIA Nucleus paths
-inside ASCII or binary USDC metadata.  A clean scan never proves a copyright
-or redistribution grant; a detected reference is a reproducible reason to
-keep the asset user-installed and outside a public release.
-"""
+"""Bounded, Isaac-free provenance hints for local OpenUSD assets."""
 
 from __future__ import annotations
 

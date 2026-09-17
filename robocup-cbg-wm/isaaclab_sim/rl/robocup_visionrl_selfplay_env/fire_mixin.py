@@ -118,9 +118,8 @@ class FireMixin:
                 for offset in edge_offsets:
                     candidates.append(np.array([wall_limit, float(target_xy[1] + offset)], dtype=np.float32))
                     candidates.append(np.array([float(target_xy[0] + offset), -wall_limit], dtype=np.float32))
-        # Add diagonal center-facing options for late base attacks after more
-        # armor has been removed; the validation step still rejects them during
-        # one- or two-target rushes.
+        # Diagonal center-facing options open up after two removed armor plates;
+        # validation still rejects them during one- and two-target rushes.
         if hits >= 2:
             angle_offsets = {
                 2: (-0.96, 0.96, -0.70, 0.70),
@@ -296,9 +295,8 @@ class FireMixin:
             if min_range <= shot_distance <= max_range:
                 hit_radius = float(geometry["hit_radius"])
                 lateral_error = float(geometry["lateral_error"])
-                # At a legal base fire pose a centimeter of pose error can leave
-                # the laser just outside the small base hit radius. Keep a slow
-                # deterministic search alive instead of freezing at a single yaw.
+                # A centimeter of pose error can leave a base shot outside the
+                # small hit radius, so keep a slow deterministic yaw search.
                 seek_amp = min(BASE_AIM_SEEK_SCAN_RAD, max(BASE_AIM_MICRO_SCAN_RAD, 0.30 * lateral_error / shot_distance))
                 if lateral_error > 0.50 * hit_radius and seek_amp > 0.002:
                     phase_offset = math.pi * 0.25 if team == "yellow" else math.pi * 0.75
@@ -417,8 +415,8 @@ class FireMixin:
             return 0.0
         distance_quality = (max_range - distance) / max(1e-6, max_range - min_range)
         lateral_quality = 1.0 - lateral_error / max(max_lateral, 1e-6)
-        # Close, centered shots are reliable; far-edge shots are intentionally
-        # uncertain so the policy learns the time-vs-accuracy tradeoff.
+        # Close centered shots are reliable and far-edge shots are uncertain,
+        # so the policy learns the time-versus-accuracy tradeoff.
         accuracy = 0.18 + 0.64 * distance_quality + 0.18 * lateral_quality
         if base_target:
             accuracy -= 0.10

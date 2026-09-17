@@ -80,8 +80,8 @@ def angled_wall_target_yaw(wall_normal_yaw: float, sign: float) -> float:
 
 
 def inward_45deg_target_yaws() -> dict[str, float]:
-    # yaw is the target face normal. The target plane itself is yaw + 90 deg,
-    # so each corner panel cuts the two wall planes at 45 deg.
+    # yaw is the target face normal, so the target plane at yaw + 90 deg cuts
+    # both wall planes at 45 deg.
     return {
         "T01_NorthMiddle": -math.pi / 4.0,
         "T02_NorthEast": -3.0 * math.pi / 4.0,
@@ -202,10 +202,8 @@ def base_hit_success_cap(normal_hits: int) -> float:
 def base_removed_side_lane_quality(normal_hits: int, base_xy: np.ndarray, xy: np.ndarray) -> float:
     """Score whether a base shot is taken from the side whose armor was removed.
 
-    The four armor plates open the base progressively. A one-target early rush
-    may only shoot through the first removed side; after two normal hits the
-    second side is also allowed. This prevents far or arbitrary line-of-sight
-    shots from counting as a legal base attack.
+    The four plates open the base progressively, so a one-hit rush may only
+    shoot through the first removed side and two hits open the second side.
     """
 
     hits = max(0, min(4, int(normal_hits)))

@@ -1,9 +1,4 @@
-"""Durable local queue backed by SQLite.
-
-工业短视频平台通常会使用 Kafka、Pulsar 或 RabbitMQ 把“上传服务”和“审核服务”解耦。
-为了让学生电脑不用额外启动消息队列，本实验用 SQLite `jobs` 表实现同样的核心概念：
-任务入队、worker 领取、失败重试、完成归档和健康统计。
-"""
+"""Durable local queue backed by SQLite."""
 
 import json
 import uuid
@@ -29,11 +24,7 @@ def enqueue_job(
     job_id: str | None = None,
     max_attempts: int = 1,
 ) -> dict:
-    """Persist a local job; this mirrors a Kafka task event in the teaching runtime.
-
-    `kind` 表示任务类型，`payload` 是 worker 处理所需的数据。
-    这里使用可选 `job_id`，是为了让同一个视频的完成任务有稳定 id，便于观察和排错。
-    """
+    """Persist a local job; this mirrors a Kafka task event in the teaching runtime."""
     init_db()
     job_id = job_id or uuid.uuid4().hex
     timestamp = now_iso()
@@ -53,11 +44,7 @@ def enqueue_job(
 
 
 def claim_next_job(worker_id: str) -> dict | None:
-    """Claim the oldest queued job for one local worker.
-
-    领取任务分两步完成：先找最早的 queued 记录，再带状态条件更新为 running。
-    `WHERE id = ? AND status = 'queued'` 能避免未来多 worker 时重复领取同一任务。
-    """
+    """Claim the oldest queued job for one local worker."""
     init_db()
     with connect() as connection:
         row = connection.execute(
@@ -103,11 +90,7 @@ def complete_job(job_id: str) -> None:
 
 
 def fail_job(job_id: str, error: str) -> None:
-    """Record a worker failure and optionally requeue the job.
-
-    本实验默认 max_attempts=1，失败会进入 failed；如果教师扩展重试实验，
-    可以把 max_attempts 调大，此函数就会在未超过次数时重新排队。
-    """
+    """Record a worker failure and optionally requeue the job."""
     init_db()
     with connect() as connection:
         row = connection.execute(
@@ -128,11 +111,7 @@ def fail_job(job_id: str, error: str) -> None:
 
 
 def requeue_interrupted_jobs() -> int:
-    """Move jobs left running by a previous process back to queued.
-
-    如果服务在处理视频时被关闭，任务可能停留在 running。
-    服务下次启动时把它们恢复为 queued，模拟工业消费者的“崩溃恢复”。
-    """
+    """Move jobs left running by a previous process back to queued."""
     init_db()
     with connect() as connection:
         updated = connection.execute(

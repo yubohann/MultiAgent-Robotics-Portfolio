@@ -1,9 +1,4 @@
-"""Create a new immutable P01--P05 manifest for the current protocol.
-
-This tool never edits historical runtime evidence.  It can only bind existing
-phase envelopes to the hash of the currently checked-in preflight protocol.
-The formal preflight audit remains the authority that validates each payload.
-"""
+"""Create a new immutable P01 through P05 manifest for the current protocol."""
 
 from __future__ import annotations
 

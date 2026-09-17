@@ -1,10 +1,4 @@
-"""Versioned, public Search3D metrics and bootstrap summaries.
-
-This module scores evaluator-produced confirmation traces.  It never accepts
-target coordinates and therefore cannot replace the private truth service for
-blind evaluation.  It provides the public metric definition and statistical
-aggregation needed for train/validation reports.
-"""
+"""Versioned, public Search3D metrics and bootstrap summaries."""
 
 from __future__ import annotations
 

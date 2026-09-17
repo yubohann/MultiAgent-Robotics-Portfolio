@@ -26,14 +26,7 @@ def test_supercover_keeps_the_measured_hit_voxel_occupied() -> None:
 
 
 def test_confirmed_free_voxel_is_never_downgraded_by_a_later_ray() -> None:
-    """Explored free volume must be monotone.
-
-    A sparse ray can graze an obstacle edge and terminate inside a voxel
-    that an earlier pass-through ray already proved free.  The continuous
-    PhysX route guard physically admitted that voxel, so downgrading it to
-    occupied would shrink the explored set and break the monotone metric
-    contract.  Confirmed free is sticky.
-    """
+    """Explored free volume must be monotone; confirmed free is sticky."""
 
     belief = SparseVoxelBelief("scene0", "uav0", 0.25)
     key = belief.world_to_voxel((1.125, 1.125, 1.125))

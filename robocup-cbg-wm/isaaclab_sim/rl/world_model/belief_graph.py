@@ -175,12 +175,12 @@ def _visible_from_any_robot(
 
 
 class BeliefTracker:
-    """Maintains sensor-facing object beliefs without exposing truth when occluded.
+    """Maintain object beliefs from sensor measurements and propagate them through occlusion.
 
-    The simulator supplies measurements through a small adapter. A ROS adapter can
-    populate the same token contract from detections, timestamps and covariances.
-    Privileged simulator state is only used to form a measurement when the object is
-    visible; otherwise the tracker propagates its previous belief and uncertainty.
+    The simulator feeds measurements through a small adapter that a ROS
+    detection source can replace. Simulator state only forms a measurement
+    while the object is visible, and the tracker ages the previous belief
+    otherwise.
     """
 
     def __init__(
@@ -382,8 +382,8 @@ class BeliefTracker:
                 self.tokens[index, TOKEN_PRESENT] = measured.present[index]
             elif not previously_present and measured.present[index] > 0.5:
                 if node_type in (NodeType.TARGET, NodeType.ARMOR_BLOCKER):
-                    # Field targets and armor geometry are map priors. Their live
-                    # visibility and active state still come from measurements.
+                    # Field targets and armor geometry are map priors, while
+                    # live visibility and active state come from measurements.
                     self.tokens[index, :PHYSICAL_TOKEN_DIM] = measured.features[index]
                 self.tokens[index, TOKEN_PRESENT] = 1.0
                 self.tokens[index, TOKEN_COVARIANCE] = 1.0
@@ -430,11 +430,11 @@ def _point_segment_distance(points: torch.Tensor, start: torch.Tensor, end: torc
 
 
 def build_typed_edges(tokens: torch.Tensor, node_types: torch.Tensor) -> torch.Tensor:
-    """Construct sparse, typed interaction edges from current beliefs.
+    """Build sparse typed interaction edges from current beliefs.
 
     Returns an adjacency tensor shaped ``[batch, edge_type, source, target]``.
-    The construction depends only on token contents and types, so it remains
-    equivariant to a joint permutation of tokens and type labels.
+    The result is equivariant to a joint permutation of tokens and type labels
+    because construction depends only on token contents and types.
     """
 
     if tokens.ndim == 2:

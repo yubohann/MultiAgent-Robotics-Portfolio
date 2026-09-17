@@ -1,10 +1,4 @@
-"""Build a closed-world pack specification without packing or admitting data.
-
-The output is an external, capture-bound control-plane artifact. It selects the
-exact eight public streams audited by ``policy_projection`` and binds an
-external observation ABI. It never copies capture payloads, writes a formal
-receipt, or changes the dataset index.
-"""
+"""Build a closed-world pack specification without packing or admitting data."""
 
 from __future__ import annotations
 

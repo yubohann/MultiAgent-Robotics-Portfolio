@@ -1,11 +1,4 @@
-"""Run one real, target-free, multi-round HM3D P07 exploration episode.
-
-This is the only P07 entry point that emits the target-free exploration worker
-schema accepted by ``hm3d_p07_matrix``.  It keeps the CF2X
-fleet alive across decisions, derives its public map solely from real sparse
-range outcomes, and uses the P03 ESDF only after execution to score the frozen
-free-flight-volume denominator.
-"""
+"""Run one real, target-free, multi-round HM3D P07 exploration episode."""
 
 # ruff: noqa: E402
 
@@ -158,88 +151,63 @@ class CandidateRouteGuardError(RuntimeError):
 
 VERTICAL_OPPORTUNITY_THRESHOLD_M = PUBLIC_VERTICAL_OPPORTUNITY_THRESHOLD_M
 MOBILITY_HEIGHT_BAND_M = 1.0
-# FUEL samples observation poses 1.5--2.5 m around a frontier instead of
-# commanding the vehicle centre to the free/unknown boundary itself.  These
-# are sensor standoff variants, not route-length targets.  Reverted to the
-# calibrated 1.5-2.5 m band: wider standoff does not create longer routes
-# (poses are limited by public FREE support, which is 0.2-0.5 m at
-# constrained starts and open elsewhere), and a rolling decision window
-# shortens the route budget in open scenes.  Empirical A/B (2026-08-08):
-# 1.5-2.5 m no-window beat 4-6 m + 6 s rolling on 00459 (52% vs 40%
-# coverage) and 00626 (13% vs 9%).
+# FUEL-style sensor standoff around a frontier, not a route-length target.
+# Empirical A/B 2026-08-08: the 1.5-2.5 m band beat 4-6 m with a 6 s rolling
+# window, 52% vs 40% coverage on 00459 and 13% vs 9% on 00626, because poses are
+# bounded by public FREE support and a rolling window shortens the route budget.
 FRONTIER_OBSERVATION_STANDOFF_M = 1.5
 FRONTIER_OBSERVATION_MAX_STANDOFF_M = 2.5
 FRONTIER_OBSERVATION_STANDOFF_VARIANTS_M = (1.5, 2.0, 2.5)
-# A received-free centre voxel alone does not establish enough local evidence
-# to nominate a CF2X observation point.  The radius is only the query window;
-# sparse range data need not classify every voxel in that window.  The exact
-# collision guard remains the authority for continuous physical clearance.
+# The support radius is a query window, not proof of local evidence; sparse range
+# need not classify every voxel in it. The exact collision guard remains the
+# authority for continuous physical clearance.
 PUBLIC_ROUTE_SUPPORT_RADIUS_M = cf2x.REQUIRED_TERMINAL_CLEARANCE_M
 PUBLIC_ROUTE_SUPPORT_MIN_FREE_VOXELS = 3
-# A count of three received-free cells can still be a one-dimensional grazing
-# ray.  Route-progress alternatives use the stronger, public-only condition
-# that free evidence spans both signs of at least two axes.  This is a ranking
-# and candidate-generation proxy, never a substitute for the shared PhysX
-# clearance guard.
+# Three received-free cells can be a one-dimensional grazing ray, so route-progress
+# rows require free evidence on both signs of at least two axes. A public-only
+# ranking proxy; the shared PhysX clearance guard stays the authority.
 PUBLIC_ROUTE_PROGRESS_MIN_BALANCED_AXES = 2
 PUBLIC_OBSERVATION_POINTS_PER_FRONTIER_VIEWPOINT = 6
 PUBLIC_ROUTE_PROGRESS_VARIANTS_PER_PATH = 4
-# Route-level access alternatives commit to a farther received-free point in
-# the same connected component instead of only sampling a 2.5 m observation
-# standoff. This is a public-map action proposal; the shared static guard
-# remains the physical admission authority.
+# Route-level access commits to a farther received-free point in the same connected
+# component, beyond a 2.5 m observation standoff; the shared static guard still admits it.
 PUBLIC_REGION_ACCESS_MIN_ADVANCE_M = 3.0
 PUBLIC_REGION_ACCESS_MAX_PER_CLUSTER = 1
-# Keep several route-prefix alternatives for each originating vehicle.  The
-# count is intentionally smaller than the total public-frontier budget: this
-# protects a long, spatially distinct route when the most efficient prefix is
-# later rejected by the common static guard, while leaving room for frontier
-# observation poses shared by the whole team.
+# Route-prefix rows kept per originating vehicle, fewer than the full frontier
+# budget so a long distinct route survives a common static-guard rejection while
+# team-wide observation poses keep their slots.
 PUBLIC_ROUTE_PROGRESS_RETAINED_PER_SOURCE = 3
-# A route prefix at least this long is an access-route action, not a sensing
-# hold. It may carry full cluster-gain ranking while still being admitted by
-# the shared static guard and producing real outcomes.
+# A prefix this long is an access-route action, not a sensing hold; it may carry
+# full cluster-gain ranking and still be admitted by the shared static guard.
 PUBLIC_ROUTE_PROGRESS_FULL_GAIN_MIN_M = 2.0
 PUBLIC_FRONTIER_CLUSTER_SEARCH_BUDGET = 16
-# Unexplored-potential gain for region-access / route-progress candidates.
-# Radius and weight are frozen protocol constants; the sparse sampling count
-# is deterministic (fixed seed) so the gain is reproducible.  Re-enabled only
-# together with wait-period sensing (completed vehicles keep sampling during
-# the synchronous hold); without it the gain is scene-dependent.
+# Unexplored-potential gain for region-access and route-progress rows. Radius and
+# weight are frozen constants; the deterministic sampling count needs wait-period
+# sensing to stay scene-independent.
 PUBLIC_POTENTIAL_GAIN_RADIUS_M = 8.0
 PUBLIC_POTENTIAL_GAIN_WEIGHT = 0.02
 PUBLIC_POTENTIAL_GAIN_SAMPLES = 128
 PUBLIC_FRONTIER_VIEWPOINTS_PER_CLUSTER = 2
 PUBLIC_FRONTIER_OBSERVATION_POINTS_PER_VIEWPOINT = 2
 PUBLIC_FRONTIER_PATH_SEARCH_BUDGET_PER_DECISION = 512
-# Region access routes are the long-horizon action authority. Reserve a fixed
-# slice of the path-search budget before observation standoff routes consume it,
-# so a dense near-frontier viewpoint set cannot silently erase every corridor
-# access proposal.
+# Reserved slice of the path-search budget for region access, so dense near-frontier
+# viewpoints cannot erase every corridor proposal.
 PUBLIC_REGION_ACCESS_PATH_SEARCH_RESERVE_PER_DECISION = 64
-# Route prefixes and the common candidate authority use the same two-voxel
-# movement threshold.  A route that cannot clear this distance is a sensing
-# hold, never an exploration action.
+# Same two-voxel movement threshold as the common candidate authority; a shorter
+# route is a sensing hold, not an exploration action.
 PUBLIC_ROUTE_PROGRESS_MIN_ADVANCE_M = MINIMUM_MEANINGFUL_EXPLORATION_PATH_M
-# Candidate admission is intentionally bounded, but the pre-guard viewpoint
-# set must leave enough spatial alternatives after the shared static guard
-# rejects wall-adjacent poses. The selector still receives at most eight legal
-# team candidates.
+# Pre-guard viewpoint bound per agent, leaving spatial alternatives after the shared
+# static guard rejects wall-adjacent poses; the selector sees at most eight legal rows.
 PUBLIC_FRONTIER_VIEWPOINTS_PER_AGENT = 8
-# A target that produced no new *public* free voxels is not immediately
-# retried from the same received-free neighbourhood.  The one-decision TTL is
-# deliberately short: it prevents a micro-motion/dwell loop without declaring
-# an online, partially observed frontier permanently exhausted.
+# One-decision cooldown for a target that produced no new public free voxels,
+# short by design so a micro-motion loop cannot permanently exhaust a frontier.
 PUBLIC_NO_GAIN_VIEWPOINT_COOLDOWN_DECISIONS = 1
 PUBLIC_NO_GAIN_VIEWPOINT_COOLDOWN_CHEBYSHEV_RADIUS_VOXELS = 1
-# A recovery route must be a previously completed exploration command.  It is
-# intentionally no shorter than a normal meaningful exploration edge, so the
-# matcher cannot replace a hold with settling noise.
+# Recovery routes must be previously completed exploration commands, no shorter
+# than a normal meaningful edge.
 OUTCOME_BACKTRACK_MIN_PATH_M = MINIMUM_MEANINGFUL_EXPLORATION_PATH_M
-# A failed public voxel-chain route may still have a physically safe long
-# alternative that the sparse belief cannot represent.  The exact clearance
-# grid planner is used only as a bounded evaluator-side rescue for public
-# exploration endpoints, never for ranking or method-specific path shaping.
+# Bounded evaluator-side rescue for a failed public voxel-chain route whose safe
+# long alternative the sparse belief cannot represent; never used for ranking.
 EXACT_CLEARANCE_GRID_RESCUE_MAX_ATTEMPTS_PER_PATH = 4
 EXACT_CLEARANCE_GRID_RESCUE_MAX_PATHS_PER_DECISION = 8
 EXACT_CLEARANCE_GRID_RESCUE_MIN_PATH_LENGTH_M = 2.0
@@ -524,10 +492,8 @@ def _terminal_clearance_pullback_guarded_path(
             break
     voxel_prefix_candidates: list[tuple[float, tuple[float, float, float]]] = []
     if voxel_keys is not None:
-        # The requested polyline is compressed and may skip public voxel
-        # centers that are the safest terminal poses.  Adding the original
-        # voxel chain lets the exact guard rescue a long route whose final
-        # requested waypoint is wall-adjacent without inventing a new route.
+        # Add the original voxel chain when the compressed polyline skips the safest
+        # terminal poses, so the exact guard can rescue a wall-adjacent final waypoint.
         for index in range(max(1, len(voxel_keys) - 1), 0, -1):
             point = belief.voxel_center(voxel_keys[index])
             route_prefix = _public_route_prefix_from_voxel_chain(
@@ -664,8 +630,8 @@ def _outcome_backtrack_frontier(
     if _path_length_m(path_m) + 1.0e-9 < OUTCOME_BACKTRACK_MIN_PATH_M:
         return None
     endpoint = path_m[-1]
-    # RouteGuard identifies recovery by the requested endpoint.  Do not create
-    # an ambiguous route if a normal viewpoint has exactly the same endpoint.
+    # RouteGuard identifies recovery by the requested endpoint, so avoid a duplicate
+    # endpoint that a normal viewpoint already occupies.
     if any(math.dist(endpoint, other) <= 1.0e-9 for other in occupied_endpoints_m):
         return None
     frontier = PublicFrontier(
@@ -1117,9 +1083,8 @@ def _decision_stationarity_supervision(
         meaningful_planned_exploration = role == "explore" and is_non_alias_exploration_path(
             fragment.path
         )
-        # The realised trajectory has no planned endpoint sequence here, so
-        # this only rejects a numerical no-motion outcome. It deliberately
-        # does not reintroduce a fixed 0.50 m eligibility threshold.
+        # The realised trajectory has no planned endpoint sequence, so this rejects a
+        # numerical no-motion outcome only.
         meaningful_realised_exploration = (
             role == "explore"
             and raw_agent.get("transit_completed") is True
@@ -1245,9 +1210,8 @@ def _vertical_opportunity_summary(
         if frontier.source_agent_id is None or frontier.source_agent_id not in starts:
             continue
         start = starts[frontier.source_agent_id]
-        # Deliberately use the candidate endpoint, never task_anchor_m. The
-        # latter is a frontier-cluster descriptor and may be far outside the
-        # currently reachable public FREE component.
+        # Use the candidate endpoint, never task_anchor_m; the latter is a frontier-
+        # cluster descriptor that can lie outside the reachable public FREE component.
         raw_frontier_deltas.append(frontier.position_m[2] - start[2])
 
     catalog_agents = candidate_route_catalog.get("agents")
@@ -1285,16 +1249,14 @@ def _vertical_opportunity_summary(
             public_free_path = route_status in {
                 "admitted",
                 "revalidated_public_access_plan",
-                # Terminal pullback and exact-clearance grid rescue are both
-                # derived from an already received-free public route and are
-                # then rechecked by the same static guard. They remain one
-                # stage here, not a relaxation of collision safety.
+                # Terminal pullback and grid rescue both derive from an already
+                # received-free route and are rechecked by the same static guard; one
+                # stage, no safety relaxation.
                 "terminal_clearance_pullback",
                 "exact_clearance_grid_route",
             }
-            # This is deliberately stricter than a bare static clearance verdict:
-            # the route must also be non-alias and fit in the current physical
-            # decision window before it is a usable individual exploration edge.
+            # Stricter than a bare static verdict: the edge must also be non-alias and
+            # fit the current physical decision window.
             static_guard_admitted = (
                 edge.get("individual_exploration_edge_admitted") is True
             )
@@ -1345,9 +1307,8 @@ def _vertical_opportunity_summary(
         if not isinstance(agent_id, str):
             raise RuntimeError("execution calibration agent omits its ID")
         selected_delta = selected_vertical_deltas_by_agent.get(agent_id)
-        # The executor may contain a recovery, backtrack, or hold transit.  It
-        # is physically meaningful, but it is not evidence that the selected
-        # exploration policy reached a vertical frontier.
+        # A recovery, backtrack or hold transit is physically meaningful but is not
+        # evidence that the selected policy reached a vertical frontier.
         if selected_delta is None:
             continue
         executed_selected_vertical_agents.add(agent_id)
@@ -1413,8 +1374,8 @@ def _vertical_opportunity_summary(
     static_guard_counts = stage_counts(stage_deltas["static_guard_admitted"])
     team_feasible_counts = stage_counts(stage_deltas["team_feasible"])
     selected_counts = stage_counts(stage_deltas["selected"])
-    # Keep directional extrema independent. A completed descending transit is
-    # evidence of downward access, not a negative "upward maximum".
+    # Keep directional extrema independent: a descending transit is downward-access
+    # evidence, not a negative upward maximum.
     raw_upward_deltas = [delta for delta in raw_frontier_deltas if delta > 0.0]
     raw_downward_deltas = [delta for delta in raw_frontier_deltas if delta < 0.0]
     realised_upward_deltas = [delta for delta in realised_deltas if delta > 0.0]
@@ -1618,10 +1579,9 @@ def _per_agent_candidate_edge_diagnostics(
         frontier = frontier_by_endpoint.get(endpoint)
         if frontier is not None:
             prior = records_by_agent[agent_id].get(frontier.frontier_id)
-            # A cached guard result is still an observed route opportunity.
-            # Prefer the original query when both forms are present so the
-            # diagnostic retains the first blocking-hit details without
-            # counting duplicate cache lookups as separate edges.
+            # Cached guard results are still observed route opportunities; prefer the
+            # original query so diagnostics keep first blocking-hit details without
+            # duplicate edges.
             if prior is None or (
                 bool(prior.get("cache_hit")) and not bool(record.get("cache_hit"))
             ):
@@ -1784,9 +1744,8 @@ def _per_agent_candidate_edge_diagnostics(
                     non_alias_guard_legal_distances
                 ),
                 "endpoint_alias_rejected_edge_count": len(endpoint_alias_rejected),
-                # This legacy 0.50 m statistic remains useful for diagnosing
-                # compact public maps, but it no longer determines ordinary
-                # observation-edge eligibility.
+                # Legacy 0.50 m diagnostic statistic for compact public maps; it no
+                # longer decides observation-edge eligibility.
                 "legacy_subhalfmetre_guard_legal_exploration_edge_count": len(
                     legacy_subhalfmetre_guard_legal
                 ),
@@ -1803,8 +1762,8 @@ def _per_agent_candidate_edge_diagnostics(
                 "terminal_pullback_failure_reason_counts": dict(
                     sorted(terminal_pullback_failure_reason_counts.items())
                 ),
-                # Retain the legacy names for old outcome readers.  New code
-                # must use the explicit guard/legal names above.
+                # Legacy names for old outcome readers; new code uses the explicit
+                # guard names above.
                 "nearest_legal_frontier_id": (
                     None if nearest_guard_legal is None else nearest_guard_legal[1]
                 ),
@@ -2706,9 +2665,8 @@ def _load_transit_timing_contract(
     execution_profile = payload.get("execution_profile")
     execution_profile_sha256 = payload.get("execution_profile_sha256")
     timing_model_payload = payload["time_model"]
-    # The active v4 contract must carry the long-route extrapolation fields in
-    # both the artifact summary and the serialized model.  This prevents a
-    # stale pre-reserve artifact from silently re-entering candidate admission.
+    # v4 artifacts must carry the long-route extrapolation fields in both the summary
+    # and the serialized model, so a stale pre-reserve artifact cannot re-enter admission.
     required_timing_fields = (
         "calibrated_max_segment_count",
         "uncovered_segment_reserve_s",
@@ -2787,15 +2745,11 @@ def _normalized_p0_eligibility_contract(
             "outcome_time_tolerance_s", normalized["receipt_time_tolerance_s"]
         )
         normalized.pop("receipt_time_tolerance_s", None)
-    # The eligibility certificate authorizes the frozen reset poses and the
-    # shared candidate pool.  The selector that will rank that pool is not
-    # part of the execution contract, so the evidence recorded under the
-    # transparent frontier_3d qualification may be reused by QD strategies.
+    # The eligibility certificate covers the frozen reset poses and the shared pool,
+    # not the ranking selector, so QD strategies may reuse the frontier_3d qualification.
     normalized.pop("strategy", None)
-    # ``random_key`` perturbs observation sampling and selector randomness,
-    # not the certified reset poses, collision clearance or relay graph.
-    # Multi-seed repetitions of the same frozen start therefore reuse one
-    # eligibility certificate instead of re-auditing every seed.
+    # random_key perturbs sampling and selector randomness, not certified reset poses,
+    # clearance or relay; multi-seed repetitions of one frozen start reuse one certificate.
     normalized.pop("random_key", None)
     return normalized
 
@@ -3774,9 +3728,8 @@ def _has_received_free_interior_support(
 class _PublicFreePathResult(NamedTuple):
     path_m: tuple[tuple[float, float, float], ...] | None
     status: str
-    # The exact public FREE voxel chain used by the bounded BFS.  Keeping this
-    # private evidence lets route-progress candidates reuse a verified prefix
-    # instead of running a second BFS to the same route's intermediate point.
+    # Exact public FREE voxel chain from the bounded BFS, kept so route-progress
+    # rows reuse a verified prefix instead of re-running BFS.
     voxel_keys: tuple[tuple[int, int, int], ...] = ()
 
 
@@ -3901,10 +3854,8 @@ class _PublicFrontierViewpoint(NamedTuple):
     position_m: tuple[float, float, float]
     source_agent_index: int
     route_lengths_m: tuple[float | None, ...]
-    # Each non-null route is constructed from this exact decision's public
-    # belief and starts at the corresponding public agent pose.  It is carried
-    # through into the common candidate pool instead of being reduced to a
-    # scalar length and re-derived from the endpoint later.
+    # Route built from this decision's public belief and the matching public agent
+    # pose, carried whole into the common pool rather than re-derived from its endpoint.
     route_paths_m: tuple[tuple[tuple[float, float, float], ...] | None, ...]
     viewpoint_kind: str
     frontier_cluster_id: str = "legacy-unclustered"
@@ -3943,8 +3894,8 @@ def _retain_route_progress_viewpoints(
         return float(length_m)
 
     def stable_key(item: tuple[tuple[int, int, int], _PublicFrontierViewpoint]) -> tuple[int, int, int]:
-        # ``max`` is used below, so negate the key to choose lexicographically
-        # smaller voxel keys for otherwise exact ties.
+        # ``max`` is used below, so negate the key for lexicographically smaller
+        # voxel ties.
         return tuple(-coordinate for coordinate in item[0])
 
     remaining = list(source_rows)
@@ -3956,9 +3907,8 @@ def _retain_route_progress_viewpoints(
             retained.append(chosen)
             remaining.remove(chosen)
 
-    # The first row prefers a committed region-access route when one exists;
-    # otherwise it retains gain-efficient local progress. The next selections
-    # protect non-local route alternatives without hiding short views entirely.
+    # Prefer a committed region-access route, then gain-efficient local progress, then
+    # non-local route alternatives without hiding short views.
     take_best(
         lambda item: (
             item[1].viewpoint_kind == "region_access",
@@ -3978,8 +3928,8 @@ def _retain_route_progress_viewpoints(
             stable_key(item),
         )
     )
-    # Prefer an independently directed/vertical observation opportunity.  If
-    # the scene is planar, endpoint separation still avoids a duplicate route.
+    # Prefer an independently directed or vertical view; endpoint separation still
+    # avoids a duplicate route in planar scenes.
     while remaining and len(retained) < maximum_count:
         take_best(
             lambda item: (
@@ -4084,10 +4034,8 @@ def _public_free_space_path_result(
             if reachability_cache.source_and_goal_share_component(start_key, goal_key):
                 return _PublicFreePathResult(None, "path_exceeds_step_budget")
             return _PublicFreePathResult(None, "public_free_component_disconnected")
-        # The bounded result alone cannot distinguish a genuinely disconnected
-        # public graph from a route that needs more than this receding-horizon
-        # action.  The second traversal is outcome-map only and produces a
-        # diagnostic label; it never authorizes the longer route.
+        # A bounded result cannot separate a genuinely disconnected public graph from
+        # a longer receding-horizon route; the second traversal is a diagnostic label only.
         connected: set[tuple[int, int, int]] = {start_key}
         unbounded_queue: deque[tuple[int, int, int]] = deque((start_key,))
         while unbounded_queue:
@@ -4106,9 +4054,8 @@ def _public_free_space_path_result(
         keys.append(cursor)
         cursor = parent[cursor]
     keys.reverse()
-    # The reset pose has already passed its own physical admission contract.
-    # Every *new* route voxel needs spatially distributed public evidence so a
-    # frontier candidate cannot be created from one narrow, grazed free ray.
+    # The reset pose passed its own admission; every new route voxel needs spatially
+    # distributed public evidence, so a narrow grazing ray cannot create a frontier.
     if minimum_received_free_support_m > 0.0 and any(
         not _has_received_free_interior_support(
             belief,
@@ -4200,8 +4147,8 @@ def _public_route_prefix_from_voxel_chain(
         )
         for key in prefix_keys[1:]
     ):
-        # This should not occur for a prefix of an admitted route, but fail
-        # closed if a future caller supplies a chain with weaker evidence.
+        # This cannot occur for a prefix of an admitted route; fail closed for
+        # weaker evidence.
         return None
     return _compress_public_voxel_path(
         belief,
@@ -4378,9 +4325,8 @@ def _known_free_observation_points(
                 stand_off = math.dist(point, frontier_point_m)
                 if not 1.0 <= stand_off <= FRONTIER_OBSERVATION_MAX_STANDOFF_M + belief.resolution_m:
                     continue
-                # Prefer public points surrounded by independently observed
-                # free space before choosing the closest nominal standoff.
-                # No static geometry enters this ordering.
+                # Prefer public points surrounded by independently observed free space
+                # before the closest nominal standoff; no static geometry enters.
                 rows.append(
                     (
                         -support.balanced_axis_count,
@@ -4393,9 +4339,8 @@ def _known_free_observation_points(
                 )
     if not rows:
         return ()
-    # Retain one robust pose around each sensor standoff before falling back to
-    # the normal support-first order. This diversifies geometry using the
-    # public map only; it does not require a route to be longer.
+    # Keep one robust pose per sensor standoff before the normal support-first
+    # order; public-map diversification only.
     selected: list[tuple[float, float, float]] = []
     for standoff_target_m in FRONTIER_OBSERVATION_STANDOFF_VARIANTS_M:
         for row in sorted(
@@ -4637,16 +4582,15 @@ def _public_frontiers_from_belief(
 
     maximum_gain_m3 = max(cluster.expected_gain_m3 for cluster in clusters)
     candidates: dict[tuple[int, int, int], _PublicFrontierViewpoint] = {}
-    # The belief does not change while one candidate pool is constructed.
-    # Reusing these local-neighborhood summaries prevents the same received-free
-    # support evidence from being rescanned for every route and viewpoint.
+    # The belief is immutable during pool construction, so local-neighborhood
+    # summaries spare repeated received-free rescans across routes and viewpoints.
     received_free_support_cache: _ReceivedFreeSupportCache = {}
     public_reachability_cache = reachability_cache or _PublicFreeReachabilityCache(belief)
     public_reachability_cache._require_same_belief(belief)
 
     def path_search_budget_exhausted(*, region_access: bool = False) -> bool:
-        # Observation standoff and route-prefix searches stop before the full
-        # decision budget so the reserved region-access search still runs.
+        # Observation standoff and route-prefix searches stop early to leave the
+        # reserved region-access budget.
         limit = (
             PUBLIC_FRONTIER_PATH_SEARCH_BUDGET_PER_DECISION
             if region_access
@@ -4725,12 +4669,9 @@ def _public_frontiers_from_belief(
             break
         gain = cluster.expected_gain_m3 / maximum_gain_m3
         risk = 0.12 if abs(cluster.outward_normal[2]) > 0.5 else 0.08
-        # Route-level access alternatives commit to a farther received-free
-        # point in the current component that moves toward this frontier
-        # region. They are generated before observation standoff routes so a
-        # dense near-frontier viewpoint set cannot consume the search budget
-        # and erase every corridor access proposal. The shared static guard
-        # remains the physical admission authority for these proposals.
+        # Region-access alternatives commit to a farther received-free point toward
+        # the frontier region, generated before standoff routes so dense viewpoints
+        # cannot consume the search budget; the shared static guard still admits them.
         region_access_generated = 0
         for agent_index in range(len(positions)):
             if (
@@ -4801,8 +4742,8 @@ def _public_frontiers_from_belief(
             region_access_generated += 1
             public_reachability_cache.record_region_access_generation()
         if path_search_budget_exhausted():
-            # The observation standoff budget is exhausted, but the region-access
-            # reserve may still contain enough searches for later clusters.
+            # Standoff budget exhausted; the region-access reserve may still serve
+            # later clusters.
             continue
         for frontier_viewpoint in cluster.viewpoint_candidates_m:
             if path_search_budget_exhausted():
@@ -4927,10 +4868,9 @@ def _public_frontiers_from_belief(
                         else:
                             if path_search_budget_exhausted():
                                 continue
-                            # A snapped prefix point can fall just outside the
-                            # exact BFS chain (for example after a diagonal
-                            # compression). Preserve the old conservative
-                            # route authority for that rare case.
+                            # A snapped prefix point can fall outside the exact BFS
+                            # chain after diagonal compression; keep the conservative
+                            # route authority for that case.
                             public_reachability_cache.record_route_prefix_fallback()
                             progress_path = _public_free_space_path(
                                 belief,
@@ -4971,12 +4911,9 @@ def _public_frontiers_from_belief(
                             observation_standoff_m=None,
                         )
     if len(candidates) < len(positions):
-        # A bootstrap-perturbed sparse belief can transiently expose fewer
-        # interior observation viewpoints than agents.  Hard-failing the whole
-        # episode on this transient would discard every earlier receipt and
-        # make the runtime unusable on narrow scenes.  Retry once with a
-        # doubled path-search budget before accepting a sparse-but-legal pool:
-        # the shared route guard and joint guard still admit every row.
+        # A bootstrap-perturbed belief can transiently expose fewer viewpoints than
+        # agents. Retry once with a doubled path-search budget instead of discarding
+        # the episode; the guards still admit every accepted row.
         if path_search_budget_exhausted():
             retry_candidates = dict(candidates)
             budget_limit = (
@@ -5063,10 +5000,8 @@ def _public_frontiers_from_belief(
         raise RuntimeError("public frontier generator emitted an unknown viewpoint kind")
     selected: list[tuple[tuple[int, int, int], _PublicFrontierViewpoint]] = []
     maximum_count = maximum_frontiers_per_agent * len(positions)
-    # Keep a small, source-balanced reserve of route prefixes alongside the
-    # complete observation poses. Both are public exploration views; the common
-    # matcher now gives them the same exploration priority so a continuous
-    # corridor route is not discarded merely because short views also exist.
+    # A small source-balanced reserve of route prefixes alongside complete
+    # observation poses; the common matcher gives both the same exploration priority.
     route_progress_reservation = min(
         PUBLIC_ROUTE_PROGRESS_RETAINED_PER_SOURCE,
         max(1, maximum_frontiers_per_agent // 2),
@@ -5101,10 +5036,8 @@ def _public_frontiers_from_belief(
             normal_alignment,
         )
 
-    # Reserve one current observation representative for each task that still
-    # exists in the latest public map. This prevents generic diversity pruning
-    # from dropping an already assigned task before the common matcher can
-    # inspect it. The route itself is still regenerated from the current pose.
+    # Reserve one observation representative per live task so diversity pruning
+    # cannot drop an assigned task before the matcher inspects it.
     for reservation in sorted(task_reservations, key=lambda item: item.agent_id):
         matching_agent_indices = [
             index
@@ -5168,17 +5101,15 @@ def _public_frontiers_from_belief(
             ),
         )
 
-    # Fill the primary viewpoint budget with complete observations first for
-    # stable spatial coverage. Route prefixes remain in the same public
-    # exploration tier once the shared matcher constructs assignments.
+    # Fill the primary viewpoint budget with complete observations first for stable
+    # spatial coverage; route prefixes share the same exploration tier.
     while observation_remaining and len(selected) < observation_capacity:
         chosen = take_next(observation_remaining)
         selected.append(chosen)
         observation_remaining.pop(chosen[0])
 
-    # Retain only a small, deterministic fallback set. These rows remain in
-    # the common action authority so a later static rejection cannot turn a
-    # valid public route prefix into an unexplained hold.
+    # Small deterministic fallback set kept in the common authority, so a later
+    # static rejection cannot turn a valid prefix into an unexplained hold.
     for source_agent_index in range(len(positions)):
         source_rows = tuple(
             item
@@ -5197,8 +5128,7 @@ def _public_frontiers_from_belief(
         selected.extend(chosen_rows)
         for key, _row in chosen_rows:
             route_progress_remaining.pop(key)
-    # If a scene has fewer than the reserved number of prefixes, spend the
-    # unused slots on additional complete observation viewpoints before adding
+    # Unused reserved slots go to additional complete observation viewpoints before
     # any non-primary prefix.
     while observation_remaining and len(selected) < maximum_count:
         chosen = take_next(observation_remaining)
@@ -6074,9 +6004,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             "and does not authorize training or formal evaluation."
         ),
     )
-    # A persistent collector owns the single Isaac application and passes an
-    # explicit worker argv. AppLauncher inspects process-global sys.argv while
-    # registering its flags, so only let the standalone entry point add them.
+    # The persistent collector owns the single Isaac application and passes worker
+    # argv explicitly; AppLauncher inspects process-global sys.argv while registering
+    # its flags.
     if argv is None:
         AppLauncher.add_app_launcher_args(parser)
     return parser.parse_args(argv)
@@ -6122,9 +6052,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         or args.outcome_time_tolerance_s < 0.0
     ):
         raise ValueError("invalid P07 online exploration budget or controller argument")
-    # The multirotor actuator samples its physical response constants from
-    # configured ranges. Bind every simulator-side random source before asset
-    # creation so a paired method comparison starts from the same dynamics.
+    # Bind every simulator-side random source before asset creation so paired
+    # method comparisons start from the same dynamics.
     random.seed(args.random_key)
     np.random.seed(args.random_key % (2**32))
     torch.manual_seed(args.random_key)
@@ -6192,14 +6121,10 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             raise ValueError(
                 "P0 eligibility evidence requires a full qualification with explicit start IDs"
             )
-        # The eligibility evidence certifies the frozen reset poses and the
-        # shared candidate pool, not the selector.  Restricting it to
-        # frontier_3d made QD strategies (whose intent-richness audit needs
-        # the same well-spread all-active reset) unable to use the verified
-        # starts, so they fell back to auto-selected poses that produced too
-        # few feasible candidates.  Allow the same evidence for QD calibration
-        # and engineering qualification; training collection still uses
-        # auto-selected starts for pose diversity.
+        # The eligibility evidence certifies reset poses and the shared pool, not
+        # the selector. The same well-spread all-active reset serves QD calibration
+        # and engineering qualification; training collection still uses auto-selected
+        # starts for pose diversity.
         if timeout_probe:
             raise ValueError("P0 eligibility evidence cannot enable timeout probes")
         if args.record_purpose not in {"engineering_smoke", "qd_calibration"}:
@@ -6625,9 +6550,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     planned_qd_selector: PlannedQDSelector | None = None
     realised_qd_selector: OutcomeGroundedQDSelector | None = None
     qd_history_summary: dict[str, Any] = {"mode": "none", "outcome_count": 0}
-    # Every selected candidate becomes one outcome-bound training transition.
-    # The same real transition may be replayed for multiple gradient updates;
-    # no gradient step is allowed to manufacture a new PhysX interaction.
+    # One outcome-bound training transition per selected candidate; the same real
+    # transition may feed multiple gradient updates.
     decision_training_rows: list[dict[str, Any]] = []
     if qd_strategy:
         assert args.qd_history is not None
@@ -6719,9 +6643,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         for raw_outcome in backend.public_range_outcomes:
             if raw_outcome.agent_id not in delivered_sender_ids:
                 continue
-            # Each isolated executor starts its local frame clock at zero.  The
-            # stage prefix makes the physical observation identity unique in
-            # the episode-level public belief without changing its content.
+            # The stage prefix makes each physical observation identity unique in
+            # the episode-level public belief while its content is unchanged.
             shifted = PublicRangeRayOutcome(
                 observation_id=f"{stage_id}-{raw_outcome.observation_id}",
                 agent_id=raw_outcome.agent_id,
@@ -6738,9 +6661,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             for belief in agent_beliefs.values():
                 team_belief.merge_public(belief)
         if not stage_outcomes:
-            # A dropped segment delta is a valid communication outcome.  The
-            # next decision receives no new map evidence, rather than silently
-            # receiving raw rays that never entered the public fusion state.
+            # A dropped segment delta is a valid communication outcome; the next
+            # decision simply receives no new map evidence.
             return ()
         return tuple(stage_outcomes)
 
@@ -6887,15 +6809,13 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             / args.action_budget_s
     )
     decision_index = 0
-    # Per-agent, in-memory recovery history. It is intentionally absent from
-    # SparseVoxelBelief: a successful physical path is a guarded execution
-    # outcome, not a new public FREE observation.
+    # Per-agent in-memory recovery history, kept out of SparseVoxelBelief because a
+    # successful path is an execution outcome, not a new public FREE observation.
     backtrack_history_by_agent: dict[str, list[_OutcomeBacktrackRoute]] = {
         f"uav{index}": [] for index in range(fleet_size)
     }
     outcome_backtrack_audit: list[dict[str, object]] = []
-    # Reservations retain only public task association plus successful outcome
-    # provenance. They never retain a stale manifest as an executable action.
+    # Reservations hold public task association and outcome provenance only.
     task_reservations_by_agent: dict[str, PublicTaskReservation] = {}
     task_reservation_audit: list[dict[str, object]] = []
     terminal_margin_distance_audit_m = maximum_rest_to_rest_distance_m(
@@ -6913,10 +6833,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             break
         decision_wall_started = time.perf_counter()
         planning_wall_started = decision_wall_started
-        # Fragment timestamps are local to one action token.  The episode
-        # clock is retained in the public remaining-budget field and in the
-        # worker record; passing its non-zero value into the executor would
-        # compare a local PhysX outcome against a previous round's timestamp.
+        # Fragment timestamps are local to one action token; the episode clock
+        # lives in the remaining-budget field, so a non-zero local value would
+        # compare mismatched rounds.
         decision_context = replace(
             root_context,
             decision_id=f"decision{decision_index}",
@@ -6926,9 +6845,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         initial_graph_wall_started = time.perf_counter()
         initial_graph = cf2x._initial_relay_graph(scene_query, current_positions)
         initial_graph_wall_s = time.perf_counter() - initial_graph_wall_started
-        # The executor may finish early once every active route has reached its
-        # observation dwell.  The remaining episode budget is only a hard
-        # physical deadline, never a fixed idle window.
+        # The executor may finish early once every active route reached its dwell;
+        # the remaining episode budget is a hard deadline.
         decision_remaining_s = args.action_budget_s - elapsed_s
         decision_duration_s = decision_remaining_s
         if args.rolling_decision_window_s is not None:
@@ -6941,17 +6859,14 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             observe_dwell_s=observation_dwell_s,
             transit_timing_model=transit_timing,
         )
-        # The active route horizon is the distance that the shared timing
-        # contract can still execute and dwell within. It is not a fixed-step
-        # parameter: a route may be shorter when public free-space evidence
-        # genuinely ends sooner.
+        # Active route horizon is what the shared timing contract can still execute
+        # and dwell within, shorter when public free-space evidence ends sooner.
         effective_frontier_step_m = reachable_path_length_m
         if effective_frontier_step_m < 0.25:
             if decision_duration_s < observation_dwell_s:
-                # There is no legal observation left in this physical
-                # remainder.  End at the last executed outcome and let the
-                # fixed-horizon metric carry its coverage forward; do not
-                # manufacture a dwell outcome merely to reach the deadline.
+                # No legal observation remains in this physical remainder; end at
+                # the last executed outcome and let the fixed-horizon metric carry
+                # coverage forward.
                 terminal_budget_tail = _unexecuted_budget_tail_record(
                     duration_s=decision_duration_s,
                     observe_dwell_s=observation_dwell_s,
@@ -7125,10 +7040,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             break
         observation_cooldown.begin_decision(decision_index)
         frontier_wall_started = time.perf_counter()
-        # The public belief is immutable while this decision's candidate pool is
-        # constructed. Share one component diagnostic cache across frontier
-        # generation and any later public-route fallback guards, then discard it
-        # before the next outcome changes the belief.
+        # Share one component diagnostic cache across frontier generation and route
+        # fallback guards for this decision, then discard it before the belief changes.
         public_reachability_cache = _PublicFreeReachabilityCache(team_belief)
         public_frontiers = _public_frontiers_from_belief(
             current_positions,
@@ -7140,14 +7053,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             reachability_cache=public_reachability_cache,
         )
         if len(public_frontiers) < fleet_size:
-            # The public belief is saturated: fewer legal frontiers remain
-            # than agents, so a team candidate cannot be constructed.  Finish
-            # the episode here instead of failing.  The remaining physical
-            # budget is consumed by an honest stationary sensing tail (the
-            # same contract as the loop-top budget tail): the fleet hovers
-            # and keeps sampling, the frozen denominator and the budget-
-            # exhausted terminal outcome are preserved, and no safety
-            # contract is touched.
+            # The public belief is saturated with fewer legal frontiers than
+            # agents. Finish the episode with an honest stationary sensing tail; the
+            # denominator and budget-exhausted terminal outcome are preserved.
             if not samples or samples[-1].timestamp_s + 1.0e-9 < elapsed_s:
                 samples.append(
                     _metric_sample(
@@ -7421,10 +7329,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         joint_guard_timing = {"wall_s": 0.0, "call_count": 0}
         joint_guard_records: list[dict[str, object]] = []
         public_route_nodes = tuple(frontier.position_m for frontier in state.frontiers)
-        # This map is intentionally scoped to one freshly built public state.
-        # A path cannot retain this authority across decisions: the next
-        # candidate pool must construct and register it again from the next
-        # sparse belief and current vehicle pose.
+        # Scoped to one freshly built public state: a path cannot keep this
+        # authority across decisions, the next pool re-registers it from the next
+        # belief and pose.
         public_access_path_authority = {
             (agent_id, path_m): frontier.frontier_id
             for frontier in state.frontiers
@@ -7544,12 +7451,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                                 (agent_id, path)
                             )
                             if public_access_frontier_id is not None:
-                                # The path was generated from this decision's
-                                # public sparse belief and matched its current
-                                # agent pose before candidate construction.
-                                # Do not collapse it to an endpoint here: the
-                                # shared static guard verifies every retained
-                                # segment against frozen collision geometry.
+                                # Generated from this decision's public belief and
+                                # matched to the current agent pose. Keep the path whole;
+                                # the shared static guard verifies every retained segment.
                                 requested_path = path
                                 public_route_status = "revalidated_public_access_plan"
                                 guarded = cf2x._routed_guard(
@@ -8345,17 +8249,10 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         if (
             qd_strategy or qd_calibration
         ) and candidate_intent_audit.status != "QD_CANDIDATE_INTENT_ADMITTED":
-            # The candidate-intent richness floor is an availability check for
-            # a behaviour repertoire.  In a constrained decision the shared
-            # pool may be physically unable to cover six joint intent cells
-            # (e.g. every agent's feasible endpoints collapse onto one
-            # dispersion bin).  Hard-failing the whole episode there would
-            # discard every earlier receipt and make the QD mechanism
-            # unusable on narrow scenes.  Fall back to the transparent public
-            # value selector for this decision, record the rejection, and
-            # continue collecting real receipts.  This never relaxes safety,
-            # timing, separation or diversity contracts; it only changes which
-            # selector ranks the same admitted pool.
+            # The intent-richness floor is an availability check. When a constrained
+            # pool cannot cover six joint intent cells, fall back to the transparent
+            # public value selector, record the rejection and keep collecting receipts;
+            # safety, timing, separation and diversity contracts stay unchanged.
             qd_intent_fallback = {
                 "status": "QD_INTENT_FALLBACK_TO_PUBLIC_VALUE",
                 "candidate_intent_audit": candidate_intent_audit.to_dict(),
@@ -8607,10 +8504,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             resolution_m=0.25,
             spatial_reference_m=float(communication_contract.network["maximum_range_m"]),
         )
-        # v4 remains the currently proposed family.  The full pre-registered
-        # feature vector is also bound into each outcome so train-only
-        # calibration can reject v4 if a less redundant three-axis family is
-        # stronger.  Validation never chooses this family.
+        # v4 is the current proposed family; the full pre-registered feature vector
+        # is bound into each outcome so train-only calibration can reject it later.
+        # Validation never chooses this family.
         descriptor = realised_descriptor_from_public_outcomes(
             scene_id=args.scene_id,
             agent_ids=tuple(applied_paths),
@@ -8625,9 +8521,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             range_outcomes=latest_public_outcomes,
             resolution_m=0.25,
         )
-        # FREE is intentionally revisable: a later occupied observation wins
-        # over an earlier free ray.  Compare the fused public maps at the
-        # decision boundary so raw segment rays cannot manufacture QD quality.
+        # FREE is revisable: a later occupied observation wins over an earlier free
+        # ray. Compare fused public maps at the decision boundary.
         public_new_free_footprint, public_revised_free_footprint = public_free_voxel_transition(
             public_free_keys_before, team_belief.free_keys()
         )
@@ -8861,9 +8756,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 or float(source_required_clearance) <= 0.0
                 or float(source_minimum_clearance) + 1.0e-9 < float(source_required_clearance)
             ):
-                # A completed path without a measured static-clearance margin
-                # remains a valid exploration outcome, but cannot authorize a
-                # future source-clearance-backed recovery.
+                # A completed path without a measured static-clearance margin stays a
+                # valid outcome and cannot authorize a future clearance-backed recovery.
                 continue
             backtrack_history_by_agent[agent_id] = [
                 _OutcomeBacktrackRoute(
@@ -8956,10 +8850,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             }
         )
         if args.strategy == "realised_qd":
-            # This is evaluated after the flight, against the exact public
-            # deficit available before selection.  It proves that an online
-            # QD intervention did not merely predict a useful mode and then
-            # execute an unrelated one under the CF2X/PhysX safety chain.
+            # Evaluated after the flight against the exact pre-selection public
+            # deficit, proving the online QD intervention did not predict one mode
+            # and execute an unrelated one.
             predicted_descriptor = selection.get("selected_predicted_descriptor")
             if not isinstance(predicted_descriptor, list) or len(predicted_descriptor) != 3:
                 raise RuntimeError("realised-QD selection omitted its predicted descriptor")
@@ -8978,9 +8871,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 realised_alignment - predicted_alignment
             )
         if selected_is_collision_avoidance_recovery:
-            # A recovery outcome is physically important, but it is not a
-            # realised exploration mode.  In particular, do not update the
-            # selector's intent predictor or archive from an escape motion.
+            # A recovery outcome is not a realised exploration mode; the intent
+            # predictor and archive stay untouched by escape motions.
             admission = AdmissionDecision(
                 False,
                 "COLLISION_AVOIDANCE_RECOVERY",
@@ -8989,9 +8881,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 realised_qd_archive.revision,
             )
         elif realised_qd_selector is not None:
-            # The realised-QD selector owns the online archive update.  Keeping
-            # this in one method prevents a predictor-only history from being
-            # mistaken for a populated outcome-grounded repertoire.
+            # The realised-QD selector owns the online archive update, so a
+            # predictor-only history cannot pass as a populated repertoire.
             admission = realised_qd_selector.observe(
                 selected,
                 descriptor,
@@ -9001,8 +8892,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 execution_feasible=qd_feasible,
             )
         else:
-            # Non-QD branches still emit comparable outcome diagnostics, but
-            # they never consult this archive to choose an action.
+            # Non-QD branches emit the same diagnostics but never consult the archive.
             admission = realised_qd_archive.add_or_update(
                 Elite(
                     candidate_id=selected.candidate_id,
@@ -9259,8 +9149,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 "wall_timing": decision_wall_timing,
             }
         )
-        # Validate and checkpoint at the decision boundary. A malformed
-        # diagnostic must fail after one decision, not after a full episode.
+        # Validate and checkpoint at the decision boundary, so a malformed
+        # diagnostic fails after one decision.
         canonical_sha256(decisions[-1])
         _write_decision_progress(
             paths["output"],
@@ -9299,8 +9189,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         total_executed_fragments += ledger.executed_fragment_count
         outcome_hashes.extend(outcome.digest for outcome in ledger.outcomes)
         if not execution_complete:
-            # A outcome-backed safety failure remains a scored episode.  The
-            # metric keeps its observed volume constant through the frozen T.
+            # An outcome-backed safety failure stays a scored episode; the metric
+            # holds observed volume constant through the frozen T.
             terminal_outcome = "executed_terminal_safety_failure"
             break
         if len(backend.final_root_positions_m) != fleet_size:
@@ -9379,9 +9269,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     )
     if not decision_training_rows:
         raise RuntimeError("completed P07 episode produced no decision-level training transition")
-    # The shared budget tail, or a safety-stop carry-forward, is attributable
-    # to the final selected action but must not become an extra policy action.
-    # The bootstrap contribution was already attached to the first transition.
+    # The budget tail or safety-stop carry-forward is attributed to the final action
+    # but never becomes an extra policy action; the bootstrap already sits on the
+    # first transition.
     terminal_tail_auc = metric.explored_free_flight_volume_auc_time - sum(
         float(row["metric_auc_contribution"]) for row in decision_training_rows
     )
@@ -9485,10 +9375,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 min(index + 1, len(decision_training_rows) - 1)
             ]
             is_final_transition = index == len(decision_training_rows) - 1
-            # A frozen episode horizon is a truncation, not a task or safety
-            # terminal.  The legacy ``done`` flag collapsed these cases and
-            # made a successful budget-exhausted rollout indistinguishable
-            # from a outcome-backed safety stop.
+            # A frozen horizon is a truncation, not a task or safety terminal; the
+            # legacy done flag conflated it with an outcome-backed safety stop.
             terminated = (
                 is_final_transition and terminal_outcome == "executed_terminal_safety_failure"
             )

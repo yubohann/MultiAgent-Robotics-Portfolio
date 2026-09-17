@@ -113,8 +113,8 @@ class ActionPacket:
     waypoint: Pose3D | None = None
     velocity_body_mps: tuple[float, float, float] | None = None
     yaw_rate_deg_s: float = 0.0
-    # A bounded inspection gimbal is independent of the CF2X body attitude.
-    # Its bounds and rate are enforced by the active execution contract.
+    # Bounded gimbal angle, independent of body attitude; bounds and rate come
+    # from the execution contract.
     sensor_pitch_deg: float | None = None
     source_observation_id: str | None = None
     messages: tuple[MessagePacket, ...] = field(default_factory=tuple)
@@ -181,8 +181,7 @@ class ObservationPacket:
     teammate_states: tuple[dict[str, Any], ...] = field(default_factory=tuple)
     received_messages: tuple[MessagePacket, ...] = field(default_factory=tuple)
     health: Literal["nominal", "terminal"] = "nominal"
-    # ``pose`` is always the measured vehicle body pose. A bounded gimbal,
-    # when declared by the task contract, reports its measured pitch here.
+    # Measured sensor pitch; ``pose`` remains the vehicle body pose.
     sensor_pitch_deg: float | None = None
 
     def __post_init__(self) -> None:

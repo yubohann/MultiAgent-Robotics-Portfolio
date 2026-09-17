@@ -235,11 +235,10 @@ def spawn_apriltag(
     pitch: float,
     yaw: float,
 ):
-    """Build a physical tag-like target from geometry.
+    """Build a physical tag-like target from primitive geometry.
 
-    The high-contrast layout is intentionally made of primitive geometry so the
-    USD stays portable. The metadata and surrounding docs record that the real
-    detector uses the AprilTag Tag36h11 family.
+    The layout stays portable to USD, and the real detector reads the AprilTag
+    Tag36h11 family that the metadata and docs record.
     """
     create_xform(path)
     orient = quat_from_euler(roll, pitch, yaw)
@@ -268,8 +267,8 @@ def spawn_apriltag(
     spawn_marker_cell(f"{path}/border_top", center, TAG_SIZE, border, 0.0, half - border * 0.5, roll, pitch, yaw)
     spawn_marker_cell(f"{path}/border_bottom", center, TAG_SIZE, border, 0.0, -half + border * 0.5, roll, pitch, yaw)
 
-    # Compact 6x6 visual code. It is not used for detection in this script; it
-    # makes IDs 1, 2, and 3 visibly distinct while still reading like AprilTag.
+    # Compact 6x6 visual code for display only. It keeps IDs 1, 2 and 3
+    # visibly distinct while still reading like AprilTag.
     patterns_by_id = {
         1: {
             (0, 0),
@@ -407,9 +406,8 @@ def spawn_target(
     board_size = (0.012, 0.095, 0.115) if base_target else (0.012, 0.180, 0.190)
     front_x = board_size[0] * 0.5 + 0.006
     edge = 0.010 if base_target else 0.010
-    # The rules put the bottom of the 5 cm AprilTag at 6.5-7.5 cm above
-    # the floor. Keep the visual tag anchored to that physical height instead
-    # of drifting upward with the decorative board.
+    # The rules put the bottom of the 5 cm AprilTag at 6.5-7.5 cm above the
+    # floor, so the visual tag stays anchored at that physical height.
     tag_local_z = TAG_CENTER_Z - board_center[2]
 
     spawn_box(
@@ -423,8 +421,8 @@ def spawn_target(
         semantic=f"target_board_id_{tag_id}",
     )
 
-    # Raised structural frame: it makes the target read as hardware instead of
-    # a flat texture and gives the laser hit board a clear silhouette.
+    # Raised structural frame so the target reads as hardware and the laser
+    # hit board keeps a clear silhouette.
     spawn_local_box(
         f"{path}/frame_left",
         board_center,
@@ -526,9 +524,8 @@ def spawn_target(
     )
 
     support_height = 0.115 if base_target else 0.120
-    # Base targets sit behind armor in a tight corner. Their low stand must
-    # remain on the arena-facing side so it does not visually or physically
-    # clip the grounded armor plates.
+    # Base targets sit behind armor in a tight corner, so the low stand stays on
+    # the arena-facing side and clears the grounded armor plates.
     support_offset_x = 0.034 if base_target else -0.034
     foot_offset_x = 0.045 if base_target else -0.045
     support_center = local_to_world(board_center, (support_offset_x, 0.0, -board_size[2] * 0.5 + support_height * 0.5), roll, pitch, yaw)
@@ -860,10 +857,9 @@ def spawn_base_armor(base_team: str, base_xy: tuple[float, float], color: tuple[
     shield_color = (0.05, 0.22, 0.78)
 
     if base_team == "blue":
-        # Four grounded armor plates segment the two open edges of the
-        # 50cm base square: right edge plates 1/3 and lower edge plates 2/4.
-        # This matches the national-rule numbering diagram and the archived
-        # final_training_replay_overview reference.
+        # Four grounded armor plates segment the two open edges of the 50 cm
+        # base square, right edge plates 1 and 3, lower edge plates 2 and 4,
+        # following the national-rule numbering diagram.
         specs = [
             ("armor_1", (-1.025, 1.375, z), (armor_thickness, armor_length, armor_height)),
             ("armor_2", (-1.375, 1.025, z), (armor_length, armor_thickness, armor_height)),

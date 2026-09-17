@@ -1,10 +1,4 @@
-"""Build a fresh-process P07 train-outcome collection plan.
-
-The plan uses the persistent-collection plan schema and writes one atomic
-worker run per episode.  It deliberately only accepts a single frozen scene
-and fixed P03/P04/P05/P06/controller artifacts, so extending the plan means
-extending the audited scene assets rather than silently changing contracts.
-"""
+"""Build a fresh-process P07 train-outcome collection plan."""
 
 from __future__ import annotations
 

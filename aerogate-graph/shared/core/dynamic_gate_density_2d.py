@@ -141,11 +141,7 @@ def generate_gate_layout(
     config: DynamicGateDensity2DConfig | None = None,
     static_layout: bool | None = None,
 ) -> list[DynamicGate2D]:
-    """Generate a formation-facing, tight-opening dynamic gate layout.
-
-    Low counts use only the center lane so the curriculum first learns to pass
-    moving gates.  Higher counts add side lanes and increasing column density.
-    """
+    """Generate a formation-facing tight-opening dynamic gate layout, center lane at low counts and side lanes at higher counts."""
 
     cfg = config or default_dynamic_gate_density_config()
     count = int(max(0, min(int(cfg.max_gate_count), int(gate_count))))
@@ -503,12 +499,9 @@ def validate_height_and_corridor_invariants(
     *,
     config: DynamicGateDensity2DConfig | None = None,
 ) -> dict[str, object]:
-    """Validate the paper hard constraints that prevent over-gate or side bypass.
-
-    The simulator line is planar, so a "height escape" is a configuration
-    error: the fixed 2D flight plane must lie inside the visual gate opening
-    and below the gate top minus a margin.  The corridor width must also be
-    tighter than the world Y bounds, otherwise side bypass cannot be detected.
+    """Validate the paper hard constraints that keep the fixed 2D flight plane inside the visual gate
+    opening and below the gate top margin.
+    The corridor width stays tighter than the world Y bounds so side bypass remains detectable.
     """
 
     cfg = config or default_dynamic_gate_density_config()
@@ -650,10 +643,9 @@ def validate_dynamic_gate_density_geometry(
     config: DynamicGateDensity2DConfig | None = None,
     sample_times_s: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0),
 ) -> dict[str, object]:
-    """Run geometry-only sanity checks before training/eval/replay.
-
-    This catches fake dynamic scenes early: missing gates, frozen live centers,
-    gate-gate post overlap, or a collision query that does not report contact.
+    """Run geometry-only sanity checks before training, scoring and replay.
+    The checks catch fake dynamic scenes early, missing gates, frozen live centers, gate-gate post
+    overlap and a collision query with an empty contact report.
     """
 
     cfg = config or default_dynamic_gate_density_config()

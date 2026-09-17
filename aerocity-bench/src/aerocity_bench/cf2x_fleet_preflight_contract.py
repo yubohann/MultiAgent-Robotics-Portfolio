@@ -367,11 +367,9 @@ class FleetMember:
 
     @property
     def prim_path(self) -> str:
-        # IsaacLab treats a non-alphanumeric leaf as a prim-path regular
-        # expression and then does not spawn the asset.  Benchmark drone IDs
-        # deliberately allow a hyphen (``uav-00``), so isolate that user-facing
-        # ABI from the low-level prim leaf.  The digest avoids collisions such
-        # as ``uav-00`` versus ``uav_00`` after normalization.
+        # IsaacLab treats a non-alphanumeric prim leaf as a regular expression
+        # and skips spawning.  Drone IDs allow ``uav-00``, so hash the leaf to
+        # keep the user-facing ABI away from the prim path.
         normalized = re.sub(r"[^A-Za-z0-9_]", "_", self.drone_id)
         return f"/World/AeroCityFleetPreflight/{normalized}_{content_hash(self.drone_id)[:10]}"
 
@@ -1495,9 +1493,8 @@ def validate_fleet_preflight_reports(
         or not bool(final_state.get("safe_completion", False))
     )
     if has_execution_failure and not allow_execution_failure:
-        # This is normally unreachable because the strict complete-summary
-        # validator rejects it; retain the guard if another failure class is
-        # added later.
+        # Normally unreachable: the strict complete-summary validator rejects
+        # it; keep the guard for future failure classes.
         raise ValidationError("execution failure requires the aggregation-only validation path")
     return {
         "status": "PASS_WITH_EXECUTION_FAILURE" if has_execution_failure else "PASS",

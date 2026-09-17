@@ -1,8 +1,4 @@
-"""Download local VLM weights through Ollama.
-
-本脚本封装跨平台最佳实践：先检查 ollama 命令、检查服务是否启动、检查版本，
-再按 16GB/32GB 档位下载模型。这样学生不用记住每个模型的 pull 命令。
-"""
+"""Download local VLM weights through Ollama."""
 
 import argparse
 import platform
@@ -140,7 +136,7 @@ def pull_model(model_id: str) -> None:
 
     command = [_ollama_command(), "pull", candidate.ollama_model]
     print(f"pulling: {candidate.ollama_model} (~{candidate.estimated_disk_gb}GB)")
-    # 使用官方 CLI 下载，避免自己实现断点续传、缓存和平台差异处理。
+    # Delegate downloads to the official CLI.
     subprocess.run(command, check=True)
     time.sleep(0.5)
     after = _local_models()
@@ -158,7 +154,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.list:
-        # 列表模式不要求 Ollama 已启动，便于学生先查看可选模型和磁盘占用。
+        # List mode works before Ollama is running.
         for model_id, candidate in MODEL_CANDIDATES.items():
             if candidate.mode != "local_ollama_vlm":
                 continue
@@ -172,7 +168,7 @@ def main() -> None:
     ollama_version = _check_daemon()
     model_ids = [args.model] if args.model else _candidate_ids_for_tier(args.tier)
     for model_id in model_ids:
-        # 每个模型单独检查运行时版本，方便未来不同模型有不同最低版本要求。
+        # Check the runtime version per model.
         _check_model_runtime(model_id, ollama_version)
         pull_model(model_id)
 

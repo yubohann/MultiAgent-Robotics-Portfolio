@@ -1,10 +1,4 @@
-"""Checkpoint-gated single-RL selector used only as a P07 weak baseline.
-
-It deliberately has no archive and no outcome-fragment reuse.  The policy can
-rank only the public candidate pool produced by the shared P07 guard.  A
-randomly initialized network is rejected rather than being mislabeled as a
-trained RL baseline.
-"""
+"""Checkpoint-gated single-RL selector used only as a P07 weak baseline."""
 
 from __future__ import annotations
 
@@ -84,13 +78,7 @@ def build_single_rl_training_transition(
     terminated: bool,
     truncated: bool,
 ) -> dict[str, object]:
-    """Serialize one decision-level, outcome-backed train-only SAC transition.
-
-    The immediate reward is the selected execution segment's additive
-    contribution to the frozen episode AUC.  Repeated gradient updates may
-    reuse this record, but the record itself always refers to exactly one real
-    CF2X execution and never to an unexecuted counterfactual.
-    """
+    """Serialize one decision-level, outcome-backed train-only SAC transition."""
 
     rows = tuple(pool)
     next_rows = tuple(next_pool)

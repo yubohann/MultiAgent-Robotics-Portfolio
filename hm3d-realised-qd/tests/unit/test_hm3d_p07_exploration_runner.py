@@ -1366,8 +1366,8 @@ def test_public_frontiers_are_team_shared_not_required_per_source_agent() -> Non
 def test_public_frontier_view_set_is_bounded_per_agent() -> None:
     runner = _load_runner_module()
     belief = SparseVoxelBelief("scene0", "uav0", 0.25)
-    # The production generator requires multiple received-free voxels in a
-    # 0.50 m support window. Build an actual 3-D interior rather than a sheet.
+    # The production generator needs multiple received-free voxels in a 0.50 m
+    # support window, so build a real 3-D interior.
     for x_index in range(-2, 14):
         for y_index in range(-2, 4):
             for z_index in range(-10, 11):
@@ -1429,9 +1429,8 @@ def test_public_frontier_deduplication_never_rounds_past_the_time_budget() -> No
 def test_public_frontiers_include_route_level_region_access() -> None:
     runner = _load_runner_module()
     belief = SparseVoxelBelief("scene0", "team", 0.25)
-    # A free volume that extends far beyond the 2.5 m frontier standoff is the
-    # minimal case where the old near-frontier viewpoints collapse into
-    # micro-routes even though a connected access route exists.
+    # A free volume far beyond the 2.5 m standoff: near-frontier viewpoints collapse
+    # into micro-routes even though a connected access route exists.
     for x_index in range(-2, 34):
         for y_index in range(-2, 8):
             for z_index in range(-10, 11):
@@ -1461,10 +1460,8 @@ def test_public_frontiers_include_route_level_region_access() -> None:
 def test_region_access_has_reserved_search_budget_when_observation_budget_exhausted() -> None:
     runner = _load_runner_module()
     belief = SparseVoxelBelief("scene0", "team", 0.25)
-    # A free volume that exposes a long corridor is the same public-map
-    # condition as the normal region-access test. The difference is that the
-    # observation standoff budget is deliberately exhausted before generation,
-    # which previously prevented the region-access loop from running at all.
+    # Long corridor with the observation standoff budget deliberately exhausted,
+    # which previously prevented the region-access loop from running.
     for x_index in range(-2, 34):
         for y_index in range(-2, 8):
             for z_index in range(-10, 11):
@@ -2095,8 +2092,8 @@ def test_component_progress_advances_inside_known_free_space_toward_disconnected
     belief = SparseVoxelBelief("scene0", "team", 0.25)
     start_m = (0.125, 0.125, 0.125)
     goal_m = (12.125, 0.125, 0.125)
-    # A known corridor approaches the frontier, but the last span is not yet
-    # observed, so the direct public path is disconnected.
+    # Corridor approaches the frontier with the last span unobserved, so the direct
+    # public path is disconnected.
     for x_index in range(0, 33):
         belief.set_state((x_index, 0, 0), FREE)
     belief.set_state((48, 0, 0), FREE)
@@ -2134,8 +2131,7 @@ def test_component_progress_rejects_stationary_or_retreating_route() -> None:
     belief = SparseVoxelBelief("scene0", "team", 0.25)
     start_m = (0.125, 0.125, 0.125)
     goal_m = (8.125, 0.125, 0.125)
-    # The source component has no received-free extension, so there is no
-    # public-map movement that can count as progress toward the frontier.
+    # No received-free extension, so no public-map movement counts as progress.
     belief.set_state((0, 0, 0), FREE)
 
     progress = runner._public_component_progress_path_result(
@@ -2160,8 +2156,8 @@ def test_observation_viewpoints_prefer_multiaxis_received_free_support() -> None
     # The nominal standoff is only supported along one received-free line.
     for key in ((33, 0, 0), weak_key, (35, 0, 0)):
         belief.set_state(key, FREE)
-    # This alternative is farther from the nominal standoff but has free
-    # evidence on both signs of all three axes.
+    # Farther from the nominal standoff but with free evidence on both signs of all
+    # three axes.
     for key in (
         robust_key,
         (33, 3, 0),

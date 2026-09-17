@@ -22,7 +22,7 @@ print("Strategy: 80% from existing user pool, 20% new users (state grows continu
 print("=" * 80)
 
 click_id = 1
-user_pool = list(range(1, 1001))  # Start with 1000 users
+user_pool = list(range(1, 1001))
 
 try:
     while True:

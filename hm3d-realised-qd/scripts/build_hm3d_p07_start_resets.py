@@ -1,10 +1,4 @@
-"""Pre-register collision-admitted candidate resets for HM3D P07 fleets.
-
-This script deliberately separates environment initialisation from P04 sensor
-calibration.  It produces a geometry-only candidate set from the already
-admitted P03 free-flight component.  P07 later chooses a range/LOS-connected
-subset in Isaac/PhysX and records the actual reset witness in its outcome.
-"""
+"""Pre-register collision-admitted candidate resets for HM3D P07 fleets."""
 
 # ruff: noqa: E402
 
@@ -83,13 +77,7 @@ def _offline_departure_witness(
     *,
     grid_tube_clearance_m: float,
 ) -> dict[str, Any]:
-    """Certify one pre-registered first hop against the collision mesh.
-
-    This is an environment-side reset filter, not a replacement for the
-    runtime PhysX guard.  It checks exactly the start, endpoint and internal
-    clearance samples used by a nonzero `_line_guard` command; the subsequent
-    P0 first-pool audit replays that witness with the actual scene query.
-    """
+    """Certify one pre-registered first hop against the collision mesh."""
 
     import numpy as np
     import trimesh

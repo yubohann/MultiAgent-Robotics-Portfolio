@@ -81,7 +81,7 @@ def rebind_held_action(
         source_observation_id=(
             observation.observation_id if action.kind == "OBSERVE" else None
         ),
-        # Reissuing messages would turn a 1 Hz planning decision into a 5 Hz
+        # Drop messages: reissuing them would turn 1 Hz planning into a 5 Hz
         # communication policy and double-count the bandwidth budget.
         messages=(),
     )
@@ -147,8 +147,8 @@ class PlanningCadenceController:
         self._pending_events.clear()
 
     def reject_planning_attempt(self) -> None:
-        # A deadline miss never promotes late actions. Replan on the next
-        # control tick while the executor applies its frozen safe overrun rule.
+        # A deadline miss never promotes late actions; replan on the next control
+        # tick while the executor applies its frozen overrun rule.
         self._pending_events.add("safety_intervention")
 
     def held_actions(

@@ -1,11 +1,4 @@
-"""Run train-only public replay calibration for the realised-QD descriptor.
-
-This launcher is deliberately outside P07/P08 ranking.  It selects six public
-intent extremes, runs every case twice from the exact same public reset, and
-then verifies that the selected manifest really repeated before the resulting
-outcomes may be offered as QD train history.  It does not invent a descriptor,
-score an episode, or turn calibration output into a formal result.
-"""
+"""Run train-only public replay calibration for the realised-QD descriptor."""
 
 from __future__ import annotations
 
@@ -218,13 +211,7 @@ def _record_descriptors(payload: dict[str, Any]) -> tuple[tuple[str, RealisedQDD
 def _record_candidate_descriptor_features(
     payload: dict[str, Any],
 ) -> tuple[OutcomeQDFeatureVector, ...]:
-    """Read the complete pre-registered outcome-only feature vector.
-
-    A v4 descriptor by itself cannot tell whether spatial dispersion is
-    redundant with complementarity.  Each worker record must therefore bind
-    all candidate features into its execution outcome before train-only
-    calibration can decide whether v4 is still defensible.
-    """
+    """Read the complete pre-registered outcome-only feature vector."""
 
     qd = payload["realised_qd"]
     assert isinstance(qd, dict)
@@ -282,17 +269,7 @@ def _write_new(path: Path, payload: dict[str, object]) -> None:
 def _calibration_admitted(
     replay_status: str, mode_contrast_status: str, descriptor_family_status: str
 ) -> bool:
-    """Return whether both independent descriptor-calibration claims hold.
-
-    Stable replays alone do not show that the emitter controls three distinct
-    behaviour axes.  Conversely, a controlled contrast is not an archive if
-    the same manifest lands in unrelated cells on a replay.  Keeping this
-    conjunction in one named function prevents the summary status from
-    silently dropping either condition.  The descriptor-family screen is a
-    third requirement: the current v4 axes must not be retained merely
-    because they themselves pass while a pre-registered alternative is less
-    redundant on the same train outcomes.
-    """
+    """Return whether both independent descriptor-calibration claims hold."""
 
     return (
         replay_status == "QD_DESCRIPTOR_REPRODUCIBILITY_ADMITTED"

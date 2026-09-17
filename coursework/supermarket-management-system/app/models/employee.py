@@ -4,7 +4,7 @@ from app import db
 
 
 class Employee(db.Model):
-    """员工档案表"""
+    """Employee profile table."""
     __tablename__ = 'employees'
 
     employee_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

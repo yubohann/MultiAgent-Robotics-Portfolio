@@ -69,9 +69,9 @@ class GroupedSafeSkyORToolsPlanner(_legacy.ORToolsInspectionPlanner):
     def from_public_reset(
         cls, public_episode: dict[str, Any], public_task_spec: dict[str, Any]
     ) -> GroupedSafeSkyORToolsPlanner:
-        # The inherited constructor validates the public boundary before it
-        # resolves the atlas.  Dynamic dispatch invokes this class's route
-        # compiler, so v9's all-safe-sky objective is never used here.
+        # The inherited constructor validates the public boundary first; dynamic
+        # dispatch uses this class's route compiler, not v9's all-safe-sky
+        # objective.
         planner = super().from_public_reset(public_episode, public_task_spec)
         planner.last_completed_cell_by_drone = {
             drone_id: None for drone_id in planner.starts
@@ -195,10 +195,9 @@ class GroupedSafeSkyORToolsPlanner(_legacy.ORToolsInspectionPlanner):
         parameters.time_limit.FromMilliseconds(100)
         solution = routing.SolveWithParameters(parameters)
         if solution is None:
-            # The group is a small mandatory TSP.  A solver failure must not
-            # silently discard public work; retain the independently certified
-            # canonical order and let the parent record planner failures only
-            # for an actual process-level error.
+            # On solver failure keep the certified canonical order instead of
+            # discarding public work; the parent records planner failures only
+            # for process-level errors.
             return list(group)
         proposed: list[str] = []
         index = routing.Start(0)

@@ -1,19 +1,4 @@
-"""Lock the locally installed HM3D v0.2 assets and a scene-disjoint split.
-
-The script deliberately records asset paths and hashes only.  It never copies
-or converts HM3D assets into the repository.  The split follows the practical
-protocol for this project:
-
-* official ``train`` is deterministically divided into train and development
-  validation scenes;
-* scenes already used for local visual/runtime development are quarantined in
-  validation; and
-* the remaining official ``val`` scenes are a frozen, untouched final test
-  partition.
-
-This is a source/license audit for P01 and P05, not a simulator result.  It
-must run before any new HM3D development job uses the locked scene list.
-"""
+"""Lock the locally installed HM3D v0.2 assets and a scene-disjoint split."""
 
 # ruff: noqa: E402
 
@@ -43,12 +28,10 @@ LICENSE_ID = "matterport-academic-use-model-data-eula"
 SOURCE_URL = "https://github.com/matterport/habitat-matterport-3dresearch"
 TERMS_URL = "https://matterport.com/matterport-end-user-license-agreement-academic-use-model-data"
 DEFAULT_SPLIT_SEED = "aerocity-hm3d-scene-split-20260801-v1"
-# Local previews and A-B-A development work have used these official val scenes.
-# Keeping the complete minival range out of final test is conservative: minival is
-# a published subset of val and is already installed on this machine.
+# Keep the complete minival range out of final test; minival is a published val
+# subset already installed on this machine.
 DEFAULT_QUARANTINED_VAL_PREFIXES = tuple(f"{index:05d}-" for index in range(800, 810))
-# This scene was used by the measured A-B-A/calibration/collision development audit
-# before this asset lock existed, despite not belonging to minival.
+# Used by the measured A-B-A, calibration and collision audits before this asset lock.
 DEFAULT_QUARANTINED_VAL_SCENE_IDS = frozenset({"00821-eF36g7L6Z9M"})
 
 
@@ -202,9 +185,8 @@ def build_payloads(
         },
         "scenes": scenes,
     }
-    # P05 becomes valid only after P04 supplies the actual public-observation
-    # and evaluator hashes.  It
-    # is nevertheless recorded now so the asset partition itself is immutable.
+    # P05 becomes valid only after P04 supplies the public-observation and evaluator
+    # hashes; the draft records the immutable asset partition meanwhile.
     p05_draft = {
         "evidence_class": "source_license_audit",
         "official_split_provenance": (

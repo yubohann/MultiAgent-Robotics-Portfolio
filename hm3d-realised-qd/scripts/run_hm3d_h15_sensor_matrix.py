@@ -1,10 +1,4 @@
-"""Run every H15 sensor cell in a fresh Isaac process, then assemble P06.
-
-The matrix runner deliberately executes serially.  Multiple concurrent Kit
-instances contend for one GPU, producing an invalid throughput comparison.
-Completed rows are immutable evidence; use ``--resume`` only to continue a
-previously interrupted matrix without rerunning a measured cell.
-"""
+"""Run every H15 sensor cell in a fresh Isaac process, then assemble P06."""
 
 from __future__ import annotations
 

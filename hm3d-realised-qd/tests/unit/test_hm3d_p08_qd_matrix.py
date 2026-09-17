@@ -152,10 +152,9 @@ def _record(
                     "team_spatial_dispersion": descriptor[1],
                     "public_observation_complementarity": descriptor[2],
                 },
-                # Identical descriptor modes retain overlapping public
-                # footprints; different modes expose disjoint ones.  The P08
-                # mechanism test must reject records that cannot establish
-                # this semantic link from real execution artifacts.
+                # Identical modes retain overlapping public footprints, different
+                # modes disjoint ones; the mechanism test rejects records without
+                # this link.
                 "public_new_free_voxel_keys": [
                     [100 * pattern_index + voxel, pattern_index, offset] for voxel in range(4)
                 ],

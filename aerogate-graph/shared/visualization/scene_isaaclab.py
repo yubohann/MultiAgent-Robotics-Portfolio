@@ -199,8 +199,8 @@ def setup_replay_scene(
             world_x_bounds_m=world_x_bounds_m,
             world_y_bounds_m=world_y_bounds_m,
         )
-    # Hide high-altitude debug markers in paper replays; they read as drones
-    # flying over gates even when the mesh stays on the 4 m plane.
+    # Hide high-altitude debug markers in paper replays because they read as drones flying
+    # over gates while the mesh stays on the 4 m plane.
     drone_halo_handles = []
     drone_mast_handles = []
     drone_beacon_handles = []

@@ -1020,8 +1020,8 @@ def _run(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     private_report["contract_validation"] = validate_private_vertical_slice_report(private_report)
     private_report["private_report_content_sha256"] = content_hash(private_report)
     _write_json_atomic(private_output_path, private_report)
-    # This is a file hash rather than a content hash so public consumers can
-    # detect byte-level replacement of the private evidence artifact.
+    # File hash, not content hash: public consumers can detect byte-level
+    # replacement of the private evidence artifact.
     private_report["private_report_file_sha256"] = file_hash(private_output_path)
     public_report = _sanitize_public_report(private_report)
     public_report["public_report_sha256"] = content_hash(public_report)

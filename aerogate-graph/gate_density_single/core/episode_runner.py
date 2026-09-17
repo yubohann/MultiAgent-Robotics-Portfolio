@@ -1,4 +1,4 @@
-"""Episode runner for single-drone gate-density evaluation."""
+"""Episode runner for single-drone gate-density scoring."""
 
 from __future__ import annotations
 
@@ -474,7 +474,7 @@ def run_episode(
         "actual_gate_motion_range_mean_m": float(np.mean(gate_motion_ranges) if gate_motion_ranges else 0.0),
         "actual_gate_max_displacement_m": float(max(gate_max_displacements) if gate_max_displacements else 0.0),
         "morph_min_distance_m": None,
-        "morph_note": "单机场景不适用",
+        "morph_note": "multi-vehicle scenarios only",
         "final_state": asdict(final_state),
     }
 

@@ -128,9 +128,8 @@ def target_rows() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
         rows.append(row)
         unexpected_line_blocks = list(line_blocks)
         if target.kind.startswith("base_"):
-            # Recessed base targets are intentionally hidden by intact armor.
-            # They should fail only if walls or non-armor blockers occlude the
-            # target, or if the target geometry overlaps a blocker.
+    # Intact armor hides recessed base targets by design, so a failure requires
+    # a wall, a non-armor blocker or overlap with the target geometry.
             unexpected_line_blocks = [label for label in line_blocks if not label.startswith("armor_")]
         if unexpected_line_blocks or center_overlaps or visual_overlaps:
             failures.append(

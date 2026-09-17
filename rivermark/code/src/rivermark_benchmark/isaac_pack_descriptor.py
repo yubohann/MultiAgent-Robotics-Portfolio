@@ -1,9 +1,4 @@
-"""Build a post-capture ABI descriptor from audited native Isaac arrays.
-
-The descriptor is written outside the immutable capture.  It describes public
-policy-visible arrays and calibration that already exist; it does not add a
-sensor claim, create a pack spec, or grant formal admission.
-"""
+"""Build a post-capture ABI descriptor from audited native Isaac arrays."""
 
 from __future__ import annotations
 

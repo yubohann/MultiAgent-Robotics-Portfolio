@@ -16,7 +16,7 @@ from .cli_contract import DEFAULT_DEVICE_REQUEST
 
 
 def _add_core_training_arguments(parser: argparse.ArgumentParser) -> None:
-    """Register model-agnostic training, selection, and evaluation options."""
+    """Register model-agnostic training, selection and scoring options."""
 
     parser.add_argument(
         "--dataset",

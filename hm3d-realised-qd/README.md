@@ -1,28 +1,31 @@
-# HM3D Realised-QD for Multi-UAV Exploration
+# HM3D Realised-QD
 
 <p align="center">
   <img src="assets/demos/hm3d-scene-1.gif" alt="HM3D multi-UAV exploration scene" width="78%" />
 </p>
 
-<p align="center"><em>Multi-UAV exploration in an HM3D-derived indoor scene.</em></p>
+**Outcome-grounded quality-diversity and reinforcement learning for target-free multi-UAV exploration in HM3D-derived 3D scenes.**
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+Four CF2X quadrotors explore an unknown indoor scan with public sparse-range sensing. The fleet fuses a shared belief, picks team plans from a common candidate pool, and executes them under real Isaac and PhysX dynamics. Behavioral diversity comes only from execution receipts, so the archive records what flew, and every method faces the same observations, safety contracts and physical time budget.
 
-Outcome-grounded quality-diversity and reinforcement learning for target-free multi-UAV exploration in HM3D-derived 3D environments.
+**Status.** `v0.1.0` research snapshot, 2026-08-08. The realised-QD selector holds a verified P10 component result across 42 real episodes, and the RB-SF-SAC policy and RFG fragment reuse are the next integration steps onto the formal selection path.
 
-This project studies cooperative exploration under real four-rotor execution constraints. Agents build local belief from public sparse-range observations, share a bounded candidate pool, execute guarded team plans, and update behavioural diversity only from receipts produced by real execution.
+## Core Design
 
-The active task is target-free online exploration, with `Explored-Free-Flight-Volume-AUC_time` as the primary metric under a shared CF2X, communication, safety, and physical-time contract.
+- The task is target-free online exploration of HM3D-derived indoor scenes, with `Explored-Free-Flight-Volume-AUC_time` as the primary metric under a shared CF2X, communication, safety and physical-time contract.
+- Public sparse-range outcomes build a sparse occupancy belief. Frontier, route-access and observation candidates are generated from that belief, admitted by a static clearance guard and a joint team guard, and capped at a frozen pool of 16.
+- The realised-QD archive keeps behavioral elites in a 3D descriptor space of 64 cells, with descriptors and quality that derive from real execution receipts.
+- RB-SF-SAC adds a recurrent, belief-state, shared-frontier SAC layer that ranks the same team candidates.
+- RFG gates fragment reuse on completed, provenance-clean execution, credits measured volume gains, and revokes credit when a later execution rewrites the fragment.
+- The PhysX executor runs every selected manifest with CF2X dynamics at a 40 s physical budget, and each episode emits receipts, safety ledgers and outcome hashes.
 
-## Repository Map
+## Verified So Far
 
-```text
-src/aerocity_method/  contracts, adapters, realised-QD, RL, runtime, safety, evaluation
-configs/              HM3D protocols and experiment contracts
-scripts/              assembly, audits, training, replay, and Isaac launch wrappers
-tests/                unit, property, leakage, performance, and integration tests
-docs/                 active research plans and execution contracts
-```
+- 42 formal P10 episodes on real Isaac and PhysX closed with zero collisions, zero flight-limit excursions, zero separation violations and zero failed fragments, with every transit completed.
+- On the 325.17 m³ train scene 00626, the realised-QD component scored 0.0984 AUC and led all five baselines, random 0.0915, frontier_3d 0.0917, auction 0.0838, gvp_mrep_port 0.0891 and single_rl 0.0932, with the highest coverage 0.1418 and the longest path at 28.8 m.
+- On the 145.13 m³ train scene 00459, the same component scored 0.3436 AUC, second to frontier_3d at 0.3854.
+- The 00626 mechanism ablation forms a gradient from planned intent to realised receipts, no_qd 0.0909, planned_qd 0.0926, realised_qd 0.0984.
+- QD replay calibration repeated nine of twelve intent-mode executions from identical public resets.
 
 ## Quick Start
 
@@ -32,10 +35,15 @@ uv sync --extra dev --extra rl --extra hm3d
 .\.venv\Scripts\python.exe -m ruff check src tests scripts
 ```
 
-Isaac and PhysX runs must use `scripts/run_isaac_python.ps1` and an explicitly verified IsaacLab interpreter. Set `AEROCITY_CF2X_USD` for the local CF2X USD asset. The public source tree holds code, contracts, and documentation. HM3D assets, converted meshes, private scoring data, checkpoints, raw logs, and runtime outputs stay in the local workspace.
+Isaac and PhysX runs go through `scripts/run_isaac_python.ps1` with a verified IsaacLab interpreter and `AEROCITY_CF2X_USD` set to the local CF2X USD asset. The public source tree holds code, contracts and documentation. HM3D assets, converted meshes, checkpoints and raw run outputs stay in the local workspace.
 
-The current research status and formal P01-P10 scope are documented in [docs/README.md](docs/README.md). The Chinese companion is [README.zh-CN.md](README.zh-CN.md).
+## Documentation
 
-## Release Scope
+- [Documentation index](docs/README.md), the current design, results and notes set.
+- [Method design](docs/主方法严格设计_realised_QD_RFG_RB_SF_SAC_2026-08-08.md), the realised-QD, RB-SF-SAC and RFG contract.
+- [P10 main table](docs/P10主表结果_2026-08-08.md), the component result table and ablation.
+- [Results summary](docs/论文实验结果汇总_2026-08-08.md), the frozen research record behind the numbers above.
+
+## License
 
 The source tree retains its project-specific release terms. Third-party code and assets retain their own licenses.

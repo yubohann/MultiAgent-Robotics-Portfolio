@@ -1,11 +1,4 @@
-"""Outcome-complete concurrent execution contract for the HM3D P07 matrix.
-
-This module owns no target truth and contains no simulator-specific control
-code.  It translates a selected, authorized high-level multi-UAV manifest into
-complete ``FragmentOutcome`` records through an injected backend.  A real
-Isaac/CF2X backend must execute the whole manifest concurrently; deterministic
-backends exist only to test the contract and are never formal evidence.
-"""
+"""Outcome-complete concurrent execution contract for the HM3D P07 matrix."""
 
 from __future__ import annotations
 
@@ -54,14 +47,7 @@ def _points(values: Sequence[Sequence[float]], name: str) -> tuple[Point3, ...]:
 
 @dataclass(frozen=True, slots=True)
 class FragmentExecutionSample:
-    """Actual result for one fragment returned by a concurrent backend.
-
-    ``command_path_m`` is the high-level guarded command that reached the
-    controller.  ``actual_path_m`` is a sampled physical trace; it is retained
-    by hash in the public outcome ledger rather than substituted for the
-    command path.  This distinction prevents physical tracking error from
-    being misrepresented as a perfect planned trajectory.
-    """
+    """Actual result for one fragment returned by a concurrent backend."""
 
     planned_fragment_hash: str
     executed: bool
@@ -275,8 +261,7 @@ class HM3DExecutionLedger:
             "reusable_fragment_count": self.reusable_fragment_count,
             "total_energy_used_j": self.total_energy_used_j,
             "minimum_clearance_m": self.minimum_clearance_m,
-            # This is a mean of fragment-level all-samples-connected booleans,
-            # not a connected-time fraction or a continuous-link claim.
+            # Mean of per-fragment all-samples-connected booleans, not a continuous-link claim.
             "fragment_connected_at_all_telemetry_samples_fraction": (
                 self.fragment_connected_at_all_telemetry_samples_fraction
             ),
@@ -404,15 +389,7 @@ def execute_hm3d_manifest(
     command_path_tolerance_m: float = 0.25,
     replay_exclusion_reason: str | None = None,
 ) -> HM3DExecutionLedger:
-    """Execute one authorized concurrent manifest and retain every outcome.
-
-    ``time_tolerance_s`` and ``command_path_tolerance_m`` are frozen P07
-    protocol parameters.  They bound physical tracking error for replay
-    eligibility; they do not change the recorded trace hashes or erase failed
-    fragments.  ``replay_exclusion_reason`` retains the same complete physical
-    outcome ledger while explicitly preventing an exceptional safety maneuver
-    from becoming a reusable OGFR/replay record.
-    """
+    """Execute one authorized concurrent manifest and retain every outcome."""
 
     _validate_token(manifest, token)
     if not isinstance(backend, HM3DManifestExecutionBackend):
@@ -429,9 +406,8 @@ def execute_hm3d_manifest(
     try:
         raw_samples = tuple(backend.execute_manifest(manifest, token))
     except Exception as error:
-        # Preserve the fail-closed unexecuted outcomes while retaining the
-        # actual backend cause for an Isaac worker's immutable failure record.
-        # This is diagnostics only; no exception-derived label may reach replay.
+        # Diagnostics only: keep fail-closed unexecuted outcomes and the backend cause;
+        # no exception-derived label reaches replay.
         diagnostics = getattr(backend, "engineering_diagnostics", None)
         if isinstance(diagnostics, dict):
             diagnostics["backend_exception"] = {
@@ -463,9 +439,8 @@ def execute_hm3d_manifest(
                 path_tolerance=path_tolerance,
             )
         else:
-            # The actual outcome remains in the execution denominator.  Only
-            # its future reuse is denied: a recovery trajectory proves that a
-            # vehicle escaped safely, not that it discovered reusable map gain.
+            # The outcome stays in the execution denominator; only future reuse is
+            # denied, because a recovery trajectory proves escape, not reusable gain.
             decision = ProvenanceDecision(False, replay_exclusion_reason, outcome.digest)
             record = None
         outcomes.append(outcome)

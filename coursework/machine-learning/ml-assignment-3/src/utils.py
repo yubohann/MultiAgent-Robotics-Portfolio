@@ -1,11 +1,6 @@
-"""Shared helpers for the assignment tasks.
-
-Data loading, standardization, and the stratified split all live here so the
-four task scripts don't each re-implement them.
-"""
+"""Shared helpers for the assignment tasks."""
 
 # Author: Bohan Yu
-# Machine learning course, assignment 3
 
 from __future__ import annotations
 
@@ -17,7 +12,7 @@ import pandas as pd
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 
-# one seed everywhere, keeps every run reproducible
+# one seed everywhere keeps every run deterministic
 RANDOM_STATE = 42
 
 IRIS_LABELS = {"Iris-setosa": 0, "Iris-versicolor": 1, "Iris-virginica": 2}
@@ -60,11 +55,7 @@ def load_wine(file_path: str | Path | None = None) -> tuple[np.ndarray, np.ndarr
 
 
 def standardize(x_train: np.ndarray, x_test: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Standardize with train-set statistics only.
-
-    Using the test set's own mean/std here would leak information into the
-    evaluation, so I never touch it.
-    """
+    """Standardize with train-set statistics only."""
     mean = x_train.mean(axis=0)
     std = x_train.std(axis=0)
     std[std == 0] = 1e-6

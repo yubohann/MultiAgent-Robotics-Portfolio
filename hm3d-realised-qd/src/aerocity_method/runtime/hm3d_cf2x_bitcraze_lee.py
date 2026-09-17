@@ -1,11 +1,4 @@
-"""MIT-licensed Bitcraze Lee controller core adapted to Isaac state tensors.
-
-The source reference is Bitcraze ``controller_lee.c`` at commit
-``5d287434b21b9b4fd3577c51e4d90bb4c54a5145``.  This module implements the
-state and geometric decision core only; Isaac's existing rotor allocation and
-thrust limits remain the execution boundary.  It intentionally does not copy
-Bitcraze's GPL ``math3d`` helpers or firmware plumbing.
-"""
+"""MIT-licensed Bitcraze Lee controller core adapted to Isaac state tensors."""
 
 from __future__ import annotations
 

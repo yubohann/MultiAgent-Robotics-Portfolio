@@ -1,10 +1,4 @@
-"""Assemble measured P03 geometry evidence before P04 observation collection.
-
-P03 proves a scene is a valid 3D CF2X flight space.  P04 then uses that fixed
-geometry to collect public sparse-range outcomes.  This explicit stage breaks
-the former P03<->P04 circular dependency without treating a planned route or
-an observation-free synthetic record as runtime evidence.
-"""
+"""Assemble measured P03 geometry evidence before P04 observation collection."""
 
 from __future__ import annotations
 

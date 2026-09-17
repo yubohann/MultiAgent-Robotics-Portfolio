@@ -1,16 +1,4 @@
-"""CPU reference for the audited OmniDrones rate-controller math.
-
-This module is intentionally not an Isaac controller and is not imported by
-the City-Lite capture path.  It gives a dependency-light way to test the
-mathematics and units used by the upstream Crazyflie rate-controller example
-before an explicitly calibrated T2 policy adapter is considered.
-
-The upstream controller consumes world-frame angular velocity in a 13D state,
-rotates it into the body frame, and returns normalized rotor commands.  The
-Rivermark runtime instead accepts physical per-rotor thrust targets in newtons.
-Both representations are returned so an integration cannot silently exchange
-one for the other.
-"""
+"""CPU reference for the audited OmniDrones rate-controller math."""
 
 from __future__ import annotations
 

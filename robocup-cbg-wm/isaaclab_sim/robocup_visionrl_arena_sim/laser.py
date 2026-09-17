@@ -221,8 +221,8 @@ def remove_next_armor(base_team: str):
     unregister_blocker(armor_path)
     start_pos, start_orient = get_xform(armor_path)
     removed_index = 4 - len(BASE_ARMOR[base_team])
-    # Removed armor is lifted out above the wall instead of being dropped onto
-    # the floor, so it never becomes a post-hit route obstacle.
+    # Removed armor lifts above the wall so it never becomes a post-hit route
+    # obstacle on the floor.
     end_pos = (
         start_pos[0],
         start_pos[1],

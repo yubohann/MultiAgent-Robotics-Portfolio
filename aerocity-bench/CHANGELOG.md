@@ -3,6 +3,14 @@
 All notable development milestones for AeroCityBench are recorded here. The project remains
 pilot-only until the formal release gates documented in the authoritative execution plan pass.
 
+## [Unreleased] - 2026-09-17
+
+### Changed
+
+- restructured documentation into a benchmark design, research notes and a run guide.
+- cleaned comments and docstrings across the package, tools and tests.
+- sized down the demo GIFs and translated the last internal tool output to English.
+
 ## [0.2.0.dev0] - 2026-07-30
 
 ### Added

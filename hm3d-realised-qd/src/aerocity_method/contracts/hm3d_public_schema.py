@@ -1,9 +1,4 @@
-"""Versioned public HM3D candidate/task contracts.
-
-These values are part of the outcome identity, not documentation labels.  A
-candidate-pool hash alone cannot distinguish an older producer that happened
-to emit the same shaped rows from the current persistent-task semantics.
-"""
+"""Versioned public HM3D candidate and task contracts."""
 
 from __future__ import annotations
 

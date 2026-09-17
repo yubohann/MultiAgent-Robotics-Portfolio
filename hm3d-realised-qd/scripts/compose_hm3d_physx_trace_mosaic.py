@@ -1,10 +1,4 @@
-"""Compose synchronized audit views from one completed HM3D PhysX replay.
-
-The input MP4s must all be trace-driven renderings produced by
-``record_hm3d_physx_trace_replay.py`` from the same engineering-smoke source
-record. This utility only combines decoded pixels. It never changes a PhysX
-trace or supplies observations to the exploration system.
-"""
+"""Compose synchronized audit views from one completed HM3D PhysX replay."""
 
 from __future__ import annotations
 
@@ -326,8 +320,8 @@ def _load_trace_timeline(
     lower = tuple(min(position[axis] for position in all_positions) for axis in range(3))
     upper = tuple(max(position[axis] for position in all_positions) for axis in range(3))
     centre = tuple((low + high) * 0.5 for low, high in zip(lower, upper, strict=True))
-    # Equal-scale coordinates make the vertical contribution visible and avoid
-    # turning a narrow XY spread into a deceptively flat trace.
+    # Equal-scale coordinates make the vertical contribution visible instead of a
+    # deceptively flat narrow XY spread.
     half_span_m = max(
         0.75,
         max(high - low for low, high in zip(lower, upper, strict=True)) * 0.5 + 0.35,

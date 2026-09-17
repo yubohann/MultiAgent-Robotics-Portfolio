@@ -4,7 +4,7 @@ from sqlalchemy import func
 
 
 def get_sales_orders(page=1, per_page=10, search='', cashier_id=None, status=None, payment_method=None, start_date=None, end_date=None):
-    """获取销售订单列表"""
+    """Return the sales order list."""
     query = db.session.query(
         Sale.sale_id,
         Sale.order_no,
@@ -106,7 +106,7 @@ def get_sales_orders(page=1, per_page=10, search='', cashier_id=None, status=Non
 
 
 def get_sales_order_detail(sale_id):
-    """获取销售订单详情"""
+    """Return the detail of one sales order."""
     sale = db.session.get(Sale, sale_id)
     if not sale:
         return None

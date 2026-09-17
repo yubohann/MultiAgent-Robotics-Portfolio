@@ -1,8 +1,4 @@
-"""Ollama client for local multimodal video-frame understanding.
-
-Ollama 通过本机 HTTP API 暴露模型能力，适合学生在 Windows/Linux/macOS 上统一运行。
-本客户端只发送经过预处理的关键帧和压缩后的指标，避免把完整视频直接塞给模型。
-"""
+"""Ollama client for local multimodal video-frame understanding."""
 
 import base64
 import json
@@ -25,11 +21,7 @@ class OllamaModelError(RuntimeError):
 
 
 def _extract_json(text: str) -> dict:
-    """Extract JSON from a model response that may include Markdown fences.
-
-    即使 prompt 要求只输出 JSON，部分本地模型仍可能包一层 ```json。
-    这里做容错解析，但如果完全没有 JSON，仍然抛错并触发上层 fallback。
-    """
+    """Extract JSON from a model response that may include Markdown fences."""
     text = text.strip()
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?", "", text).strip()
@@ -49,10 +41,7 @@ def _image_base64(path: str) -> str:
 
 
 def _representative_frames(frames: list[dict], limit: int) -> list[dict]:
-    """Pick evenly spaced keyframes when the preprocessor produced too many.
-
-    预处理阶段可能保留 12 张候选帧；为了照顾 16GB 机器，默认只向 VLM 发送 4 张。
-    """
+    """Pick evenly spaced keyframes when the preprocessor produced too many."""
     if len(frames) <= limit:
         return frames
     if limit <= 1:
@@ -98,11 +87,7 @@ class OllamaVLMClient:
         preprocess: dict,
         local_metrics: dict,
     ) -> dict:
-        """Run one multimodal analysis request through Ollama.
-
-        输入包括标题、视频 metadata、关键帧抽样原因和 baseline 指标。
-        输出必须是结构化 JSON，便于后续审核策略稳定读取字段。
-        """
+        """Run one multimodal analysis request through Ollama."""
         if not self.is_model_available(candidate.ollama_model):
             raise OllamaModelError(
                 f"Ollama model is not downloaded: {candidate.ollama_model}. "
@@ -117,7 +102,7 @@ class OllamaVLMClient:
         if not images:
             raise OllamaModelError("no keyframes available for Ollama inference")
 
-        # Ollama chat 接口支持 images 数组；`think: False` 避免 Qwen3 系列输出冗长思考过程。
+        # The Ollama chat API accepts an images array, and think=False suppresses long reasoning output.
         payload = {
             "model": candidate.ollama_model,
             "stream": False,
@@ -158,11 +143,7 @@ class OllamaVLMClient:
         local_metrics: dict,
         selected_frames: list[dict],
     ) -> str:
-        """Build the compact Chinese prompt sent to the local VLM.
-
-        prompt 明确约束字段名、风险等级和 JSON 输出格式，这让后续 Python 代码可以
-        像处理普通结构化数据一样处理模型结果。
-        """
+        """Build the compact Chinese prompt sent to the local VLM."""
         keyframes = [
             {
                 "timestamp_sec": frame["timestamp_sec"],

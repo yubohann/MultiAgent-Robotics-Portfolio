@@ -1,12 +1,4 @@
-"""Package an independently validated Isaac Search3D capture for admission.
-
-The packer is a projection boundary, not an evaluator and not an admission
-authority.  It copies only explicitly selected policy-visible artifacts into a
-new closed-world candidate, commits to evaluator truth held elsewhere, and
-binds the resulting formal receipt to an independent validation receipt.  A
-release operator must still approve the formal receipt hash before
-``DatasetCollector`` can admit the candidate.
-"""
+"""Package an independently validated Isaac Search3D capture for admission."""
 
 from __future__ import annotations
 

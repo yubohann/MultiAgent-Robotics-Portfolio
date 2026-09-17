@@ -1,4 +1,4 @@
-"""Aggregate gate-density evaluation runs into tables and curves."""
+"""Aggregate gate-density scoring runs into tables and curves."""
 
 from __future__ import annotations
 

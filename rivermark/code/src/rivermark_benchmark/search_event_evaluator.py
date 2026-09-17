@@ -1,10 +1,4 @@
-"""Authoritative, sensor-grounded Search3D event matching.
-
-Policies submit timestamped candidate positions.  Episode duration, target
-truth, per-observation visibility, and safety observations are evaluator-owned inputs;
-they never come from the policy submission.  This module deliberately keeps
-matching separate from the legacy public trace scorer in :mod:`evaluator`.
-"""
+"""Authoritative, sensor-grounded Search3D event matching."""
 
 from __future__ import annotations
 

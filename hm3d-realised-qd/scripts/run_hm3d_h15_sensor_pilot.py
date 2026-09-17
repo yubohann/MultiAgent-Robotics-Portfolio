@@ -1,11 +1,4 @@
-"""Measure the frozen H15 sensor matrix in one real Isaac Sim HM3D scene.
-
-The pilot is a throughput admission run, not a search-policy benchmark.  It
-uses the same static HM3D collision stage, physics step, run horizon, receiver
-poses and failure denominator for the formal four-CF2X camera-free two-mode matrix.
-H15 emits no task-quality field because no task controller is selected here;
-later P07/P08 exclusively own exploration-quality measurements.
-"""
+"""Measure the frozen H15 sensor matrix in one real Isaac Sim HM3D scene."""
 
 from __future__ import annotations
 
@@ -151,8 +144,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         if frame_due:
             frame_start = time.perf_counter()
             if profile.mode == "sparse_range_3d":
-                # One source-bound sparse 3-D range sweep per UAV: the
-                # endpoint is from the same PhysX collision scene.
+                # One source-bound sparse 3-D range sweep per UAV from the same
+                # PhysX collision scene.
                 for agent_index, origin in enumerate(fleet_positions):
                     for direction in (
                         (1.0, 0.0, 0.0),
@@ -248,9 +241,8 @@ def _entrypoint() -> int:
     args = parse_args()
     app = AppLauncher(args)
     exit_code = main(args, app.app)
-    # Every matrix cell runs in a fresh process. The measurement has already
-    # been atomically written by ``_write_new``; process isolation gives each
-    # next cell a clean PhysX instance.
+    # Each matrix cell runs in a fresh process; the measurement was atomically
+    # written by ``_write_new`` before isolation exits.
     sys.stdout.flush()
     sys.stderr.flush()
     os._exit(exit_code)

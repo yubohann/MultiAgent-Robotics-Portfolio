@@ -480,11 +480,11 @@ def path_length(path: list[tuple[float, float]]) -> float:
 
 
 def demo_policy_corridor(team: str, start_xy: tuple[float, float], goal_xy: tuple[float, float]) -> list[tuple[float, float]]:
-    """Wide, regulation-safe staging waypoints for the portfolio self-play replay.
+    """Wide staging waypoints for the portfolio self-play replay.
 
-    The high-level policy still decides which opponent target to attack. These
-    waypoints emulate the low-level Nav2 corridor preference that keeps the
-    differential-drive base away from start rails, inner fences, and armor.
+    The high-level policy decides which opponent target to attack, and these
+    waypoints emulate the Nav2 corridor preference that keeps the base clear of
+    start rails, inner fences and armor.
     """
     sx, sy = start_xy
     gx, gy = goal_xy

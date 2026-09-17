@@ -1,11 +1,4 @@
-"""Dependency-light validator for the field-level observation ABI.
-
-The episode manifest binds files and provenance.  This contract binds the
-meaning of values inside those files: shape, dtype, units, timing, missing
-values, compression, and calibration.  It is intentionally separate from the
-pilot manifest so an old pilot cannot be made to look standards-compliant by
-adding a label after the fact.
-"""
+"""Dependency-light validator for the field-level observation ABI."""
 
 from __future__ import annotations
 

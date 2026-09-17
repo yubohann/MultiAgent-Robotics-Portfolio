@@ -1,11 +1,4 @@
-"""Train and execute a real public-observation multi-agent pilot policy.
-
-The environment is a PettingZoo parallel environment over the ordinary
-Rivermark kinematic runtime.  Each agent receives its own public state plus a
-fixed summary of public team messages.  A small shared-parameter, decentralized
-PPO-style actor-critic is trained from those rollouts.  This is a genuine local
-MARL path, not a claim of skrl, RLlib, MAPPO, or Isaac training.
-"""
+"""Train and execute a real public-observation multi-agent pilot policy."""
 
 from __future__ import annotations
 

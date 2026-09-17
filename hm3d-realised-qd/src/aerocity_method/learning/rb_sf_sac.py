@@ -1,9 +1,4 @@
-"""Masked, duration-aware discrete SAC compatibility kernel.
-
-The public behavior is based on tests and semantics from the locally owned
-``md_qd_swarm.method.rb_sf_sac`` snapshot.  The implementation is decoupled
-from its old route, scene, outcome and archive models.
-"""
+"""Masked, duration-aware discrete SAC compatibility kernel."""
 
 from __future__ import annotations
 
@@ -509,8 +504,7 @@ class RBSFSAC:
             and self.cost_multiplier_optimizer is not None
         ):
             cost_violation = cost_value.mean() - float(self.config.cost_limit)
-            # Minimize -lambda * (observed cost - limit), so lambda rises only
-            # when the measured execution cost exceeds the configured budget.
+            # Minimize -lambda * (observed cost - limit); lambda rises only above budget.
             dual_loss = -self.cost_multiplier * cost_violation
             self.cost_multiplier_optimizer.zero_grad(set_to_none=True)
             dual_loss.backward()

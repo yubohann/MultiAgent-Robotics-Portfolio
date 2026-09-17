@@ -120,9 +120,7 @@ The 50v50 benchmark is a rule-level large-scale extension with IsaacLab tactical
 Primary artifacts.
 
 ```text
-docs/large_scale_50v50_plan.md
-docs/large_scale_50v50_curriculum_plan.md
-docs/large_scale_50v50_report.md
+docs/rl_data/large_scale_curriculum/
 docs/rl_data/large_scale_50v50/
 docs/media/large_scale_50v50_isaaclab_replay.mp4
 docs/figures/large_scale_50v50/

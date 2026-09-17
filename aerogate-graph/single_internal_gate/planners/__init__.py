@@ -1,4 +1,4 @@
-"""Simple deterministic planners used by experiment-2 method ablations."""
+"""Deterministic planners used by experiment-2 method ablations."""
 
 from __future__ import annotations
 

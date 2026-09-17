@@ -1,9 +1,4 @@
-"""Deterministic, finite-only serialization helpers.
-
-The core semantics are derived from the locally owned md_qd_swarm
-``method/io_contract.py`` snapshot recorded in ``manifests/reuse_manifest.json``.
-This module is a clean rewrite with recursive normalization and safe cleanup.
-"""
+"""Deterministic, finite-only serialization helpers."""
 
 from __future__ import annotations
 

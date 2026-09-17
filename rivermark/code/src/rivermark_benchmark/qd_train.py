@@ -1,11 +1,4 @@
-"""Train and execute a real pyribs MAP-Elites archive on public pilot routes.
-
-This is deliberately a route-parameter archive rather than a hidden-target
-optimizer.  Fitness and descriptors are derived only from the public mission,
-public geometry, and the rollout's public state/safety records.  The resulting
-archive is hash-bound and can be executed through the same online recorder as
-other pilot methods.
-"""
+"""Train and execute a real pyribs MAP-Elites archive on public pilot routes."""
 
 from __future__ import annotations
 

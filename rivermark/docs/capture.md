@@ -1,8 +1,8 @@
 # Native Isaac Capture
 
-`rivermark_benchmark.isaac_capture` runs the native collection. One long-lived Isaac AppLauncher process builds a fresh stage with the approved City-Lite roots and eight physical CF2X vehicles. This section covers capture preparation and each physics step.
+`rivermark_benchmark.isaac_capture` runs the native collection. One long-lived Isaac AppLauncher process builds a fresh stage with the approved City-Lite roots and eight physical CF2X vehicles. This page covers capture preparation and each physics step.
 
-## The step loop
+## The Step Loop
 
 At every physical step the collector performs this sequence.
 
@@ -14,9 +14,9 @@ At every physical step the collector performs this sequence.
 
 Command-before-step timing makes causal scoring possible.
 
-## Before launch
+## Before Launch
 
-A capture starts only after preflight checks pass, covering a clean source tree, disk reservation, the Windows system-commit guard, GPU and driver capacity, the City-Lite contract, the CF2X asset hash, the runtime lock, and the scorer-private manifest binding. A repository-wide lease allows one AppLauncher at a time.
+A capture starts after preflight checks pass, covering a clean source tree, disk reservation, the Windows system-commit guard, GPU and driver capacity, the City-Lite contract, the CF2X asset hash, the runtime lock, and the scorer-private manifest binding. A repository-wide lease allows one AppLauncher at a time.
 
 The collection protocol, cell, and episode index are bound before Isaac starts.
 
@@ -32,16 +32,16 @@ rivermark-isaac-capture --output-dir E:\rivermark-runs\run-001 `
 
 The capture resolves the protocol once, stores a path-free binding in the receipt, and derives the episode seed deterministically from the protocol, cell, and episode index. A runtime seed that differs from the bound seed is rejected.
 
-## Fail-closed behavior
+## Fail-Closed Behavior
 
 A capture is discarded when any gate fails, covering missing or stale sensor frames, pose-closure error, unresolved scene references, visual intrusion, unsafe obstacle proximity, route-contract violations, private-truth leakage, insufficient disk, runtime-lock mismatch, and resource-guard breaches. Failed artifacts stay outside the formal dataset and enter a redacted failure ledger.
 
-## The evidence path
+## The Evidence Path
 
 - **Overview witness**. A fixed public-world camera pose, checked live at every retained frame. The sparse archive keeps RGB, native semantics, and pose at the first, every tenth, and final retained frame.
 - **Onboard gates**. Every RGB-D and LiDAR sample passes a visual-intrusion gate. Close meshes, foliage, near-surface depth domination, or anomalous near-range LiDAR fail the capture at this gate.
-- **Video**. Overview and composite MP4s encode only after an independent validator passes, and each file is fully decoded and sampled at the first, 25%, 50%, 75%, and final frames. Episode validity rests on the validator pass.
+- **Video**. Overview and composite MP4s encode after an independent validator passes, and each file is fully decoded and sampled at the first, 25%, 50%, 75%, and final frames. Episode validity rests on the validator pass.
 
-## Private manifest retention
+## Private Manifest Retention
 
 For every future `fixed_public_route` capture, the operator supplies an existing private retention directory outside both the repository and the capture. The collector snapshots the exact scorer manifest there under its SHA-256 filename and loads the retained snapshot in place of the mutable source. The public receipt records the retention kind, hash, and byte count, while the private root, path, and manifest bytes remain local.

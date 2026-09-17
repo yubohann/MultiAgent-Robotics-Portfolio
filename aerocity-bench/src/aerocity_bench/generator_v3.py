@@ -439,10 +439,8 @@ def _architectural_components(
         size_x, size_y, size_z = (float(value) for value in component["size"])
         roof_z = center_z + size_z / 2.0
         base_id = str(component["id"])
-        # Perpendicular parapets must have a real join gap, not merely a
-        # mathematical edge contact.  CitySpec serializes each box to four
-        # decimals independently; nominal contact can otherwise become a
-        # positive-volume corner overlap after serialization.
+        # Leave a real join gap, not edge contact: four-decimal serialization
+        # of each box can turn nominal contact into a positive-volume overlap.
         horizontal_span = size_x - 2.0 * parapet_thickness - COLLIDER_JOIN_GAP_M
         vertical_span = size_y - 2.0 * parapet_thickness - COLLIDER_JOIN_GAP_M
         for suffix, detail_center, detail_size in (
@@ -501,10 +499,8 @@ def _architectural_components(
                 }
             )
 
-    # Complex courtyard and stepped grammars have more component roofs than a
-    # single tower.  A fixed upper bound prevents them from becoming a hidden
-    # performance variable or a large collider budget.  The seed is city-local
-    # and never derives from a target label.
+    # Cap the parapet count so complex grammars cannot turn roof count into a
+    # hidden performance variable.  The seed is city-local, never target-derived.
     if len(parapet_candidates) > 8:
         selected = set(rng.sample(range(len(parapet_candidates)), 8))
         details.extend(
@@ -590,9 +586,8 @@ def _roof_equipment_component(
     equipment_width = min(3.2, max(0.7, size_x * rng.uniform(0.14, 0.26)), size_x - 0.4)
     equipment_depth = min(3.2, max(0.7, size_y * rng.uniform(0.14, 0.26)), size_y - 0.4)
     equipment_roof_gap = 0.015
-    # Keep the equipment clear of the bounded roof parapets. The detail
-    # geometry uses a 0.28 m maximum wall thickness, so 0.50 m guarantees
-    # non-overlapping colliders after CitySpec's four-decimal serialization.
+    # 0.50 m clears the 0.28 m maximum parapet wall thickness even after
+    # four-decimal serialization.
     x_room = max(0.0, (size_x - equipment_width) / 2.0 - 0.50)
     y_room = max(0.0, (size_y - equipment_depth) / 2.0 - 0.50)
     return {
@@ -681,9 +676,8 @@ def _generate_buildings(
         building_id = f"building-{content_hash([x, y, width, depth, height])[:10]}"
         components = _components(template, x, y, width, depth, height)
         side = rng.choice(("south", "east", "north", "west"))
-        # Keep visual/architectural sampling separate from the core city stream:
-        # visual richness must not alter street topology, building placement,
-        # obstacle sampling, target processes, or difficulty admission.
+        # Architectural detail uses its own RNG stream: visual richness must not
+        # perturb the core city stream or target processes.
         detail_rng = random.Random(derived_seed(building_id, "architectural-detail-v1"))
         structural_components = list(components)
         architectural_details, entrance = _architectural_components(
@@ -986,8 +980,7 @@ def generate_city_v3(
     road_width = rng.uniform(width_low, width_high)
     nodes, roads = _road_graph(family, size_m, road_width, rng)
     style_rng = random.Random(derived_seed(seed, "road-surface-style-v1"))
-    # The style is public, layout-hashed geometry metadata, but it must not
-    # perturb the core RNG stream used to sample city structure.
+    # Public, layout-hashed metadata; keep it off the core city RNG stream.
     for road in roads:
         road["surface_style"] = style_rng.choice(ROAD_SURFACE_STYLES)
     templates = OOD_TEMPLATES if split == "test_topology" else DEVELOPMENT_TEMPLATES

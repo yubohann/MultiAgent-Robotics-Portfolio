@@ -296,8 +296,8 @@ def test_adapter_schedules_enough_samples_for_continuous_dwell() -> None:
         for _ in range(6)
     ]
 
-    # One hover absorbs arrival velocity and one follows the first public
-    # settled packet.  The first OBSERVE sample then starts the dwell window.
+    # One hover absorbs arrival velocity, one follows the first settled public
+    # packet, and the first OBSERVE sample starts the dwell window.
     assert [action["kind"] for action in actions] == ["HOVER", "HOVER", *(["OBSERVE"] * 4)]
     assert (len(actions[2:]) - 1) * planner.control_period_s >= planner.dwell_s
 

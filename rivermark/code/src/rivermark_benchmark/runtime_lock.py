@@ -1,11 +1,4 @@
-"""Exact, Isaac-free runtime lock verification for native City-Lite work.
-
-The v2 lock deliberately separates facts which can be observed before Kit is
-started (package/source/asset provenance) from settings which must be checked
-again after ``AppLauncher`` and ``SimulationContext`` exist.  This keeps the
-preflight useful without pretending that a JSON file alone proves the live
-renderer or PhysX configuration.
-"""
+"""Exact, Isaac-free runtime lock verification for native City-Lite work."""
 
 from __future__ import annotations
 

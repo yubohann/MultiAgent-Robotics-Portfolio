@@ -56,7 +56,7 @@ _FAQ_PRESET_ANSWERS = {
 
 
 def generate_assistant_reply(message):
-    """根据用户问题生成助手回复。"""
+    """Generate an assistant reply for a user question."""
     text = (message or '').strip()
     if not text:
         return {
@@ -203,7 +203,7 @@ def _try_generate_by_llm(text):
         'Content-Type': 'application/json',
     }
 
-    # 硅基流动兼容 OpenAI 接口，附带来源信息便于平台识别调用方。
+    # SiliconFlow follows the OpenAI API, and site headers identify the caller.
     if provider == 'siliconflow':
         if site_url:
             headers['Referer'] = site_url

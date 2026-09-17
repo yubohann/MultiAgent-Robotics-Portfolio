@@ -23,14 +23,7 @@ def _point(values: Sequence[float], name: str) -> Point3:
 def required_segment_sample_clearance_m(
     required_clearance_m: float, maximum_sample_spacing_m: float
 ) -> float:
-    """Return the point-clearance threshold that proves a linear segment safe.
-
-    Distance to a fixed collision mesh is 1-Lipschitz.  If samples are at
-    most ``maximum_sample_spacing_m`` apart, every point on a line segment is
-    within half that spacing of one sample.  Requiring this returned value at
-    every sample therefore proves the requested continuous centreline
-    clearance without assuming that the ESDF is exact.
-    """
+    """Return the point-clearance threshold that proves a linear segment safe under sampling."""
 
     required = float(required_clearance_m)
     spacing = float(maximum_sample_spacing_m)
@@ -63,14 +56,7 @@ class ClearanceAssessment:
 
 @dataclass(frozen=True, slots=True)
 class ConservativeVoxelClearance:
-    """A lower-bound distance query over an evaluator-private collision ESDF.
-
-    The input distance grid is derived from the exact collision mesh used by
-    PhysX.  A query takes the minimum of the local lattice cells and subtracts
-    one voxel diagonal, covering both the query-to-grid-centre and the
-    surface-to-occupied-voxel discretization error.  It is therefore a
-    conservative admission test, rather than a method-visible map feature.
-    """
+    """A lower-bound distance query over an evaluator-private collision ESDF."""
 
     collision_distance_m: np.ndarray
     origin_center_m: Point3
@@ -239,14 +225,7 @@ class SynchronizedSeparationAssessment:
 
 @dataclass(frozen=True, slots=True)
 class RouteTubeSeparationAssessment:
-    """Minimum spatial separation of every pair of planned route centrelines.
-
-    This is intentionally independent of the nominal timing model.  It is a
-    conservative admission certificate for an executor that advances waypoint
-    references after physical settling, rather than an enforceable temporal
-    reservation system.  A moving route and a stationary relay are both
-    represented as spatial segments.
-    """
+    """Minimum spatial separation of every pair of planned route centrelines."""
 
     required_separation_m: float
     minimum_route_separation_m: float
@@ -271,14 +250,7 @@ class RouteTubeSeparationAssessment:
 
 @dataclass(frozen=True, slots=True)
 class CollisionAvoidanceRecoveryAssessment:
-    """Certificate for a one-vehicle escape from a planning-envelope overlap.
-
-    This is intentionally narrower than normal joint-route admission.  It is
-    only for a physically safe fleet that has entered the tracking envelope
-    but not the collision envelope.  One vehicle follows a diverging route
-    while every other vehicle remains stationary; the endpoint must restore
-    the normal planning margin before ordinary candidate generation resumes.
-    """
+    """Certificate for a one-vehicle escape from a planning-envelope overlap."""
 
     physical_minimum_separation_m: float
     planned_minimum_separation_m: float
@@ -399,15 +371,7 @@ def _spatial_segments(
 def assess_route_tube_separation(
     routes: Sequence[TimedPolyline | TimedStationary], *, minimum_separation_m: float
 ) -> RouteTubeSeparationAssessment:
-    """Reject routes whose occupied spatial tubes overlap before execution.
-
-    The assessment is deliberately stricter than
-    :func:`assess_synchronized_separation`: two paths crossing at different
-    *planned* times still conflict because waypoint settling makes those times
-    non-binding in the current CF2X executor.  It is not claimed to prove
-    safety for arbitrary asynchronous execution; that requires enforced
-    temporal reservations or online replanning.
-    """
+    """Reject routes whose occupied spatial tubes overlap before execution."""
 
     required = float(minimum_separation_m)
     if not math.isfinite(required) or required <= 0.0:
@@ -535,13 +499,7 @@ def assess_collision_avoidance_recovery(
     recovery_endpoint_minimum_separation_m: float,
     boundary_speed_limit_mps: float,
 ) -> CollisionAvoidanceRecoveryAssessment:
-    """Certify a stationary-fleet, strictly non-converging envelope recovery.
-
-    It never relaxes the physical CF2X separation requirement.  The exception
-    is only that the *initial* planning envelope may be entered, provided the
-    fleet is already near rest and the sole moving vehicle can monotonically
-    increase its distance from every stationary neighbour.
-    """
+    """Certify a stationary-fleet, strictly non-converging envelope recovery."""
 
     physical = float(physical_minimum_separation_m)
     planned = float(planned_minimum_separation_m)

@@ -1,11 +1,4 @@
-"""Local authenticated evaluator-service prototype.
-
-This module deliberately stops at a local service boundary.  It does not open
-ports or provide a blind-test leaderboard.  It adds the controls that must be
-tested before an independently operated service exists: bearer-token
-authentication, a bounded request window, an in-memory replay store, a
-path-free append-only audit log, and detached Ed25519 result signatures.
-"""
+"""Local authenticated evaluator-service prototype."""
 
 from __future__ import annotations
 

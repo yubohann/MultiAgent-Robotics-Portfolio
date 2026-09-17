@@ -104,9 +104,8 @@ def _is_isaac_process_record(name: str, command_line: str) -> bool:
         return True
     if normalized_name not in {"python.exe", "pythonw.exe"}:
         return False
-    # IsaacLab launchers need not share a fixed script basename.  Its Python
-    # environment together with headless execution is a narrower and more
-    # durable signature than maintaining an incomplete script-name allowlist.
+    # Launchers need not share a script basename; the IsaacLab Python
+    # environment plus headless mode is a more durable signature.
     if "isaaclab" in normalized_command and "--headless" in normalized_command:
         return True
     return any(
@@ -226,9 +225,8 @@ def _stop_process(process: subprocess.Popen[Any]) -> None:
     if process.poll() is not None:
         return
     if os.name == "nt":
-        # Terminate only the process tree created for this attempt.  Isaac may
-        # retain Kit/render children, so killing only the Python parent can
-        # poison every later batch job on the same host.
+        # Tree-kill only this attempt's process: Isaac may retain Kit/render
+        # children that would poison later batch jobs on the same host.
         try:
             subprocess.run(
                 ["taskkill", "/PID", str(process.pid), "/T", "/F"],
@@ -238,9 +236,8 @@ def _stop_process(process: subprocess.Popen[Any]) -> None:
                 timeout=30.0,
             )
         except (OSError, subprocess.SubprocessError):
-            # The monitor must still regain control if taskkill itself cannot
-            # start or times out.  Killing the parent is weaker than a tree
-            # kill, but it prevents the guard from losing its failure receipt.
+            # If taskkill cannot start or times out, fall back to killing the
+            # parent; weaker than a tree kill, but the guard keeps its receipt.
             process.kill()
     else:
         process.terminate()

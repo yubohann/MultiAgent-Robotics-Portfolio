@@ -1,10 +1,4 @@
-"""Run the public CPU smoke from a temporary clean Git clone.
-
-This command is a reproducibility check for the public researcher entry path.
-It does not provide second-machine evidence, an Isaac reproduction, or a
-formal dataset episode. The temporary clone and fixture are removed after the
-report is written; only a path-free, hash-bound report remains.
-"""
+"""Run the public CPU smoke from a temporary clean Git clone."""
 
 from __future__ import annotations
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Compare an estimator odometry stream with Gazebo truth from one replay.
 
-The comparison is trajectory-aligned at the first timestamped pair. This
-removes the arbitrary estimator origin and fixed sensor mounting offset while
-retaining drift and motion error. It is a simulation/bag diagnostic, not a
-physical calibration result.
+The comparison aligns both trajectories at the first timestamped pair, which
+removes the arbitrary estimator origin and the fixed sensor mounting offset
+while retaining drift and motion error as a simulation and bag diagnostic.
 """
 
 from __future__ import annotations
@@ -60,7 +59,7 @@ def _percentile(values: list[float], fraction: float) -> float | None:
 def _aligned_error(truth: Pose, estimate: Pose, first_truth: Pose, first_estimate: Pose) -> tuple[float, float]:
     yaw_offset = first_estimate.yaw - first_truth.yaw
     c, s = math.cos(yaw_offset), math.sin(yaw_offset)
-    # Align truth's first point to the estimator's first point in SE(2).
+    # Align the first truth point to the first estimate point in SE(2).
     tx = first_estimate.x - (c * first_truth.x - s * first_truth.y)
     ty = first_estimate.y - (s * first_truth.x + c * first_truth.y)
     aligned_x = c * truth.x - s * truth.y + tx
@@ -85,8 +84,8 @@ class TruthEvaluator:
         self.node = rclpy.create_node("odom_truth_evaluator")
         self.node.create_subscription(Odometry, truth_topic, self._truth_callback, qos_profile_sensor_data)
         self.node.create_subscription(Odometry, estimate_topic, self._estimate_callback, qos_profile_sensor_data)
-        # Persist progress during replay; ROS shutdown can be delayed by a
-        # bag player or an estimator that does not handle SIGINT promptly.
+        # Persist progress during replay because a bag player or an estimator
+        # with a slow SIGINT path can delay ROS shutdown.
         self.node.create_timer(1.0, self.write_summary)
         self.write_summary()
 

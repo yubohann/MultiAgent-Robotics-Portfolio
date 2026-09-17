@@ -1,11 +1,4 @@
-"""Fail-closed policy-observation index for validated native T1 captures.
-
-The raw capture is an audit bundle and contains streams that a policy must not
-read.  This module writes an external, hash-bound index over an explicit
-allow-list.  It copies no sensor payload and is deliberately only an
-accidental-leakage guard; it is not an operating-system sandbox for hostile
-policy code.
-"""
+"""Fail-closed policy-observation index for validated native T1 captures."""
 
 from __future__ import annotations
 

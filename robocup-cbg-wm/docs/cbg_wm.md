@@ -8,6 +8,8 @@ It addresses a narrower question than generic video prediction. Can a robot use 
 
 ## Implemented architecture
 
+![CBG-WM training and scoring pipeline](figures/cbg_wm_accgd_pipeline.png)
+
 1. `BeliefTracker` converts simulated detections to a fixed set of typed belief tokens. Each token contains pose, velocity, type-specific attributes, extent, visibility, last-seen time, observation age, covariance, occlusion and presence. Occluded objects retain their last belief and accumulate uncertainty. Fixed target and armor geometry may enter as a high-covariance field-map prior, and movable boxes require observation. Referee and hit events synchronize target and armor presence even when geometry is occluded. The planner consumes belief tokens as its state representation.
 2. `build_typed_edges` constructs sparse relations for observation, contact, route blocking, base protection, threats, proximity and line of sight. The construction and graph dynamics are equivariant when tokens and their type labels are permuted together.
 3. `CounterfactualBeliefGraphWorldModel` separates per-object self dynamics from typed interaction messages. Each ensemble member predicts Gaussian state deltas, reward distributions, termination, visibility and presence and four rule-risk channels.

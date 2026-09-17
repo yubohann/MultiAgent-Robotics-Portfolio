@@ -1,10 +1,4 @@
-"""Runnable, provenance-labelled Rivermark pilot reference methods.
-
-The native policies in this module are small implementations intended to
-exercise the benchmark contract.  They are not aliases for third-party
-checkpoints.  Checkpoint adapters are registered separately and fail closed
-until the user supplies both a compatible dependency and an immutable weight.
-"""
+"""Runnable, provenance-labelled Rivermark pilot reference methods."""
 
 from __future__ import annotations
 

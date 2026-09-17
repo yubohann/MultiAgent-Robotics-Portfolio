@@ -1,10 +1,4 @@
-"""Passive online recorder for Rivermark pilot episodes.
-
-The recorder only receives runtime frames and public observations.  It never
-queries evaluator-private target positions and cannot feed values back into a
-policy.  Payloads use NPZ/JSONL for the dependency-light pilot; the manifest
-records that this is not the eventual Parquet/Zarr release store.
-"""
+"""Passive online recorder for Rivermark pilot episodes."""
 
 from __future__ import annotations
 

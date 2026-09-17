@@ -467,11 +467,11 @@ def design_robot(
 
 
 def create_lidar_proxy_mesh() -> str:
-    """Create a single static mesh for the IsaacLab RayCaster.
+    """Create one static mesh for the IsaacLab RayCaster.
 
-    This local IsaacLab build only supports one static mesh in RayCaster, so
-    the field collision boxes are mirrored into one invisible mesh. The visible
-    scene remains made from separate physical parts.
+    This local IsaacLab build supports a single static mesh in RayCaster, so the
+    field collision boxes are mirrored into one invisible mesh while the visible
+    scene keeps separate physical parts.
     """
     stage = get_current_stage()
     proxy_root = "/World/LidarProxy"

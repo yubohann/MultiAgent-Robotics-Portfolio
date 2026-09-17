@@ -1,9 +1,4 @@
-"""Read-only readiness audit for packaging a native Isaac T1 capture.
-
-The audit does not create a candidate, copy payload bytes, admit an episode,
-or disclose evaluator-private truth.  It turns the packer's implicit
-prerequisites into explicit, machine-readable blockers.
-"""
+"""Read-only readiness audit for packaging a native Isaac T1 capture."""
 
 from __future__ import annotations
 

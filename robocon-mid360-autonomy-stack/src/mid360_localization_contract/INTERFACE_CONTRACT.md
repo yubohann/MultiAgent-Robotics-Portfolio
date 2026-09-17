@@ -2,15 +2,15 @@
 
 ## Evidence Status
 
-This contract is implemented as an isolated ROS 2 Humble package. Topic availability, QoS compatibility, external FAST-LIO2 frame names, calibration, map registration and target computer timing carry `TBD` entries pending Linux, ROS 2 and hardware evidence.
+This contract is implemented as an isolated ROS 2 Humble package. Topic availability, QoS compatibility, external FAST-LIO2 frame names, calibration, map registration and target computer timing carry `TBD` placeholders that close with Linux, ROS 2 and hardware evidence.
 
 ## Frame Ownership
 
 ```text
 map -> odom                  mid360_map_odom_anchor
 odom -> base_link            mid360_pose_bridge
-base_link -> imu_link        mid360_static_sensor_frames (calibration gate)
-imu_link -> lidar_mid360     mid360_static_sensor_frames (calibration gate)
+base_link -> imu_link        mid360_static_sensor_frames with the calibration gate
+imu_link -> lidar_mid360     mid360_static_sensor_frames with the calibration gate
 ```
 
 External FAST-LIO2 `odom -> base_link` publication stays disabled or renamed, and its source TF is private input.

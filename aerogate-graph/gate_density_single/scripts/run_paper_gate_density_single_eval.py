@@ -1,9 +1,5 @@
-"""Run resumable paper E1/E2 single-drone gate-density evaluations.
-
-This is an orchestration wrapper around ``run_gate_density_eval.py``.  It does
-not duplicate layout, live-gate motion, or collision logic; every episode is
-still produced by the existing single-drone evaluator so training, evaluation,
-and replay stay on the same gate-density contract.
+"""Orchestration wrapper for resumable paper E1 and E2 single-drone gate-density scoring through
+``run_gate_density_eval.py``.
 """
 
 from __future__ import annotations

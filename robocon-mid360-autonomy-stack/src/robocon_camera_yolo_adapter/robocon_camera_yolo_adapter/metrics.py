@@ -1,8 +1,7 @@
 """Deterministic offline metrics for recorded target detections.
 
-The evaluator deliberately consumes an explicit ground-truth stream.  It does
-not infer labels from images and therefore cannot turn synthetic or missing
-truth into a detector-quality claim.
+The evaluator consumes an explicit ground-truth stream, so labels stay tied to
+recorded evidence and detector-quality claims come only from the replay.
 """
 
 from __future__ import annotations

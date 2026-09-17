@@ -1,9 +1,4 @@
-"""Download a small public MP4 sample into the incoming directory.
-
-本作品集截图证据使用 Pexels 真实公开视频；这个脚本只是给同学提供
-“自选短视频流”的补充入口。
-报告中若使用互联网素材，需要写明来源和使用理由。
-"""
+"""Download a small public MP4 sample into the incoming directory."""
 
 from pathlib import Path
 import sys
@@ -25,7 +20,7 @@ def main() -> None:
     url = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_URL
     output_path = INCOMING_DIR / "internet-sample-640x360.mp4"
     print(f"downloading: {url}")
-    # timeout 防止网络卡住时脚本无限等待，课堂环境下尤其重要。
+    # A timeout keeps the script from waiting forever on a slow network.
     response = requests.get(url, timeout=30)
     response.raise_for_status()
     output_path.write_bytes(response.content)

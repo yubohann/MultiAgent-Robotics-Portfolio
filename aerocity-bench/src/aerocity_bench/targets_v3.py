@@ -34,11 +34,10 @@ _REACHABILITY_CACHE_LIMIT = 32
 _REACHABILITY_CACHE: OrderedDict[str, tuple[dict[str, Any], ...]] = OrderedDict()
 _REACHABILITY_CACHE_LOCK = threading.RLock()
 
-# This private lattice is deliberately independent from the public atlas-cell
-# density.  The atlas says what public structure must be inspected; target
-# sampling later chooses a hidden state on this fixed surface support.  Without
-# that separation, a cell-density ablation would silently alter the target
-# distribution as well as the public representation.
+# Deliberately independent of public atlas-cell density: the atlas declares
+# what to inspect, target sampling later picks a hidden state on this fixed
+# surface support.  Otherwise a density ablation would also alter the target
+# distribution.
 _G2_I_PRIVATE_SUPPORT_POLICY = {
     "policy_id": "g2-i-private-surface-support-v1",
     "surface_spacing_m": 2.5,
@@ -469,9 +468,8 @@ def _context_review_pose(
     owner_id = str(site["owner_collider_id"])
     context_ids = frozenset(str(value) for value in site["surrounding_collider_ids"])
 
-    # The candidate set is deterministic and deliberately well beyond the
-    # three-metre confirmation radius.  Oblique views make facade/roof edges and
-    # nearby context much more likely to be visible than a normal-only close-up.
+    # Deterministic candidates sit well beyond the three-metre confirmation
+    # radius: oblique views expose edges and context better than a close-up.
     candidates: list[tuple[tuple[float, float, float, float, float], dict[str, Any]]] = []
     for distance_m in (5.5, 7.0, 8.5, 10.0):
         for lateral_factor in (-0.80, -0.50, 0.50, 0.80):
@@ -484,12 +482,9 @@ def _context_review_pose(
                     + (distance_m * vertical_factor if index == 2 else 0.0)
                     for index in range(3)
                 )
-                # This is an offline L2 camera, not an executable UAV pose.  A
-                # bounded exterior ring is required to inspect outward-facing
-                # facade targets placed near the public flight-envelope edge.
-                # That relaxation is horizontal only: a camera below the flight
-                # floor is occluded by the ground plane in Isaac and cannot be
-                # accepted as visual evidence.
+                # Offline L2 camera, not a UAV pose: the exterior ring may leave
+                # the horizontal flight bounds to inspect edge facades, but never
+                # the vertical ones, where the Isaac ground plane occludes it.
                 if any(
                     value < low - review_outside_margin
                     or value > high + review_outside_margin
@@ -894,11 +889,9 @@ def _episode_reachable_sites(
             for collider in colliders
         )
 
-    # The transit altitude is one metre above every expanded collider.  Thus
-    # each horizontal sky segment is necessarily clear.  The vertical lift from
-    # a start is invariant across all witnesses, and the descent to a witness
-    # is invariant across all starts.  Hoisting both checks preserves the same
-    # three-segment proof while avoiding repeated collider scans.
+    # Sky segments fly one metre above every expanded collider and are thus
+    # clear; the start lift and the witness descent are each invariant, so both
+    # are hoisted here to avoid repeating the collider scans.
     start_sky_clear = {
         str(start["drone_id"]): segment_clear(
             tuple(float(value) for value in start["position"]),
@@ -1115,9 +1108,9 @@ def _mission_sector_support_sites(
         result.append(
             {
                 **raw_site,
-                # This evaluator-private annotation is used only to create a
-                # counterfactual distractor in the same public inspection
-                # region. It is deliberately omitted from the episode schema.
+                # Evaluator-private annotation used only to place a
+                # counterfactual distractor in the same public region; omitted
+                # from the episode schema.
                 "_mission_region_id": str(mission_region["region_id"]),
                 "context_collider_ids": context,
                 "context_collider_count": len(context),
@@ -1515,8 +1508,7 @@ def public_episode_projection(episode: dict[str, Any]) -> dict[str, Any]:
         "schema": "org.aerocity.bench.episode-public.ordinary.v1",
         "episode_id": episode["episode_id"],
         "layout_id": episode["layout_id"],
-        # The projection crosses the authority boundary.  It must not share
-        # mutable roster objects with the evaluator-held private episode.
+        # Cross the authority boundary without sharing mutable roster objects.
         "fleet_profile": copy.deepcopy(episode["fleet_profile"]),
         "starts": copy.deepcopy(episode["starts"]),
         "target_count_public": False,

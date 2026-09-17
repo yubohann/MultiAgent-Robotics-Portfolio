@@ -1,11 +1,4 @@
-"""LeRobot v3.0 state/action projection for validated development captures.
-
-The native capture remains the source of truth.  This module consumes the
-bounded development Parquet projection, writes one LeRobot episode per agent,
-and preserves the eight-agent relationship in a separate group manifest.
-Visual and asynchronous sensor streams are deliberately out of scope until a
-reader-verified media projection exists.
-"""
+"""LeRobot v3.0 state/action projection for validated development captures."""
 
 from __future__ import annotations
 

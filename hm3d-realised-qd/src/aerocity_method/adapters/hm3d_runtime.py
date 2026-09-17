@@ -1,13 +1,4 @@
-"""Runtime preparation for official HM3D assets.
-
-The helpers in this module deliberately distinguish the public three-scene
-example from the formal HM3D train/validation/test release.  An official
-example can exercise conversion, collision, sensing and control, but it can
-never authorize a formal split, P09 freeze or paper result.
-
-Heavy geometry dependencies are imported inside runtime functions so the core
-contracts and their unit tests remain usable without Isaac Sim or trimesh.
-"""
+"""Runtime preparation for official HM3D assets."""
 
 from __future__ import annotations
 
@@ -276,14 +267,7 @@ def build_enclosed_esdf(
     vehicle_clearance_m: float,
     min_component_voxels: int = 64,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Voxelize collision geometry and derive conservative enclosed free space.
-
-    The free-space mask is not the Habitat ground navmesh.  A voxel must have
-    collision surfaces in both directions along all three world axes, exceed
-    the vehicle-clearance distance, and belong to a non-trivial 3D component.
-    This rejects the unbounded space surrounding an indoor scan.  Isaac/PhysX
-    collision replay remains a separate admission requirement.
-    """
+    """Voxelize collision geometry and derive conservative enclosed free space."""
 
     import numpy as np
     from scipy import ndimage
@@ -321,9 +305,8 @@ def build_enclosed_esdf(
     free_points = voxel_grid.indices_to_points(free_indices)
     origin = voxel_grid.indices_to_points(np.asarray([[0, 0, 0]], dtype=int))[0]
     z_counts = np.bincount(free_indices[:, 2], minlength=surface.shape[2])
-    # A multi-floor building can be one connected 3D component through its
-    # stairs.  Count substantial horizontal free-space bands instead of only
-    # completely empty Z slices; narrow stairwell slices then separate floors.
+    # Count substantial horizontal free-space bands instead of only empty Z slices,
+    # so narrow stairwells separate floors of a connected multi-floor component.
     substantial_threshold = max(8, int(math.ceil(float(z_counts.max()) * 0.05)))
     active_z = np.flatnonzero(z_counts >= substantial_threshold)
     band_count = 1 + int(np.count_nonzero(np.diff(active_z) > 1))
@@ -380,14 +363,7 @@ def reachable_component_mask(
     *,
     start_positions_m: Iterable[tuple[float, float, float]],
 ) -> tuple[Any, dict[str, Any]]:
-    """Return the evaluator-only free-space union reachable from episode starts.
-
-    P03 deliberately records the complete retained indoor flight space.  An
-    exploration episode, however, may only score components containing one of
-    its frozen physical resets.  This helper keeps that distinction explicit:
-    it never exposes the mask to method code and returns enough provenance to
-    make the episode-level denominator independently auditable.
-    """
+    """Return the evaluator-only free-space union reachable from episode starts."""
 
     import numpy as np
 

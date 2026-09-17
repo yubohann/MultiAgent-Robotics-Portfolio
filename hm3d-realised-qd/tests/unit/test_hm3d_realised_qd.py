@@ -137,9 +137,8 @@ def test_outcome_feature_vector_separates_vertical_observation_from_empty_climbi
             "uav0": ((0.0, 0.0, 1.0), (0.0, 0.0, 3.0)),
             "uav1": ((2.0, 0.0, 1.0), (2.0, 2.0, 1.0)),
         },
-        # The team climbed, but its delivered public observations are all at
-        # one altitude.  A motion-only coordinate must not be mistaken for
-        # evidence of vertical exploration.
+        # The team climbed, but all delivered observations sit at one altitude; a
+        # motion-only coordinate is not vertical-exploration evidence.
         range_outcomes=(
             _outcome("uav0-ray", "uav0", (0.0, 0.0, 1.0), (0.0, 2.0, 1.0)),
             _outcome("uav1-ray", "uav1", (2.0, 0.0, 1.0), (2.0, 2.0, 1.0)),
@@ -163,9 +162,8 @@ def test_descriptor_family_screen_rejects_current_redundant_axes() -> None:
     features: list[OutcomeQDFeatureVector] = []
     footprints: list[tuple[tuple[int, int, int], ...]] = []
     scene_ids: list[str] = []
-    # 12 train-only behaviour cells, each replayed once.  The deployed v4
-    # family has vertical motion and spatial dispersion on the same line;
-    # pre-registered observed-height alternatives have three independent axes.
+    # 12 train-only behaviour cells, each replayed once; v4 has motion and dispersion
+    # on one line, the pre-registered alternatives have three independent axes.
     for motion_index in range(4):
         for span_index in range(3):
             motion = motion_index / 3.0
@@ -199,9 +197,8 @@ def test_descriptor_family_screen_rejects_current_redundant_axes() -> None:
 def test_descriptor_family_screen_rejects_richness_concentrated_in_one_scene() -> None:
     descriptors: list[RealisedQDDescriptor] = []
     scene_ids: list[str] = []
-    # The pooled archive covers many cells, but every outcome from scene_b has
-    # the same descriptor.  A QD family that only exists in one layout is not
-    # allowed to become the frozen HM3D repertoire.
+    # The pooled archive covers many cells, but scene_b outcomes share one descriptor;
+    # a family that exists in one layout cannot become the frozen repertoire.
     patterns = (
         (0.10, 0.10, 0.10),
         (0.10, 0.40, 0.70),

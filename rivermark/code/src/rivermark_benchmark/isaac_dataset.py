@@ -1,11 +1,4 @@
-"""Lazy access to native Isaac capture payloads.
-
-The capture directory is an evidence bundle, not a Python object to load in
-one shot.  This module reads JSON metadata eagerly, opens chunked frame
-archives lazily, and yields one selected frame at a time.  It is intended for
-research scripts that need a small window or a decimated modality without
-copying a multi-gigabyte episode into RAM.
-"""
+"""Lazy access to native Isaac capture payloads."""
 
 from __future__ import annotations
 

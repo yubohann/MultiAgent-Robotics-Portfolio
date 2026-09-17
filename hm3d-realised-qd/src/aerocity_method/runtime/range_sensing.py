@@ -1,10 +1,4 @@
-"""Shared deterministic public range-ray patterns.
-
-Every ranked method must use the same sensor entitlement.  The 26-ray pattern
-retains the public range-outcome semantics (no camera pixels and no evaluator
-truth) while giving the shared free-space belief enough corridor connectivity to
-navigate through rooms and toward frontiers.
-"""
+"""Shared deterministic public range-ray patterns."""
 
 from __future__ import annotations
 

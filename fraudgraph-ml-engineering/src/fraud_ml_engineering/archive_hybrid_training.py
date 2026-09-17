@@ -1329,9 +1329,8 @@ def train_archive_hybrid_pipeline(
     risk_positive_ratio: float = 0.15,
     force_preview: bool = False,
 ) -> dict:
-    # FL/RL has been archived to `legacy_federated_rl_backup/`; keep this
-    # entry point stable but force the active archive pipeline onto the
-    # GNN + Transformer mainline.
+    # FL and RL runtime code lives in `legacy_federated_rl_backup/`, and this entry point
+    # stays on the GNN and Transformer mainline.
     planner_mode, disable_federated = _force_mainline_gnn_transformer_mode(
         planner_mode=planner_mode,
         disable_federated=disable_federated,

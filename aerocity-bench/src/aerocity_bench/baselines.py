@@ -320,9 +320,8 @@ def _public_transit_altitude(
     safe_sky = float(transit_contract.get("safe_sky_altitude_m", math.nan))
     if not math.isfinite(safe_sky):
         raise ValueError("public safe-sky transit altitude must be finite")
-    # The public height envelope is a certified aggregate, not exact collision
-    # truth.  It prevents an unnecessarily near-ceiling transit that makes a
-    # 300-second baseline infeasible solely because the flight volume is tall.
+    # The public height envelope is an aggregate, not exact collision truth; it
+    # keeps a tall flight volume from making the 300-second baseline infeasible.
     lane_spacing = 2.0 * float(vehicle["radius_m"]) + 0.25
     requested = safe_sky + lane_index * lane_spacing
     if requested > maximum + 1.0e-9:
@@ -345,15 +344,12 @@ def _group_route(
     observe_indices: set[int] = set()
 
     def append(pose: Pose3D, *, observable: bool = False) -> None:
-        # A zero-length approach leg is not a useful waypoint.  More
-        # importantly, leaving it in the route makes a native policy settle
-        # twice at the same pose before it may issue OBSERVE.
+        # Skip a zero-length transfer leg: a repeated pose makes the native
+        # policy settle twice before it may issue OBSERVE.
         if route and distance(route[-1].position, pose.position) <= 1.0e-9:
-            # Preserve a coincident non-observable staging pose immediately
-            # before an observation pose.  The policy uses it to arrive and
-            # settle before commanding the facade-facing yaw at zero
-            # translation; merging them would request a large yaw turn during
-            # the final descent.
+            # Keep a coincident staging pose before an observation pose; the
+            # policy settles there before the yaw-only turn that would otherwise
+            # couple a large rotation with the final descent.
             if observable and len(route) - 1 not in observe_indices:
                 route.append(pose)
                 observe_indices.add(len(route) - 1)
@@ -510,9 +506,8 @@ def _anisotropic_motion_lower_bound_s(
     for start, end in zip(positions[:-1], positions[1:], strict=True):
         horizontal_time_s = math.hypot(end[0] - start[0], end[1] - start[1]) / horizontal_speed_mps
         vertical_time_s = abs(end[2] - start[2]) / vertical_speed_mps
-        # Horizontal and vertical references may be executed concurrently.  A
-        # sum would be a conservative route estimate, but not a kinematic
-        # lower bound and could incorrectly reject a feasible public method.
+        # Horizontal and vertical motion may overlap; charge the larger leg, not
+        # the sum, or a feasible public method could be rejected.
         total += max(horizontal_time_s, vertical_time_s)
     return total
 
@@ -571,9 +566,8 @@ class _RoutePolicy:
         observe = self.config.raw["execution_contract"]["observe"]
         position_tolerance = min(0.05, float(observe["max_pose_drift_m"]) * 0.5)
         yaw_error = abs(((target.yaw_deg - observation.pose.yaw_deg + 180.0) % 360.0) - 180.0)
-        # Inspection poses specify camera pitch. The CF2X body remains level
-        # while the bounded gimbal reaches this public angle. Transit and return
-        # do not wait for gimbal motion before the vehicle can reach home.
+        # Atlas pitch commands the bounded camera, not body attitude: the CF2X
+        # stays level, and return does not wait for gimbal motion.
         pitch_ready = (
             not require_sensor_pitch
             or abs(target.pitch_deg - float(observation.sensor_pitch_deg)) <= 0.5
@@ -600,21 +594,16 @@ class _RoutePolicy:
                 and distance(observation.pose.position, target.position)
                 <= float(observation.local_occupancy_radius_m)
             ):
-                # The public occupancy map is local to the current vehicle
-                # pose.  Refining a distant cell both cannot use that map and
-                # permanently prevented the old policy from refining it after
-                # arrival.  Repeating the full voxel scan on every subsequent
-                # tick then exceeded the planner deadline.  Refine exactly once
-                # when the public cell enters the sensed neighborhood.
+                # Refine a scan pose once, when the cell enters the local
+                # occupancy radius: a distant refine cannot use the map, and a
+                # repeated voxel scan exceeds the planner deadline.
                 target = self._refine_scan_pose(observation, target)
                 route[index] = target
                 self.refined_scan_indices[drone_id].add(index)
             if index not in self.observe_indices[drone_id]:
-                # A transit waypoint specifies geometry only.  Keeping the
-                # measured attitude prevents a large facade-yaw correction
-                # from being coupled with horizontal acceleration.  A separate
-                # coincident observation pose below performs that rotation only
-                # after the vehicle has settled at its public scan position.
+                # A transit waypoint carries geometry only; keep the measured
+                # attitude so the yaw-only rotation happens at the separate
+                # coincident observation pose after the vehicle settles.
                 target = Pose3D(
                     target.position,
                     observation.pose.yaw_deg,
@@ -771,10 +760,8 @@ class _RoutePolicy:
             candidate_position: tuple[float, float, float],
             candidate_occupied: list[AABB],
         ) -> bool:
-            # This predicate only needs to prove that every box clears the
-            # threshold.  Computing the exact global minimum evaluates every
-            # expensive segment/AABB pair even after one blocking voxel has
-            # already made the candidate unusable.
+            # Early exit on the first blocking voxel: the exact global minimum
+            # would evaluate every expensive segment/AABB pair.
             for box in candidate_occupied:
                 if box.point_distance(candidate_position) + 1.0e-9 < required:
                     return False
@@ -796,10 +783,8 @@ class _RoutePolicy:
                     return False
             return True
 
-        # This is exactly the first (lowest-displacement) member of the full
-        # search below.  Most atlas poses are already locally safe, so checking
-        # it first avoids evaluating 288 equivalent public candidates at every
-        # newly observed cell while preserving the same safety predicate.
+        # The first (lowest-displacement) member of the full search below; most
+        # atlas poses are safe as-is, so this avoids scanning 288 candidates.
         base_candidate = pose_looking_at(base.position, surface_point)
         base_occupied = corridor_boxes(
             observation.pose.position, base_candidate.position, required
@@ -807,12 +792,10 @@ class _RoutePolicy:
         if is_safe(base_candidate.position, base_occupied):
             return base_candidate
 
-        # Every fallback endpoint is within this distance of ``base``.  If a
-        # voxel is farther than that displacement plus the required clearance
-        # from the base segment, triangle inequality proves it cannot affect
-        # any fallback endpoint or its route from the current pose.  This is a
-        # conservative exact broad phase; all retained voxels still use the
-        # original point and segment clearance tests below.
+        # Conservative broad phase: a voxel farther than this displacement plus
+        # the required clearance cannot affect any fallback endpoint or its
+        # route (triangle inequality); retained voxels still use the exact
+        # point and segment clearance tests below.
         maximum_endpoint_displacement_m = math.sqrt(0.75**2 + 1.2**2 + 1.5**2)
         relevant_occupied = corridor_boxes(
             observation.pose.position,
@@ -841,10 +824,8 @@ class _RoutePolicy:
                     displacement = distance(base.position, candidate_position)
                     score = (displacement, outward, abs(sideways), vertical)
                     candidates.append((score, candidate, candidate_position))
-        # The previous implementation evaluated exact segment clearance for all
-        # 288 candidates and selected the minimum score afterwards.  Sorting the
-        # same finite candidate set first is equivalent to that argmin, while
-        # allowing the first safe candidate to terminate the expensive checks.
+        # Sorting the full set and taking the first safe candidate is equivalent
+        # to scoring all 288, but terminates the expensive checks early.
         candidates.sort(key=lambda item: item[0])
         for _, candidate, candidate_position in candidates:
             if is_safe(candidate_position, relevant_occupied):
@@ -909,10 +890,9 @@ class _RoutePolicy:
         if not scored_candidates:
             return Pose3D(current, observation.pose.yaw_deg)
         selected = max(scored_candidates, key=lambda item: item[0])[1]
-        # Public CF2X waypoints command position and yaw.  Roll and pitch are
-        # controller-derived attitudes, so freezing an in-motion pitch here
-        # creates an unreachable return-completion condition after the vehicle
-        # settles at the retreat point.
+        # Waypoints command position and yaw only; roll and pitch are
+        # controller-derived, so freezing an in-motion pitch here would make
+        # return completion unreachable once the vehicle settles.
         return Pose3D(selected, observation.pose.yaw_deg)
 
     def _return_action(self, drone_id: str, observation: ObservationPacket) -> ActionPacket:
@@ -949,9 +929,8 @@ class _RoutePolicy:
             else:
                 return self._waypoint_action(observation, target)
         if phase == "descend":
-            # RETURN remains a distinct public action, but its endpoint is
-            # explicit.  The native adapter must never infer a direct-home
-            # coordinate that is absent from the receipt-bound ActionPacket.
+            # RETURN carries an explicit endpoint; the native adapter must not
+            # infer a home coordinate absent from the receipt-bound ActionPacket.
             if self._pose_ready(home, observation):
                 self.return_phases[drone_id] = "home"
                 return ActionPacket(
@@ -1000,9 +979,8 @@ class _RoutePolicy:
         vehicle = self.config.raw["execution_contract"]["vehicle"]
         current = observation.pose.position
         # A local voxel observation cannot justify skipping a distant route
-        # leg.  Treating it as global collision truth previously caused the
-        # reference policy to collapse a high-to-low transfer into a sequence
-        # of unrelated low-altitude waypoints before the CF2X arrived.
+        # leg; treating it as global collision truth once collapsed a
+        # high-to-low transfer into unrelated low-altitude waypoints.
         if distance(current, target.position) > float(observation.local_occupancy_radius_m):
             return False
         delta = tuple(
@@ -1029,8 +1007,8 @@ class _RoutePolicy:
             ),
             default=(math.inf, None),
         )
-        # Cells already conservatively cover their full voxel. A small numerical margin is
-        # enough here; minimum-clearance enforcement remains the execution backend's job.
+        # A small margin suffices here: cells already cover their full voxel,
+        # and the execution backend enforces minimum clearance.
         return clearance <= 0.25
 
     def _arbitrate_teammate_trajectories(
@@ -1092,11 +1070,9 @@ class _RoutePolicy:
                 if target is None:
                     actions[drone_id] = self._return_action(drone_id, observation)
                     continue
-            # A reference policy cannot infer a failed waypoint from a few
-            # unchanged observations. The native executor may deliberately
-            # hover on a planning deadline; skipping here turns a continuous
-            # route into discontinuous low-altitude commands. Keep the target
-            # until it is reached or the executor reports terminal failure.
+            # Keep a target until it is reached or the executor reports terminal
+            # failure: a planning-deadline hover must not turn a continuous route
+            # into discontinuous low-altitude commands.
             self.previous_positions[drone_id] = observation.pose.position
             actions[drone_id] = self._waypoint_action(observation, target)
         return self._arbitrate_teammate_trajectories(actions, observations)
@@ -1123,8 +1099,7 @@ class _RoutePolicy:
         execution = self.config.raw["execution_contract"]
         episode = execution["episode"]
         period = float(execution["control_period_s"])
-        # ``observe_steps`` includes the initial OBSERVE sample and is the
-        # actual integer-time behavior of this reference policy, not merely
+        # ``observe_steps`` is the actual integer-time dwell of this policy, not
         # the continuous dwell value in the task declaration.
         observation_dwell_s = self.observe_steps * period
         duration_s = float(episode["duration_s"])
@@ -1352,10 +1327,9 @@ def _surface_scan_policy(
     if maximum_groups_per_drone is not None:
         if maximum_groups_per_drone < 1:
             raise ValueError("maximum_groups_per_drone must be positive")
-        # ``sweep-3d`` is a budgeted diagnostic baseline.  It must not silently
-        # compile an exhaustive route whose lower bound exceeds the task.  The
-        # unselected public groups remain useful for an explicit coverage audit,
-        # but are not claimed to have been executed by this policy.
+        # ``sweep-3d`` is budgeted: cap its route so the lower bound stays
+        # inside the task.  Unselected groups remain available for an explicit
+        # coverage audit but were not executed by this policy.
         assigned = {
             drone_id: groups_for_drone[:maximum_groups_per_drone]
             for drone_id, groups_for_drone in assigned.items()
@@ -1378,10 +1352,9 @@ def _surface_scan_policy(
             for group in assigned[drone_id]
         ]
         if screen_route_against_public_prior:
-            # A diagnostic route may contain multiple public groups.  Its former
-            # outward approach waypoint could sit inside a neighboring coarse-
-            # prior building column.  A direct descent to the stand-off scan
-            # pose avoids that unobservable collision trap.
+            # A multi-group diagnostic route can put the outward approach
+            # waypoint inside a neighboring coarse-prior building column; a
+            # direct descent to the stand-off scan pose avoids that trap.
             safe_group: _ScanGroup | None = None
             for candidate in selected_groups:
                 candidate_route, _ = _group_route(
@@ -1499,8 +1472,8 @@ def _atlas_scan_groups(
             ]
             if not cells:
                 continue
-        # Evenly retain cells across a public region.  The stride is derived
-        # from the public cell count and cap, never from private targets.
+        # Even stride over the public cell count and cap; never derived from
+        # private targets.
         stride = max(1, math.ceil(len(cells) / maximum_cells_per_region))
         chosen = cells[::stride][:maximum_cells_per_region]
         poses: list[Pose3D] = []
@@ -1638,9 +1611,8 @@ def _coarse_region_scan_groups(
             center = tuple((low + high) / 2.0 for low, high in zip(lower, upper, strict=True))
             add_group(region, face_name, poses, center, upper[2] - lower[2])
 
-        # Roof/entrance/rubble bounds do not expose a public normal.  A small
-        # top-down sample remains honest about that missing information and
-        # prevents the coarse ablation from silently using full-cell geometry.
+        # Roof/entrance/rubble regions lack a public normal; sample top-down
+        # rather than silently using full-cell geometry in the coarse ablation.
         if str(region["region_class"]) in {"roof", "entrance", "rubble"}:
             roof_z = min(flight_max[2] - body_margin, upper[2] + stand_off_m)
             poses = []
@@ -1784,9 +1756,8 @@ def _budgeted_atlas_region_policy(
                 observe_count = sum(
                     len(indices) for indices in candidate.observe_indices.values()
                 )
-                # This method is the breadth counterpart to the single-region
-                # surface inspector. Prefer visiting more public regions, then
-                # use remaining budget for additional cells inside each region.
+                # Breadth first: prefer more public regions, then more cells
+                # inside each region within the remaining budget.
                 score = (group_cap, observe_count, cap)
                 if score > selected_score:
                     selected_policy = candidate
@@ -1932,9 +1903,8 @@ def create_baseline(
     descriptor = BASELINES[method_id]
     if descriptor.requires_private_truth and private_episode is None:
         raise ValueError(f"{method_id} is a private diagnostic and needs authority truth")
-    # The policy constructor is a method-facing boundary.  Validate before
-    # looking at starts or the inspection sector so malformed public data
-    # cannot reach a reference policy and only fail later in the evaluator.
+    # Validate the public boundary before reading starts or the inspection
+    # sector, so malformed data fails here rather than inside a policy.
     if task_spec.get("task_track") == "G2-I":
         validate_public_task_spec(task_spec)
         validate_public_episode(public_episode, task_spec)
@@ -2101,10 +2071,8 @@ def create_baseline(
             )
             return required_s <= duration_s + 1.0e-9
 
-        # The oracle is a private feasibility upper bound.  It may use target
-        # witnesses, but it must still obey the declared task clock.  Greedily
-        # admit the fastest witness that leaves a measured return reserve; do
-        # not append an impossible route and call it an oracle failure.
+        # Private feasibility upper bound: admit the fastest witness that still
+        # leaves the return reserve under the declared task clock.
         ordered_targets = sorted(
             private_episode["targets"],
             key=lambda target: (
@@ -2161,8 +2129,8 @@ def create_baseline(
                 admitted = True
                 break
             if not admitted:
-                # A private upper bound is allowed to leave a target
-                # unconfirmed when the declared physical budget cannot fit it.
+                # A target may stay unconfirmed when the physical budget
+                # cannot fit it.
                 continue
         for drone_id, route in routes.items():
             if not route:

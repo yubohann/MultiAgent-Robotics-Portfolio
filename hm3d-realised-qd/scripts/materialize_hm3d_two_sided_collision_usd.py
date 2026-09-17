@@ -1,11 +1,4 @@
-"""Create a local two-sided PhysX collision derivative for one HM3D scan.
-
-HM3D meshes are surface scans rather than watertight solids.  A sparse-range
-ray can meet a nearby back-facing scan triangle that a one-sided PhysX query
-passes through.  This tool makes a local, conservative collision derivative by
-duplicating every triangle with reverse winding.  It never modifies the source
-GLB or the original collision USD, and records exact provenance for the output.
-"""
+"""Create a local two-sided PhysX collision derivative for one HM3D scan."""
 
 from __future__ import annotations
 
@@ -93,10 +86,8 @@ def _validate_source_manifest(
 
 
 def main() -> int:
-    # This post-processing step deliberately uses only the public USD Python
-    # bindings.  PhysX schema registration itself requires a live Isaac app,
-    # so the runtime audit remains responsible for proving the derived mesh is
-    # actually accepted by PhysX.
+    # Public USD Python bindings only; PhysX schema registration needs a live Isaac
+    # app, so the runtime audit must prove the derived mesh is accepted.
     from pxr import Usd, UsdGeom, UsdPhysics
 
     args = parse_args()

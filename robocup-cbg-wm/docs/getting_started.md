@@ -1,6 +1,6 @@
 # Getting Started Guide
 
-This guide gives a minimal path for running the public repository evidence. The project can be inspected at three levels, Python-only rule tests, ROS2 dry run, and IsaacLab replay.
+This guide gives a minimal path for running the public repository evidence. The project can be inspected at three levels, Python rule tests, ROS2 dry run, and IsaacLab replay.
 
 ## 1. Repository Scope
 
@@ -59,7 +59,7 @@ Recommended platform.
 - `colcon`
 - `rosdep`
 
-If you use WSL, copy `crc_robocup_vision_ws/` to a native Linux path such as `~/crc_robocup_vision_ws`, because ROSIDL generation requires an ASCII path.
+ROSIDL generation needs a build path with ASCII characters, so a WSL workspace is copied to a native Linux path such as `~/crc_robocup_vision_ws` before building.
 
 Commands.
 
@@ -82,7 +82,7 @@ Expected behavior.
 
 - bringup, behavior, navigation, vision and shooter service nodes can be launched.
 - shooter can run in dry-run mode.
-- the dry run needs software only.
+- the dry run needs software alone.
 
 ### Level 2 IsaacLab Replay
 
@@ -113,7 +113,7 @@ The compact GitHub checkout carries the three-view GIF, and the individual MP4 s
 
 The public training and scoring artifacts are already included under `docs/rl_data/`. To regenerate them, use the commands in `docs/reproducibility.md`.
 
-Important generated-output rule.
+Important generated-output rules.
 
 - local training outputs go under `isaaclab_sim/output/`.
 - temporary videos, cache files and debug frames stay local, and selected final evidence is committed.
@@ -127,8 +127,8 @@ Recommended order.
 2. `docs/admissions_project_brief.md`
 3. `docs/capabilities.md`
 4. `docs/reproducibility.md`
-5. `docs/parameter_tuning.md`
-6. `docs/scene_adaptation.md`
+5. `docs/cbg_wm.md`
+6. `docs/sim2real.md`
 
 ## 5. Common Issues
 

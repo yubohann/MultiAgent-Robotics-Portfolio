@@ -1,12 +1,4 @@
-"""Condition requests and evidence checks for collection-bound captures.
-
-The collection protocol names a cell, but a cell is not evidence that Isaac
-actually applied its conditions.  This module keeps the bridge deliberately
-small: it reuses the existing protocol binding and receipt, records the cell's
-public condition IDs, and evaluates only evidence that can be recomputed from
-the raw capture.  Unsupported axes remain unavailable instead of being
-counted from labels.
-"""
+"""Condition requests and evidence checks for collection-bound captures."""
 
 from __future__ import annotations
 

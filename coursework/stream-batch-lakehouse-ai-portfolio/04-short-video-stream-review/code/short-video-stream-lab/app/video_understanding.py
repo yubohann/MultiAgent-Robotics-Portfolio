@@ -1,9 +1,4 @@
-"""Explainable local baseline for video understanding and moderation.
-
-这个模块不是 SOTA 多模态模型，而是一个可解释的 OpenCV baseline：
-它从采样帧中计算亮度、运动、色彩和闪烁，再生成基础标签和审核信号。
-当 Ollama 模型未下载或不可用时，系统可以用它兜底，保证课堂演示不断链。
-"""
+"""Explainable local baseline for video understanding and moderation."""
 
 import time
 from dataclasses import dataclass
@@ -86,11 +81,7 @@ class VideoUnderstandingModel:
         emit_event: EventCallback | None = None,
         simulate_delay_sec: float = 0.03,
     ) -> dict:
-        """Read a video as sampled frame events and return semantic signals.
-
-        这里故意保留 `emit_event` 和 `simulate_delay_sec`：前者让网站能看到流式进度，
-        后者让同学更容易观察“上传立即可见、后台慢慢补理解结果”的异步效果。
-        """
+        """Read a video as sampled frame events and return semantic signals."""
         capture = cv2.VideoCapture(str(video_path))
         if not capture.isOpened():
             raise ValueError(f"cannot open video: {video_path}")
@@ -104,7 +95,7 @@ class VideoUnderstandingModel:
         sampled_index = 0
 
         while sampled_index < MAX_SAMPLED_FRAMES:
-            # OpenCV 顺序读取视频帧；达到抽样间隔时才进入特征计算，降低 CPU 压力。
+            # Only every sampled frame reaches feature extraction to keep CPU cost low.
             ok, bgr_frame = capture.read()
             if not ok:
                 break
@@ -121,12 +112,12 @@ class VideoUnderstandingModel:
 
             motion = 0.0
             if previous_gray is not None:
-                # motion 使用相邻采样帧亮度差的平均值，简单但便于教学解释。
+                # Motion is the average brightness delta between sampled frames.
                 motion = float(np.mean(np.abs(gray - previous_gray)))
 
             flash_delta = 0.0
             if previous_brightness is not None:
-                # flash_delta 用于发现强亮度跳变，模拟闪烁风险检测。
+                # flash_delta detects strong brightness jumps for flash-risk signals.
                 flash_delta = abs(brightness_value - previous_brightness)
 
             frame_signals.append(
@@ -144,7 +135,7 @@ class VideoUnderstandingModel:
             previous_brightness = brightness_value
 
             if emit_event and (sampled_index == 1 or sampled_index % 5 == 0):
-                # 不对每一帧都写事件，避免事件列表被低价值日志淹没。
+                # Events are emitted sparsely to keep the timeline readable.
                 emit_event(
                     video_id,
                     "frame_sample",
@@ -278,11 +269,7 @@ class VideoUnderstandingModel:
 
 
 def moderate_analysis(analysis: dict, title: str) -> dict:
-    """Apply deterministic moderation rules to the analysis result.
-
-    审核策略采用“规则信号 + VLM 风险建议”的合并方式：规则负责稳定、可解释，
-    VLM 负责识别更丰富的语义风险。最终状态只有 published、review、rejected 三类。
-    """
+    """Apply deterministic moderation rules to the analysis result."""
     metrics = analysis["metrics"]
     score = 0.0
     reasons: list[dict] = []
@@ -293,7 +280,7 @@ def moderate_analysis(analysis: dict, title: str) -> dict:
         word for word in BANNED_TITLE_WORDS if word.lower() in lowered_title or word in title
     ]
     if matched_words:
-        # 标题命中高风险词直接强烈加分，因为标题是用户主动输入的发布信号。
+        # A high-risk title word scores strongly because the title is an explicit publish signal.
         score += 80
         reasons.append(
             {
@@ -306,7 +293,7 @@ def moderate_analysis(analysis: dict, title: str) -> dict:
 
     duration = metrics["duration_sec"]
     if duration <= 0:
-        # 无效时长代表媒体不可理解，按 fail-closed 思路拒绝发布。
+        # An invalid duration rejects the video under fail-closed moderation.
         score += 100
         reasons.append(
             {
@@ -329,7 +316,7 @@ def moderate_analysis(analysis: dict, title: str) -> dict:
 
     brightness = metrics["brightness"]["avg"]
     if brightness < 25:
-        # 极暗画面不一定违规，但自动理解置信度不足，因此进入复核。
+        # Very dark frames route to human review because confidence is low.
         score += 42
         reasons.append(
             {
@@ -351,7 +338,7 @@ def moderate_analysis(analysis: dict, title: str) -> dict:
         )
 
     if metrics["flash_ratio"] >= 0.15:
-        # 强闪烁可能造成观看不适，本实验把它作为人工复核信号。
+        # Strong flashing routes to review as a viewing-comfort signal.
         score += 38
         reasons.append(
             {
@@ -386,7 +373,7 @@ def moderate_analysis(analysis: dict, title: str) -> dict:
     risk_level = model_risk.get("level", "pass")
     model_score = float(model_risk.get("score") or 0)
     if risk_level == "reject":
-        # VLM 明确拒绝时使用较高风险分，避免规则分过低导致放行。
+        # An explicit VLM rejection carries a high risk score.
         score = max(score, max(75.0, model_score))
         reasons.append(
             {
@@ -401,7 +388,7 @@ def moderate_analysis(analysis: dict, title: str) -> dict:
             }
         )
     elif risk_level == "review":
-        # VLM 建议复核时至少提升到 review 阈值附近。
+        # A VLM review suggestion lifts the score to the review threshold.
         score = max(score, max(40.0, model_score))
         reasons.append(
             {

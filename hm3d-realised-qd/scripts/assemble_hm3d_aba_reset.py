@@ -1,10 +1,4 @@
-"""Assemble three independent real CF2X reset probes into A-B-A evidence.
-
-This tool consumes the JSON written by ``probe_hm3d_cf2x_reset.py``.  It does
-not execute a simulator itself and refuses fabricated, failed, or mismatched
-probes.  Its output is development evidence until P01/P05 lock the complete
-official HM3D split manifest.
-"""
+"""Assemble three independent real CF2X reset probes into A-B-A evidence."""
 
 from __future__ import annotations
 

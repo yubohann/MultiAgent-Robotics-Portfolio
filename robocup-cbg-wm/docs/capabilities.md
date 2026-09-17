@@ -1,10 +1,10 @@
 # Capabilities and Measured Evidence
 
-This file lists the capabilities of this repository together with the measured evidence behind each one.
+This page lists the validated capabilities of this repository and the measured evidence behind each one.
 
 ## 1. Validated Main Scenario
 
-The primary scenario is a RoboCup-style two-robot yellow-vs-blue adversarial match. After the IsaacLab and rule-environment evidence package, real-robot 1v1 experiments were also performed through the ROS2 deployment stack.
+The primary scenario is a RoboCup-style two-robot yellow-versus-blue adversarial match. Real-robot 1v1 experiments were also performed through the ROS2 deployment stack after the IsaacLab and rule-environment evidence package.
 
 Capabilities.
 
@@ -26,7 +26,7 @@ Primary evidence files.
 docs/rl_data/world_model_sacflow_final/training_summary.json
 docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.json
 docs/rl_data/world_model_sacflow_final/strict_replay_summary.json
-docs/media/ (final three-view MP4/GIF files with Chinese filenames)
+docs/media/最终回放_三视角同步拼接版.gif
 ```
 
 ## 2. Two-Robot Measured Results
@@ -64,7 +64,7 @@ docs/media/ (final three-view MP4/GIF files with Chinese filenames)
 
 ## 3. Large-Scale 50v50 Evidence
 
-The repository also includes a large-scale 50-vs-50 benchmark for scalable strategy research and tactical visualization. The benchmark runs staged rule-level curriculum training, a 256-game scoring run and an IsaacLab tactical replay with 100 vehicle-shaped actors.
+The repository also includes a large-scale 50-versus-50 benchmark for scalable strategy research and tactical visualization. The benchmark runs staged rule-level curriculum training, a 256-game scoring run and an IsaacLab tactical replay with 100 vehicle-shaped actors.
 
 Capabilities in the current 50v50 evidence package.
 
@@ -97,10 +97,8 @@ Current 256-game metrics.
 Large-scale evidence files.
 
 ```text
-docs/large_scale_50v50_plan.md
-docs/large_scale_50v50_curriculum_plan.md
-docs/large_scale_50v50_report.md
 docs/rl_data/large_scale_50v50/
+docs/rl_data/large_scale_curriculum/
 docs/media/large_scale_50v50_isaaclab_replay.mp4
 docs/media/large_scale_50v50_replay.mp4
 docs/figures/large_scale_50v50/
@@ -117,7 +115,7 @@ The 50v50 result is a simulation-stage rule-level benchmark with an IsaacLab vis
 | SAC Flow and PolicyFlow-style actor | Implemented and scored | training config, checkpoint and scoring summaries |
 | Rule-aware action shield | Validated in main scenario | zero static and box penetrations |
 | Pushable red boxes | Validated in main scenario | push events and changing box poses |
-| Base blocker line-of-sight | Validated in main scenario | strict replay hard violations 0 |
+| Base blocker line of sight | Validated in main scenario | strict replay hard violations 0 |
 | ROS2 runtime contract | Used for 1v1 real-robot experiments | `crc_robocup_vision_ws/` packages |
 | IsaacLab two-robot replay | Validated | final three-view MP4 and GIF |
 | 1v1 real-robot experiment | Performed | `docs/sim2real.md` and the ROS2 deployment stack |
@@ -126,10 +124,10 @@ The 50v50 result is a simulation-stage rule-level benchmark with an IsaacLab vis
 
 ## 5. Multi-Agent Scope
 
-The repository uses multi-agent in two explicit scopes.
+The repository uses the term multi-agent in two explicit scopes.
 
 1. Primary scope, a validated two-robot adversarial RoboCup-style match with subsequent 1v1 real-robot experiments.
-2. Large-scale extension, a simulation-stage 50-vs-50 rule-level benchmark with IsaacLab replay evidence.
+2. Large-scale extension, a simulation-stage 50-versus-50 rule-level benchmark with IsaacLab replay evidence.
 
 ## 6. Distributed Training Support
 

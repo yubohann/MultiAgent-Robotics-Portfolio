@@ -82,11 +82,8 @@ def _select_training_action(
     learning_starts: int,
     use_policy_prefill: bool,
 ) -> np.ndarray:
-    """Choose one action batch for training collection.
-
-    Warm-started stages should prefill replay with the current actor rather than
-    random actions, otherwise delayed optimization starts on mostly off-policy
-    noise and can immediately destabilize the actor.
+    """Choose one action batch for training collection, with warm-started stages prefilling replay from
+    the current actor.
     """
 
     if int(transitions_collected) < int(learning_starts):

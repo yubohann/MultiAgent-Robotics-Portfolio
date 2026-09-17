@@ -1,11 +1,6 @@
-"""Task 1 — PCA on the Wine dataset (classes 1 vs 2).
-
-Standardize the 13 wine-chemical features, project the binary subset onto
-two principal components, save the projection as CSV, and plot it.
-"""
+"""Task 1, PCA on the Wine dataset for classes 1 and 2."""
 
 # Author: Bohan Yu
-# Machine learning course, assignment 3
 
 from __future__ import annotations
 
@@ -29,7 +24,7 @@ plt.rcParams["axes.unicode_minus"] = False
 
 def main() -> None:
     x, y = load_wine()
-    mask = np.isin(y, [0, 1])  # keep only classes 1 and 2
+    mask = np.isin(y, [0, 1])
     x_bin, y_bin = x[mask], y[mask]
     y_bin = y_bin + 1  # shift back to 1/2 for nicer labels on the plot
 

@@ -1,9 +1,4 @@
-"""Run same-scene P07 episodes under one Isaac process.
-
-Formal collection uses one scene per process.  A process can still contain
-multiple repeated episodes for that scene, but cross-scene stage reuse is
-blocked unless an explicit engineering-only escape hatch is supplied.
-"""
+"""Run same-scene P07 episodes under one Isaac process."""
 
 from __future__ import annotations
 
@@ -77,9 +72,8 @@ def _load_worker_module() -> Any:
     if spec is None or spec.loader is None:
         raise RuntimeError("cannot load the P07 worker module")
     module = importlib.util.module_from_spec(spec)
-    # The worker module defines @dataclass classes at module scope.  Without
-    # registering it in sys.modules first, dataclasses._is_type resolves the
-    # class module to None and raises AttributeError during exec_module.
+    # Register in sys.modules before exec_module; dataclasses._is_type resolves the
+    # class module and can otherwise raise AttributeError.
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
@@ -138,12 +132,7 @@ def _load_plan(
 
 
 def _worker_completion_audit(payload: dict[str, Any]) -> tuple[bool, list[str]]:
-    """Return whether a worker is a clean, budget-exhausted execution.
-
-    Worker exit code alone is insufficient: the episode runner can emit a
-    outcome-backed safety failure after a normal Python return.  Keep the
-    reasons in the manifest so the failed artifact remains auditable.
-    """
+    """Return whether a worker is a clean, budget-exhausted execution."""
 
     reasons: list[str] = []
     if payload.get("status") != P07_EXECUTION_SMOKE_COMPLETE_STATUS:
@@ -184,10 +173,8 @@ def _validated_worker_summary(run: CollectionRun) -> dict[str, Any]:
         raise ValueError("persistent-collection worker output lacks task_reservation")
     if task_reservation.get("schema_version") != PUBLIC_TASK_RESERVATION_SCHEMA_VERSION:
         raise ValueError("persistent-collection task_reservation schema mismatch")
-    # MARVEL is retained only as a source/audit reference because its published
-    # policy is fixed-altitude. It is not a formal HM3D learning strategy, so
-    # its legacy transition family must never enter a production collection
-    # manifest beside the active single-RL or MARL-IPP transition contracts.
+    # MARVEL is a fixed-altitude source reference, so its legacy transition family
+    # never enters a production collection manifest.
     for retired_key in (
         "marvel_training_transitions",
         "marvel_supplementary_reference_training_transitions",
@@ -197,10 +184,8 @@ def _validated_worker_summary(run: CollectionRun) -> dict[str, Any]:
                 f"persistent-collection rejects retired MARVEL transition family ({retired_key}); "
                 "use marl_ipp_training_transitions for the external learning transfer"
             )
-    # The manifest is allowed to summarize engineering-only workers, but it
-    # must never index a transition whose public-task schema differs from its
-    # executed decision.  Full feature/hash validation remains the job of the
-    # downstream evidence/training readers.
+    # A manifest may summarize engineering-only workers but never index a transition
+    # whose public-task schema differs from its executed decision.
     for transition_key in (
         "single_rl_training_transitions",
         "marl_ipp_training_transitions",
@@ -319,10 +304,8 @@ def _build_manifest(
 ) -> dict[str, Any]:
     if failed < 0:
         raise ValueError("collection failure count cannot be negative")
-    # Do not let a caller mark a collection complete merely because its local
-    # failure counter is zero.  A missing worker output or a malformed summary
-    # is itself a failed collection, and must remain visible to resume/audit
-    # tooling instead of crossing the completion boundary.
+    # A missing worker output or malformed summary is itself a failed collection and
+    # stays visible to resume and audit tooling.
     complete_workers = sum(row.get("completed") is True for row in rows)
     all_runs_present = len(rows) == len(runs)
     all_workers_clean = all_runs_present and all(
@@ -520,9 +503,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             ),
         )
         if exit_code != 0:
-            # An exception may leave a partially constructed USD stage or
-            # SimulationContext behind. Reusing that same Isaac process made
-            # the following run hang without trustworthy evidence.
+            # A partial USD stage or SimulationContext after an exception made the
+            # next run hang without trustworthy evidence.
             break
     manifest = _build_manifest(
         plan_sha256=plan_sha256,
@@ -556,17 +538,14 @@ def _entrypoint() -> int:
     try:
         exit_code = main(args, app.app)
     except BaseException:
-        # A failed collection may have an incomplete stage. Preserve the normal
-        # Isaac shutdown path so that the traceback remains actionable.
+        # A failed collection may have an incomplete stage; keep the normal Isaac
+        # shutdown path so the traceback stays actionable.
         app.app.close()
         raise
 
-    # The final manifest and every immutable worker outcome have already been
-    # atomically written when ``main`` returns.  On this Isaac build,
-    # ``SimulationApp.close()`` can spin indefinitely after a successful
-    # collection while retaining the GPU context.  The individual P07 worker
-    # already uses this process-boundary rule.  Match it here so a completed
-    # episode frees its resources and cannot block the next collection run.
+    # The manifest and worker outcomes are already written when main returns; on this
+    # Isaac build SimulationApp.close() can spin after a successful collection, so use
+    # the same process-boundary rule as the P07 worker.
     sys.stdout.flush()
     sys.stderr.flush()
     os._exit(exit_code)

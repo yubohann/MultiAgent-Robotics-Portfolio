@@ -1,11 +1,4 @@
-"""Measure the target-free P04 public sparse-range observation contract in Isaac Sim.
-
-This is an admission measurement, not an exploration-policy rollout. It places
-a calibration receiver at previously audited free-flight positions and uses
-PhysX scene queries to generate the only ray outcomes an eventual method may
-consume. The P03 ESDF, collision mesh, and denominator membership remain
-evaluator-side throughout.
-"""
+"""Measure the target-free P04 public sparse-range observation contract in Isaac Sim."""
 
 from __future__ import annotations
 
@@ -320,8 +313,8 @@ def _entrypoint() -> int:
     args = parse_args()
     app = AppLauncher(args)
     exit_code = main(args, app.app)
-    # Windows Kit shutdown can hang after large static scene-query stages.
-    # The result is atomically persisted before process isolation exits.
+    # Windows Kit shutdown can hang after large static scene-query stages; the result
+    # is persisted before process isolation exits.
     sys.stdout.flush()
     sys.stderr.flush()
     os._exit(exit_code)

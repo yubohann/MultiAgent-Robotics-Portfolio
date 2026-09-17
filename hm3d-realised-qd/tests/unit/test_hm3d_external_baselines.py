@@ -85,9 +85,8 @@ def test_gvp_port_handles_four_agents_and_real_vertical_frontier_assignments() -
             PublicAgentPose(f"uav{index}", (4.0 * index, 0.0, 1.0), 1.0, 1)
             for index in range(4)
         ),
-        # Every currently observed frontier is above the launch band.  This
-        # checks that the controlled transfer can allocate genuine 3-D tasks;
-        # it does not force an ascent when a closer planar frontier is better.
+        # Every observed frontier sits above the launch band; the transfer can
+        # allocate genuine 3-D tasks without forcing an ascent.
         frontiers=tuple(
             PublicFrontier(
                 f"uav{index}-upper",

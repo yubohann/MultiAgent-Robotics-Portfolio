@@ -1,9 +1,4 @@
-"""Kafka consumer that runs the same review pipeline for ingest events.
-
-默认网站使用 SQLite jobs，本脚本用于连接前三章流批一体架构：
-从 `short_video_ingest` 读取视频进入事件，处理后把结果写到 `short_video_result`。
-主题名可通过环境变量改成带学号的 topic，便于报告原创性检查。
-"""
+"""Kafka consumer that runs the same review pipeline for ingest events."""
 
 import json
 import os
@@ -20,7 +15,7 @@ from app.pipeline import ShortVideoPipeline  # noqa: E402
 
 
 BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-# 环境变量让同学可以使用 short_video_ingest_学号 这类 topic 名称。
+# Environment variables allow student-suffixed topic names.
 INGEST_TOPIC = os.getenv("SHORT_VIDEO_INGEST_TOPIC", "short_video_ingest")
 RESULT_TOPIC = os.getenv("SHORT_VIDEO_RESULT_TOPIC", "short_video_result")
 MAX_MESSAGES = int(os.getenv("SHORT_VIDEO_KAFKA_MAX_MESSAGES", "0"))
@@ -34,7 +29,7 @@ def main() -> None:
         consumer = KafkaConsumer(
             INGEST_TOPIC,
             bootstrap_servers=BOOTSTRAP,
-            # earliest 便于课堂验收：先发消息再启动消费者也能读到历史样本。
+            # earliest lets a late consumer still read the sample messages.
             auto_offset_reset="earliest",
             group_id=GROUP_ID,
             value_deserializer=lambda raw: json.loads(raw.decode("utf-8")),
@@ -57,7 +52,7 @@ def main() -> None:
     processed_count = 0
     for message in consumer:
         payload = message.value
-        # Kafka payload 只传路径和标题；完整理解、审核、入库仍复用主 pipeline。
+        # The Kafka payload carries only a path and title and reuses the main pipeline.
         record = pipeline.process_video(
             Path(payload["path"]),
             title=payload.get("title"),

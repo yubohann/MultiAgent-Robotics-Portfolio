@@ -1,10 +1,4 @@
-"""Record one real Isaac Sim reset witness for a collision-admitted HM3D USD.
-
-The output is deliberately a *single-scene probe*.  Three independently run
-probes (A, B and A again) are required before constructing A-B-A reset
-evidence.  This prevents a source-file hash from being presented as a physics
-reset result.
-"""
+"""Record one real Isaac Sim reset witness for a collision-admitted HM3D USD."""
 
 from __future__ import annotations
 
@@ -106,7 +100,7 @@ def _load_collision_manifest(path: Path, scene_id: str, collision_usd: Path) -> 
 
 
 def main() -> int:
-    # All Omniverse imports must happen after Application creation.
+    # Omniverse imports require Application creation first.
     import isaaclab.sim as sim_utils
     import omni.usd
     import torch
@@ -195,8 +189,8 @@ def main() -> int:
     robot.write_root_pose_to_sim(reset_pose)
     robot.write_root_velocity_to_sim(reset_velocity)
     robot.write_data_to_sim()
-    # Refresh Fabric/RTX without advancing physics.  Advancing one frame lets
-    # gravity change the reset state, which is not a reset equivalence test.
+    # Refresh Fabric/RTX without advancing physics; one advanced frame lets gravity
+    # change the reset state.
     sim.forward()
     sim.render()
     robot.update(sim.cfg.dt)

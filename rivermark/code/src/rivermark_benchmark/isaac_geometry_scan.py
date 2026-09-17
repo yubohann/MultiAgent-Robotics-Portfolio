@@ -1,10 +1,4 @@
-"""Create a small native geometry catalog for the approved City-Lite authority.
-
-This is deliberately not a capture: it spawns no CF2X, targets, sensors,
-video, or dataset payload.  Its only purpose is to bind conservative AABBs to
-the exact native City-Lite composition used by ``isaac_capture`` before an
-external private evaluator samples targets.
-"""
+"""Create a small native geometry catalog for the approved City-Lite authority."""
 
 from __future__ import annotations
 

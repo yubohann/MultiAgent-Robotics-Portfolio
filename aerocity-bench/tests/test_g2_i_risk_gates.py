@@ -407,9 +407,8 @@ def test_public_cell_credit_requires_orientation_los_acceptance_and_dwell(risk_f
     assert not runtime._public_cell_visible(wrong_yaw, cell)
     assert not runtime._public_cell_visible(wrong_pitch, cell)
 
-    # The nominal atlas pose is a public suggestion, not a hard waypoint.
-    # Moving farther out along the public surface normal must remain eligible
-    # when the observation still satisfies the physical sensor contract.
+    # The nominal pose is a suggestion: an outward-refined observation remains
+    # eligible while it satisfies the sensor contract.
     normal = cell.surface_normal
     refined_position = tuple(
         value + 0.75 * normal[index] for index, value in enumerate(cell.pose.position)
@@ -507,8 +506,7 @@ def test_g2_i_runtime_snapshots_public_and_private_setup_objects(risk_fixture) -
     )
     public_cell_ids = set(runtime._public_atlas_cells)
 
-    # These emulate a policy-side or caller-side mutation after setup.  The
-    # authority state must continue to score the exact objects it validated.
+    # Post-setup mutation by a caller must not change what the authority scores.
     public_episode["starts"][0]["position"][0] += 100.0
     caller_task_spec["inspection_atlas"]["regions"] = []
     caller_episode["starts"][0]["position"][0] += 100.0

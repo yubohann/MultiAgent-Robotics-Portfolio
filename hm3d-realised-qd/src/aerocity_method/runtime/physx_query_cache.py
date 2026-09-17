@@ -1,10 +1,4 @@
-"""Exact-result cache for repeated static PhysX ray queries.
-
-The P07 route guard asks the same immutable HM3D collision stage about many
-identical segments while it screens public candidate routes.  Caching those
-queries is a runtime optimisation only: every cache miss is delegated to
-PhysX with its original arguments, and cached hits return that exact response.
-"""
+"""Exact-result cache for repeated static PhysX ray queries."""
 
 from __future__ import annotations
 

@@ -1,10 +1,4 @@
-"""Aggregate the independent checks required before a public release.
-
-This module is deliberately a control-plane report.  It does not admit an
-episode, upload bytes, contact a URL, or grant a license.  It combines the
-existing formal-dataset, release-manifest, supply-chain, and Git-index audits
-so a maintainer cannot mistake one passing subsystem for a release decision.
-"""
+"""Aggregate the independent checks required before a public release."""
 
 from __future__ import annotations
 

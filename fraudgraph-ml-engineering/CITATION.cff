@@ -5,12 +5,12 @@ type: software
 version: 0.1.0
 date-released: 2026-07-31
 authors:
-  - family-names: Han
-    given-names: Yu Bo
+  - family-names: Yu
+    given-names: Bohan
 repository-code: "https://github.com/yubohann/fraudgraph-ml-engineering"
 url: "https://github.com/yubohann/fraudgraph-ml-engineering"
 abstract: >-
-  A reproducible engineering repository for graph-and-sequence fraud detection
+  An engineering repository for graph-and-sequence fraud detection
   experiments across financial transaction datasets.
 keywords:
   - fraud detection
@@ -18,5 +18,5 @@ keywords:
   - SplitGNN
   - transformers
   - financial machine learning
-  - reproducibility
+  - determinism
 license: "LicenseRef-Proprietary"

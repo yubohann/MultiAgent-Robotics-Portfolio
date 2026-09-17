@@ -9,8 +9,21 @@ description = "Open benchmark for 3D multi-UAV search under urban topology, targ
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
-authors = [{ name = "AeroCityBench maintainers" }]
+authors = [{ name = "Bohan Yu" }]
+keywords = ["multi-uav", "drone-search", "robotics-benchmark", "3d-search", "multi-agent-systems", "isaac-sim"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/yubohann/MultiAgent-Robotics-Portfolio/tree/main/aerocity-bench"
+Upstream = "https://github.com/yubohann/AeroCityBench"
 
 [project.optional-dependencies]
 dev = ["jsonschema>=4.23", "pytest>=8.0", "ruff>=0.6"]
@@ -21,9 +34,7 @@ rl = ["gymnasium>=1.0", "pettingzoo>=1.24"]
 aerocity-bench = "aerocity_bench.cli:main"
 
 [tool.hatch.build]
-# Keep engineering investigations and local release logs out of source
-# distributions.  They are useful in the repository history, but are neither
-# runtime inputs nor a redistributable benchmark artifact.
+# Engineering investigations and local release logs stay out of source distributions.
 exclude = [
   "/.wheel_verify_*/",
   "/debug/",
@@ -31,7 +42,6 @@ exclude = [
   "/fix-results.tsv",
   "/reason/",
   "/scenario/",
-  "/ship-log.md",
 ]
 
 [tool.hatch.build.targets.wheel]

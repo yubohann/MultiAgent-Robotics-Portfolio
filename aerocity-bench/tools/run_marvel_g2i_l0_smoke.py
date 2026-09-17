@@ -31,9 +31,9 @@ from aerocity_bench.targets_v3 import public_episode_projection  # noqa: E402
 UPSTREAM_URL = "https://github.com/marmotlab/MARVEL.git"
 UPSTREAM_COMMIT = "318c2a6016d0f2d1dbb0dd08b3f8f8224b361e4c"
 UPSTREAM_LICENSE = "MIT"
-# Full public G2-I atlases are larger than the legacy 1 MB G1 line default.
-# This bound is deliberately finite and covers the current largest compressed
-# calibration reset (about 1.34 MB), rather than granting an unbounded channel.
+# Public G2-I atlases exceed the legacy 1 MB G1 default; 2 MB covers the
+# largest compressed calibration reset (about 1.34 MB) without leaving the
+# channel unbounded.
 MAXIMUM_RESET_BYTES = 2_000_000
 
 

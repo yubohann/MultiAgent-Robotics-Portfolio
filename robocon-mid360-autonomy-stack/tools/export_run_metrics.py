@@ -29,8 +29,8 @@ def _pose_age_metrics(value: object) -> tuple[object, str]:
     if value is None:
         return "unknown", "missing"
     seconds = float(value)
-    # A multi-day value can only come from the pre-readiness simulation clock;
-    # retain the run row but keep that startup artifact out of performance plots.
+    # A multi-day value comes from the pre-readiness simulation clock, so the
+    # run row stays and the startup artifact stays out of performance plots.
     if seconds < 0.0 or seconds > 60.0:
         return "unknown", "startup_clock_artifact"
     return seconds * 1_000.0, "valid_motion_window"

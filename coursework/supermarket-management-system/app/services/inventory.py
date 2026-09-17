@@ -5,7 +5,7 @@ from app.models import Category, Inventory, InventoryLog, Product, User
 
 
 def set_inventory_quantity(product_id, quantity_after, change_type='adjust', reason=None, operator_id=None):
-    """设置库存数量并记录流水。"""
+    """Set the inventory quantity and append a movement record."""
     inventory = db.session.get(Inventory, product_id)
     quantity_before = inventory.quantity if inventory else 0
 
@@ -32,7 +32,7 @@ def set_inventory_quantity(product_id, quantity_after, change_type='adjust', rea
 
 
 def get_inventory_summary():
-    """获取库存概览。"""
+    """Return the inventory summary."""
     total_products = Product.query.count()
     total_quantity = db.session.query(func.coalesce(func.sum(Inventory.quantity), 0)).scalar() or 0
     low_stock_count = db.session.query(func.count(Product.product_id)).join(
@@ -58,7 +58,7 @@ def get_inventory_summary():
 
 
 def get_inventory_list(page=1, per_page=20, search='', category_id=None, stock_state=None):
-    """获取库存列表。"""
+    """Return the inventory list."""
     query = db.session.query(
         Product,
         Inventory.quantity,
@@ -131,7 +131,7 @@ def get_inventory_list(page=1, per_page=20, search='', category_id=None, stock_s
 
 
 def get_inventory_logs(page=1, per_page=20, search='', change_type=None, start_date=None, end_date=None):
-    """获取库存流水。"""
+    """Return inventory movement records."""
     query = db.session.query(
         InventoryLog,
         Product.product_name,
@@ -208,7 +208,7 @@ def get_inventory_logs(page=1, per_page=20, search='', change_type=None, start_d
 
 
 def get_inventory_alerts(limit=20):
-    """获取库存预警列表。"""
+    """Return low-stock alerts."""
     results = db.session.query(
         Product,
         Inventory.quantity,

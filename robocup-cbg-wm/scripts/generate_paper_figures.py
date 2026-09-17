@@ -302,16 +302,12 @@ def draw_arena(fig: Figure, x: float, y: float, w: float, h: float):
     for i in range(1, 5):
         fig.line(x + w * i / 5, y, x + w * i / 5, y + h, "#D7DEE8", 0.9)
         fig.line(x, y + h * i / 5, x + w, y + h * i / 5, "#D7DEE8", 0.9)
-    # bases and start partitions
     fig.rect(x + 18, y + 18, 82, 72, fill="#DBEAFE", outline=COL["blue"], width=2.0, r=4)
     fig.rect(x + w - 100, y + h - 90, 82, 72, fill="#FEF3C7", outline=COL["yellow"], width=2.0, r=4)
-    # pushable boxes
     fig.rect(x + w * 0.62, y + h * 0.22, 48, 48, fill="#FB923C", outline=COL["orange"], width=1.4, r=4)
     fig.rect(x + w * 0.22, y + h * 0.66, 48, 48, fill="#FB923C", outline=COL["orange"], width=1.4, r=4)
-    # robots
     fig.circle(x + w * 0.28, y + h * 0.80, 18, COL["yellow"], COL["ink"], text="Y")
     fig.circle(x + w * 0.75, y + h * 0.36, 18, COL["blue"], COL["ink"], text="B")
-    # targets around walls
     target_pts = [
         (0.12, 0.48), (0.18, 0.72), (0.38, 0.12), (0.50, 0.24),
         (0.82, 0.28), (0.84, 0.56), (0.68, 0.82), (0.34, 0.88),
@@ -319,7 +315,6 @@ def draw_arena(fig: Figure, x: float, y: float, w: float, h: float):
     for tx, ty in target_pts:
         fig.rect(x + w * tx - 10, y + h * ty - 16, 20, 32, fill="#FFFFFF", outline=COL["ink"], width=1.0, r=3)
         fig.circle(x + w * tx, y + h * ty, 5, COL["red"], COL["red"])
-    # tactical rays and path
     fig.line(x + w * 0.28, y + h * 0.80, x + w * 0.34, y + h * 0.88, COL["yellow"], 2.0, arrow=True)
     fig.line(x + w * 0.75, y + h * 0.36, x + w * 0.84, y + h * 0.56, COL["blue"], 2.0, arrow=True)
     fig.line(x + w * 0.28, y + h * 0.80, x + w * 0.22, y + h * 0.66, COL["orange"], 2.0, arrow=True, dash=True)

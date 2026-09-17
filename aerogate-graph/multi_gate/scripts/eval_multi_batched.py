@@ -1,4 +1,4 @@
-"""Batched multi-agent evaluation entry for gate_graph_2d_minimal."""
+"""Batched multi-agent scoring entry for gate_graph_2d_minimal."""
 
 from __future__ import annotations
 

@@ -85,10 +85,8 @@ class CandidateTransition:
         duration = finite_number(self.duration, "duration")
         if cost < 0.0 or duration < 0.0:
             raise ValueError("cost and duration must be non-negative")
-        # ``done`` remains the Bellman-bootstrap mask for the fixed-horizon
-        # candidate-selection task.  Preserve the cause separately so outcome
-        # records never turn a normal time-budget truncation into a safety
-        # terminal failure.
+        # ``done`` is the Bellman-bootstrap mask for the fixed-horizon task; the
+        # cause is kept separately so a budget truncation never becomes a safety failure.
         terminated = self.done if self.terminated is None else self.terminated
         if not isinstance(self.done, bool) or not isinstance(terminated, bool):
             raise ValueError("done and terminated must be booleans")

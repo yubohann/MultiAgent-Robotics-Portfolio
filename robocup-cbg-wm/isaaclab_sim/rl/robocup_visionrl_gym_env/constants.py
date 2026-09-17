@@ -10,9 +10,9 @@ WALL_THICKNESS = 0.04
 ZONE_SIZE = 0.50
 OBSTACLE_SIZE = 0.30
 PUSHABLE_OBSTACLE_HALF = OBSTACLE_SIZE * 0.5
-# The rules state that two 30 cm cube obstacles are randomly placed.  The
-# default deterministic layout follows the red obstacle centers measured from
-# the national-rule field diagram; training can then jitter these references.
+# The rules place two 30 cm cube obstacles randomly, and this deterministic
+# layout follows the red obstacle centers measured from the national-rule field
+# diagram. Training jitters these references.
 PUSHABLE_OBSTACLE_STARTS = {
     "box_ne": np.array([0.80, 0.80], dtype=np.float32),
     "box_sw": np.array([-0.80, -0.80], dtype=np.float32),
@@ -24,15 +24,14 @@ ROBOT_LENGTH = 0.34
 ROBOT_WIDTH = 0.24
 ROBOT_RADIUS = math.hypot(ROBOT_LENGTH * 0.5, ROBOT_WIDTH * 0.5)
 ROBOT_PUSHABLE_CLEARANCE_RADIUS = ROBOT_RADIUS + 0.030
-# Conservative visual/contact hull used for pushable red boxes.  It includes
-# the rendered wheel/body footprint so videos and strict audits agree.
+# Conservative visual and contact hull for pushable red boxes, matching the
+# rendered wheel and body footprint so videos and strict audits agree.
 ROBOT_PUSHABLE_VISUAL_HALF_EXTENTS = (ROBOT_LENGTH * 0.5 + 0.110, ROBOT_WIDTH * 0.5 + 0.087)
 ROUTE_CLEARANCE = ROBOT_WIDTH * 0.5 + 0.04
-# Real-laser contract used by the RL rule environments and the IsaacLab replay.
-# Distances are measured from the fixed shooter outlet, not from base_link.
-# Normal targets remain a close 5-50 cm shot. Base targets are physically
-# recessed behind armor, so the valid outlet-to-target range is wider but still
-# bounded; line-of-sight through remaining armor is always checked separately.
+# Real-laser contract for the RL rule environments and the IsaacLab replay.
+# Distances are measured from the fixed shooter outlet rather than base_link.
+# Normal targets stay a close 5-50 cm shot, and recessed base targets accept a
+# wider outlet-to-target range with a separate line-of-sight check.
 NORMAL_SHOOT_MIN_RANGE = 0.05
 NORMAL_SHOOT_RANGE = 0.50
 NORMAL_SHOOT_IDEAL_DISTANCE = 0.30

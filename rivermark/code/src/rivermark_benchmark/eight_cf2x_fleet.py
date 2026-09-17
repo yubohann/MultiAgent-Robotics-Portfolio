@@ -1,10 +1,4 @@
-"""A read-batched facade over eight literal one-instance IsaacLab CF2X assets.
-
-IsaacLab initializes PhysX handles only after ``SimulationContext.reset()``.
-The facade is therefore constructed after reset, while the eight literal
-``MultirotorCfg`` objects author their independent initial states before it.
-It intentionally exposes command delegation but no root-state rewrite API.
-"""
+"""A read-batched facade over eight literal one-instance IsaacLab CF2X assets."""
 
 from __future__ import annotations
 

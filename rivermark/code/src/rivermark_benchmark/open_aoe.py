@@ -1,11 +1,4 @@
-"""Read-only provenance and consistency checks for external Open-AoE segments.
-
-Open-AoE is a human egocentric manipulation corpus.  It is valuable as an
-external pretraining source for visual, language-conditioned, and world-model
-representations, but its MANO hand actions are not CF2X flight actions.  This
-module intentionally never creates a Rivermark episode, never copies source
-media, and emits a path-free manifest with that boundary frozen in its schema.
-"""
+"""Read-only provenance and consistency checks for external Open-AoE segments."""
 
 from __future__ import annotations
 

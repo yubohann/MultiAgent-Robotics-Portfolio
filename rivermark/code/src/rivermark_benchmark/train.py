@@ -1,9 +1,4 @@
-"""Train a real SB3 PPO or SAC policy on the state-only Rivermark pilot ABI.
-
-This command is intentionally a training utility, not a benchmark result
-generator.  It produces a checkpoint plus required adapter metadata.  Running
-the trained checkpoint still requires the normal online recorder and receipt.
-"""
+"""Train a real SB3 PPO or SAC policy on the state-only Rivermark pilot ABI."""
 
 from __future__ import annotations
 

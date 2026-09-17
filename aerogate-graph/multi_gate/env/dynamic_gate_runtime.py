@@ -1,4 +1,4 @@
-"""Extracted method helpers for :mod:`multi_gate.env.multi_gate_env`."""
+"""Extracted method helpers for ``multi_gate.env.multi_gate_env``."""
 
 from __future__ import annotations
 

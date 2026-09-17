@@ -28,10 +28,10 @@ def _step_one(args):
 
 
 class RoboCupVisionRLSelfPlayVector:
-    """Simple vectorized self-play runner for SAC Flow rollout collection.
+    """In-process vectorized self-play runner for SAC Flow rollout collection.
 
-    It keeps environments in-process so debugging is easy and reproducible
-    while the object-centric replay buffer collects self-play transitions.
+    Environments run in one process so debugging is easy and the object-centric
+    replay buffer sees deterministic self-play transitions.
     """
 
     def __init__(

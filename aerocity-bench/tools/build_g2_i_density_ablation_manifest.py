@@ -158,9 +158,8 @@ def build_density_manifest(
     if input_root.exists():
         stale_entries = list(input_root.iterdir())
         if len(stale_entries) == 1 and stale_entries[0].name == "release_config.json":
-            # A terminated builder can leave only this copied input behind.  It
-            # contains no generated scene or private episode, so removing this
-            # exact verified directory prevents a false permanent blockage.
+            # A terminated builder leaves only this copied config, which holds
+            # no scene or private episode; removing it avoids a false blockage.
             shutil.rmtree(input_root)
         else:
             raise FileExistsError(f"density input directory already exists: {input_root}")

@@ -208,9 +208,8 @@ def _outcome_payload(
     calibration_only_timeout_probe: bool = False,
     intermediate_waypoint_requires_settle: bool = False,
 ) -> dict[str, object]:
-    # These rows exercise the still-readable pre-v8 direct-route ABI.  They
-    # deliberately omit turn settling; the v8 multi-waypoint ABI is covered by
-    # _decision_calibration below with an explicit completed turn.
+    # These rows exercise the readable pre-v8 direct-route ABI without turn settling;
+    # the v8 multi-waypoint ABI is covered below.
     return {
         "schema_version": "hm3d-p07-physx-execution-smoke-v1",
         "synthetic": False,

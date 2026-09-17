@@ -120,10 +120,8 @@ class L0FleetRuntime:
         public_episode: dict[str, Any] | None = None,
     ) -> None:
         self.config = config
-        # The authority runtime owns an immutable-in-practice snapshot.  A
-        # policy, adapter, or caller must never be able to change the task
-        # that a live evaluator is scoring by mutating a dictionary it passed
-        # during setup.
+        # Deep-copy the authority snapshot: a caller must not mutate the task a
+        # live evaluator is scoring through a dictionary it passed at setup.
         self.city = copy.deepcopy(city)
         self.private_episode = copy.deepcopy(private_episode)
         self.public_task_spec = copy.deepcopy(public_task_spec)
@@ -321,13 +319,10 @@ class L0FleetRuntime:
     def _public_cell_visible(
         self, observation: ObservationPacket, cell: _PublicAtlasCell
     ) -> bool:
-        # A public cell is an area-bearing inspection domain, not a mandatory
-        # waypoint.  Baselines are allowed to refine the nominal pose using
-        # public local occupancy, and a valid observation may therefore move
-        # outside the nominal pose envelope while still inspecting the same
-        # surface footprint.  Credit is constrained by the actual sensor
-        # geometry below (range, FoV, facing, LOS) plus dwell and safety checks
-        # in _record_public_atlas_observation.
+        # A public cell is an area-bearing domain, not a mandatory waypoint:
+        # a refined pose may sit outside the nominal envelope yet still inspect
+        # the same footprint.  Credit is decided by the sensor geometry below
+        # (range, FoV, facing, LOS) plus the dwell and safety checks.
         contract = self.config.raw["execution_contract"]
         body_margin = float(contract["vehicle"]["radius_m"]) + float(
             contract["vehicle"]["minimum_clearance_m"]

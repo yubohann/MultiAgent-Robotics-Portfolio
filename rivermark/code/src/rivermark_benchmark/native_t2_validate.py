@@ -1,11 +1,4 @@
-"""Independent CPU-only validation for a development native Isaac T2 canary.
-
-This path intentionally does not reuse the capture's self-reported outcome.
-It reopens the raw bounded artifacts, recreates public RGB-D semantic
-candidates, verifies the command-to-actuator chain, and invokes the private
-event evaluator only in memory.  It is a development canary validator, not a
-formal-episode admission path.
-"""
+"""Independent CPU-only validation for a development native Isaac T2 canary."""
 
 from __future__ import annotations
 

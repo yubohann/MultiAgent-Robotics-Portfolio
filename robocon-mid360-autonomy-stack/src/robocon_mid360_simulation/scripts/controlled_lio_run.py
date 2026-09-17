@@ -198,9 +198,9 @@ class ControlledLioRecorder(Node):
         ros_now_ns = int(self.get_clock().now().nanoseconds)
         stamp_ns = _stamp_ns(message)
         age = (ros_now_ns - stamp_ns) / 1e9 if ros_now_ns > 0 and stamp_ns > 0 else None
-        # Do not mix startup samples with the motion-window latency metric.
-        # Before the readiness gate, Gazebo may still publish a zero/old clock
-        # stamp and produce an artificial multi-year pose age.
+        # Startup samples stay out of the motion-window latency metric because
+        # a zero or old Gazebo clock before the readiness gate produces an
+        # artificial multi-year pose age.
         if self.ready_wall is not None and age is not None and age >= 0.0:
             self.pose_ages.append(age)
         self._write(self.events, {
@@ -270,10 +270,8 @@ class ControlledLioRecorder(Node):
         if self.elapsed >= self.duration_sec:
             self._finish()
             return
-        # Repeat the full motion pattern when a longer mapping run is
-        # requested.  Previously the recorder stopped at the end of the
-        # first 60-second sequence even if duration_sec was larger, which
-        # made a "longer" run collect no additional coverage.
+        # A longer run repeats the full motion pattern so coverage keeps
+        # growing past the first 60-second sequence.
         cycle_elapsed = self.elapsed % SEQUENCE_DURATION_SEC
         cycle_index = int(self.elapsed // SEQUENCE_DURATION_SEC)
         elapsed_until_segment = 0.0
@@ -323,8 +321,8 @@ class ControlledLioRecorder(Node):
             "motion_duration_target_sec": self.duration_sec,
             "readiness_wait_wall_sec": self.readiness_wait_sec,
             "motion_wall_sec": motion_wall_sec,
-            # This is a derived simulation/wall-clock ratio, not Gazebo's
-            # official real-time-factor metric.
+            # Derived simulation to wall-clock ratio, distinct from the Gazebo
+            # real-time-factor metric.
             "sim_to_wall_ratio": sim_to_wall_ratio,
             "readiness": self.readiness.snapshot(),
             "startup_diagnostic_count": self.startup_diagnostic_count,

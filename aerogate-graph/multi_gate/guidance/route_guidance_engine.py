@@ -34,7 +34,7 @@ class _PendingGuidanceRequest:
 
 
 class RouteGuidanceEngine:
-    """Low-frequency guidance engine that never blocks env stepping on remote calls."""
+    """Low-frequency guidance engine that keeps remote calls off the env stepping path."""
 
     def __init__(
         self,

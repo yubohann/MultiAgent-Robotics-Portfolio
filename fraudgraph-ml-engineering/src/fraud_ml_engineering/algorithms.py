@@ -502,9 +502,8 @@ DATASET_PROBABILITY_RULES = {
         "sharp_drop_delta": -0.08,
     },
     "yelp": {
-        # Yelp should tolerate sharper probabilities than the default rule, but
-        # the previous 1e-5-level threshold was letting obviously collapsed
-        # runs pass without controller feedback.
+        # Yelp tolerates sharper probabilities than the default rule, and the earlier 1e-5
+        # threshold let collapsed runs pass with quiet controller feedback.
         "collapse_std": 5e-3,
         "severe_collapse_std": 2e-3,
         "reward_low_prob_std_floor": 5e-3,
@@ -590,17 +589,17 @@ DATASET_PROBABILITY_RULES = {
     },
 }
 CONTROLLER_REWARD_WEIGHTS = {
-    "auc_gain": 1.2,  # Avoid over-optimizing AUC at the expense of other fraud metrics.
-    "f1_gain": 0.8,  # Balance precision and recall through macro F1.
-    "recall_gain": 1.0,  # Preserve recall sensitivity for rare fraud cases.
-    "prob_std_gain": 0.5,  # Stabilize the predicted-probability distribution.
-    "alignment": 1.0,  # Prefer controller actions that remain policy-consistent.
-    "quality_bonus": 0.6,  # Reward stable, high-quality rounds.
-    "communication_cost": 0.8,  # Penalize unnecessary client communication.
-    "compute_cost": 0.5,  # Trade model quality against compute cost.
-    "clip_cost": 0.3,  # Account for gradient-clipping pressure.
-    "collapse_penalty": 0.8,  # Penalize degenerate prediction distributions.
-    "plateau_penalty": 0.2,  # Retain limited room to adapt during plateaus.
+    "auc_gain": 1.2,
+    "f1_gain": 0.8,
+    "recall_gain": 1.0,
+    "prob_std_gain": 0.5,
+    "alignment": 1.0,
+    "quality_bonus": 0.6,
+    "communication_cost": 0.8,
+    "compute_cost": 0.5,
+    "clip_cost": 0.3,
+    "collapse_penalty": 0.8,
+    "plateau_penalty": 0.2,
 }
 DATASET_CONTROLLER_REWARD_PROFILES = {
     "default": {
@@ -937,8 +936,8 @@ DATASET_MULTIMODAL_AUX_LOSS = {
         "sequence_aux_loss_weight": 0.05,
     },
     "comp": {
-        # Keep the graph trunk explicitly supervised so the hybrid mainline
-        # does not drift below the graph-only baseline on comp.
+        # Keep the graph trunk explicitly supervised to hold the hybrid mainline at or above
+        # the graph-only baseline on comp.
         "graph_aux_loss_weight": 0.12,
         "sequence_aux_loss_weight": 0.03,
     },
@@ -981,9 +980,8 @@ DATASET_GRAPH_ANCHOR_PROFILES = {
         "graph_anchor_temperature": 1.45,
     },
     "comp": {
-        # Comp remains graph-dominant; keep the fusion logits close enough to
-        # the graph trunk during multimodal training so sequence gains stay
-        # corrective instead of destabilizing the baseline.
+        # Comp stays graph-dominant, and fusion logits stay close to the graph trunk during
+        # multimodal training so sequence gains stay corrective.
         "graph_anchor_loss_weight": 0.20,
         "graph_anchor_temperature": 1.35,
     },
@@ -2344,10 +2342,8 @@ def _build_training_args(
     )
     args.graph_teacher_temperature = float(max(graph_teacher_temperature, 1e-6)) if multimodal_aux_enabled else 1.0
     if dataset_name_normalized == "elliptic":
-        # Keep the Elliptic mainline focused on the light, direct path:
-        # weak-graph / strong-temporal fusion + direct branch selection.
-        # Do not silently re-enable heavier teacher/prototype/shared-private
-        # families through low-label profiles or caller overrides.
+        # Keep the Elliptic mainline on the light direct path with weak-graph and strong-temporal fusion plus direct branch selection.
+        # Heavier teacher, prototype and shared-private families stay out of low-label profiles and caller overrides.
         args.teacher_ema_decay = 0.0
         args.graph_teacher_distill_weight = 0.0
         args.tabular_teacher_distill_weight = 0.0
@@ -2880,8 +2876,8 @@ def _should_update_best_checkpoint(
     current_f1_macro = float(current_metrics.get("f1_macro", 0.0))
     current_recall = float(current_metrics.get("recall", 0.0))
 
-    # For SplitGNN structural ablations we avoid very conservative checkpoints
-    # unless the ranking improvement is clearly meaningful.
+    # SplitGNN structural ablations keep conservative checkpoints only when the ranking
+    # improvement is clearly meaningful.
     if splitgnn_policy_active and current_recall < 0.22 and current_recall_at_precision < 0.18:
         if best_round >= 0 and current_auc <= best_valid_auc + 0.02 and current_pr_auc <= best_valid_pr_auc + 0.02:
             return False
@@ -3625,9 +3621,8 @@ def _train_one_dataset(
     pure_label_fraction: bool = False,
 ) -> dict:
     """Train the active GNN + Transformer mainline."""
-    # FL/RL has been archived to `legacy_federated_rl_backup/`; keep the public
-    # API stable but force the active project runtime onto the structure-only
-    # GNN + Transformer path.
+    # FL and RL runtime code lives in `legacy_federated_rl_backup/`, and the public API stays
+    # stable on the structure-only GNN and Transformer path.
     planner_mode, disable_federated = _force_mainline_gnn_transformer_mode(
         planner_mode=planner_mode,
         disable_federated=disable_federated,
@@ -5325,8 +5320,8 @@ def _train_one_dataset(
         )
 
         if writer is not None and not has_test_timeseries and has_test_metrics:
-            # Keep `test/*` semantically clean: either periodic evaluation during
-            # training, or one final point when periodic test logging is disabled.
+            # Keep `test/*` semantically clean with periodic scoring during training or a
+            # single final point for runs that disable periodic test logging.
             test_step = len(history)
             writer.add_scalar("test/acc", test_metrics["acc"], test_step)
             writer.add_scalar("test/f1_binary", test_metrics["f1_binary"], test_step)
@@ -6181,10 +6176,8 @@ def MAFRL(
     eta_2: float = 0.5,
     **kwargs,
 ) -> dict:
-    """Compatibility wrapper for older scripts.
-
-    `eta_2` is ignored because the active hybrid pipeline no longer uses the
-    legacy second edge-loss coefficient.
+    """Compatibility wrapper for older scripts. ``eta_2`` stays accepted and the active hybrid pipeline
+    ignores it.
     """
     _ = eta_2
     return train_hybrid_fraud_pipeline(

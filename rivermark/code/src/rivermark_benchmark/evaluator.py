@@ -1,11 +1,4 @@
-"""Legacy development trace scorer and evaluator provenance contract.
-
-Version 1 scores confirmation traces that must already have been produced by
-an authoritative evaluator.  It is retained for fixture and metric-regression
-compatibility; it is not a policy-submission format and cannot establish a
-benchmark result by itself.  New policy evaluations use timestamped candidate
-events and server-owned truth through :mod:`search_event_evaluator`.
-"""
+"""Legacy development trace scorer and evaluator provenance contract."""
 
 from __future__ import annotations
 

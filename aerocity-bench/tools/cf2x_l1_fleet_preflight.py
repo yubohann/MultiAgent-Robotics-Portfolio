@@ -77,10 +77,8 @@ EXTERNAL_PROCESS_INITIALIZATION_DEADLINE_S = 10.0
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     # Isaac Lab 2.3.0 probes the parser with parse_known_args() while adding
-    # launcher options.  Required application arguments would make parser
-    # construction (and --help) exit before the launcher options are added.
-    # Register them first for Isaac Lab's collision checks, then restore their
-    # required semantics after the launcher has finished extending the parser.
+    # launcher options, so required arguments would exit before the options are
+    # added.  Register them, then restore required=True after extension.
     required_actions = [
         parser.add_argument("--layout-root", type=Path),
         parser.add_argument("--release-config", type=Path),
@@ -921,17 +919,15 @@ def _run(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
             create_stage_in_memory=False,
             physx=sim_utils.PhysxCfg(
                 # Isaac Sim 5.1 removed the pre-5.x
-                # ``enable_external_forces_every_iteration`` field.  The
-                # wrench application path is still advanced at every PhysX
-                # step; keep only fields present in the frozen runtime API.
+                # ``enable_external_forces_every_iteration`` field; keep only
+                # fields present in the frozen runtime API.
                 min_velocity_iteration_count=1,
             ),
         )
     )
-    # ``UsdFileCfg`` may create a leaf prim but does not reliably author an
-    # absent intermediate Xform in an already-open CitySpec stage.  Create the
-    # shared parent once, before any CF2X exists; each child remains an
-    # independently named articulation below this one common PhysX world.
+    # ``UsdFileCfg`` does not reliably author an absent intermediate Xform, so
+    # create the shared parent once; each CF2X remains a separately named
+    # articulation below this one common PhysX world.
     from pxr import UsdGeom
 
     fleet_root = "/World/AeroCityFleetPreflight"
@@ -1003,9 +999,8 @@ def _run(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
         wrench_by_drone[drone_id] = rotor_thrust_wrench(spec, applied)
 
     evaluator = PrivateEvaluator(config, city, private_episode, receipt_secret=os.urandom(32))
-    # The public policy sees public task material and G1 observations only.  The
-    # private episode remains evaluator-owned and is never passed to a baseline
-    # or an external planner process.
+    # The baseline policy receives public material only; the private episode
+    # stays evaluator-owned and never reaches a planner process.
     policy = (
         create_baseline(args.method, config, task_spec, public_episode)
         if args.execution_mode == "public-policy"
@@ -1078,9 +1073,8 @@ def _run(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     sensor_pitch_by_drone: dict[str, float] = {}
     altitude_samples = {member.drone_id: [] for member in members}
     execution_receipts: list[dict[str, Any]] = []
-    # This private evidence contains the exact public packets passed through the
-    # adapter.  It lets the CPU-only verifier recompute receipt bindings without
-    # retaining evaluator-private targets or witnesses.
+    # Exact public packets passed through the adapter, so the CPU-only verifier
+    # can recompute receipt bindings without private targets or witnesses.
     execution_bindings_public: list[dict[str, Any]] = []
     observation_receipts: list[dict[str, Any]] = []
     confirmation_receipts: list[dict[str, Any]] = []
@@ -1089,8 +1083,8 @@ def _run(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     action_kind_counts: dict[str, int] = {}
     observation_build_latency_s: list[float] = []
     policy_latency_s: list[float] = []
-    # Scalar timing attribution only. The raw packets remain in the existing
-    # protected execution binding trace and are never copied into this trace.
+    # Scalar timing attribution only; raw packets stay in the protected
+    # execution binding trace and are never copied into this trace.
     external_planning_timing_trace: list[dict[str, float | int | None]] = []
     collision_detected = False
     out_of_bounds_detected = False
@@ -1270,9 +1264,8 @@ def _run(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
         elif planning_cadence is not None and not planner_invoked:
             actions = planning_cadence.held_actions(current_observations)
         elif fixture is not None:
-            # All four vehicles remain in the same PhysX world.  Only this
-            # internal evaluator-owned fixture may consult a private witness;
-            # the three non-selected vehicles hold their public start poses.
+            # All four vehicles share one PhysX world; only this evaluator-owned
+            # fixture may use a private witness, while the others hold start.
             actions = {
                 member.drone_id: ActionPacket(
                     episode_id=str(public_episode["episode_id"]),
@@ -1485,9 +1478,8 @@ def _run(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
                 goal_position, goal_yaw = current_position, current_yaw
             elif action.kind == "RETURN":
                 if action.waypoint is None:
-                    # A third-party adapter may issue a bare RETURN.  Preserve
-                    # its conservative preflight fallback, but record it as an
-                    # intervention instead of silently inventing a route.
+                    # Bare RETURN from a third-party adapter: use the
+                    # conservative home fallback and record the intervention.
                     goal_position = home_by_drone[drone_id]
                     goal_yaw = member.start_yaw_deg * math.pi / 180.0
                     safety_intervention = True
@@ -1495,8 +1487,8 @@ def _run(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
                     goal_position = action.waypoint.position
                     goal_yaw = math.radians(action.waypoint.yaw_deg)
             else:
-                # The initial native adapter intentionally does not reinterpret
-                # body-frame velocity actions as an extra controller surface.
+                # The native adapter does not expose body-frame velocity actions
+                # as an extra controller surface.
                 executed_kind = "HOVER"
                 goal_position, goal_yaw = current_position, current_yaw
                 safety_intervention = True

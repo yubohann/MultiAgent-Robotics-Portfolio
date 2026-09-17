@@ -1,10 +1,4 @@
-"""Build evaluator-private City-Lite target manifests outside the repository.
-
-The generator is deliberately Isaac-free.  It consumes a public collection
-cell and a trusted native geometry scan, then writes selected target truth
-only to an operator-controlled path.  The returned manifest must never be
-placed in Git, a capture payload, or a public task description.
-"""
+"""Build evaluator-private City-Lite target manifests outside the repository."""
 
 from __future__ import annotations
 

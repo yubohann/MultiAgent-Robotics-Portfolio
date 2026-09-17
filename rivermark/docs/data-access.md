@@ -1,6 +1,6 @@
 # Data Access
 
-Researchers interact with the benchmark through a CPU-only package, a researcher smoke, a lazy episode reader, and, for a future cleared release, a selective downloader.
+Researchers interact with the benchmark through a CPU-only package, a researcher smoke, a lazy episode reader, and a selective downloader for a future cleared release.
 
 ## Researcher entry
 
@@ -39,7 +39,7 @@ Three projection formats move selected data between ecosystems.
 - **Parquet**. A development-only projection of the three public streams, state and action, public task, and public messages, pinned to PyArrow 25.0.0. Raw sensor modalities and scorer truth stay out of this format.
 - **RLDS-shaped JSONL**. A streaming interchange using the RLDS field names, `observation`, `action`, `reward`, `discount`, `is_first`, `is_last`, and `is_terminal`. Timing is explicit, `observation[i] + command[i+1] -> observation[i+1]`, because command 0 runs before the first observation. Missing rewards raise a hard error, and the projector writes measured values only.
 
-## Release download (future)
+## Release Download
 
 When a cleared release exists, the signed manifest and selective downloader move the requested shards.
 

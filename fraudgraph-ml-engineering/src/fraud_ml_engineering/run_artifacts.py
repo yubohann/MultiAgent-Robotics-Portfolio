@@ -92,7 +92,7 @@ def build_run_manifest(
     extra: Mapping[str, Any] | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
-    """Build a JSON-serializable provenance record without requiring the training stack."""
+    """Build a JSON-serializable provenance record from dependency-light inputs."""
 
     timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     return {
@@ -116,7 +116,7 @@ def build_run_manifest(
 
 
 def write_json(path: str | Path, payload: Any) -> None:
-    """Write JSON atomically so interrupted provenance capture never leaves a partial file."""
+    """Write JSON atomically so every interrupted provenance capture yields a complete file."""
 
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)

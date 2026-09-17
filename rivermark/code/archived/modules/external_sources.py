@@ -1,14 +1,4 @@
-"""Read-only snapshot auditing for the external robotics ecosystems.
-
-The projects listed here inform Rivermark's data product, task protocol,
-perception, and baseline work.  They remain external sources: auditing a local
-checkout does not import its runtime, copy payloads, create a Rivermark
-episode, or establish native Isaac closed-loop evidence.
-
-The manifest intentionally contains only source identifiers, relative key
-paths, sizes, and hashes.  It never stores the local checkout path, which keeps
-research provenance shareable without exposing a workstation layout.
-"""
+"""Read-only snapshot auditing for the external robotics ecosystems."""
 
 from __future__ import annotations
 

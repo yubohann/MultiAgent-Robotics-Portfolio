@@ -1,11 +1,4 @@
-"""Machine-auditable public communication contract for HM3D P07 episodes.
-
-HM3D contains geometry, not radio measurements.  This contract therefore
-defines a benchmark networking condition and deliberately avoids claims about
-real RF propagation.  It binds the worker's range/LOS graph, packet timing and
-acceptance rule to the raw episode record so a detached hash cannot authorize a
-run whose communication evidence was never checked.
-"""
+"""Machine-auditable public communication contract for HM3D P07 episodes."""
 
 from __future__ import annotations
 

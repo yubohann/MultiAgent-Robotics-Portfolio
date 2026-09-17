@@ -24,12 +24,10 @@ def wrap_angle(angle: float) -> float:
 
 
 class MotionDriftRecorder(Node):
-    """Record motion commands and fused sensor residuals for drift calibration.
+    """Write motion commands and fused sensor residuals to CSV for drift calibration.
 
-    The source ROS1 Mini stack publishes `/cmd_vel`, wheel odometry, IMU and
-    RPLidar scan data. This ROS2 node keeps the same contract and writes a CSV
-    that can be used to fit the acceleration-to-localization-drift model used
-    by the IsaacLab/RL environment.
+    The topic contract mirrors the source ROS1 Mini stack, and the CSV feeds the
+    acceleration-to-localization-drift model used by the IsaacLab and RL paths.
     """
 
     def __init__(self) -> None:

@@ -43,8 +43,8 @@ class TeamExpertProfile:
 
 YELLOW_EXPERT = TeamExpertProfile(
     name="yellow_expert",
-    # Yellow starts in the south-east lane. It first takes the north-middle
-    # shot on the right lane, then turns to the west side-gate base window.
+    # Yellow opens from the south-east lane with the north-middle shot, then
+    # turns to the west side-gate base window.
     normal_order=("T01_NorthMiddle", "T03_WestAboveGate", "T05_EastAboveGate", "T02_NorthEast"),
     side_gate_targets=("T03_WestAboveGate", "T05_EastAboveGate"),
     post_base_retry_order=("T05_EastAboveGate", "T02_NorthEast"),
@@ -66,8 +66,8 @@ YELLOW_EXPERT = TeamExpertProfile(
 
 BLUE_EXPERT = TeamExpertProfile(
     name="blue_expert",
-    # Blue mirrors the task with a south-middle opener, then turns to the east
-    # side-gate window before deciding whether a two-hit base rush is worth it.
+    # Blue opens with a south-middle shot, then takes the east side-gate
+    # window before deciding on a two-hit base rush.
     normal_order=("T08_SouthMiddle", "T06_EastBelowGate", "T04_WestBelowGate", "T07_SouthWest"),
     side_gate_targets=("T06_EastBelowGate", "T04_WestBelowGate"),
     post_base_retry_order=("T04_WestBelowGate", "T07_SouthWest"),
@@ -150,9 +150,8 @@ def select_target(
 ):
     """Pick the nearest legal opponent target with a valid firing pose.
 
-    The expert attacks opponent targets only. Yellow and blue use separate
-    profiles so their opening order, push willingness, and base-rush tempo can
-    diverge before the residual actors are trained.
+    Yellow and blue use separate profiles so opening order, push willingness
+    and base-rush tempo diverge before the residual actors are trained.
     """
 
     profile = expert_profile(team) if profile is None else profile
@@ -417,9 +416,8 @@ def residual_expert_action(
 ) -> np.ndarray:
     """Blend an RL residual with the safe scripted policy.
 
-    The residual can change tactical preference and timing but is bounded per
-    dimension so it cannot easily disable recovery or violate the opponent-only
-    shooting gate that is enforced by the environment.
+    Per-dimension bounds keep the residual from disabling recovery or the
+    opponent-only firing gate enforced by the environment.
     """
 
     base = scripted_action(env, team)

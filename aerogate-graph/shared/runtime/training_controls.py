@@ -183,8 +183,8 @@ def _multi_selection_details(eval_summary: dict[str, object]) -> dict[str, objec
         - agent_collision_rate * 180_000.0
         - safety_violation_rate * 180_000.0
         + timeout_term
-        # Keep raw return informative, but do not let curriculum-specific reward scale dominate
-        # bucket success and hard-safety signals during checkpoint selection.
+        # Keep raw return informative while letting bucket success and hard-safety signals
+        # lead checkpoint selection.
         + mean_episode_reward * 200.0
         - mean_slot_error_m * 600.0
         + mean_min_clearance_m * 240.0
@@ -235,7 +235,7 @@ def build_checkpoint_selection_details(eval_summary: dict[str, object]) -> dict[
 
 
 def compute_checkpoint_selection_score(eval_summary: dict[str, object]) -> float:
-    """Score one checkpoint using robust deterministic evaluation results."""
+    """Score one checkpoint from robust deterministic scoring results."""
 
     return float(build_checkpoint_selection_details(eval_summary)["score"])
 
@@ -253,8 +253,8 @@ def refresh_best_checkpoint_alias(
     target_path.parent.mkdir(parents=True, exist_ok=True)
     if source_path.resolve() != target_path.resolve() and target_path.exists():
         target_path.unlink()
-    # Preserve the selected artifact contents, but let the alias timestamp
-    # reflect when the alias itself was refreshed.
+    # Preserve the selected artifact contents and refresh the alias timestamp when the alias
+    # itself refreshes.
     shutil.copy(source_path, target_path)
     return target_path
 

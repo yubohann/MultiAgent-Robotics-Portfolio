@@ -1,11 +1,4 @@
-"""Run the complete CPU test suite in auditable, independently recorded chunks.
-
-Some Windows execution hosts can lose the final stdout from a long-lived test
-process even though its child process continues and exits.  This runner starts
-one pytest child at a time and atomically updates a small report after every
-chunk.  The report is test evidence only: it never imports Isaac, Torch, a
-dataset payload, or a GPU runtime.
-"""
+"""Run the complete CPU test suite in auditable, independently recorded chunks."""
 
 from __future__ import annotations
 

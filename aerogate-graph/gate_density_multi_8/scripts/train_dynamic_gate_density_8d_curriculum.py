@@ -146,7 +146,7 @@ def _write_json(path: Path, payload: object) -> None:
 
 
 def _slot_offsets(scale: float) -> np.ndarray:
-    # Compact 8-drone shell: two longitudinal rows and four lateral lanes.
+    # Compact 8-drone shell with two longitudinal rows and four lateral lanes.
     raw = np.asarray(
         [
             [-0.85, -2.10],
@@ -300,8 +300,8 @@ def _dynamic_channel_bias(
         dx = float(center[0] - team_center[0])
         if dx < -0.8 or dx > lookahead_m:
             continue
-        # The center lane is the pass-through corridor for the 8-drone shell;
-        # side lanes remain obstacles but should not pull the formation away.
+        # The center lane is the pass-through corridor for the 8-drone shell and side lanes
+        # stay obstacles that hold the formation centered.
         if abs(float(center[1])) > 4.2:
             continue
         predicted = center.copy()
@@ -332,12 +332,8 @@ def _adaptive_formation_offsets(
     base_speed_mps: float,
     toggles: ModuleToggles,
 ) -> tuple[np.ndarray, float, float]:
-    """Deform the formation near gate openings, then recover afterwards.
-
-    The policy is obstacle-first: when a center-lane gate is near, lateral slot
-    offsets are compressed enough to fit through the tightened opening and the
-    two longitudinal rows are staggered slightly.  This allows temporary
-    relative-position changes without changing the final formation objective.
+    """Deform the formation near gate openings and recover afterwards, with compressed lateral offsets
+    and staggered longitudinal rows.
     """
 
     if len(gates) == 0 or len(centers) == 0:
@@ -382,8 +378,8 @@ def _adaptive_formation_offsets(
     lateral_scale = (1.0 - deformation) + deformation * compressed_scale
     adaptive[:, 1] = adaptive[:, 1] * lateral_scale
 
-    # Short stagger lets front/back rows avoid sweeping the same gate boundary
-    # at the exact same moment, while staying recoverable after the gate.
+    # Short stagger keeps front and back rows off the same gate line at once and stays
+    # recoverable after the gate.
     row_sign = np.sign(adaptive[:, 0])
     lane_phase = adaptive[:, 1] / max(max_lateral * lateral_scale, 1.0e-6)
     adaptive[:, 0] = adaptive[:, 0] + deformation * (0.60 * row_sign + 1.15 * lane_phase)
@@ -596,8 +592,8 @@ def run_episode(
         prev_positions = positions.copy()
         positions = positions + velocities * DT_S
 
-        # Hard collision checks use the live map after movement.  A simple
-        # swept check samples the segment midpoint to catch fast gate contacts.
+        # Collision checks read the live map after movement and sample the swept segment
+        # midpoint to catch fast gate contacts.
         next_posts = next_posts_for_velocity
         mid_positions = 0.5 * (prev_positions + positions)
         live_posts = np.vstack([posts, next_posts]) if len(posts) and len(next_posts) else posts
@@ -968,11 +964,8 @@ def run_e2d3(params: ControllerParams, output_dir: Path) -> list[dict[str, objec
 
 
 def run_drone_speed_sweep(params: ControllerParams, output_dir: Path) -> list[dict[str, object]]:
-    """Evaluate the same controller across commanded drone-speed targets.
-
-    This sweep is separate from moving-gate speed.  The gate scenarios stay
-    fixed while the drone command-speed cap is increased, so the resulting
-    curve can show where success, collision, timeout, and flight time trade off.
+    """Sweep the controller across commanded drone-speed targets with fixed gate scenarios to expose
+    success, collision, timeout and flight-time tradeoffs.
     """
 
     scenarios = [

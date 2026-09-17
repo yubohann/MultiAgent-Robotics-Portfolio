@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Export and plot the paired FAST-LIO2 / Point-LIO replay metrics.
+"""Export and plot the paired FAST-LIO2 and Point-LIO replay metrics.
 
-The script is intentionally log-only: it never launches ROS or changes a run.
-It creates a CSV, JSON summary, and publication-style PNG/PDF/SVG figure from
-one completed run directory.
+The script reads one completed run directory and writes a CSV, a JSON summary
+and a publication-style PNG, PDF and SVG figure from the recorded logs.
 """
 
 from __future__ import annotations

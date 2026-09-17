@@ -5,10 +5,8 @@ from __future__ import annotations
 import numpy as np
 
 P07_START_RESET_SCHEMA_VERSION = "hm3d-p07-start-reset-candidates-v1"
-# A P0 qualification reset must leave enough room for the first interior
-# sample of a guarded movement command.  The numeric threshold is deliberately
-# supplied by the execution layer when the manifest is generated or admitted;
-# this constant only freezes the reset-selection semantics in the artifact.
+# Reset-selection semantics frozen in the artifact; the numeric threshold comes from
+# the execution layer when the manifest is generated or admitted.
 P07_START_RESET_ROUTE_SAMPLE_SELECTION_RULE = (
     "largest-component-route-sample-departure-witness-local-farthest-spread-v4"
 )
@@ -49,14 +47,7 @@ def largest_component_clearance_points(
     *,
     minimum_clearance_m: float,
 ) -> np.ndarray:
-    """Return largest-component voxel centres that meet a reset mobility margin.
-
-    The P03 free-flight mask only proves the physical body-clearance contract.
-    A P07 reset also needs enough static clearance to depart through the first
-    interior sample of a subsequent guarded exploration leg. This
-    environment-side filter never enters the public map or selector state;
-    PhysX still verifies the chosen fleet and every actual route at runtime.
-    """
+    """Return largest-component voxel centres that meet a reset mobility margin."""
 
     if not np.isfinite(minimum_clearance_m) or minimum_clearance_m <= 0.0:
         raise ValueError("minimum_clearance_m must be finite and positive")
@@ -72,16 +63,7 @@ def largest_component_departure_witnesses(
     *,
     minimum_route_sample_clearance_m: float,
 ) -> tuple[np.ndarray, np.ndarray, float]:
-    """Return starts and one nonzero six-neighbour departure witness each.
-
-    Reset selection cannot mistake a collision-admitted dead-end voxel for a
-    usable launch point.  Every returned start and its witness endpoint carry
-    an extra half-voxel clearance.  Because distance to the voxelised static
-    surface is 1-Lipschitz, that leaves the requested route-sample margin
-    along the short, axis-aligned first hop.  The build script subsequently
-    checks the same samples against the exact collision mesh; PhysX remains
-    the final runtime authority.
-    """
+    """Return starts and one nonzero six-neighbour departure witness each."""
 
     if (
         not np.isfinite(minimum_route_sample_clearance_m)
@@ -145,13 +127,7 @@ def select_local_spread_positions(
     cluster_radius_m: float,
     minimum_separation_m: float,
 ) -> np.ndarray:
-    """Select one deterministic, separated local reset candidate cluster.
-
-    The caller supplies evaluator-side, collision-admitted free-space points.
-    The returned positions define an environment reset distribution, never a
-    policy feature, frontier, or evaluator denominator.  A later PhysX worker
-    must still verify the selected fleet's actual range/LOS connectivity.
-    """
+    """Select one deterministic, separated local reset candidate cluster."""
 
     values = np.asarray(points, dtype=np.float64)
     if values.ndim != 2 or values.shape[1] != 3 or not len(values):

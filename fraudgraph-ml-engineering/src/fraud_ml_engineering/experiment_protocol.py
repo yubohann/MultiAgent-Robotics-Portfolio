@@ -1,4 +1,4 @@
-"""Dependency-light helpers shared by reproducible experiment runners."""
+"""Dependency-light helpers shared by deterministic experiment runners."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def resolve_seeds(
 
 
 def dedupe_float_values(values: Iterable[float]) -> list[float]:
-    """Return ordered, numerically stable float values without duplicate CLI inputs."""
+    """Return ordered, numerically stable float values from CLI inputs with duplicates removed."""
 
     resolved: list[float] = []
     seen: set[str] = set()
@@ -94,7 +94,7 @@ def label_fraction_slug(label_fraction: float) -> str:
 
 
 def aggregate_metric(values: Sequence[float]) -> dict[str, float]:
-    """Summarize a metric across seeds without requiring ML runtime dependencies."""
+    """Summarize a metric across seeds using dependency-light math."""
 
     if not values:
         return {"mean": 0.0, "std": 0.0, "min": 0.0, "max": 0.0}

@@ -116,8 +116,8 @@ def main() -> int:
             while rclpy.ok() and node.exit_code is None and time.monotonic() < deadline:
                 rclpy.spin_once(node, timeout_sec=0.1)
         except ExternalShutdownException:
-            # ros2 launch may shut down the shared context while this finite
-            # client is leaving; do not call rclpy.shutdown() a second time.
+            # ros2 launch may already be shutting the shared context down, so
+            # this finite client skips a second rclpy.shutdown().
             pass
         if node.exit_code is None:
             node.get_logger().error(

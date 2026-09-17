@@ -1,14 +1,4 @@
-"""Conservative cleanup of completed Isaac run directories.
-
-Large capture artifacts are moved to the Windows Recycle Bin instead of being
-unlinked. This is reversible archival, not guaranteed capacity reclamation:
-the Recycle Bin may continue to consume space on the same volume until an
-operator explicitly empties it. Automatic cleanup considers only orphaned,
-crash-left runs with no terminal receipt; terminal evidence requires explicit
-operator opt-in. Eligible directories must exceed the retention age and size
-thresholds. The active output directory is always protected, and every
-attempted move is recorded in a small JSONL ledger in the run root.
-"""
+"""Conservative cleanup of completed Isaac run directories."""
 
 from __future__ import annotations
 

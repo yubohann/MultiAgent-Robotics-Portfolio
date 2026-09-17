@@ -1,62 +1,50 @@
 # Supermarket Management System
 
-A full-featured supermarket store management system built for my *Software Development and Management* course design at [REDACTED]. It covers products, inventory, checkout, sales, finance, announcements, business analysis, an intelligent assistant, and the second-phase modules, members, employees, suppliers, and system parameters.
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-## About this work
+<p align="center">
+  <a href="reports/system-analysis-design/screenshots/系统运行界面完整截图_20260614_220302/03-首页概览.png"><img src="reports/system-analysis-design/screenshots/系统运行界面完整截图_20260614_220302/03-首页概览.png" alt="Dashboard overview page" width="49%" /></a>
+  <a href="reports/system-analysis-design/screenshots/系统运行界面完整截图_20260614_220302/04-商品管理.png"><img src="reports/system-analysis-design/screenshots/系统运行界面完整截图_20260614_220302/04-商品管理.png" alt="Product management page" width="49%" /></a>
+</p>
 
-- **Author** Bohan Yu
-- **Course** Software Development and Management course design, 课程设计
-- **Stack** Flask + Flask-SQLAlchemy + SQLite + Jinja2 + vanilla JavaScript
-- **Engineering discipline** uv-managed dependencies, an automated pytest suite with a 100% coverage gate, and full system-analysis documentation including reports, diagrams, and the defense PPT in this repository.
+**A full store management system built with Flask and SQLite for a software development and management course design.**
 
-## Tech stack
+The system covers products, inventory, checkout, sales, finance, announcements, business analysis and an intelligent assistant, plus second-phase modules for members, employees, suppliers and system parameters. The engineering side uses uv-managed dependencies, a pytest suite with a 100 percent coverage gate on the backend models and second-phase services, and a complete analysis package with reports, diagrams and the defense deck.
 
-| Layer | Technology |
-| --- | --- |
-| Backend | Flask + Flask-SQLAlchemy |
-| Database | SQLite at `data/supermarket.db` |
-| Frontend | Jinja2 templates + vanilla JavaScript + Bootstrap-style pages |
-| Data exchange | CSV and Excel import with openpyxl |
-| Tooling | uv package management, pytest, coverage with a 100% gate |
+**Status.** Course design complete. 11 automated tests pass, and the coverage report shows 530 statements at 100 percent.
 
-## Repository structure
+## Modules
 
-```text
-app/                     Flask application (models / routes / services / templates / static)
-tests/                   Automated tests (auth, products, inventory, checkout, finance, announcements, second-phase modules, error paths)
-data/                    Database file and SQL scripts
-scripts/                 Helper scripts
-docs/                    Course-design documents and defense materials
-reports/                 Lab reports and defense PPT
-supermarket-management-diagrams/       System analysis & design diagrams (PNG)
-supermarket-management-diagrams-drawio-editable/  drawio editable sources
-tools/                   Utility scripts
-run.py                   Application entry point
-pyproject.toml           Project configuration (deps / pytest / coverage)
-```
+- Products, CRUD, shelf status, CSV and Excel import and inventory initialization
+- Inventory, summaries, stock movement ledger and low-stock alerts
+- Checkout, product search, cart settlement, stock validation and sales order generation
+- Sales, order list, filtering and order details
+- Finance, income and expense ledger, daily reconciliation, payables and monthly snapshots
+- Business analysis, sales overview, trends, best sellers and category share
+- Announcements, publish and take down, target roles and read status
+- Intelligent assistant for inventory, sales, product and help questions
+- Members, profiles, tiers, points adjustment and account status
+- Employees, profiles, positions and scheduling
+- Suppliers, contacts and settlement cycles
+- System parameters, inventory alerts and receipt text
 
-## Quick start
+## Quick Start
 
-Requirements.
-
-- Python `>=3.12,<3.14`
-- Recommended package manager `uv`
-- Database SQLite
+Python 3.12 or 3.13 with uv.
 
 ```powershell
-cd supermarket-management-system
 uv sync
 uv run python run.py
 ```
 
-Then open `http://127.0.0.1:5000`.
+Open `http://127.0.0.1:5000`.
 
 Default accounts.
 
 - Administrator `admin`, password `admin123`
 - Cashier `cashier01`, password `123456`
 
-The first launch creates the database tables, default users and categories, and demo data for the second-phase modules. The database lives at `data/supermarket.db`.
+The first launch creates the database tables, default users and categories, and demo data for the second-phase modules at `data/supermarket.db`.
 
 ## Tests
 
@@ -67,37 +55,29 @@ uv run coverage run -m pytest
 uv run coverage report
 ```
 
-The automated tests in `tests/` cover login and registration, products, inventory, checkout, sales, finance, announcements, second-phase master data, error paths, and page access control. Coverage is measured on the backend models and second-phase core services, with `fail_under = 100` in the coverage config, currently at 100%.
+The suite covers login and registration, products, inventory, checkout, sales, finance, announcements, second-phase master data, error paths and page access control.
 
-## Main modules
+## Documentation
 
-- Products, CRUD, shelf on and off, CSV and Excel import, inventory initialization
-- Inventory, summary, lists, stock movement ledger, low-stock alerts
-- Checkout, product search, cart settlement, stock validation, sales order generation
-- Sales, order list, filtering, order details
-- Finance, income and expense ledger, daily reconciliation, payables, monthly snapshots
-- Business analysis, sales overview, trends, best sellers, category share
-- Announcements, publish, take down, target roles, read status
-- Intelligent assistant, inventory, sales, product and help Q&A
-- Members, profiles, tiers, points adjustment, enable and disable
-- Employees, profiles, positions, scheduling, enable and disable
-- Suppliers, profiles, contacts, settlement cycles, enable and disable
-- System, store parameters, inventory-alert switch, receipt text, etc.
+- [Course deliverables](docs/course-deliverables/README.md), startup notes, requirements modeling, test case design and the defense checklist.
+- [System analysis and design report](reports/system-analysis-design/), the final report, defense deck and report figures.
+- [System diagrams](supermarket-management-diagrams/), analysis and design diagrams as PNG images, with editable sources in [supermarket-management-diagrams-drawio-editable](supermarket-management-diagrams-drawio-editable/).
 
-## Course deliverables
+## Repository Layout
 
-- Final lab report, `reports/system-analysis-design/`
-- Defense PPT, `reports/system-analysis-design/超市管理系统_答辩PPT_20260602.pptx`
-- Defense flow checklist, `docs/course-deliverables/defense-flow-checklist.md`
-- Report figures, `reports/system-analysis-design/images/`
-- System analysis & design PNG diagrams, `supermarket-management-diagrams/`
-- drawio editable diagrams, `supermarket-management-diagrams-drawio-editable/`
-- Module-level UML use-case supplements, `supermarket-management-diagrams/01-环境与用例/模块级用例图/`
-- Phase supplements, `docs/course-deliverables/`
-- Automated & functional test materials, `tests/`, `docs/course-deliverables/test-case-design.md`
+```text
+app/       Flask application with models, routes, services, templates and static assets
+tests/     Automated test suite
+data/      SQL schema, seed data and the SQLite database
+docs/      Course deliverables
+reports/   Lab report, defense deck and report figures
+supermarket-management-diagrams/                  Exported PNG diagrams
+supermarket-management-diagrams-drawio-editable/  Editable drawio sources
+run.py            Application entry point
+config.py         Application configuration
+pyproject.toml    Dependencies, pytest and coverage configuration
+```
 
-## Acceptance notes
-
-The repository is aligned with the course-design defense flow, covering reports, PPT, diagrams, test source, code-review records, and phase supplements. Before acceptance, re-run `uv run pytest`, `uv run coverage report`, and `git status --short` so the test results and coverage match the defense materials.
+The database, demo accounts and seed data serve local development and coursework demonstration.
 
 *Bohan Yu, Software Development and Management course design.*

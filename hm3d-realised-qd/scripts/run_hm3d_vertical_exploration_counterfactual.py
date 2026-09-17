@@ -1,11 +1,4 @@
-"""Measure a target-free vertical-exploration counterfactual in Isaac Sim.
-
-This P03 probe is deliberately independent from the retired target-search
-pipeline.  It uses matched, target-free ESDF routes and PhysX range outcomes to
-compare free-height sensing with a fixed-height control.  The ESDF mask is used
-only by the evaluator to score real ray-confirmed free cells; policies never
-receive it.
-"""
+"""Measure a target-free vertical-exploration counterfactual in Isaac Sim."""
 
 from __future__ import annotations
 
@@ -198,8 +191,8 @@ def _matched_routes(
     if len(free_points) < count:
         raise ValueError("largest free-flight component cannot supply the requested route")
     free_route = free_points[farthest_spread_indices(free_points, count=count, seed=seed)]
-    # Use the strongest feasible fixed-height control. A median active slice can
-    # be a narrow connector and can reject otherwise valid multi-level scenes.
+    # Strongest feasible fixed-height control; a median active slice can be a narrow
+    # connector that rejects valid multi-level scenes.
     fixed_z_index = densest_height_slice_index(component)
     fixed_mask = component & (np.indices(component.shape)[2] == fixed_z_index)
     fixed_points = _grid_points(arrays, fixed_mask)
@@ -227,8 +220,8 @@ def _evaluator_free_indices(
     grid_origin: np.ndarray,
     resolution_m: float,
 ) -> set[tuple[int, int, int]]:
-    # Exact hit endpoints are occupied.  The half-cell offset avoids awarding
-    # the terminal surface cell as free while retaining conservative free rays.
+    # Hit endpoints are occupied; the half-cell offset keeps the terminal surface
+    # cell out of the free length.
     free_length = max(0.0, hit_distance_m - resolution_m * 0.5)
     steps = max(1, int(math.ceil(free_length / (resolution_m * 0.5))))
     output: set[tuple[int, int, int]] = set()

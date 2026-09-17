@@ -1,11 +1,4 @@
-"""Validate and selectively download immutable Rivermark release shards.
-
-The release manifest is deliberately separate from a native Isaac capture.  It
-contains only public shard metadata and opaque source-capture commitments; it
-never contains evaluator-private targets.  Downloads are sequential, hashed
-while written, and promoted atomically so a failed transfer cannot become a
-valid-looking dataset file.
-"""
+"""Validate and selectively download immutable Rivermark release shards."""
 
 from __future__ import annotations
 

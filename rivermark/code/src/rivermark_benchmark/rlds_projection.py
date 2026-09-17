@@ -1,16 +1,4 @@
-"""Stream a bounded, explicit RLDS-shaped interchange projection.
-
-The native capture stream records a command before each simulation step and a
-state after that step.  RLDS defines an action as the action taken after the
-current observation.  This module therefore emits the provable transitions
-``state[i] -- command[i + 1] --> state[i + 1]`` and records the unrepresented
-initial command in the episode metadata.  It never silently shifts an action,
-fills a missing reward, or calls the JSONL interchange a TFDS dataset.
-
-The output is intentionally dependency-free JSONL.  A future TFDS writer can
-consume the same validated records once a public episode has a cleared reward
-stream and an external reader agreement report.
-"""
+"""Stream a bounded, explicit RLDS-shaped interchange projection."""
 
 from __future__ import annotations
 

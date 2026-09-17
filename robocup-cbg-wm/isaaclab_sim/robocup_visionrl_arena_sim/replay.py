@@ -247,8 +247,8 @@ def trained_replay_pushable_pose(
                 changed = True
                 continue
 
-            # Jammed box: keep the rendered robot on the near side of the box
-            # instead of letting the trace visually pass through it.
+            # Jammed box: keep the rendered robot on the near side so the trace
+            # stays outside the box.
             corrected = (
                 corrected[0] + normal[0] * (penetration + 0.010),
                 corrected[1] + normal[1] * (penetration + 0.010),

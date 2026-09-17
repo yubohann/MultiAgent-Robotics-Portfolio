@@ -1,12 +1,6 @@
-"""Task 3 — k-Nearest Neighbors from scratch on Iris.
-
-The whole pipeline is hand-written: Euclidean distance, neighbour voting,
-stratified split, standardization. I sweep odd k values and plot how the
-accuracy changes.
-"""
+"""Task 3, k-nearest neighbours from scratch on Iris."""
 
 # Author: Bohan Yu
-# Machine learning course, assignment 3
 
 from __future__ import annotations
 
@@ -26,11 +20,7 @@ plt.rcParams["axes.unicode_minus"] = False
 
 
 def euclidean_distances(x_train: np.ndarray, x_test: np.ndarray) -> np.ndarray:
-    """Distance from every test point to every train point in one shot.
-
-    Broadcasting is much faster than a double loop, and easier to read once
-    you get used to it.
-    """
+    """Distance from every test point to every train point in one shot."""
     diff = x_train[None, :, :] - x_test[:, None, :]
     return np.sqrt((diff**2).sum(axis=2))
 

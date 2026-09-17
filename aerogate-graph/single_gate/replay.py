@@ -18,7 +18,7 @@ from shared.runtime.artifacts import allocate_replay_artifacts, default_run_name
 
 
 class HeuristicSingleReplayController:
-    """A simple waypoint follower used for deterministic smoke replays."""
+    """A waypoint follower for deterministic smoke replays."""
 
     def __init__(self, env: SingleGate2DEnv) -> None:
         self.env = env

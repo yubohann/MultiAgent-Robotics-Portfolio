@@ -1,4 +1,4 @@
-"""Record a reproducible experiment manifest without launching model training."""
+"""Record a deterministic experiment manifest before model training starts."""
 
 from __future__ import annotations
 

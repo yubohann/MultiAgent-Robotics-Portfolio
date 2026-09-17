@@ -1,9 +1,4 @@
-"""Run the bounded CPU researcher-entry smoke test.
-
-This command is the first five-minute path for a fresh checkout. It exercises
-the public fixture, loader, and evaluator contracts without Isaac Sim, Torch,
-GPU access, private evaluator truth, or a formal dataset episode.
-"""
+"""Run the bounded CPU researcher-entry smoke test."""
 
 from __future__ import annotations
 

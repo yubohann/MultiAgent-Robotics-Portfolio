@@ -249,10 +249,8 @@ def collect_expert_demonstrations(
         )
         fragment_step_count = 0
         training_fragment_only = False
-        # Formal expert collection must not turn a collision episode into BC
-        # data.  Collision prefixes can be collected by a separate debug or
-        # DAgger-fragment pipeline, but they cannot satisfy the expert quality
-        # gate for the current full-route curriculum.
+        # Formal expert collection keeps collision episodes out of BC data and routes
+        # collision prefixes to the separate debug and DAgger-fragment pipeline.
         episode_summary = {
             "episode_index": episode_idx,
             "seed": episode_seed,
@@ -1177,12 +1175,8 @@ def _classify_expert_episode_retention(
         audit_failures.append("side_bypass_failure")
     if bool(episode_metrics.get("corridor_miss_failure", False)):
         audit_failures.append("corridor_miss_failure")
-    # formation_line_collapse_failure is not an audit failure for expert
-    # retention: the protocol allows temporary formation deformation during
-    # gate passage (task-first priority).  Episodes that reach the goal
-    # with formation collapse are retained with a warning note instead.
-    # Episodes that TERMINATE with formation_line_collapse_failure as
-    # done_reason are still rejected by the hard-failure check below.
+    # The protocol permits temporary formation deformation, so formation_line_collapse_failure stays out of
+    # the audit failures while the hard-failure check below rejects terminal cases and warns on goal-reaching runs.
     if dynamic_gate_scene and not bool(episode_metrics.get("corridor_through_success", False)):
         audit_failures.append("corridor_through_failed")
     if audit_failures:
@@ -1527,9 +1521,8 @@ def _supports_safe_progress_timeout_retention(
         max_supported_team_size = 5
     max_supported_corridor_length_m = 48.0 if max_supported_team_size >= 7 else 32.0
     if is_gate_2d_scene_mode(scene_mode) and max_team_size <= 3:
-        # The fixed 2/3-agent gate_2d presets use the full -46m -> 46m route.
-        # A short BC smoke collection may time out despite being a clean,
-        # high-progress expert segment, so retain it for imitation data only.
+        # The fixed 2 and 3-agent gate_2d presets use the full -46m to 46m route, and a short BC smoke
+        # collection can time out as a clean high-progress expert segment, so it stays in the imitation data.
         max_supported_corridor_length_m = 96.0
     return (
         (is_exp3_empty_scene_mode(scene_mode) or is_gate_2d_scene_mode(scene_mode))

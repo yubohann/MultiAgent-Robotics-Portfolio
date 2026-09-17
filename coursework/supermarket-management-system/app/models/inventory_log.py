@@ -4,7 +4,7 @@ from app import db
 
 
 class InventoryLog(db.Model):
-    """库存变动日志表"""
+    """Inventory movement log table."""
     __tablename__ = 'inventory_logs'
 
     log_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

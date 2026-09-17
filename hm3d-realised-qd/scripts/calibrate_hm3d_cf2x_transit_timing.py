@@ -1,10 +1,4 @@
-"""Freeze a conservative CF2X transit-time contract from immutable P07 outcomes.
-
-The script accepts only real Isaac/PhysX smoke evidence and creates a new
-calibration artifact without copying evaluator-private task fields, private
-geometry, or complete execution traces.  It is a calibration
-artifact, not a P07 baseline result.
-"""
+"""Freeze a conservative CF2X transit-time contract from immutable P07 outcomes."""
 
 # ruff: noqa: E402
 
@@ -98,15 +92,7 @@ def _route_geometry(path: Any) -> dict[str, object]:
 def _controller_tracking_profile(
     execution: dict[str, Any], source: Path, record_id: str
 ) -> dict[str, object]:
-    """Extract the control settings that determine outcome transit timing.
-
-    This is deliberately a small, explicit contract rather than a hash of the
-    whole smoke artifact: candidate pools, routes and task outcomes must vary
-    across calibration samples, whereas an altered near-waypoint controller
-    invalidates their common speed envelope.  Rejecting a missing profile also
-    prevents historical, pre-change evidence from silently entering a new
-    calibration.
-    """
+    """Extract the control settings that determine outcome transit timing."""
 
     tracking = execution.get("controller_tracking")
     if not isinstance(tracking, dict):
@@ -116,8 +102,8 @@ def _controller_tracking_profile(
         raise ValueError(f"controller profile lacks controller_id: {source}#{record_id}")
     speed_profile = tracking.get("speed_profile")
     if speed_profile is None:
-        # Historical proportional-controller evidence remains readable, but
-        # its profile cannot mix with either trajectory-reference ABI.
+        # Historical proportional-controller evidence stays readable but cannot mix
+        # with either trajectory-reference ABI.
         numeric_fields = (
             "horizontal_approach_speed_gain_mps_per_m",
             "waypoint_settle_speed_mps",
@@ -369,13 +355,7 @@ def _validate_source_safety(
     record_id: str,
     minimum_static_clearance_m: float,
 ) -> dict[str, object]:
-    """Reject every calibration input lacking a successful trace-safety outcome.
-
-    A completed maneuver is not speed evidence when it collided, left the
-    admitted component, triggered an execution guard, or crossed the physical
-    0.30 m static-mesh contract.  This deliberately rejects historical schema
-    variants which did not write per-agent trace-clearance evidence.
-    """
+    """Reject every calibration input lacking a successful trace-safety outcome."""
 
     trace = execution.get("static_trace_clearance")
     if not isinstance(trace, dict):
@@ -457,14 +437,7 @@ def _source_execution_profile(
 def _source_censoring_contract(
     execution: dict[str, Any], source: Path, record_id: str, action_budget_s: float
 ) -> tuple[float, bool]:
-    """Return the real execution horizon used to censor an unfinished transit.
-
-    A calibration-only timeout probe deliberately preserves the normal token
-    and planning budget, then stops the physical executor earlier.  Its lower
-    bound is that real deadline, not the larger decision budget.  Old outcome
-    artifacts predate this field and are valid only when their implicit
-    execution horizon equals the action budget.
-    """
+    """Return the real execution horizon used to censor an unfinished transit."""
 
     probe = execution.get("calibration_only_timeout_probe", False)
     if not isinstance(probe, bool):
@@ -755,8 +728,8 @@ def main() -> int:
                             "lower_bound_transit_seconds": source_execution_deadline_s,
                         }
                     )
-    # Millimetre-scale coordinate noise must not masquerade as route-length
-    # diversity.  Calibration needs genuinely distinct centimetre-scale paths.
+    # Millimetre coordinate noise is not route-length diversity; calibration needs
+    # centimetre-scale distinct paths.
     unique_success_paths = {
         (round(float(row["command_path_length_m"]), 2), int(row["waypoint_segments"]))
         for row in rows
@@ -792,8 +765,8 @@ def main() -> int:
     )
     required_route_classes = set(args.require_route_class or ())
     if intermediate_waypoint_requires_settle:
-        # A terminal-plus-intermediate model cannot be admitted for the current
-        # executor until a completed corner route has tested that exact ABI.
+        # The current executor admits a terminal-plus-intermediate model only after
+        # a completed corner route tests that ABI.
         required_route_classes.add("turn")
     covered_route_classes = sorted(
         {route_class for row in rows for route_class in row["route_classes"]}

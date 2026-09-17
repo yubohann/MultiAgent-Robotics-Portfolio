@@ -1,8 +1,4 @@
-"""Registry of selectable local video-language model candidates.
-
-所有模型候选集中写在这里，前端、下载脚本和理解服务共用同一份配置。
-这种注册表模式可以避免“前端显示一个模型，后端实际调用另一个模型”的教学事故。
-"""
+"""Registry of selectable local video-language model candidates."""
 
 from dataclasses import asdict, dataclass
 from typing import Literal
@@ -38,8 +34,7 @@ class ModelCandidate:
         return asdict(self)
 
 
-# 候选模型按本机已下载、16GB 和 32GB 三类组织。默认选择本机已验证的 Ministral 3 8B vision。
-# 需要基线对照时，只额外使用两个 4B 级主流视觉模型，避免误拉 7B/8B/12B 大模型。
+# Candidates are grouped by download state and 16GB or 32GB memory tiers.
 MODEL_CANDIDATES: dict[str, ModelCandidate] = {
     "ministral-3-3b-ollama": ModelCandidate(
         id="ministral-3-3b-ollama",

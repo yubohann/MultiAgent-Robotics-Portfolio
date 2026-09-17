@@ -1,11 +1,4 @@
-"""Bounded, Isaac-free preflight checks for storage and source provenance.
-
-This module runs before any Isaac AppLauncher is created. It does not promise
-that a GPU, scene, or Kit renderer can run; it prevents avoidable launches when
-declared storage, provenance, runtime, or authority requirements are invalid.
-The existing runtime Windows commit guard remains authoritative during an
-active capture.
-"""
+"""Bounded, Isaac-free preflight checks for storage and source provenance."""
 
 from __future__ import annotations
 

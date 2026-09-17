@@ -4,7 +4,7 @@ from app import db
 
 
 class CashReconciliation(db.Model):
-    """日结对账记录"""
+    """Daily cash reconciliation records."""
     __tablename__ = 'cash_reconciliations'
     __table_args__ = (
         db.UniqueConstraint('reconcile_date', 'payment_method', name='uq_cash_reconcile_date_method'),

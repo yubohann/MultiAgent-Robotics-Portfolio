@@ -1,12 +1,6 @@
-"""Task 2 — LDA on the Wine dataset (classes 1 vs 2).
-
-Unlike PCA, LDA uses the class labels: it looks for the axis that separates
-the two classes best. I project onto that single axis and check how far apart
-the class means land.
-"""
+"""Task 2, LDA on the Wine dataset for classes 1 and 2."""
 
 # Author: Bohan Yu
-# Machine learning course, assignment 3
 
 from __future__ import annotations
 

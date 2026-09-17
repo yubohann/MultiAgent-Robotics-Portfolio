@@ -152,9 +152,8 @@ def _blocker_features(env: RoboCupVisionRLSelfPlayEnv) -> list[np.ndarray]:
 def extract_object_state(env: RoboCupVisionRLSelfPlayEnv) -> np.ndarray:
     """Return a fixed object-centric state vector for world-model and critic use.
 
-    The local actor can remain decentralized, but critics/world models receive
-    explicit robot, target, box and armor-blocker tokens instead of only the
-    flattened local observations.
+    The local actor stays decentralized, while critics and world models receive
+    explicit robot, target, box and armor-blocker tokens.
     """
 
     score_delta = float(env.scores["yellow"] - env.scores["blue"]) / 60.0

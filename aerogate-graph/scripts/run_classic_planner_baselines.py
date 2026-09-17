@@ -1,10 +1,5 @@
-"""Run planner-only baselines against completed mainline scenarios.
-
-Scope:
-- eval_only, classic_python_planner
-- no imitation learning, no DAgger, no RL, no checkpoint warm start
-- reads completed scenario/results metadata from the configured results root
-- writes planner baseline rows and planner-vs-completed-mainline tables
+"""Classic Python planner baselines that read completed scenario metadata and write planner rows plus
+planner-vs-mainline tables.
 """
 
 from __future__ import annotations
@@ -1603,9 +1598,8 @@ def _mainline_single_progress_distance(
         return max(0.0, min(float(full_route_distance_m), float(full_route_distance_m) - goal_distance))
     if math.isfinite(success_rate) and success_rate >= 0.999:
         return float(full_route_distance_m)
-    # Older paper_2d summaries do not store final goal distance.  Use executed
-    # path length as a bounded fallback so missing data is not reported as zero
-    # progress.  This is diagnostic, not a replacement for full-route success.
+    # Older paper_2d summaries record executed path length, which serves as a bounded
+    # diagnostic fallback when final goal distance is missing.
     if math.isfinite(path_length_m_mean):
         return max(0.0, min(float(full_route_distance_m), path_length_m_mean))
     return None

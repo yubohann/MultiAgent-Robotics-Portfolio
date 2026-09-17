@@ -1,9 +1,5 @@
-"""Run resumable paper multi-drone E4/E7/E8 gate-density evaluations.
-
-The row worker builds its environment through
-``run_dynamic_gate_density_8d_curriculum._stage_config`` so static, dynamic,
-team-size, and geometry-pressure evaluations share the same live gate layout
-and collision implementation as E5 training/eval/replay.
+"""Resumable paper multi-drone E4, E7 and E8 gate-density scoring on the shared live gate layout from
+``run_dynamic_gate_density_8d_curriculum._stage_config``.
 """
 
 from __future__ import annotations
@@ -364,9 +360,8 @@ def _build_config(
     )
     base = replace(base, dynamic_gate_density=gate_cfg, environment=env_cfg)
     stage = runner.DynamicGateCurriculumStage(
-        # The E2D2 prefix is intentional: the curriculum runner uses it to keep
-        # the 0-gate baseline on the straight dynamic-gate paper route instead
-        # of silently switching back to the demo8 morph route.
+        # The E2D2 prefix keeps the 0-gate baseline on the straight dynamic-gate paper route
+        # and blocks a fallback to the demo8 morph route.
         f"E2D2_{experiment}_{scenario}_gate{gate_count:02d}",
         int(gate_count),
         float(speed_mps),

@@ -1,11 +1,4 @@
-"""Sensor entitlement, scheduling and throughput contracts for multi-UAV runs.
-
-The simulator and evaluator may use private collision geometry, but policy code
-only receives observations produced under a frozen public sensor entitlement.
-This module deliberately separates *availability* from *consumption*: a baseline
-may ignore an available modality, but it may not receive a different sensor
-budget from the proposed method in the same comparison table.
-"""
+"""Sensor entitlement, scheduling and throughput contracts for multi-UAV runs."""
 
 from __future__ import annotations
 
@@ -23,8 +16,8 @@ from aerocity_method.contracts.privacy import walk_public_payload
 
 SENSOR_CONTRACT_SCHEMA_VERSION = "multi-uav-sensor-contract-v1"
 FORMAL_H15_SENSOR_PILOT_MODES = ("physics_only", "sparse_range_3d")
-# HM3D's active contract is camera-free.  Historical camera pilots live in the
-# dated archive and cannot be scheduled through this module.
+# The active HM3D contract is camera-free; historical camera pilots stay in the
+# dated archive outside this module's schedule.
 SENSOR_PILOT_MODES = FORMAL_H15_SENSOR_PILOT_MODES
 _PHASES = frozenset({"transit", "observe", "dwell", "map_update"})
 _DROP_POLICIES = frozenset({"block", "drop_oldest", "mark_missing"})

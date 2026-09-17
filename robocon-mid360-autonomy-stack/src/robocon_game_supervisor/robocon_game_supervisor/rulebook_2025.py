@@ -1,8 +1,7 @@
 """Executable constraints from the ABU ROBOCON 2025 Robot Basketball rulebook.
 
-The rule engine is deliberately independent of Gazebo and ROS messages.  A simulator,
-vision module, or a real hardware adapter must supply the physical evidence named by each
-method.  A boolean claim is never inferred from a command being sent.
+The rule engine stays independent of Gazebo and ROS messages and takes physical
+evidence as method inputs, so a sent command never implies a boolean claim.
 """
 
 from __future__ import annotations
@@ -39,9 +38,9 @@ class RuleDecision:
 class ABURobocon2025RuleEngine:
     """Track the rulebook constraints that can be evaluated from explicit evidence.
 
-    Source: ABU ROBOCON 2025 Rulebook (2024-08-14), sections 2, 6, 7, 10 and 12.
-    Referee-only decisions, contact/foul judgement and zone geometry that lack an official
-    numeric definition remain external evidence inputs rather than guessed calculations.
+    Source is the ABU ROBOCON 2025 Rulebook (2024-08-14), sections 2, 6, 7, 10
+    and 12. Referee-only decisions, contact judgement and officially undefined
+    zone geometry arrive as external evidence inputs.
     """
 
     FIELD_LENGTH_M = 15.0

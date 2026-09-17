@@ -1,12 +1,4 @@
-"""Controlled external planning baselines on the public HM3D candidate interface.
-
-This module does *not* relabel the local auction heuristic as a literature
-method.  It implements the task-level graph/Voronoi allocation idea of
-GVP-MREP on the shared public candidate pool.  The original paper's ROS,
-RotorS, depth pipeline and trajectory optimiser are deliberately outside this
-adapter, so callers must report this as a controlled ``GVP-MREP-inspired``
-transfer rather than an original-environment reproduction.
-"""
+"""Controlled external planning baselines on the public HM3D candidate interface."""
 
 from __future__ import annotations
 
@@ -54,13 +46,7 @@ def _edge_length(
     state: PublicSearchState,
     manifest: CandidateFragmentManifest,
 ) -> dict[tuple[str, str], float]:
-    """Build a public dynamic topology graph from admitted guarded routes.
-
-    An edge from an agent to a frontier exists only when that public route was
-    already emitted by the shared guard.  Frontier-to-frontier links model
-    communication/topological adjacency, not a claim that the straight line
-    between them is a collision-free flight path.
-    """
+    """Build a public dynamic topology graph from admitted guarded routes."""
 
     edges: dict[tuple[str, str], float] = {}
 
@@ -82,8 +68,7 @@ def _edge_length(
             )
     for index, left in enumerate(exploration_frontiers):
         for right in exploration_frontiers[index + 1 :]:
-            # This is a local-map adjacency edge.  It is only used for
-            # Voronoi ownership, never as a command route.
+            # Local-map adjacency for Voronoi ownership only, never a command route.
             length = _distance(left.position_m, right.position_m)
             if length <= state.communication_range_m:
                 add(f"frontier:{left.frontier_id}", f"frontier:{right.frontier_id}", length)
@@ -92,8 +77,8 @@ def _edge_length(
             length = _distance(left.position_m, right.position_m)
             if length <= state.communication_range_m:
                 add(f"agent:{left.agent_id}", f"agent:{right.agent_id}", length)
-    # Bind the exact selected guarded paths to the graph.  A guard rewrite can
-    # make an intended direct edge more expensive than its Euclidean chord.
+    # Bind the exact selected guarded paths; a guard rewrite can cost more than the
+    # Euclidean chord.
     for fragment in manifest.fragments:
         if fragment.type_signature.fragment_type != "transit":
             continue

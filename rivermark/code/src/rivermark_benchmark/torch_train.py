@@ -1,11 +1,4 @@
-"""Train provenance-bound compact multimodal Rivermark pilot checkpoints.
-
-This module trains three intentionally small models from ``dataset.py``
-episodes.  They are real PyTorch checkpoints, but not external foundation
-models, Isaac captures, or formal benchmark results.  Every run writes a
-metadata sidecar that binds all source manifests and their hashes before the
-checkpoint's own SHA-256 is written.
-"""
+"""Train provenance-bound compact multimodal Rivermark pilot checkpoints."""
 
 from __future__ import annotations
 

@@ -1,19 +1,4 @@
-"""Render an auditable HM3D replay from one real CF2X/PhysX trace.
-
-This tool is intentionally separate from the target-free exploration runtime.
-It reads only the optional post-step audit telemetry emitted by
-``run_hm3d_p07_exploration_episode.py --visualization-trace-hz`` and never
-creates observations, alters a physical state, or influences a result.  The
-mesh render is a human-inspection aid; all vehicle positions and yaw headings
-come from the already-realised PhysX trace.
-
-Run with the configured Isaac Lab interpreter, for example::
-
-    python scripts/record_hm3d_physx_trace_replay.py \
-      --trace-record E:/asset/.../00803_physx_visual_source.json \
-      --scene-usd E:/asset/hm3d_video_00803/hm3d_00803.usd \
-      --output E:/asset/.../00803_global.mp4
-"""
+"""Render an auditable HM3D replay from one real CF2X and PhysX trace."""
 
 from __future__ import annotations
 
@@ -45,9 +30,8 @@ LOCATOR_COLORS = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    # AppLauncher calls parse_known_args() while registering its own flags.
-    # Keep these as post-parse requirements so ``--help`` can remain useful
-    # without a pretend trace record or USD path.
+    # Optional at parse time so AppLauncher registration and ``--help`` work;
+    # required after parsing.
     parser.add_argument("--trace-record", type=Path)
     parser.add_argument("--scene-usd", type=Path)
     parser.add_argument("--cf2x-usd", type=Path, default=DRONE_ASSET)
@@ -176,10 +160,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--overwrite", action="store_true")
     AppLauncher.add_app_launcher_args(parser)
-    # This command always captures an RTX-rendered camera stream.  Leaving the
-    # AppLauncher camera flag at its generic default selects the non-rendering
-    # headless Kit experience, which can make CaptureExtension report progress
-    # while creating no usable image sequence.
+    # RTX camera capture; the generic headless default can leave CaptureExtension
+    # without any usable image sequence.
     parser.set_defaults(enable_cameras=True)
     args = parser.parse_args()
     missing = [
@@ -196,8 +178,7 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-# Keep pure trace-validation and plotting helpers importable by unit tests. Isaac
-# is launched only by ``main`` after the command line has been accepted.
+# Pure trace-validation and plotting helpers stay importable; Isaac starts in ``main``.
 ARGS: argparse.Namespace | None = None
 SIMULATION_APP: Any | None = None
 
@@ -281,10 +262,8 @@ class PhysxTraceReplay:
         if timestamp_s <= self.frames[0].timestamp_s:
             return 0
         timestamps = tuple(frame.timestamp_s for frame in self.frames)
-        # ``bisect_right`` deliberately selects the final source sample at a
-        # duplicated decision-boundary timestamp. That is the same state the
-        # historic loop selected and gives every output frame one auditably
-        # defined realised PhysX source sample.
+        # Final source sample at a duplicated boundary timestamp, as the historic
+        # loop selected, so every output frame has one defined PhysX source sample.
         return min(len(self.frames) - 1, bisect_right(timestamps, timestamp_s + 1.0e-9) - 1)
 
     def frame_at(self, timestamp_s: float) -> ReplayFrame:
@@ -301,13 +280,7 @@ def _finite_positive_float(raw: Any, label: str) -> float:
 def _follow_camera_clearance_evidence(
     payload: dict[str, Any], agent_order: tuple[str, ...]
 ) -> FollowCameraClearanceEvidence | None:
-    """Return a conservative camera certificate or ``None`` when evidence is incomplete.
-
-    A follow camera is visual-only, but an arbitrary third-person offset can
-    leave an indoor room through a wall.  The executor already records exact
-    static-mesh clearance at every realised root trace pose.  The camera is
-    therefore allowed only inside a ball around that certified root pose.
-    """
+    """Return a conservative camera certificate, or None when evidence is incomplete."""
 
     execution_payload = payload.get("execution")
     terminal_tail = (
@@ -397,12 +370,7 @@ def _certify_follow_camera(
     camera_radius_m: float,
     safety_margin_m: float,
 ) -> dict[str, object]:
-    """Refuse a follow pose outside the recorded static-collision free-space ball.
-
-    HM3D's render mesh and its collision representation need not be identical.
-    This certificate constrains the review camera relative to collision geometry;
-    it cannot certify that scan fragments will not visually occlude the camera.
-    """
+    """Refuse a follow pose outside the recorded static-collision free-space ball."""
 
     radius = _finite_positive_float(camera_radius_m, "follow camera radius")
     margin = float(safety_margin_m)
@@ -467,13 +435,7 @@ def _frame_time_mapping(
     *,
     frame_count: int,
 ) -> dict[str, Any]:
-    """Record the exact output-frame to realised-trace sample relation.
-
-    The capture extension consumes Kit frames, not a simulation clock.  The
-    emitted mapping proves which already-recorded PhysX sample drove every
-    visual frame and lets the compositor refuse a superficially similar video
-    with a different time base.
-    """
+    """Record the exact output-frame to realised-trace sample relation."""
 
     rows: list[dict[str, float | int]] = []
     for output_frame_index in range(frame_count):
@@ -699,13 +661,7 @@ def _trace_local_bounds(
     minimum_span_m: float = 2.0,
     padding_m: float = 0.60,
 ) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-    """Build a compact, equal-scale review volume from realised root positions.
-
-    The global review camera must not use the whole HM3D mesh extent: Matterport
-    scan shells can be tens of metres wide while the realised four-UAV trace is
-    local.  This is a framing volume only, never a flight-space or clearance
-    certificate.
-    """
+    """Build a compact, equal-scale review volume from realised root positions."""
 
     if minimum_span_m <= 0.0 or padding_m < 0.0:
         raise ValueError("trace review bounds require positive span and non-negative padding")
@@ -804,12 +760,7 @@ def _frame_integrity_diagnostics(
     *,
     expected_frames: int,
 ) -> dict[str, Any]:
-    """Decode every output frame and flag near-uniform render failures.
-
-    RGB content cannot prove that a global camera is unobstructed by geometry.
-    This diagnostic only detects blank, almost uniform, or malformed rendered
-    frames, while the follow view has its separate static-clearance certificate.
-    """
+    """Decode every output frame and flag near-uniform render failures."""
 
     import cv2
 
@@ -936,10 +887,8 @@ def _set_camera(
     target_v = Gf.Vec3d(*target)
     if (target_v - eye_v).GetLength() < 1.0e-9:
         return
-    # A USD camera looks along local -Z.  ``SetLookAt`` returns a view matrix,
-    # so its inverse is the camera's world transform.  This avoids the former
-    # hand-built quaternion path, whose roll correction could point a valid
-    # camera away from its target in Isaac Sim 5.1.
+    # SetLookAt returns a view matrix, so its inverse is the camera world
+    # transform; the former hand-built path could point the camera away.
     view_matrix = Gf.Matrix4d().SetLookAt(eye_v, target_v, Gf.Vec3d(0.0, 0.0, 1.0))
     xformable = UsdGeom.Xformable(camera)
     xformable.ClearXformOpOrder()
@@ -986,8 +935,7 @@ def _global_exterior_camera_pose(
         scene_bounds_max[1] - scene_bounds_min[1],
         1.0,
     )
-    # A restrained orbit avoids the wall-crossing behaviour of the prior
-    # local review camera while still conveying the room-scale geometry.
+    # Restrained orbit; the prior local review camera could cross walls.
     angle = math.radians(-132.0) + frame_fraction * math.radians(8.0)
     horizontal_radius = scene_horizontal_span * 0.92
     eye = (
@@ -1035,8 +983,8 @@ def _follow_camera_pose(
     yaw_rad = math.radians(yaw_deg)
     forward = (math.cos(yaw_rad), math.sin(yaw_rad), 0.0)
     lateral = (-forward[1], forward[0], 0.0)
-    # A former 1.08 m chase offset could cross a Matterport wall.  This
-    # normalized local pose stays inside the root-clearance sphere instead.
+    # Normalized local pose inside the root-clearance sphere; a former 1.08 m
+    # chase offset could cross a Matterport wall.
     raw_eye_direction = (
         -forward[0] + lateral[0] * 0.35,
         -forward[1] + lateral[1] * 0.35,
@@ -1087,23 +1035,15 @@ def _apply_ghost_scene_material(
     scene_prim: Any,
     opacity: float,
 ) -> dict[str, Any]:
-    """Replace render materials on scan meshes with an audit-only translucent material.
-
-    Matterport render meshes contain open shells and small non-manifold scan
-    fragments.  A close collision-clearance-certified review camera can still
-    be visually covered by those render-only triangles.  This function acts
-    only on the replay stage and never opens a physics scene or changes the
-    source record.  Its resulting video is explicitly marked non-sensor.
-    """
+    """Replace render materials on scan meshes with an audit-only translucent material."""
 
     if not math.isfinite(opacity) or not 0.0 < opacity < 1.0:
         raise ValueError("--ghost-scene-opacity must be finite and strictly between zero and one")
     from pxr import Gf, Sdf, Usd, UsdGeom, UsdShade
 
     material = UsdShade.Material.Define(stage, "/World/AuditGhostScanMaterial")
-    # Use USD Preview Surface rather than reusing source OmniPBR inputs.  The
-    # source scan has per-face material subsets; a mesh-level *strong* binding
-    # must override those subsets before opacity becomes visible in RTX.
+    # USD Preview Surface with a mesh-level strong binding, so per-face material
+    # subsets cannot hide the audit opacity in RTX.
     shader = UsdShade.Shader.Define(stage, "/World/AuditGhostScanMaterial/PreviewSurface")
     shader.CreateIdAttr("UsdPreviewSurface")
     shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(0.72, 0.80, 0.88))
@@ -1139,13 +1079,7 @@ def _configure_trajectory_only_scene(
     trace_review_bounds_min: tuple[float, float, float],
     trace_review_bounds_max: tuple[float, float, float],
 ) -> dict[str, Any]:
-    """Hide scan render meshes and add a non-physical neutral review backdrop.
-
-    Matterport scan shells are useful scene context but can visually obscure a
-    clearance-certified camera.  This creates a deliberately geometry-free
-    visual review mode.  It has no Physics APIs and is never loaded by the
-    exploration runtime.
-    """
+    """Hide scan render meshes and add a non-physical neutral review backdrop."""
 
     from pxr import Gf, Sdf, Usd, UsdGeom, UsdShade
 
@@ -1180,10 +1114,8 @@ def _configure_trajectory_only_scene(
     material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
     UsdShade.MaterialBindingAPI.Apply(backdrop.GetPrim()).Bind(material)
 
-    # A sparse world-space grid gives the unrestricted team review a stable
-    # depth reference without adding captions or screen-space annotations.
-    # It is placed below every realised root pose, so it cannot hide the
-    # recorded CF2X models or their growing trace curves.
+    # Sparse world grid below every realised root pose as a depth reference without
+    # captions or annotations.
     horizontal_span = max(spans[0], spans[1], 1.0)
     raw_step_m = horizontal_span / 8.0
     magnitude = 10.0 ** math.floor(math.log10(raw_step_m))
@@ -1282,8 +1214,8 @@ def _bind_visual_rotors(stage: Any, drones: list[Any]) -> list[tuple[Any, int, t
         drone_path = str(drone.GetPath())
         for propeller_index, direction in enumerate(propeller_directions, start=1):
             propeller = stage.GetPrimAtPath(
-                # The referenced asset's default prim is /crazyflie, so its
-                # children compose directly below each /World/UAV_N instance.
+                # The asset default prim is /crazyflie, so children compose under
+                # each /World/UAV_N instance.
                 f"{drone_path}/m{propeller_index}_prop"
             )
             if not propeller.IsValid():
@@ -1310,15 +1242,7 @@ def _bind_visual_rotors(stage: Any, drones: list[Any]) -> list[tuple[Any, int, t
 
 
 def _apply_review_vehicle_materials(stage: Any, drones: list[Any]) -> dict[str, Any]:
-    """Give replay-only CF2X meshes enough contrast for close human review.
-
-    The source trace has no camera or motor telemetry, and the imported HM3D
-    scans include very dark interior surfaces.  The referenced CF2X asset is
-    therefore hard to inspect in a clearance-certified close-follow view.
-    These USD bindings live only on the temporary replay stage: they neither
-    modify the source asset nor attach physics APIs.  Rotor meshes retain a
-    darker material so their replayed phase is visually observable.
-    """
+    """Give replay-only CF2X meshes enough contrast for close human review."""
 
     from pxr import Gf, Sdf, Usd, UsdGeom, UsdShade
 
@@ -1436,8 +1360,7 @@ def _define_visual_trails(
         curve.CreateCurveVertexCountsAttr([2])
         start = Gf.Vec3f(*positions[0])
         curve.CreatePointsAttr([start, start])
-        # A single width is constant by USD's default interpolation; Isaac
-        # Sim 5.1 does not expose a CreateWidthsInterpolationAttr helper.
+        # USD constant-width attribute; Isaac Sim 5.1 offers no interpolation helper.
         curve.CreateWidthsAttr([0.014])
         curve.CreateDisplayColorAttr().Set([Gf.Vec3f(*LOCATOR_COLORS[agent_index])])
         trails.append((curve, positions))
@@ -1470,13 +1393,7 @@ def _reencode_capture_frames(
     width: int,
     height: int,
 ) -> dict[str, Any]:
-    """Replace Isaac 5.1's sometimes unreadable MP4 with an OpenCV-decoded MP4.
-
-    CaptureExtension is retained for renderer access, but its bundled H.264
-    encoder can produce a file that Windows/OpenCV cannot decode.  The PNG
-    sequence is the authoritative rendered output; this function only packs
-    it into a portable MP4 container and checks that result immediately.
-    """
+    """Replace the CaptureExtension MP4 with an OpenCV-decoded portable copy and check it."""
 
     import cv2
 
@@ -1507,9 +1424,8 @@ def _reencode_capture_frames(
     diagnostics = _frame_integrity_diagnostics(temporary, expected_frames=expected_frames)
     if diagnostics["near_uniform_frame_count"]:
         temporary.unlink(missing_ok=True)
-        # CaptureExtension writes its provisional movie before the portable
-        # PNG-backed re-encode is checked.  A rejected replay must not remain
-        # at the requested delivery path.
+        # Remove a rejected capture so no provisional movie remains at the
+        # delivery path.
         output.unlink(missing_ok=True)
         raise RuntimeError(
             "re-encoded MP4 failed frame-content validation: "
@@ -1630,11 +1546,9 @@ def main() -> int:
     scene_prim = _define_xform(stage, "/World/HM3D", (0.0, 0.0, 0.0))
     scene_prim.GetPrim().GetReferences().AddReference(str(scene_usd))
     _progress("scene_reference_added")
-    # The imported official mesh contains materials and therefore needs a
-    # moderate dome light instead of unbounded exposure.
+    # Moderate dome light for the imported materials.
     dome = UsdLux.DomeLight.Define(stage, "/World/DomeLight")
-    # Keep the scan readable without washing out its light materials.  The
-    # previous 1200/1800 pair made the review orbit nearly white on RTX 4090.
+    # Keep the scan readable; a former 1200/1800 pair washed out the review orbit.
     dome.CreateIntensityAttr(450.0)
     dome.CreateColorAttr((1.0, 1.0, 1.0))
     key = UsdLux.DistantLight.Define(stage, "/World/KeyLight")
@@ -1643,9 +1557,8 @@ def main() -> int:
     key.AddRotateXYZOp().Set((35.0, -20.0, 20.0))
     _progress("lights_created")
 
-    # Let USD finish composing before reading the real scene bounds.  This is
-    # intentionally performed before drone prims are added, so the visual CF2X
-    # models cannot enlarge or otherwise corrupt the scene extent.
+    # Compose USD fully before reading scene bounds, before drone prims are added,
+    # so visual CF2X models cannot corrupt the scene extent.
     for _ in range(12):
         SIMULATION_APP.update()
     bounds_min, bounds_max = _scene_bounds(scene_prim.GetPrim())
@@ -1657,8 +1570,8 @@ def main() -> int:
             opacity=ARGS.ghost_scene_opacity,
         )
     elif ARGS.scene_review_mode == "trajectory_only":
-        # Bounds and trace-coordinate registration below must still see the
-        # authored HM3D hierarchy before its visuals are hidden.
+        # Bounds and trace-coordinate registration still need the authored HM3D
+        # hierarchy before its visuals are hidden.
         scene_review = {
             "mode": "trajectory_only",
             "pending_after_coordinate_registration": True,
@@ -1672,9 +1585,8 @@ def main() -> int:
             "not_sensor_imagery": False,
             "reason": "normal_source_scan_render",
         }
-    # This is a minimal registration check, not a collision re-evaluation: a
-    # visual USD with a different world origin would otherwise make a real
-    # trace look plausible while actually being rendered in the wrong building.
+    # Minimal origin registration check, not a collision re-evaluation: a different
+    # world origin would render a real trace in the wrong building.
     coordinate_padding_m = 0.50
     invalid_trace_positions: list[tuple[str, tuple[float, float, float]]] = []
     for frame in replay.frames:
@@ -1726,10 +1638,8 @@ def main() -> int:
             )
         )
     review_vehicle_materials = _apply_review_vehicle_materials(stage, drones)
-    # The source record intentionally contains vehicle poses, not motor RPM.
-    # Animate only the visible mesh propellers with a fixed, explicit visual
-    # phase so the human replay reads as a flying CF2X without inventing a
-    # control or telemetry signal.
+    # Mesh propellers animate on a fixed visual phase, because the source record
+    # carries vehicle poses and no motor signal.
     visual_rotors = _bind_visual_rotors(stage, drones)
     if ARGS.scene_review_mode != "trajectory_only":
         trail_agent_indices: tuple[int, ...] = ()
@@ -1749,15 +1659,13 @@ def main() -> int:
         for prim in [*drones, *locators]:
             _set_visible(prim, False)
     elif ARGS.view_mode == "follow":
-        # A follow camera is an inspection view of one vehicle.  Keeping the
-        # other five beacons in the scene makes the camera look as if it is
-        # following several vehicles at once and can obscure the mesh.
+        # Hide the other beacons in follow view; they suggest several followed
+        # vehicles and can obscure the mesh.
         assert ARGS.follow_agent is not None
         for agent_index, prim in enumerate(drones):
             _set_visible(prim, agent_index == ARGS.follow_agent)
-        # Follow footage shows the actual CF2X mesh only. The coloured beacon
-        # is useful in the global room-scale camera but can occlude a UAV that
-        # is only 11 cm wide when the camera is nearby.
+        # Use the CF2X mesh only in follow footage; the beacon occludes an 11 cm
+        # UAV at close range.
         for locator in locators:
             _set_visible(locator, False)
     _progress(
@@ -1769,9 +1677,8 @@ def main() -> int:
     )
 
     camera = UsdGeom.Camera.Define(stage, "/World/ReviewCamera")
-    # FPV keeps a broad 18 mm view.  The global view frames the realised trace
-    # volume rather than the complete building shell, so four true-scale UAVs
-    # remain legible in an audit capture.
+    # The global view frames the realised trace volume rather than the building
+    # shell, so four true-scale UAVs stay legible.
     focal_length = ARGS.global_focal_length_mm if ARGS.view_mode == "global" else 24.0
     if focal_length <= 0.0:
         raise ValueError("--global-focal-length-mm must be positive")
@@ -1789,9 +1696,8 @@ def main() -> int:
     )
     camera.CreateFocalLengthAttr(focal_length)
     camera.CreateHorizontalApertureAttr(36.0)
-    # Third-person review places the camera within a certified local sphere of
-    # a true-scale 11 cm CF2X.  The USD default near plane clips the vehicle;
-    # this changes rendering only, never the flight-space or physics contract.
+    # Custom near plane; the USD default clips a true-scale 11 cm CF2X in close
+    # third-person review. Rendering only, no physics change.
     camera.CreateClippingRangeAttr(Gf.Vec2f(0.01, 10_000.0))
     active_agent = ARGS.fpv_agent if ARGS.view_mode == "fpv" else ARGS.follow_agent
     active_state = initial_frame.states_by_agent[replay.agent_order[active_agent or 0]]
@@ -1820,19 +1726,16 @@ def main() -> int:
     _set_camera(camera.GetPrim(), eye, target)
     _progress("review_camera_created")
 
-    # The viewport capture API is deliberately used here instead of Replicator.
-    # It is the path already used by the historical IsaacLab video scripts and
-    # avoids a second RTX pipeline initialisation on this Windows installation.
+    # Viewport capture API instead of Replicator, matching existing IsaacLab video
+    # scripts and avoiding a second RTX pipeline on Windows.
     from isaacsim.core.utils.extensions import enable_extension
 
     enable_extension("omni.kit.capture.viewport")
     _progress("capture_extension_enabled")
     for _ in range(8):
         SIMULATION_APP.update()
-    # Isaac Sim 5.1 exposes movie capture through the extension singleton.
-    # The former get_active_viewport_capture() helper used by old recordings
-    # was removed, so using it silently deferred failure until the HM3D mesh
-    # had already been fully loaded and materialized.
+    # Capture goes through the extension singleton; the former viewport helper was
+    # removed in Isaac Sim 5.1 and deferred failure until after mesh load.
     from omni.kit.capture.viewport import (
         CaptureExtension,
         CaptureOptions,
@@ -1926,8 +1829,8 @@ def main() -> int:
         raise RuntimeError("Isaac Sim viewport capture refused the configured movie")
     _progress("capture_started", output=str(output), total_frames=frame_count)
 
-    # CaptureExtension runs on Kit's update event.  It owns image sequencing
-    # and MP4 encoding; the loop only advances Kit until that work is complete.
+    # CaptureExtension owns image sequencing and MP4 encoding; the loop only
+    # advances Kit.
     update_count = 0
     max_updates = max(1000, frame_count * 16)
     while SIMULATION_APP.is_running() and not capture.done:

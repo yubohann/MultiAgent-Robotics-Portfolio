@@ -1,11 +1,4 @@
-"""Outcome-bound MARVEL author-SAC migration for public HM3D team candidates.
-
-The neural ``PolicyNet`` and ``QNet`` are vendored unchanged from the authors'
-MIT-licensed ICRA 2025 repository.  The adapter maps the common public team
-candidate pool to the author's graph-action tensors and retains twin critics,
-target critics and learned entropy temperature.  This is a controlled
-three-dimensional task migration, not an original-task result reproduction.
-"""
+"""Outcome-bound MARVEL author-SAC migration for public HM3D team candidates."""
 
 from __future__ import annotations
 

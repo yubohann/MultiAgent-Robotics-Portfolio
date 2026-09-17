@@ -1,12 +1,4 @@
-"""Bounded Parquet projection for validated, development-only Isaac captures.
-
-The formal packer intentionally requires redistribution-cleared assets.  A
-local Isaac capture can still be useful to researchers before that decision,
-but it must not be relabelled as a formal episode.  This module therefore
-projects only the small public state/action/task/message streams, binds them
-to the raw capture and independent-validation hashes, and writes a manifest
-whose development-only boundary is machine-readable.
-"""
+"""Bounded Parquet projection for validated, development-only Isaac captures."""
 
 from __future__ import annotations
 

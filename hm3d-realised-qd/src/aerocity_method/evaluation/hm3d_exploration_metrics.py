@@ -1,9 +1,4 @@
-"""Metrics for the HM3D target-free online 3D exploration task.
-
-The primary score is time-integrated explored free-flight volume.  This module
-has no target-confirmation semantics and is suitable for the P07 validity
-matrix.
-"""
+"""Metrics for the HM3D target-free online 3D exploration task."""
 
 from __future__ import annotations
 

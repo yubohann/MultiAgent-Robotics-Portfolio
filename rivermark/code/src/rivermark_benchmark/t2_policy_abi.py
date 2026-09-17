@@ -1,12 +1,4 @@
-"""Public, bounded policy ABI for native City-Lite T2 control.
-
-This module deliberately has no Isaac, Torch, evaluator-manifest, target, or
-sensor-frame imports.  It defines the small public boundary that a native
-runner must use before lowering a policy command through the calibrated CF2X
-controller.  Native capture owns the actual sensor read, actuator write,
-simulation step, and private evaluation; this module makes their causal
-binding checkable without launching Kit.
-"""
+"""Public, bounded policy ABI for native City-Lite T2 control."""
 
 from __future__ import annotations
 

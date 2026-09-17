@@ -177,9 +177,10 @@ def download_time_evidence(bundle: Path, asset: dict[str, Any]) -> dict[str, Any
         "exact_download_time_available": False,
         "status": "estimated_from_local_filesystem_metadata",
         "confidence": "weak",
-        "warning_cn": (
-            "原下载程序未记录完成时间。NTFS创建时间可能因复制、恢复或迁移而改变，"
-            "只能作为本机首次出现时间的旁证，不能表述为精确下载时间。"
+        "warning": (
+            "The original downloader stored no completion time. NTFS creation time "
+            "changes on copy, restore or migration, so it only approximates when these "
+            "files first appeared on this host."
         ),
         "method": "minimum_and_maximum_observed_NTFS_creation_time_across_registered_files",
         "files": file_records,
@@ -481,19 +482,19 @@ def main() -> int:
         f"{manifest_hash}  PROVENANCE_MANIFEST.json\n".encode(),
     )
 
-    readme = "# Poly Haven 资产来源证据\n\n"
-    readme += f"- 资产数量：{len(assets)}\n"
-    readme += f"- 成功取得官方证据：{len(results)}\n"
-    readme += f"- 失败：{len(failures)}\n"
-    readme += f"- 证据采集完成时间（UTC）：{manifest['completed_at_utc']}\n"
-    readme += f"- 原登记表 SHA-256：`{sha256_bytes(registry_bytes)}`\n"
-    readme += f"- 证据清单 SHA-256：`{manifest_hash}`\n\n"
-    readme += "作者来自 Poly Haven 官方 `info/{asset_id}` API；原始文件 URL 由官方 "
-    readme += "`files/{asset_id}` API 快照交叉验证。许可证证据包含 Poly Haven 官方许可页、"
-    readme += "Creative Commons CC0 法律文本及其原始 HTTP 快照。\n\n"
-    readme += "历史下载程序没有保存精确完成时间。`DOWNLOAD_TIME_RECOVERY.json` 中的时间仅为 "
-    readme += "NTFS 创建时间估算，已明确标记为弱证据，不得改写为精确下载时间。\n"
-    atomic_write(provenance / "README_CN.md", readme.encode("utf-8"))
+    readme = "# Poly Haven asset provenance evidence\n\n"
+    readme += f"- Assets: {len(assets)}\n"
+    readme += f"- Official evidence captured: {len(results)}\n"
+    readme += f"- Failures: {len(failures)}\n"
+    readme += f"- Evidence captured at {manifest['completed_at_utc']} UTC\n"
+    readme += f"- Registry SHA-256: `{sha256_bytes(registry_bytes)}`\n"
+    readme += f"- Manifest SHA-256: `{manifest_hash}`\n\n"
+    readme += "Authors come from the official Poly Haven `info/{asset_id}` API, and original file URLs are "
+    readme += "cross-checked against the official `files/{asset_id}` API snapshot. License evidence includes "
+    readme += "the Poly Haven license page, the Creative Commons CC0 legal text and their original HTTP snapshots.\n\n"
+    readme += "The historical downloader stored no completion time. Timestamps in `DOWNLOAD_TIME_RECOVERY.json` "
+    readme += "are NTFS creation estimates, recorded as weak evidence from the local filesystem.\n"
+    atomic_write(provenance / "README.md", readme.encode("utf-8"))
 
     print(f"Manifest: {manifest_path}", flush=True)
     print(f"Manifest SHA-256: {manifest_hash}", flush=True)

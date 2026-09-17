@@ -96,10 +96,9 @@ def materialize(
         raise ValueError("native G2-I development layout cannot consume a formal split")
     if output.exists():
         raise FileExistsError(f"output already exists: {output}")
-    # A staged public CitySpec deliberately omits its development split.  The
-    # private deterministic episode sampler still needs that label to select
-    # the configured target process; keep this reconstructed copy in-process
-    # and continue emitting the original public CitySpec unchanged.
+    # The staged public CitySpec omits its development split, but the private
+    # episode sampler needs it to pick the target process; add it in-process and
+    # keep emitting the original public CitySpec.
     episode_city = dict(city)
     episode_city["split"] = split
     output.mkdir(parents=True)

@@ -1,11 +1,5 @@
-"""SplitGNN 数据预处理脚本。
-
-总说明：
-1. 将原始 `.mat` 数据转换为 DGL 异构图。
-2. 划分 train / valid / test 掩码。
-3. 为 `homo` 边生成监督标签和训练掩码。
-
-其中 `comp` 数据集已经自带 DGL 图，因此这里只做存在性确认。
+"""SplitGNN data preprocessing script that converts `.mat` sources into DGL graphs with train, valid
+and test masks.
 """
 
 import argparse
@@ -24,7 +18,7 @@ DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
 
 
 def first_existing_path(*candidates):
-    # 在多个可能路径中找到第一个实际存在的文件。
+    # Return the first existing file across candidate paths.
     for candidate in candidates:
         if os.path.exists(candidate):
             return candidate
@@ -32,7 +26,7 @@ def first_existing_path(*candidates):
 
 
 def generate_edges_labels(edges, labels, train_idx):
-    # 同标签边记为 +1，异标签边记为 -1，同时标记哪些边属于训练集。
+    # Label same-class edges +1 and cross-class edges -1, and mark the training edge set.
     row, col = edges
     edge_labels = []
     edge_train_mask = []
@@ -62,7 +56,7 @@ if __name__ == '__main__':
     print(f'Generate {args.dataset}')
     print('**********************************')
     if args.dataset == 'yelp':
-        # 生成 YelpChi 的 DGL 图。
+        # Build the YelpChi DGL graph.
         if os.path.exists(dataset_path+'yelp.dgl'):
             print('Dataset yelp has been created')
             sys.exit()
@@ -130,7 +124,7 @@ if __name__ == '__main__':
         print(f'Edge train num:{homo_train_mask.sum().item()}, pos num:{(homo_labels[homo_train_mask]==1).sum().item()}')
         
     elif args.dataset == 'amazon':
-        # 生成 Amazon 的 DGL 图。
+        # Build the Amazon DGL graph.
         if os.path.exists(dataset_path+'amazon.dgl'):
             print('dataset amazon has been created')
             sys.exit()
@@ -198,7 +192,7 @@ if __name__ == '__main__':
         print(f'Edge train num:{homo_train_mask.sum().item()}, pos num:{(homo_labels[homo_train_mask]==1).sum().item()}')
 
     elif args.dataset == 'comp':
-        # `comp` 原本就是 DGL 图，因此不需要再做转换。
+        # `comp` ships as a DGL graph, so this path passes it through unchanged.
         comp_path = first_existing_path(
             os.path.join(DATA_DIR, 'comp.dgl'),
             os.path.join(DATA_DIR, 'FDCompCN', 'comp.dgl')

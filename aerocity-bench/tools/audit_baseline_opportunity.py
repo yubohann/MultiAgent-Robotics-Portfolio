@@ -217,10 +217,8 @@ def _load_derived_development_inputs(
     ):
         raise ValueError("derivation receipt derived task-spec hash mismatch")
 
-    # Check byte-level derivation bindings before parsing the public task.  This
-    # keeps a corrupted derived file attributable to the derivation receipt,
-    # while the boundary audit below still rejects any semantically invalid
-    # public artifact before a policy can consume it.
+    # Hash bindings are checked before parsing, so a corrupted derived file
+    # stays attributable; the boundary audit below still rejects invalid data.
     audit_public_layout(source_layout_root)
     audit_public_layout(derived_layout_root)
 

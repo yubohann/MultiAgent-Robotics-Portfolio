@@ -1,1 +1,1 @@
-"""Vendored research dependencies retained for reproducible experiments."""
+"""Vendored research dependencies retained for deterministic experiments."""

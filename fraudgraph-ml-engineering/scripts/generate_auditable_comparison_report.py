@@ -1,8 +1,5 @@
-"""Create an auditable comparison report from explicit experiment records.
-
-The tool never searches artifact directories or selects a stronger historical run. Every
-record must declare its data revision, split policy, validation-only selection policy,
-seed, and validation/test metrics before it can appear in the report.
+"""Create an auditable comparison report from explicit experiment records that declare their data
+revision, split policy, selection policy, seed and metrics.
 """
 
 from __future__ import annotations
@@ -171,7 +168,7 @@ def _metric_value(record: dict[str, Any], partition: str, metric: str) -> str:
 
 
 def render_markdown(report: dict[str, Any]) -> str:
-    """Render a report without ranking or implicitly selecting any supplied row."""
+    """Render a report that preserves the supplied row order."""
 
     lines = [
         f"# {report['title']}",

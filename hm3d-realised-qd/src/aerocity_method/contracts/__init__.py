@@ -16,8 +16,7 @@ from aerocity_method.contracts.hm3d_public_schema import (
 )
 from aerocity_method.contracts.models import ABI_VERSION
 
-# The formal paper contract is intentionally single-scale.  Outcomes retain
-# this value for provenance, but no runtime entry point accepts another fleet.
+# Single-scale formal paper contract; outcomes retain the value for provenance.
 FORMAL_FLEET_SIZE = 4
 
 __all__ = [

@@ -1,12 +1,4 @@
-"""Rank official HM3D *train* scenes for later 3-D multi-UAV admission.
-
-This is deliberately a cheap preliminary screen.  Official Matterport fields
-describe ground-navigation annotations; neither their floor count nor their
-area authorizes free flight.  A listed scene must still pass collision USD,
-3-D ESDF, public sparse-range receiver placement, vertical free-flight
-opportunity, control-boundary, and four-CF2X
-runtime admission before it enters P07.
-"""
+"""Rank official HM3D train scenes for later 3-D multi-UAV admission."""
 
 from __future__ import annotations
 

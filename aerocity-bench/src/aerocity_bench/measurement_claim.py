@@ -311,9 +311,9 @@ def _fit_ridge(
             right[first] += row[first] * target
             for second in range(width):
                 system[first][second] += row[first] * row[second]
-    # A fixed tiny ridge penalty makes the comparison well-defined when a
-    # calibration panel has nearly collinear coverage signals.  It is applied
-    # identically to both models and deliberately not tuned on held-out data.
+    # A fixed tiny ridge penalty keeps the comparison well-defined with nearly
+    # collinear coverage signals; applied identically to both models, never
+    # tuned on held-out data.
     for index in range(1, width):
         system[index][index] += 1.0e-8
     return _solve_linear_system(system, right)

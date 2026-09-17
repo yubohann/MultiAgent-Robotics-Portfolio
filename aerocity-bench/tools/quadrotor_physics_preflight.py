@@ -62,10 +62,9 @@ _PROFILES = (
     "open-loop-drop",
 )
 
-# This is deliberately only a sensor-evidence floor, not a crash-safety
-# threshold.  The isolated 1.5 m CF2X drop produced 5.379 N on 2026-07-31;
-# 0.05 N is well above a numerical near-zero reading while leaving the actual
-# collision envelope to a later, separately calibrated city-obstacle gate.
+# Sensor-evidence floor, not a crash-safety threshold: a 1.5 m CF2X drop
+# produced 5.379 N (2026-07-31), so 0.05 N only distinguishes real contact
+# from numerical near-zero readings.
 _CONTACT_EVIDENCE_MIN_FORCE_N = 0.05
 
 
@@ -288,8 +287,8 @@ def _run(args: argparse.Namespace) -> dict[str, Any]:
             f"{tuple(robot.data.thruster_names)}"
         )
 
-    # This is the episode reset boundary.  The flight loop below performs no
-    # root pose, root velocity, or joint-state writes.
+    # Episode reset boundary; the flight loop below writes no root pose,
+    # root velocity, or joint state.
     default_root_state = robot.data.default_root_state.clone()
     robot.write_root_pose_to_sim(default_root_state[:, :7])
     robot.write_root_velocity_to_sim(default_root_state[:, 7:])
@@ -326,9 +325,8 @@ def _run(args: argparse.Namespace) -> dict[str, Any]:
                 )
                 maneuver_steps += 1
             elif args.profile == "open-loop-drop":
-                # The isolated contact gate intentionally commands no lift.
-                # The ensuing ground contact must arise from PhysX, never from
-                # a root-state write or a synthetic contact record.
+                # The contact gate commands no lift: ground contact must arise
+                # from PhysX, not from root-state writes or synthetic records.
                 reference_rad_s = (0.0,) * 4
         else:
             target_position = (0.0, 0.0, 1.5)
@@ -678,10 +676,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"CF2X preflight failed: {exc}", file=sys.stderr, flush=True)
         return 2
     finally:
-        # On Windows + Isaac Sim, full cleanup can block indefinitely after a
-        # valid small diagnostic.  This tool owns one isolated process, so use
-        # the same non-rendering close mode as the L1 slice and let the host
-        # guard reject a later process if this process does not exit.
+        # Full Isaac cleanup can block indefinitely on Windows; skip it (the
+        # L1 slice does the same) and let the host guard kill a hung process.
         simulation_app.close(wait_for_replicator=False, skip_cleanup=True)
 
 

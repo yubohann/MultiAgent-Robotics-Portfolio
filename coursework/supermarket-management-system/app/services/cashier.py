@@ -12,7 +12,7 @@ VALID_PAYMENT_METHODS = {'cash', 'wechat', 'alipay', 'card'}
 
 
 def search_cashier_products(keyword='', limit=20):
-    """收银台商品检索。"""
+    """Search products for the cashier screen."""
     keyword = (keyword or '').strip()
     limit = max(1, min(int(limit or 20), 100))
 
@@ -59,7 +59,7 @@ def search_cashier_products(keyword='', limit=20):
 
 
 def checkout_cashier_order(cashier_id, items, payment_method='cash', discount_amount=0):
-    """收银结算并生成订单。"""
+    """Settle a cashier cart and create the order."""
     if payment_method not in VALID_PAYMENT_METHODS:
         return False, '支付方式不支持', None
 

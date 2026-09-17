@@ -1,11 +1,4 @@
-"""Small, actually trainable multimodal pilot models and checkpoint policies.
-
-These are deliberately not presented as foundation models.  They are compact
-PyTorch baselines that make the VLM/VLA/world-model data paths executable in a
-resource-bounded pilot: RGB plus public language and state feed an action
-chunk, RGB plus language feeds a grounding head, and a state-action MLP feeds
-MPC.  Every checkpoint has metadata and a SHA-256 provenance record.
-"""
+"""Small, actually trainable multimodal pilot models and checkpoint policies."""
 
 from __future__ import annotations
 

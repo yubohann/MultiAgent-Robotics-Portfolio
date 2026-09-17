@@ -1,11 +1,4 @@
-"""Audit collected P07 train-outcome records before RL/QD use.
-
-This is a development-side data-quality audit.  It does not compute or
-validate new paper metrics, but it aggregates the fields that decide whether
-the next checkpoint can enter RL/QD analysis: four-agent utilization,
-candidate diversity, vertical participation, real path length, safety,
-physics/wall time, and coverage.
-"""
+"""Audit collected P07 train-outcome records before RL and QD use."""
 
 from __future__ import annotations
 

@@ -1,10 +1,4 @@
-"""Assemble a complete, source-consistent H15 pilot from isolated Isaac rows.
-
-Each H15 matrix cell must be measured in its own Isaac process.  This command
-does not manufacture measurements: it rejects incomplete, duplicate, mixed-
-source, synthetic, or smoke rows, then serializes the exact P06 payload used
-by the formal preflight auditor.
-"""
+"""Assemble a complete, source-consistent H15 pilot from isolated Isaac rows."""
 
 from __future__ import annotations
 

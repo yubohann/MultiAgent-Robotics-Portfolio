@@ -4,7 +4,7 @@ from app import db
 
 
 class SupplierPayable(db.Model):
-    """供应商应付款"""
+    """Supplier payables."""
     __tablename__ = 'supplier_payables'
 
     payable_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

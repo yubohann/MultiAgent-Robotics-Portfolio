@@ -1,11 +1,4 @@
-"""Run a controlled real-PhysX CF2X collision replay against HM3D geometry.
-
-The probe uses the static triangle-mesh collider produced by
-``convert_hm3d_glb_to_collision_usd.py``.  It selects a collision direction
-through a real PhysX ray query, then records contact-sensor force while an
-actual CF2X articulation moves into that specific mesh.  This validates
-collision wiring only; a deliberate impact is never a policy or safety score.
-"""
+"""Run a controlled real-PhysX CF2X collision replay against HM3D geometry."""
 
 from __future__ import annotations
 
@@ -149,7 +142,7 @@ def _select_hm3d_raycast(
 
 
 def main() -> int:
-    # Omniverse modules must only be imported after the app is running.
+    # Omniverse imports require a running application.
     import isaaclab.sim as sim_utils
     import omni.physx
     import omni.usd
@@ -231,8 +224,8 @@ def main() -> int:
             usd_path=str(drone_usd),
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                # This is a deterministic collider probe, not a flight rollout.
-                # Gravity is disabled only for the direct, horizontal impact.
+                # Deterministic collider probe, not a flight rollout; gravity is
+                # disabled for the direct horizontal impact.
                 disable_gravity=True,
                 max_depenetration_velocity=10.0,
                 enable_gyroscopic_forces=True,

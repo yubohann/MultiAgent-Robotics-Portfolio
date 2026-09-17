@@ -4,7 +4,7 @@ from app import db
 
 
 class Announcement(db.Model):
-    """系统公告"""
+    """System announcement table."""
     __tablename__ = 'announcements'
 
     announcement_id = db.Column(db.Integer, primary_key=True, autoincrement=True)

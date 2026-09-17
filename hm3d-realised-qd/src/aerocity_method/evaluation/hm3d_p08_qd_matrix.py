@@ -1,10 +1,4 @@
-"""Fail-closed assembly for the P08 realised-QD paired comparison.
-
-This module consumes immutable, real P07 worker records.  It does not run a
-simulator, create a score, or fill missing records.  Its job is to prevent two
-common category errors: comparing different public candidate pools, and
-declaring a QD gain from a hand-written aggregate rather than paired episodes.
-"""
+"""Fail-closed assembly for the P08 realised-QD paired comparison."""
 
 from __future__ import annotations
 
@@ -29,15 +23,13 @@ from aerocity_method.runtime.hm3d_realised_qd import (
 )
 
 P08_QD_PAIRED_EVIDENCE_SCHEMA_VERSION = "hm3d-p08-qd-paired-evidence-v1"
-# One changed choice in twelve can be a tie-break accident.  A QD mechanism
-# claim needs multiple, value-protected interventions before its paired score
-# is interpreted.
+# A QD mechanism claim needs multiple value-protected interventions; one changed
+# choice in twelve can be a tie-break accident.
 MINIMUM_QD_SELECTION_CHANGE_RATE = 0.10
 MINIMUM_QD_VALUE_PROTECTED_DIVERSITY_OPPORTUNITY_RATE = 0.20
 MINIMUM_QD_PRACTICAL_RELATIVE_AUC_GAIN = 0.05
-# A target-free short-horizon AUC can be close to zero.  The floor makes the
-# pre-registered relative effect stable while still requiring an absolute
-# improvement of at least 0.0005 on the [0, 1] primary-metric scale.
+# Denominator floor for the pre-registered relative effect, keeping the required
+# absolute improvement at 0.0005 on the [0, 1] primary-metric scale.
 MINIMUM_QD_EFFECT_DENOMINATOR_AUC = 0.01
 MINIMUM_QD_ARCHIVE_ENTRIES_FOR_ACTIVE_SELECTION = MINIMUM_OUTCOME_ARCHIVE_ENTRIES_FOR_SELECTION
 _REQUIRED_STRATEGIES = ("no_qd", "planned_qd", "realised_qd")
@@ -267,13 +259,7 @@ def _candidate_admissions(
 def _value_protected_candidate_opportunities(
     payloads: Sequence[Mapping[str, Any]],
 ) -> tuple[int, int, int, int, float]:
-    """Count decisions where QD had diverse, near-value public alternatives.
-
-    Candidate richness alone is not an opportunity to use QD: all diverse
-    candidates may be outside the common value-protection band.  Keeping this
-    diagnostic separate makes a no-effect result attributable instead of
-    silently blaming the archive or selector.
-    """
+    """Count decisions where QD had diverse, near-value public alternatives."""
 
     assessed = 0
     admitted = 0
@@ -388,13 +374,7 @@ def _realised_outcomes(
 def _verified_train_descriptor_admission(
     payloads: Sequence[Mapping[str, Any]],
 ) -> Mapping[str, Any]:
-    """Verify the compact, train-only QD admission used by every P08 worker.
-
-    Rich, non-collinear realised behaviour and semantically distinct footprints
-    are necessary for a QD claim.  Forced intent campaigns, replay probes and
-    descriptor-family tournaments remain recorded diagnostics, not preconditions
-    for running the complete four-UAV paper matrix.
-    """
+    """Verify the compact train-only QD admission used by every P08 worker."""
 
     admissions: list[Mapping[str, Any]] = []
     for payload in payloads:
@@ -534,19 +514,13 @@ def _effect_status(
 
 
 def assemble_p08_qd_paired_evidence(units: Sequence[P08QDUnit]) -> dict[str, object]:
-    """Assemble immutable P08 mechanism diagnostics from paired workers.
-
-    The function rejects malformed, incomparable, or non-outcome-grounded
-    evidence.  It deliberately reports rather than gates on a validation
-    effect-size threshold: P10 is the frozen holdout comparison.
-    """
+    """Assemble immutable P08 mechanism diagnostics from paired workers."""
 
     rows = tuple(units)
     if len(rows) < 12:
         raise ValueError("P08 QD needs at least twelve paired validation units")
-    # P08QDUnit validates at construction, but evidence mappings are mutable
-    # JSON-like objects.  Revalidate here so a post-construction edit cannot
-    # bypass the hash, pairing, or current-schema checks.
+    # Revalidate here; evidence mappings are mutable, so a post-construction edit
+    # could bypass the hash, pairing or schema checks.
     for unit in rows:
         P08QDUnit(unit.unit_id, unit.no_qd, unit.planned_qd, unit.realised_qd)
     unit_ids = [row.unit_id for row in rows]
@@ -577,8 +551,8 @@ def assemble_p08_qd_paired_evidence(units: Sequence[P08QDUnit]) -> dict[str, obj
         minimum_value_protected_joint_cells,
         value_protected_utility_slack,
     ) = _value_protected_candidate_opportunities(qd_records)
-    # Parse every validation outcome to reject missing/old descriptor fields,
-    # but do not tune or admit a descriptor from validation observations.
+    # Parse validation outcomes to reject missing or old descriptor fields;
+    # descriptor admission stays train-only.
     intents, descriptors, footprints = _realised_outcomes(tuple(unit.realised_qd for unit in rows))
     del intents, descriptors, footprints
     train_descriptor_admission = _verified_train_descriptor_admission(

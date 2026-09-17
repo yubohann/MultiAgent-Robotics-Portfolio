@@ -1,11 +1,4 @@
-"""Bitcraze Mellinger decision core adapted to Isaac CF2X state tensors.
-
-The decision equations and legacy mixer are constrained by outputs from
-``controller_mellinger.c`` at the pinned Bitcraze firmware revision.  The
-firmware's PWM output is converted through Crazyswarm2's documented PWM/RPM
-calibration and normalized at the active Isaac hover equilibrium.  It is thus
-an auditable controlled transfer, not a claim of full firmware equivalence.
-"""
+"""Bitcraze Mellinger decision core adapted to Isaac CF2X state tensors."""
 
 from __future__ import annotations
 

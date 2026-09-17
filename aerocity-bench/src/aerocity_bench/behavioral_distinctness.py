@@ -38,9 +38,9 @@ def _action_semantics(action: ActionPacket | Mapping[str, Any]) -> dict[str, Any
     messages = node.get("messages", [])
     if not isinstance(messages, list) or any(not isinstance(item, Mapping) for item in messages):
         raise ValueError("public action trace contains malformed messages")
-    # Episode IDs, packet sequence numbers, absolute issue times, message IDs,
-    # and source-observation IDs bind receipts but do not change the requested
-    # mission behavior. Invocation order is retained by the outer trace.
+    # Receipt-binding fields (episode/sequence/time/message/source IDs) are
+    # excluded: they do not change the requested mission behavior.  Invocation
+    # order is retained by the outer trace.
     return {
         "drone_id": str(node["drone_id"]),
         "kind": kind,

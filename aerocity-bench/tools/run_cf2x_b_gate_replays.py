@@ -466,10 +466,8 @@ def build_replay_plan(
             raise ValueError(f"development layout contract differs for {ancestor}")
         source_city_hash = content_hash(city)
         if development.get("city_source_sha256") != source_city_hash:
-            # A public layout stores a projected cityspec rather than the
-            # generator's private source record.  Accept that projection only
-            # when its own content hash was explicitly attested at materialize
-            # time; the original source hash remains in the manifest.
+            # A public layout stores a projected cityspec, not the private source
+            # record; accept it only when materialize attested its own hash.
             if development.get("materialized_cityspec_sha256") != source_city_hash:
                 raise ValueError(f"materialized city differs from precommitted source: {ancestor}")
         if development.get("private_episode_sha256") != content_hash(episode):
