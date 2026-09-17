@@ -1,4 +1,4 @@
-﻿"""Legacy FlashSAC compatibility entry point for the single-agent task."""
+"""Legacy FlashSAC compatibility entry point for the single-agent task."""
 
 from __future__ import annotations
 

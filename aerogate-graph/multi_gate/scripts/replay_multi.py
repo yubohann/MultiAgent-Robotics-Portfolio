@@ -1,4 +1,4 @@
-﻿"""Replay entry for the multi-agent Graph-FlashSAC and heuristic controllers."""
+"""Replay entry for the multi-agent Graph-FlashSAC and heuristic controllers."""
 
 from __future__ import annotations
 

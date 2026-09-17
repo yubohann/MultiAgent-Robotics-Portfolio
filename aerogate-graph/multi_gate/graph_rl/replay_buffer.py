@@ -1,4 +1,4 @@
-﻿"""Replay buffer for fixed-size multi-agent graph observations."""
+"""Replay buffer for fixed-size multi-agent graph observations."""
 
 from __future__ import annotations
 

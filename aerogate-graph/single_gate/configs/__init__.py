@@ -1,2 +1,2 @@
-﻿"""Config entry points for the single-agent experiment."""
+"""Config entry points for the single-agent experiment."""
 

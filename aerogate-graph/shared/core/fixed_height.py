@@ -1,4 +1,4 @@
-﻿"""Fixed-height helpers for the 2D drone experiment line."""
+"""Fixed-height helpers for the 2D drone experiment line."""
 
 from __future__ import annotations
 

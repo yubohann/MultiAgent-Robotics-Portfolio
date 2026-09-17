@@ -1,4 +1,4 @@
-﻿"""Run behavior cloning for the multi-agent actor from a saved expert dataset."""
+"""Run behavior cloning for the multi-agent actor from a saved expert dataset."""
 
 from __future__ import annotations
 

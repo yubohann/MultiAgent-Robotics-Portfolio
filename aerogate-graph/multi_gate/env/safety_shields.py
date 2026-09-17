@@ -1,10 +1,20 @@
-"""Velocity-space safety corrections for the multi-agent gate environment."""
+"""Extracted method helpers for :mod:`multi_gate.env.multi_gate_env`."""
 
 from __future__ import annotations
 
 import math
+import time
+from typing import Any
 
 import numpy as np
+
+
+def bind_runtime(namespace: dict[str, Any]) -> None:
+    """Bind the environment module globals used by extracted methods."""
+
+    for name, value in namespace.items():
+        if not name.startswith("__"):
+            globals()[name] = value
 
 
 def _default_action_shield_info(self) -> dict[str, object]:
@@ -36,7 +46,9 @@ def _apply_action_safety_shield(
 
     virtual_center_xy = self._virtual_center_xy()
     desired_slots_xy, dynamic_gate_task_ratio = self._actor_observation_desired_slots_xy(virtual_center_xy)
-    dynamic_gate_task_threshold = float(getattr(self.env_config, "formation_line_collapse_task_ratio", 0.70) or 0.70)
+    dynamic_gate_task_threshold = float(
+        getattr(self.env_config, "formation_line_collapse_task_ratio", 0.70) or 0.70
+    )
     if dynamic_gate_task_ratio < dynamic_gate_task_threshold:
         desired_slots_xy = self._desired_slots[: self._num_agents].copy()
     heading_xy = np.asarray(self._current_guidance_heading(virtual_center_xy), dtype=np.float32)
@@ -86,7 +98,9 @@ def _apply_action_safety_shield(
         dtype=np.float32,
     )
     intervention_norm = (
-        float(np.linalg.norm(shielded_action - resolved_action, axis=1).mean()) if self._num_agents > 0 else 0.0
+        float(np.linalg.norm(shielded_action - resolved_action, axis=1).mean())
+        if self._num_agents > 0
+        else 0.0
     )
     diagnostics.update(
         {
@@ -213,7 +227,9 @@ def _apply_pairwise_velocity_shield(
         float(getattr(self.env_config, "action_safety_shield_outward_slot_bias_scale", 0.0) or 0.0),
         0.0,
     )
-    pair_closing_brake_only = bool(getattr(self.env_config, "action_safety_shield_pair_closing_brake_only", False))
+    pair_closing_brake_only = bool(
+        getattr(self.env_config, "action_safety_shield_pair_closing_brake_only", False)
+    )
     pair_time_horizon_s = max(
         float(getattr(self.env_config, "action_safety_shield_pair_time_horizon_s", 0.0) or 0.0),
         0.0,
@@ -455,7 +471,7 @@ def _apply_dynamic_gate_channel_velocity_shield(
     weighted_lateral = 0.0
     weight_sum = 0.0
     max_closeness = 0.0
-    for gate_idx, (gate, center_xy) in enumerate(zip(self._dynamic_gates, centers_xy, strict=False)):
+    for gate_idx, (gate, center_xy) in enumerate(zip(self._dynamic_gates, centers_xy)):
         if int(getattr(gate, "lane_index", 0)) != 0:
             continue
         relative_xy = np.asarray(center_xy, dtype=np.float32) - team_center
@@ -617,3 +633,4 @@ def _apply_obstacle_velocity_shield(
             commanded_velocity_xy = np.asarray(shielded[agent_idx], dtype=np.float32)
 
     return shielded, float(max_closeness)
+

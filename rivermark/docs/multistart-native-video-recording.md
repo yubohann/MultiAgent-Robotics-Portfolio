@@ -1,14 +1,10 @@
 # Multi-Start Native Isaac Video Recording
 
-Rivermark's City-Lite contract already defines two public route families. Each
-family contains eight literal CF2X start poses, so one episode shows a swarm
-initialised across the map rather than eight drones placed at one shared point.
-Family A covers the train condition; family B is the mirrored validation
-condition.
+Rivermark's City-Lite contract defines two public route families. Each family contains eight literal CF2X start poses, so one episode shows the swarm spread across the map. Family A covers the train condition, and family B is the mirrored validation condition.
 
 ## Plan the batch
 
-Run from a clean checkout:
+Run from a clean checkout.
 
 ```powershell
 $matrix = Join-Path $env:TEMP 'rivermark-multistart-video-matrix.json'
@@ -16,17 +12,11 @@ python tools/plan_multistart_video_matrix.py --output $matrix
 Get-Content $matrix
 ```
 
-The output contains eight initial world poses and the complete waypoint route
-for every episode. It deliberately contains placeholders for the external
-CF2X USD, City-Lite contract, evaluator-private manifest, retention directory,
-IsaacLab source, and sensor-smoke receipt.
+The output contains eight initial world poses and the complete waypoint route for every episode, with placeholders for the external CF2X USD, City-Lite contract, scorer-private manifest, retention directory, IsaacLab source, and sensor-smoke receipt.
 
 ## Record
 
-Replace the placeholders in each matrix row with paths from the local asset
-package, then run the command through the IsaacLab Python interpreter. The
-private manifest must match the cell's route family and stay outside both the
-repository and the episode output directory:
+Replace the placeholders in each matrix row with paths from the local asset package, then run the command through the IsaacLab Python interpreter. The private manifest must match the cell's route family and stay outside both the repository and the episode output directory.
 
 ```powershell
 & C:\Users\Administrator\IsaacLab\python\python.exe `
@@ -46,16 +36,11 @@ repository and the episode output directory:
   --headless
 ```
 
-The capture's native RGB frames, depth, semantic labels, pose, actions, and
-runtime receipt are the source of truth. Do not create a video by drawing a
-trajectory over a blank canvas. A later encoder may combine the native RGB
-frames with a transparent diagnostics panel, but it may not replace the Isaac
-render.
+The capture's native RGB frames, depth, semantic labels, pose, actions, and runtime receipt are the source of truth. A later encoder may combine the native RGB frames with a transparent diagnostics panel, and the Isaac render stays the image source.
 
 ## Encode Native Frames
 
-After a capture passes its receipt and independent validation, encode the
-native RGB archive directly:
+After a capture passes its receipt and independent validation, encode the native RGB archive directly.
 
 ```powershell
 $env:PYTHONPATH = (Resolve-Path .\code\src)
@@ -66,27 +51,18 @@ python .\tools\encode_native_video.py `
   --fps 20
 ```
 
-Use `--view onboard` for the multi-camera onboard archive. The encoder refuses
-missing archives, wrong RGB shape/dtype, missing FFmpeg, and partial output; it
-writes a SHA-256-bound `.manifest.json` beside the MP4.
+Use `--view onboard` for the multi-camera onboard archive. The encoder rejects missing archives, wrong RGB shape or dtype, a missing FFmpeg, and partial output, and writes a SHA-256-bound `.manifest.json` beside the MP4.
 
 ## Acceptance
 
-Accept a video only when its episode receipt and native payload pass all of the
-following checks:
+A video is accepted when its episode receipt and native payload pass these checks.
 
-- `route_family_id`, cell, seed, and eight initial poses are hash-bound;
-- the first retained frame shows the City-Lite scene and all visible swarm
-  members, with no camera-only placeholder;
-- the waypoint route is executed by the physical CF2X runtime, not a post-hoc
-  trajectory animation;
-- timestamps are monotonic and frame count agrees with the native capture;
-- camera pose closure, RGB/depth/semantic freshness, LiDAR/IMU sync, collision
-  and clearance gates pass;
-- the final MP4 hash is recorded alongside the capture receipt and Git commit;
-- family A and family B videos are labelled separately; no private targets or
-  evaluator coordinates appear in the public video or manifest.
+- `route_family_id`, cell, seed, and eight initial poses are hash-bound.
+- the first retained frame shows the City-Lite scene and all visible swarm members as native renders.
+- the waypoint route is executed by the physical CF2X runtime.
+- timestamps are monotonic and frame count agrees with the native capture.
+- camera pose closure, RGB, depth, and semantic freshness, LiDAR and IMU synchronization, and collision and clearance gates pass.
+- the final MP4 hash is recorded alongside the capture receipt and Git commit.
+- family A and family B videos are labelled separately, and private targets and scorer coordinates stay out of the public video and manifest.
 
-The repository does not include the local NVIDIA assets, private manifests, or
-generated videos. Those remain in the operator's local evidence store under the
-applicable NVIDIA and asset-package terms.
+The local NVIDIA assets, private manifests, and generated videos live in the operator's local evidence store under the applicable NVIDIA and asset-package terms.

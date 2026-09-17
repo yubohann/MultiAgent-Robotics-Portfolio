@@ -1,11 +1,20 @@
-"""Live dynamic-gate layouts, obstacle maps, and per-step caches."""
+"""Extracted method helpers for :mod:`multi_gate.env.multi_gate_env`."""
 
 from __future__ import annotations
 
+import math
+import time
+from typing import Any
+
 import numpy as np
 
-from shared.core.collision_2d import GateObstacleMap2D, GatePostObstacle2D
-from shared.core.dynamic_gate_density_2d import gate_posts, generate_gate_layout, live_gate_centers
+
+def bind_runtime(namespace: dict[str, Any]) -> None:
+    """Bind the environment module globals used by extracted methods."""
+
+    for name, value in namespace.items():
+        if not name.startswith("__"):
+            globals()[name] = value
 
 
 def _reset_dynamic_gate_layout(self, *, seed: int | None) -> None:
@@ -128,7 +137,7 @@ def _dynamic_gate_obstacle_map(self) -> GateObstacleMap2D:
             usd_path="dynamic_gate_density_2d",
             velocity_xy=(float(velocity_xy[0]), float(velocity_xy[1])),
         )
-        for post_xy, velocity_xy in zip(posts_xy, post_velocities_xy, strict=True)
+        for post_xy, velocity_xy in zip(posts_xy, post_velocities_xy)
     )
     self._dynamic_gate_obstacle_map_cache = GateObstacleMap2D(obstacles)
     return self._dynamic_gate_obstacle_map_cache
@@ -158,3 +167,4 @@ def _dynamic_gate_motion_range_m(self) -> float:
     if centers.size == 0 or bases.size == 0:
         return 0.0
     return float(np.max(np.linalg.norm(centers - bases, axis=1)))
+

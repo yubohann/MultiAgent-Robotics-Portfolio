@@ -1,4 +1,4 @@
-﻿"""Collect experts, run BC warm start, then fine-tune with Graph-FlashSAC."""
+"""Collect experts, run BC warm start, then fine-tune with Graph-FlashSAC."""
 
 from __future__ import annotations
 

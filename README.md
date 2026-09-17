@@ -1,89 +1,66 @@
 # Bohan Yu | Multi-Agent Robotics Portfolio
 
-Research engineering for embodied and multi-agent systems: reproducible experiment contracts, simulation and replay pipelines, ROS 2 autonomy, and evaluation infrastructure.
+Research engineering for embodied and multi-agent systems, covering multi-UAV search benchmarks, graph-based reinforcement learning, ROS 2 autonomy and deterministic ML pipelines.
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**B.Eng. candidate in Computer Science and Technology, expected June 2027.** Focused on PhD and research-engineering opportunities in multi-agent learning, robotics systems, and embodied AI.
+**B.Eng. candidate in Computer Science and Technology, Hubei University of Technology, June 2027.** Open to PhD and research-engineering roles.
 
-[Research projects](#selected-public-work) | [Coursework](#coursework-and-learning) | [Engineering practice](#local-verification) | [GitHub profile](https://github.com/yubohann)
+[Projects](#selected-work) | [Certificates](#certificates) | [Videos](#videos) | [GitHub profile](https://github.com/yubohann)
 
-## Video demonstrations
+## Certificates
 
-- [Multi-agent robotics research demonstration](https://www.youtube.com/watch?v=V4CoEqpcfR4) — research systems and experimental results.
-- [ROBOCON robotics laboratory work](https://www.youtube.com/watch?v=AA78LbGNxQ8) — physical-robot integration and laboratory testing.
+<table>
+  <tr>
+    <td align="center"><a href="assets/certificates/robocup-2025-visual-challenge-first-prize.jpg"><img src="assets/certificates/robocup-2025-visual-challenge-first-prize.jpg" width="240" alt="RoboCup China 2025 visual challenge national first prize" /></a><br />RoboCup China 2025, visual challenge, national first prize</td>
+    <td align="center"><a href="assets/certificates/robocup-2025-finals-third-place-first-prize.jpg"><img src="assets/certificates/robocup-2025-finals-third-place-first-prize.jpg" width="240" alt="RoboCup China 2025 finals third place and national first prize" /></a><br />RoboCup China 2025 finals, third place and national first prize</td>
+    <td align="center"><a href="assets/certificates/robocon-24th-basketball-competition-second-prize.jpg"><img src="assets/certificates/robocon-24th-basketball-competition-second-prize.jpg" width="240" alt="24th ROBOCON basketball competition national second prize" /></a><br />24th ROBOCON basketball, national second prize</td>
+  </tr>
+  <tr>
+    <td align="center"><a href="assets/certificates/robocon-24th-basketball-shooting-second-prize.jpg"><img src="assets/certificates/robocon-24th-basketball-shooting-second-prize.jpg" width="240" alt="24th ROBOCON basketball shooting national second prize" /></a><br />24th ROBOCON shooting, national second prize</td>
+    <td align="center"><a href="assets/certificates/robocon-24th-basketball-passing-third-prize.jpg"><img src="assets/certificates/robocon-24th-basketball-passing-third-prize.jpg" width="240" alt="24th ROBOCON basketball passing national third prize" /></a><br />24th ROBOCON passing, national third prize</td>
+    <td align="center"><a href="assets/certificates/robocon-24th-bionic-crosscountry-team1.jpg"><img src="assets/certificates/robocon-24th-bionic-crosscountry-team1.jpg" width="240" alt="24th ROBOCON bionic legged cross-country national second prize team 1" /></a><br />24th ROBOCON bionic legged cross-country, national second prize, team 1</td>
+  </tr>
+  <tr>
+    <td align="center"><a href="assets/certificates/robocon-24th-bionic-crosscountry-team2.jpg"><img src="assets/certificates/robocon-24th-bionic-crosscountry-team2.jpg" width="240" alt="24th ROBOCON bionic legged cross-country national second prize team 2" /></a><br />24th ROBOCON bionic legged cross-country, national second prize, team 2</td>
+    <td align="center"><a href="assets/certificates/hubei-mechanical-innovation-2024-third-prize.jpg"><img src="assets/certificates/hubei-mechanical-innovation-2024-third-prize.jpg" width="240" alt="Hubei Mechanical Innovation Design Contest 2024 third prize" /></a><br />Hubei Mechanical Innovation Design Contest 2024, third prize</td>
+    <td align="center"><a href="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg"><img src="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg" width="240" alt="Hubei Engineering Practice and Innovation Contest 2025 second prize" /></a><br />Hubei Engineering Practice and Innovation Contest 2025, second prize</td>
+  </tr>
+</table>
 
-## Research Engineering Focus
+## Videos
 
-| Area | What I build | Public evidence |
+- [Multi-agent robotics research demonstration](https://www.youtube.com/watch?v=V4CoEqpcfR4), research systems and experimental results.
+- [ROBOCON robotics laboratory work](https://www.youtube.com/watch?v=AA78LbGNxQ8), physical robot integration and laboratory testing.
+
+## Selected Work
+
+| Project | Focus | Start here |
 |---|---|---|
-| Multi-agent learning | Explicit task, observation, action, and evaluation boundaries for partial-observation decision systems | Contracts, validators, replay artifacts, and documented failure boundaries |
-| Embodied systems | ROS 2 interfaces, localization, perception gates, navigation, and simulator-to-runtime integration | TF and message contracts, Gazebo/Isaac simulation, testable safety gates |
-| Research infrastructure | Configurable experiments, provenance, release checks, and reproducibility-oriented tooling | Run manifests, schema checks, local validators, and project-level tests |
+| [Rivermark](rivermark/) | Multi-agent 3D search benchmark on Isaac Sim with contract-pinned capture and scoring. | [Overview](rivermark/README.md), [Code](rivermark/code/README.md) |
+| [RoboCup CBG-WM](robocup-cbg-wm/) | Object-centric world models with risk-aware MPC and rule-gated scoring for adversarial multi-robot navigation. | [Overview](robocup-cbg-wm/README.md), [Project brief](robocup-cbg-wm/docs/admissions_project_brief.md) |
+| [Robocon MID-360 Autonomy Stack](robocon-mid360-autonomy-stack/) | Livox MID-360 and FAST-LIO2 localization and a competition autonomy stack for a basketball-shooting robot. | [Overview](robocon-mid360-autonomy-stack/README.md) |
+| [AeroCityBench](aerocity-bench/) | Procedural 3D multi-UAV search benchmark with public and private scoring splits. | [Overview](aerocity-bench/README.md) |
+| [HM3D Realised-QD](hm3d-realised-qd/) | Outcome-grounded quality-diversity and reinforcement learning for multi-UAV exploration in HM3D scenes. | [Overview](hm3d-realised-qd/README.md) |
+| [AeroGate Graph](aerogate-graph/) | Graph-structured reinforcement learning for dense dynamic gate traversal, single-agent and 8-drone formation. | [Overview](aerogate-graph/README.md) |
+| [FraudGraph ML Engineering](fraudgraph-ml-engineering/) | Graph-and-sequence fraud detection across eight financial datasets with a deterministic protocol. | [Overview](fraudgraph-ml-engineering/README.md) |
+| [ROS 2 Learning Notes](ros2-systematic-learning-notes/) | A structured ROS 2 handbook covering communication, TF2, Nav2, MoveIt2 and deployment. | [Overview](ros2-systematic-learning-notes/README.md) |
 
-## Selected Public Work
+## Experience and Education
 
-| Project | Engineering focus | Public artifacts | Start here |
-|---|---|---|---|
-| [Rivermark](rivermark/) | Audit-first multi-sensor Search3D benchmark infrastructure | Contracts, schema validators, release gates, CPU researcher smoke, and test suite | [Overview](rivermark/README.md) · [Code](rivermark/code/README.md) |
-| [RoboCup CBG-WM](robocup-cbg-wm/) | Object-centric visual robotics, replay, and rule-gated evaluation | ROS 2 workspace, IsaacLab replay, current rule-environment smoke, and evaluation artifacts | [Overview](robocup-cbg-wm/README.md) · [Project brief](robocup-cbg-wm/docs/admissions_project_brief.md) |
-| [Robocon MID-360 Autonomy Stack](robocon-mid360-autonomy-stack/) | Simulation-first ROS 2 localization and competition-autonomy stack | Livox/FAST-LIO2 contracts, scan matching, perception gates, synthetic competition controls, and contract tests | [Overview](robocon-mid360-autonomy-stack/README.md) |
-| [AeroCityBench](aerocity-bench/) | Procedural 3D multi-UAV search benchmark | City generation, public/private evaluation boundaries, G2-I contracts, baseline adapters, and release audits | [Overview](aerocity-bench/README.md) |
-| [HM3D Realised-QD](hm3d-realised-qd/) | Outcome-grounded multi-UAV exploration and quality-diversity | Sparse-range contracts, realised receipts, QD/RL learning, CF2X runtime, and HM3D protocols | [Overview](hm3d-realised-qd/README.md) |
-| [AeroGate Graph](aerogate-graph/) | Modular 2D drone-racing simulator for graph route planning, formation control, and dynamic gate navigation | Single- and multi-agent environments, deterministic reproduction CLI, evaluation artifacts, optional IsaacLab adapters, and CI | [Overview](aerogate-graph/README.md) · [Architecture](aerogate-graph/docs/architecture.md) · [Reproducibility](aerogate-graph/docs/REPRODUCIBILITY.md) |
-| [FraudGraph ML Engineering](fraudgraph-ml-engineering/) | Reproducible graph-and-sequence fraud-detection engineering | Training package, dataset adapters, experiment protocol, CLI, CI, manifest tooling, and tests | [Overview](fraudgraph-ml-engineering/README.md) · [Protocol](fraudgraph-ml-engineering/docs/research-protocol.md) · [Reproducibility](fraudgraph-ml-engineering/docs/reproducibility-checklist.md) |
-| [ROS 2 Learning Notes](ros2-systematic-learning-notes/) | Structured ROS 2 engineering handbook | Systematic ROS 2 reference, project PDF, and deployment-oriented learning map | [Overview](ros2-systematic-learning-notes/README.md) |
+- **B.Eng. candidate in Computer Science and Technology**, Hubei University of Technology, June 2027. GPA 86.7 out of 100, merit rank 1 of 33.
+- **Algorithm Engineering Intern**, Wuhan Yawei Electronic Technology Co., Ltd., May to July 2026. Isaac Lab environments, PPO training, formation-aware observations and obstacle-avoidance experiments.
+- **LiDAR and Perception Lead**, ROBOCON Robotics Team, 2023 to 2025. LiDAR-inertial localization, ROS 2 integration, navigation interfaces and embedded-control handoff.
+- **Team Lead**, Mathematical Modeling Laboratory, 2024 to 2025. Python, MATLAB and linear-algebra training for student teams.
 
-## Research Record
+## Coursework
 
-Each project links its code, documentation, tests, and retained evidence directly. The portfolio is organized so a reviewer can move from the top-level systems view to an executable entry point without relying on a generic summary.
-
-For navigation and project-specific verification entry points, see the [Portfolio Guide](docs/PORTFOLIO_GUIDE.md). The checked-in [project registry](tools/portfolio_registry.json) is the single source of truth for the curated project set, its entry documents, and the local verification route for each runnable core project.
-
-Integrated source provenance is recorded in [Integrated Project Sources](docs/INTEGRATED_PROJECTS.md).
-
-## Coursework and Learning
-
-| Project | Area | Stack |
+| Project | Focus | Stack |
 |---|---|---|
-| [Machine Learning Coursework](coursework/machine-learning/) | From-scratch classic algorithms, PCA/LDA, kNN, and ID3 | Python, NumPy, pandas, scikit-learn, matplotlib |
-| [YOLO26 + VisDrone Detection](coursework/yolo26-visdrone-detection/) | Drone object detection, validation, and ONNX export | Ultralytics YOLO, VisDrone, ONNX |
-| [Stream-Batch Lakehouse AI Portfolio](coursework/stream-batch-lakehouse-ai-portfolio/) | Lakehouse, streaming, recommender, and short-video review labs | Kafka, Flink, MinIO, Paimon, Spark |
+| [Machine Learning Coursework](coursework/machine-learning/) | From-scratch classic algorithms, PCA and LDA, kNN and ID3 | Python, NumPy, pandas, scikit-learn |
+| [YOLO26 + VisDrone Detection](coursework/yolo26-visdrone-detection/) | Drone object detection, validation and ONNX export | Ultralytics YOLO, VisDrone, ONNX |
+| [Stream-Batch Lakehouse AI Portfolio](coursework/stream-batch-lakehouse-ai-portfolio/) | Lakehouse, streaming, recommender and short-video review labs | Kafka, Flink, MinIO, Paimon, Spark |
 | [Supermarket Management System](coursework/supermarket-management-system/) | Store-management application and engineering documentation | Flask, SQLAlchemy, SQLite, pytest |
-| [Embodied AI Learning Roadmap](embodied-ai-learning-roadmap.md) | Twelve-week project-driven route from LLMs to robot learning | PyTorch, robot learning, evaluation, ROS 2 |
+| [Embodied AI Learning Roadmap](embodied-ai-learning-roadmap.md) | Twelve-week project-driven route from LLMs to robot learning | PyTorch, robot learning, ROS 2 |
 
-## Education and Experience
-
-- **B.Eng. candidate, Computer Science and Technology** — Hubei University of Technology, expected June 2027. GPA: 86.7/100; overall merit rank: 1/33.
-- **Algorithm Engineering Intern** — Wuhan Yawei Electronic Technology Co., Ltd., May-July 2026. Isaac Lab environments, PPO training, formation-aware observations, and obstacle-avoidance evaluation.
-- **LiDAR and Perception Lead** — ROBOCON Robotics Team, 2023-2025. LiDAR-inertial localization, ROS 2 integration, navigation interfaces, and embedded-control handoff.
-- **Team Lead** — Mathematical Modeling Laboratory, 2024-2025. Python, MATLAB, and linear-algebra training for student teams.
-
-## Recognition
-
-| Award | Level | Role |
-|---|---|---|
-| 2025 China Robot Competition and RoboCup China Open, third place / national first prize | National | Team leader |
-| 24th ROBOCON Robot Basketball Competition, national second prize | National | LiDAR and perception lead |
-| 24th ROBOCON Robot Basketball Shooting Competition, national second prize | National | LiDAR and perception lead |
-| 24th ROBOCON Bionic Legged Robot Obstacle Challenge, national first prize | National | Team member |
-
-## Local Verification
-
-The repository includes a dependency-free check for its curated portfolio documents:
-
-```bash
-python tools/verify_portfolio.py
-```
-
-Run the project-wide lightweight suite with:
-
-```bash
-python tools/run_portfolio_checks.py
-```
-
-The first command validates UTF-8 decoding, unresolved local Markdown and HTML links, selected image paths, and unresolved conflict markers in the portfolio entry documents. The second command runs the lightweight validation paths for AeroGate, FraudGraph, MID-360, RoboCup, and Rivermark without starting training, ROS, Isaac, or external-data workflows.
-
-## Attribution and Release Boundaries
-
-Subprojects retain their own licenses, notices, and third-party attribution files. Vendored robotics components remain within their source boundaries, and the public tree is organized around executable code, documentation, verification, and reproducible artifacts.
+Navigation and local checks live in the [Portfolio Guide](docs/PORTFOLIO_GUIDE.md) and [Integrated Project Sources](docs/INTEGRATED_PROJECTS.md). Each subproject ships its own license and third-party notices.

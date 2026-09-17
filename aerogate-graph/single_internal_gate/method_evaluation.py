@@ -1,4 +1,4 @@
-﻿"""Closed-loop method evaluation for experiment-2 variants."""
+"""Closed-loop method evaluation for experiment-2 variants."""
 
 from __future__ import annotations
 

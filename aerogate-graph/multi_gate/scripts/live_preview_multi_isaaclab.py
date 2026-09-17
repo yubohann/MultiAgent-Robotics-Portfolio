@@ -62,7 +62,7 @@ def main() -> None:
             "Activate the Isaac Sim / IsaacLab Python environment to run this live preview."
         )
 
-    ensure_writable_kit_runtime(args_cli, app_name="aerogate_graph_multi_live_preview")
+    ensure_writable_kit_runtime(args_cli, app_name="gate_graph_2d_minimal_multi_live_preview")
     app_launcher = AppLauncher(args_cli)
     simulation_app = app_launcher.app
 

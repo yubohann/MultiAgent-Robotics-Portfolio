@@ -1,4 +1,4 @@
-﻿"""Synchronous vector wrapper for the single-agent 2D gate task."""
+"""Synchronous vector wrapper for the single-agent 2D gate task."""
 
 from __future__ import annotations
 

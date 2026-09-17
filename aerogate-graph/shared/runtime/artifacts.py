@@ -1,4 +1,4 @@
-"""Independent runtime directories and execution policy for aerogate_graph."""
+"""Independent runtime directories and execution policy for gate_graph_2d_minimal."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ class RuntimeExecutionPolicy:
     automatic_restart: bool = False
     automatic_source_patch: bool = False
     notes: str = (
-        "aerogate_graph is an isolated experiment line. It does not attach to legacy "
+        "gate_graph_2d_minimal is an isolated experiment line. It does not attach to legacy "
         "guardian/watchdog loops, does not auto-mutate configs, and does not auto-restart runs."
     )
 

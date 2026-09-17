@@ -1,4 +1,4 @@
-﻿"""Shared planner contracts for experiment-2 internal 2D methods."""
+"""Shared planner contracts for experiment-2 internal 2D methods."""
 
 from __future__ import annotations
 

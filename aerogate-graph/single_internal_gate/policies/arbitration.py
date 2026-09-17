@@ -1,4 +1,4 @@
-﻿"""Uncertainty-aware planner/reactive arbitration for experiment-2."""
+"""Uncertainty-aware planner/reactive arbitration for experiment-2."""
 
 from __future__ import annotations
 

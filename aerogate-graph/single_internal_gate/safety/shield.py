@@ -1,4 +1,4 @@
-﻿"""One-step safety shield for experiment-2 2D closed-loop rollouts."""
+"""One-step safety shield for experiment-2 2D closed-loop rollouts."""
 
 from __future__ import annotations
 

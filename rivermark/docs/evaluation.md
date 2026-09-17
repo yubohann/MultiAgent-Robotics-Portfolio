@@ -1,16 +1,16 @@
-# Evaluation
+# Scoring
 
-Scoring happens at the boundary between the public submission and the private evaluator. The repository ships the public side (metric definitions, submission schema, local validator) and keeps the hidden truth separate.
+Scoring happens where the public submission meets the private scorer. The repository ships the public side, the metric definitions, submission schema, and local validator, with hidden truth held separately.
 
 ## Event-based confirmation
 
-The active event contract is `search-event-submission.v3`. A candidate confirmation must bind a **source observation ID**. The evaluator privately owns that observation's agent and timestamp, and accepts a target match only when the source observation is evaluator-attested as visible for that target. Guessed IDs, cross-agent claims, and stale timing count as false confirmations.
+The active event contract is `search-event-submission.v3`. A candidate confirmation must bind a **source observation ID**. The scorer privately owns that observation's agent and timestamp, and accepts a target match when the source observation is scorer-attested as visible for that target. Guessed IDs, cross-agent claims, and stale timing count as false confirmations.
 
-A false-confirmation budget is an eligibility hard gate, alongside safety. Eligibility and success are different things: a policy that emits no events can have zero false positives while finding nothing. Every report shows recall, confirmed-AUC, time-to-first-confirm, false confirmations, collisions/near misses, timeout, effort, and failure rate.
+A false-confirmation budget is an eligibility hard gate alongside safety. Eligibility and success are separate, so a silent policy can post zero false positives with zero finds. Every report shows recall, confirmed-AUC, time-to-first-confirm, false confirmations, collisions and near misses, timeout, effort, and failure rate.
 
 ## Metrics
 
-`rivermark_benchmark.metrics` defines the versioned Search3D metric and bootstrap summaries without accepting target coordinates:
+`rivermark_benchmark.metrics` defines the versioned Search3D metric and bootstrap summaries over public inputs, keeping target coordinates outside.
 
 ```python
 from rivermark_benchmark.metrics import bootstrap_summary, score_search_episode
@@ -21,13 +21,13 @@ episode = score_search_episode(
 summary = bootstrap_summary([episode.normalized_confirmed_auc], metric="normalized_confirmed_auc")
 ```
 
-The public metric code is a scoring/aggregation contract. The private evaluator remains the authority on true confirmations for blind splits.
+The public metric code is a scoring and aggregation contract. The private scorer remains the authority on true confirmations for blind splits.
 
 ## Submissions
 
-A submission (`evaluator_submission_v1`) contains only evaluator-produced timestamps and cumulative confirmation counts, plus bindings for the dataset index, split, evaluator build, policy revision, checkpoint, and seed. Target coordinates, private truth, and reward traces are rejected.
+A submission in the `evaluator_submission_v1` schema carries scorer-produced timestamps and cumulative confirmation counts, plus bindings for the dataset index, split, evaluator build, policy revision, checkpoint, and seed. Target coordinates, private truth, and reward traces are rejected.
 
-Validate and score a local submission without Isaac:
+Validate and score a local submission on the CPU path.
 
 ```powershell
 $env:PYTHONPATH = (Resolve-Path .\src)
@@ -37,10 +37,10 @@ python -m rivermark_benchmark.evaluator .\submission.json `
   --output .\submission-report.json
 ```
 
-The local evaluator enforces a 64 MiB submission limit, at most 4096 episodes, and at most 100,000 samples per trace as denial-of-service guards.
+The local scorer enforces denial-of-service guards at 64 MiB per submission, 4096 episodes, and 100,000 samples per trace.
 
-## Threat boundary
+## Threat model
 
-The main risks the design defends against: truth leakage (private fields rejected), split probing (split binding enforced), replay (duplicate episodes rejected), stale provenance (hash binding), metric manipulation (trace checks), resource exhaustion (caps), and result tampering (input hash + detached signature).
+The design handles truth leakage through private-field rejection, split probing through enforced split binding, replay through duplicate-episode rejection, stale provenance through hash binding, metric manipulation through trace checks, resource exhaustion through caps, and result tampering through input hashing and detached signatures.
 
-One important honesty note: the local validator and the in-process evaluator prototype are engineering controls, not a deployed blind leaderboard service. A real leaderboard needs an independently operated service, key custody, durable logs, and a published incident policy.
+The local validator and the in-process scorer prototype run as engineering controls on the local machine. A production leaderboard adds an independently operated service, key custody, durable logs, and a published incident policy.

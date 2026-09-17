@@ -1,10 +1,10 @@
 # Auditable Comparison Report
 
-`scripts/generate_auditable_comparison_report.py` creates a comparison report from explicit result records. It does not scan artifact directories, infer missing metrics, restore values from old summaries, or select the strongest historical model. This keeps the generated comparison tied to evidence a reviewer can inspect.
+`scripts/generate_auditable_comparison_report.py` creates a comparison report from explicit result records. Every row comes from a supplied record. Scanned directories, inferred metrics, old summaries, and historical model picks stay out of scope, so the comparison ties directly to evidence a reviewer can inspect.
 
 ## Input record
 
-Provide each row as a JSON file passed with a separate `--record` flag. The record must include the following fields:
+Provide each row as a JSON file passed with a separate `--record` flag. Each record must include these fields.
 
 ```json
 {
@@ -21,15 +21,15 @@ Provide each row as a JSON file passed with a separate `--record` flag. The reco
 }
 ```
 
-The numeric values above are schema placeholders, not benchmark results. Include any additional numeric metrics that are useful for the comparison.
+The numeric values above are schema placeholders. Include any additional numeric metrics that are useful for the comparison.
 
 ## Validation rules
 
 - Each record must name the dataset, model, data revision, split policy, validation-only selection policy, seed, validation metrics, and test metrics.
 - The selection policy must begin with `validation_only`.
-- Within a dataset, all supplied records must have exactly one data revision and one split policy. Mixed revisions or splits are rejected.
-- Files with `smoke`, `debug`, `probe`, or `stagecheck` in the filename are rejected to avoid publishing temporary runs as evidence.
-- The report preserves input order and deliberately does not rank rows or choose a winner.
+- Within a dataset, all supplied records must share exactly one data revision and one split policy.
+- The report covers production runs. Filenames containing `smoke`, `debug`, `probe`, or `stagecheck` mark temporary runs.
+- The report preserves input order and presents rows as supplied.
 
 ## Generate a report
 
@@ -40,4 +40,4 @@ python scripts/generate_auditable_comparison_report.py `
   --output_root artifacts/experiments/auditable_comparison
 ```
 
-The output directory contains `auditable_comparison.json` and `auditable_comparison.md`. Each row includes the source filename and SHA-256 digest, so its provenance can be checked without recording an absolute local path.
+The output directory contains `auditable_comparison.json` and `auditable_comparison.md`. Each row includes the source filename and SHA-256 digest, so provenance traces back to the source artifact.

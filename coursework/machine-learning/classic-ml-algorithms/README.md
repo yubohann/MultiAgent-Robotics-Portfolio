@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-Ten classical machine-learning algorithms implemented from scratch for coursework. The implementations use NumPy or the Python standard library for the algorithm logic; they do not wrap equivalent estimator implementations from an ML library.
+Ten classical machine-learning algorithms implemented from scratch for coursework. The implementations use NumPy or the Python standard library for the algorithm logic and build every estimator directly.
 
 ## Scope
 
@@ -42,7 +42,7 @@ classic-ml-algorithms/
 
 ## Run Examples
 
-Run commands from this directory:
+Run commands from this directory.
 
 ```bash
 python AdaBoost/src/AdaBoost.py -f AdaBoost/data/magic04.data
@@ -56,10 +56,10 @@ python PageRank/src/PageRank.py --sample
 python SVM/src/SVM.py -f SVM/data/iris.data
 ```
 
-The 20 Newsgroups corpus used by Naive Bayes is not committed in full. Supply a local dataset path or use the project's documented data-loading route.
+The 20 Newsgroups corpus used by Naive Bayes ships as a partial copy. Supply a local dataset path or use the project's documented data-loading route.
 
 ## Notes
 
 - Each algorithm is independently runnable and documented in its own directory.
-- The reports and datasets are coursework artifacts, not claims of production-ready or state-of-the-art implementations.
-- See the parent [Machine Learning Coursework index](../README.md) for the related PCA/LDA and classifier assignment.
+- The reports and datasets are coursework artifacts, and they document the coursework runs and results.
+- See the parent [Machine Learning Coursework index](../README.md) for the related PCA and LDA coursework and the classifier assignment.

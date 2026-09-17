@@ -1,4 +1,4 @@
-﻿"""Replay buffer for fixed-size graph observations."""
+"""Replay buffer for fixed-size graph observations."""
 
 from __future__ import annotations
 

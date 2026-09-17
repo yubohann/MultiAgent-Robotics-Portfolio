@@ -1,7 +1,7 @@
-# Challenge 04: Late And Out-Of-Order Data
+# Challenge 04, Late And Out-Of-Order Data
 
-Student: REDACTED  
-Student ID: demo000000
+Student REDACTED  
+Student ID demo000000
 
 This folder contains the acceptance checklist and evidence area for late and out-of-order event handling. It focuses on Watermark, allowed lateness, side output, and result correctness.
 
@@ -11,7 +11,7 @@ This folder contains the acceptance checklist and evidence area for late and out
 
 ## Folders
 
-- `screenshots/`: save screenshots `4-1` to `4-3`.
-- `evidence/`: save late-event samples, side-output logs, and result comparisons.
+- `screenshots/`, save screenshots `4-1` to `4-3`.
+- `evidence/`, save late-event samples, side-output logs, and result comparisons.
 
 See `acceptance_checklist.md` for the detailed checklist.

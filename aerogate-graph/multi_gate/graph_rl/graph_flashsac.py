@@ -1,4 +1,4 @@
-﻿"""Graph-FlashSAC public entry point for the multi-agent task."""
+"""Graph-FlashSAC public entry point for the multi-agent task."""
 
 from __future__ import annotations
 

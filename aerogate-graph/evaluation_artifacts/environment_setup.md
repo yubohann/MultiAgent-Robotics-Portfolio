@@ -8,7 +8,7 @@
 - Shell：PowerShell
 - Python：`python`
 - Python 版本：`Python 3.13.5`
-- 项目根目录：`<aerogate_graph>`
+- 项目根目录：`<gate_graph_2d_minimal>`
 
 ## 核心依赖版本
 
@@ -26,7 +26,7 @@ networkx==3.4.2
 ## 基本启动
 
 ```powershell
-cd <aerogate_graph>
+cd <gate_graph_2d_minimal>
 python -m pytest tests
 ```
 

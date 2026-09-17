@@ -1,1 +1,1 @@
-﻿"""Small IsaacLab runtime helpers copied for the gate-only package."""
+"""Small IsaacLab runtime helpers copied for the gate-only package."""

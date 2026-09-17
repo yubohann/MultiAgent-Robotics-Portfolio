@@ -1,4 +1,4 @@
-﻿"""Planner-only baselines for 2D gate tasks."""
+"""Planner-only baselines for 2D gate tasks."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-﻿"""Run DAgger-style BC correction followed by Graph-FlashSAC fine-tuning."""
+"""Run DAgger-style BC correction followed by Graph-FlashSAC fine-tuning."""
 
 from __future__ import annotations
 

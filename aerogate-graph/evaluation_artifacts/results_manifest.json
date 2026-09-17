@@ -1,5 +1,5 @@
 {
-  "package": "aerogate_graph evaluation artifacts",
+  "package": "gate_graph_2d_minimal evaluation artifacts",
   "generated_on": "2026-06-21",
   "selection_policy": "Gate-related CSV/JSON metrics retained for reproducibility; large video files are not included in this source package.",
   "files": [

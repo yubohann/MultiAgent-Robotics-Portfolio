@@ -1,4 +1,4 @@
-﻿"""Reward and termination logic for the multi-agent 2D gate task."""
+"""Reward and termination logic for the multi-agent 2D gate task."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-﻿"""Eval-only EGO-Planner and Fast-Planner baselines."""
+"""Eval-only EGO-Planner and Fast-Planner baselines."""
 
 from __future__ import annotations
 

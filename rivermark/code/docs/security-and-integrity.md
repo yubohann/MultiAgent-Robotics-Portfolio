@@ -1,32 +1,30 @@
 # Security And Integrity Reports
 
-Do not disclose evaluator credentials, private target manifests, local asset
-paths, or unredacted capture artifacts in a public issue. Those files are
-outside the repository's public data boundary.
+Scorer credentials, private target manifests, local asset paths, and unredacted
+capture artifacts belong in the private channel. Those files sit outside the
+repository's public data scope.
 
 ## Report privately
 
-For a suspected vulnerability, credential exposure, evaluator leakage, or a
+For a suspected vulnerability, credential exposure, scorer leakage, or a
 problem that could allow a result or payload to be altered, contact the
 repository owner through the private GitHub security-advisory channel. Include
-the affected commit or release, a minimal reproduction that contains no
-secrets, and the impact. Do not test against a public evaluator or attempt to
-recover hidden targets.
+the affected commit or release, a minimal failing case free of secrets, and the
+impact. Run tests on local checkouts, with hidden targets private.
 
-If private advisory access is unavailable, open a minimal issue titled
-`security contact requested` without technical details and wait for a private
-reply.
+When private advisory access is unavailable, open a minimal issue titled
+`security contact requested` that asks for a private channel, and wait for a
+private reply.
 
-## Data and reproducibility issues
+## Data and determinism issues
 
 Use the corresponding issue template for public schema, shard, download, or
-reproduction problems. Redact absolute paths, tokens, private evaluator
-fields, and raw sensor payloads. A reported defect does not authorize changing
-released bytes; maintainers use the hash-bound defect and tombstone mechanism
-and publish corrections in a new version.
+replay problems. Redact absolute paths, tokens, private scorer fields, and raw
+sensor payloads. Released bytes stay fixed, and maintainers publish corrections
+through the hash-bound defect and tombstone mechanism in a new version.
 
-## Response boundary
+## Response scope
 
-The local evaluator prototype is not a public network service. It has no
-public credentials, blind backend, or leaderboard. Do not infer those controls
-from the presence of an in-process test service.
+The local scorer prototype runs as an in-process test service on the
+engineering machine. Public credentials, a blind backend, and a leaderboard
+belong to a production deployment.

@@ -1,4 +1,4 @@
-"""Small TensorBoard helpers for aerogate_graph training runs."""
+"""Small TensorBoard helpers for gate_graph_2d_minimal training runs."""
 
 from __future__ import annotations
 

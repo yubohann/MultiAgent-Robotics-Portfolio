@@ -1,4 +1,4 @@
-﻿"""Train and evaluate the 8-drone dynamic gate curriculum."""
+"""Train and evaluate the 8-drone dynamic gate curriculum."""
 
 from __future__ import annotations
 

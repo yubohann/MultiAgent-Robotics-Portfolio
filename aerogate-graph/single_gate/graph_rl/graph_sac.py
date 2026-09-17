@@ -1,4 +1,4 @@
-﻿"""A lightweight single-agent Graph-FlashSAC implementation."""
+"""A lightweight single-agent Graph-FlashSAC implementation."""
 
 from __future__ import annotations
 

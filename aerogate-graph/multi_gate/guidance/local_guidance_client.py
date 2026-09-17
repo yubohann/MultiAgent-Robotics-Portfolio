@@ -1,4 +1,4 @@
-﻿"""Thin local HTTP client used by the route guidance bridge."""
+"""Thin local HTTP client used by the route guidance bridge."""
 
 from __future__ import annotations
 

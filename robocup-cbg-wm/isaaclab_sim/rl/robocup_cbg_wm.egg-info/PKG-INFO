@@ -67,7 +67,7 @@ Core areas: multi-agent reinforcement learning, object-centric world models, SAC
 | 50v50 extension | Staged 5v5 -> 10v10 -> 25v25 -> 50v50 rule-level curriculum, 256-game eval, IsaacLab tactical replay | Simulation-stage only; not 100-robot hardware deployment and not full rigid-body RL for all 100 vehicles |
 | Reproducibility | Rule-environment checks, ROS2 dry-run commands, IsaacLab wrapper, capability boundary docs | IsaacLab/ROS2 full setup still requires the documented platform dependencies |
 
-For a short admissions/reviewer-oriented summary, start with [Admissions Project Brief](./docs/admissions_project_brief.md). For exact scope boundaries, read [Capability Boundaries and Measured Evidence](./docs/capability_boundaries.md).
+For a short admissions/reviewer-oriented summary, start with [Admissions Project Brief](./docs/admissions_project_brief.md). For exact scope boundaries, read [Capabilities and Measured Evidence](./docs/capabilities.md).
 
 ## Highlights
 
@@ -158,7 +158,7 @@ processes first:
 Detailed onboarding:
 
 - [Getting Started Guide](./docs/getting_started.md): step-by-step Python, ROS2 and IsaacLab setup, quick demo tutorial and troubleshooting.
-- [Capability Boundaries](./docs/capability_boundaries.md): validated agent scale, published metrics, distributed-training boundary and Sim2Real evidence boundary.
+- [Capabilities](./docs/capabilities.md): validated agent scale, published metrics, distributed-training boundary and Sim2Real evidence boundary.
 
 ## Target Platform
 
@@ -224,7 +224,7 @@ Final strict replay audit:
 
 The public validated multi-agent result is a two-robot yellow-vs-blue adversarial RoboCup-style match. The current repository validates object-centric world-model SAC Flow self-play, rule-aware action shielding, pushable boxes, base blockers, laser dwell/range constraints, ROS2 runtime contracts, IsaacLab three-view replay and subsequent 1v1 real-robot experiment coverage for this two-agent setting.
 
-Large-scale 50v50 is still in the simulation stage: staged rule-level curriculum training, 256-game evaluation and IsaacLab tactical replay are published as a separate benchmark below, but 50v50 has not been moved to real robots. Full 100-robot rigid-body IsaacLab RL, multi-node distributed training and multi-GPU training are not claimed as public validated results. The Sim2Real material documents the ROS2 interface contract, calibration order, domain randomization and deployment validation ladder; 1v1 real-robot trials have been performed, while a full public statistical hardware benchmark with success-rate tables and rosbag release is still future evidence work. See [Capability Boundaries and Measured Evidence](./docs/capability_boundaries.md) for the exact support matrix and metrics.
+Large-scale 50v50 is still in the simulation stage: staged rule-level curriculum training, 256-game evaluation and IsaacLab tactical replay are published as a separate benchmark below, but 50v50 has not been moved to real robots. Full 100-robot rigid-body IsaacLab RL, multi-node distributed training and multi-GPU training are not claimed as public validated results. The Sim2Real material documents the ROS2 interface contract, calibration order, domain randomization and deployment validation ladder; 1v1 real-robot trials have been performed, while a full public statistical hardware benchmark with success-rate tables and rosbag release is still future evidence work. See [Capabilities and Measured Evidence](./docs/capabilities.md) for the exact support matrix and metrics.
 
 ## Large-Scale 50v50 Benchmark
 
@@ -268,7 +268,7 @@ The rendered episode passes strict checks for static-obstacle penetration, pusha
 
 - `docs/admissions_project_brief.md`: concise English portfolio/reviewer summary with contribution, evidence and limitation framing.
 - `docs/getting_started.md`: step-by-step environment setup, quick demo, ROS2 dry run, IsaacLab preview and troubleshooting.
-- `docs/capability_boundaries.md`: explicit validated scope, measured metrics, unsupported large-scale/distributed claims and Sim2Real evidence boundary.
+- `docs/capabilities.md`: explicit validated scope, measured metrics, unsupported large-scale/distributed claims and Sim2Real evidence boundary.
 - `docs/architecture.md`: system architecture and ROS2/IsaacLab component boundaries.
 - `docs/reproducibility.md`: exact smoke-test, ROS2 dry-run, IsaacLab preview and evaluation commands.
 - `docs/rules_summary.md`: public rule summary used by rule gates and replay checks.

@@ -1,4 +1,4 @@
-"""Python-level batched evaluation helpers for multi-agent aerogate_graph."""
+"""Python-level batched evaluation helpers for multi-agent gate_graph_2d_minimal."""
 
 from __future__ import annotations
 

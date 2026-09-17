@@ -12,7 +12,7 @@ Outcome-grounded quality-diversity and reinforcement learning for target-free mu
 
 This project studies cooperative exploration under real four-rotor execution constraints. Agents build local belief from public sparse-range observations, share a bounded candidate pool, execute guarded team plans, and update behavioural diversity only from receipts produced by real execution.
 
-The active task has no manually placed targets, target counts, confirmed-recall objective, or formal RGB-D contract. The primary metric is `Explored-Free-Flight-Volume-AUC_time` under a shared CF2X, communication, safety, and physical-time contract.
+The active task is target-free online exploration, with `Explored-Free-Flight-Volume-AUC_time` as the primary metric under a shared CF2X, communication, safety, and physical-time contract.
 
 ## Repository Map
 
@@ -32,10 +32,10 @@ uv sync --extra dev --extra rl --extra hm3d
 .\.venv\Scripts\python.exe -m ruff check src tests scripts
 ```
 
-Isaac/PhysX runs must use `scripts/run_isaac_python.ps1` and an explicitly verified IsaacLab interpreter. Set `AEROCITY_CF2X_USD` for the local CF2X USD asset. HM3D assets, converted meshes, private evaluation data, checkpoints, raw logs, and runtime outputs remain outside the public source boundary.
+Isaac and PhysX runs must use `scripts/run_isaac_python.ps1` and an explicitly verified IsaacLab interpreter. Set `AEROCITY_CF2X_USD` for the local CF2X USD asset. The public source tree holds code, contracts, and documentation. HM3D assets, converted meshes, private scoring data, checkpoints, raw logs, and runtime outputs stay in the local workspace.
 
-The current research status and formal P01-P10 boundaries are documented in [docs/README.md](docs/README.md). The Chinese companion is [README.zh-CN.md](README.zh-CN.md).
+The current research status and formal P01-P10 scope are documented in [docs/README.md](docs/README.md). The Chinese companion is [README.zh-CN.md](README.zh-CN.md).
 
-## Release Boundary
+## Release Scope
 
 The source tree retains its project-specific release terms. Third-party code and assets retain their own licenses.

@@ -1,4 +1,4 @@
-﻿"""Validate the paper 2D experiment curricula before launching long runs."""
+"""Validate the paper 2D experiment curricula before launching long runs."""
 
 from __future__ import annotations
 

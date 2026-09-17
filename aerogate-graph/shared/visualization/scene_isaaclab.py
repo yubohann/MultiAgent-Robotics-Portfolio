@@ -1,4 +1,4 @@
-"""IsaacLab scene helpers for aerogate_graph replay rendering."""
+"""IsaacLab scene helpers for gate_graph_2d_minimal replay rendering."""
 
 from __future__ import annotations
 

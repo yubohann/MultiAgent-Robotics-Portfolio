@@ -1,4 +1,4 @@
-﻿"""Single-agent 2D gate environment for the isolated graph-RL experiment."""
+"""Single-agent 2D gate environment for the isolated graph-RL experiment."""
 
 from __future__ import annotations
 

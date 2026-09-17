@@ -11,7 +11,7 @@ def test_fixed_team_presets_cover_original_gate_sizes() -> None:
     assert GLOBAL_CONFIG.max_fixed_team_agents >= max(expected_sizes)
     for team_size in expected_sizes:
         module = importlib.import_module(f"multi_gate.configs.experiment_config_fixed_{team_size:02d}")
-        config = module.MULTI_EXPERIMENT_CONFIG
+        config = getattr(module, "MULTI_EXPERIMENT_CONFIG")
         assert config.default_agents == team_size
         assert config.max_agents_soft == team_size
 
@@ -23,3 +23,4 @@ def test_fixed_team_builder_rejects_out_of_range_values() -> None:
         except ValueError:
             continue
         raise AssertionError(f"expected ValueError for fixed team size {bad_size}")
+

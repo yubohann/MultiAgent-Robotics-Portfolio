@@ -1,2 +1,2 @@
-﻿"""Formation helpers for the multi-agent 2D gate experiment."""
+"""Formation helpers for the multi-agent 2D gate experiment."""
 

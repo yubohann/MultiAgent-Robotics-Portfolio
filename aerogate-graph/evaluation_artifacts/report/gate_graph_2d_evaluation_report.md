@@ -1,12 +1,12 @@
-# AeroGate Graph 评估附件报告
+# Gate Graph 2D Minimal 评估附件报告
 
 生成日期：2026-06-21
 
-项目目录：`aerogate_graph`
+项目目录：`gate_graph_2d_minimal`
 
 ## 1. 目录目的
 
-本报告说明 `aerogate_graph` 的复现实验材料结构。目录仅保留 gate-only 实验，不包含树、森林或无关 Markdown 历史文档。重点覆盖动态门柱、单机/多机、静态/动态、Graph-FlashSAC、action/safety shield 和经典规划器基线。
+本报告说明 `gate_graph_2d_minimal` 的复现实验材料结构。目录仅保留 gate-only 实验，不包含树、森林或无关 Markdown 历史文档。重点覆盖动态门柱、单机/多机、静态/动态、Graph-FlashSAC、action/safety shield 和经典规划器基线。
 
 ## 2. 组件与代码位置
 
@@ -46,7 +46,7 @@ networkx==3.4.2
 测试命令：
 
 ```powershell
-cd <aerogate_graph>
+cd <gate_graph_2d_minimal>
 python -m pytest tests
 ```
 
@@ -96,7 +96,7 @@ python -m pytest tests
 ## 7. 哈希核验
 
 ```powershell
-cd <aerogate_graph>\evaluation_artifacts
+cd <gate_graph_2d_minimal>\evaluation_artifacts
 @'
 import hashlib, json
 from pathlib import Path
@@ -118,4 +118,4 @@ raise SystemExit(1 if bad else 0)
 
 ## 8. 结论
 
-`aerogate_graph` 当前保留了可复现环境说明、原始结果、基线对比和 SHA256 完整性清单。后续发布前应重新核对 `results_manifest.json` 与实际附件是否一致。
+`gate_graph_2d_minimal` 当前保留了可复现环境说明、原始结果、基线对比和 SHA256 完整性清单。后续发布前应重新核对 `results_manifest.json` 与实际附件是否一致。

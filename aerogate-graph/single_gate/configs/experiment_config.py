@@ -1,4 +1,4 @@
-"""Stage-C config entry for the single-agent aerogate_graph experiment."""
+"""Stage-C config entry for the single-agent gate_graph_2d_minimal experiment."""
 
 from __future__ import annotations
 

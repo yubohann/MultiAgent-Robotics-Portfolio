@@ -1,4 +1,4 @@
-﻿"""DAgger-style online correction for multi-agent BC warm start."""
+"""DAgger-style online correction for multi-agent BC warm start."""
 
 from __future__ import annotations
 

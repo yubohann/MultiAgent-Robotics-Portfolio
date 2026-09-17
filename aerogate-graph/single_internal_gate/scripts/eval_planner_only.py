@@ -1,4 +1,4 @@
-﻿"""Run experiment-2 planner-only baselines and print a compact metrics table."""
+"""Run experiment-2 planner-only baselines and print a compact metrics table."""
 
 from __future__ import annotations
 

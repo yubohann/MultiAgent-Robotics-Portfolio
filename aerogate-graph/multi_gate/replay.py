@@ -1078,7 +1078,7 @@ def run_multi_replay(
     report["trajectory_path"] = str(trajectory_path)
     write_json(report_path, report)
     trajectory_payload = {
-            "format": "aerogate_graph_multi_replay_v2",
+            "format": "gate_graph_2d_minimal_multi_replay_v2",
             "fixed_height_m": float(env.env_config.fixed_height_m),
             "goal_radius_m": float(env.env_config.goal_radius_m),
             "world_x_bounds_m": list(env.env_config.world_x_bounds_m),

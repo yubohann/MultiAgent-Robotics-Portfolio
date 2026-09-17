@@ -1,13 +1,20 @@
-"""Graph-observation assembly and dynamic-gate formation targets."""
+"""Extracted method helpers for :mod:`multi_gate.env.multi_gate_env`."""
 
 from __future__ import annotations
 
 import math
+import time
+from typing import Any
 
 import numpy as np
 
-from multi_gate.dynamic_gate_task_slots import dynamic_gate_task_first_slots
-from multi_gate.env.observation_multi import build_multi_graph_observation
+
+def bind_runtime(namespace: dict[str, Any]) -> None:
+    """Bind the environment module globals used by extracted methods."""
+
+    for name, value in namespace.items():
+        if not name.startswith("__"):
+            globals()[name] = value
 
 
 def _actor_observation_desired_slots_xy(
@@ -30,7 +37,12 @@ def _dynamic_gate_task_slots_for_observation(
     center_xy: tuple[float, float],
     base_slots_xy: np.ndarray,
 ) -> tuple[np.ndarray | None, float]:
-    if not self._dynamic_gate_enabled or not self._dynamic_gates or self._num_agents <= 1 or base_slots_xy.size == 0:
+    if (
+        not self._dynamic_gate_enabled
+        or not self._dynamic_gates
+        or self._num_agents <= 1
+        or base_slots_xy.size == 0
+    ):
         return None, 0.0
     centers_xy = self._dynamic_gate_centers_xy(next_frame=False)
     if centers_xy.size == 0:
@@ -77,7 +89,11 @@ def _dynamic_gate_observation_feedforward_speed_mps(
     )
     if goal_distance_m <= 10.0:
         desired_speed = min(desired_speed, 1.2 + 0.35 * goal_distance_m)
-    if 8 < num_agents <= 16 and int(self._path_index) >= len(self._plan.waypoints_xy) - 3 and min_clearance_m >= 2.0:
+    if (
+        8 < num_agents <= 16
+        and int(self._path_index) >= len(self._plan.waypoints_xy) - 3
+        and min_clearance_m >= 2.0
+    ):
         desired_speed = min(max_speed * 0.98, desired_speed * 1.35)
     if min_clearance_m < 0.75:
         desired_speed *= 0.58
@@ -142,3 +158,4 @@ def _build_observation(self) -> dict[str, np.ndarray]:
         route_guidance=self._route_guidance_summary(virtual_center),
     )
     return observation.as_dict()
+

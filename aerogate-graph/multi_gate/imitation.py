@@ -1,4 +1,4 @@
-﻿"""Expert-data collection and BC warm-start helpers for the multi-agent line."""
+"""Expert-data collection and BC warm-start helpers for the multi-agent line."""
 
 from __future__ import annotations
 

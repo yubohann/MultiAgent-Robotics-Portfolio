@@ -175,7 +175,7 @@ def _validate_checkpoint_for_formal_eval(args: argparse.Namespace) -> None:
     if matched:
         raise SystemExit(
             "Refusing historical diagnostic checkpoint for formal paper eval: "
-            f"{args.checkpoint}. Historical checkpoint eval is disabled on the active aerogate_graph mainline."
+            f"{args.checkpoint}. Historical checkpoint eval is disabled on the active gate_graph_2d_minimal mainline."
         )
 
 

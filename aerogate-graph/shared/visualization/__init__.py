@@ -1,1 +1,2 @@
-"""Visualization helpers for aerogate_graph."""
+"""Visualization helpers for gate_graph_2d_minimal."""
+

@@ -1,1 +1,1 @@
-﻿"""Gate experiment scripts package."""
+"""Gate experiment scripts package."""

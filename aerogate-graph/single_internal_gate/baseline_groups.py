@@ -1,4 +1,4 @@
-﻿"""Planner baseline groups for experiment-2 scripts."""
+"""Planner baseline groups for experiment-2 scripts."""
 
 from __future__ import annotations
 

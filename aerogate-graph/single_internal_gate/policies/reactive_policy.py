@@ -1,4 +1,4 @@
-﻿"""Reactive local 2D obstacle-avoidance policy for experiment-2."""
+"""Reactive local 2D obstacle-avoidance policy for experiment-2."""
 
 from __future__ import annotations
 

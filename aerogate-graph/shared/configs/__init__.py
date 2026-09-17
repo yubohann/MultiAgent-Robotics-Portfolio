@@ -1,2 +1,2 @@
-﻿"""Config entry points shared by the new experiments."""
+"""Config entry points shared by the new experiments."""
 

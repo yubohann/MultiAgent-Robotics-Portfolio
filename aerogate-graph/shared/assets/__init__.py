@@ -1,1 +1,1 @@
-"""Shared asset adapters for aerogate_graph."""
+"""Shared asset adapters for gate_graph_2d_minimal."""

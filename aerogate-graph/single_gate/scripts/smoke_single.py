@@ -1,4 +1,4 @@
-﻿"""Smoke entry for the single-agent Graph-FlashSAC experiment."""
+"""Smoke entry for the single-agent Graph-FlashSAC experiment."""
 
 from __future__ import annotations
 

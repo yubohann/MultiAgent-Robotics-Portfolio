@@ -1,4 +1,4 @@
-﻿"""Run planner-only baselines against completed mainline scenarios.
+"""Run planner-only baselines against completed mainline scenarios.
 
 Scope:
 - eval_only, classic_python_planner

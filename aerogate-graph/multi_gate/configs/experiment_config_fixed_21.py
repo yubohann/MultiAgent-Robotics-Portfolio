@@ -1,4 +1,4 @@
-﻿"""Fixed 21-agent config preset for the multi-agent gate experiment."""
+"""Fixed 21-agent config preset for the multi-agent gate experiment."""
 
 from __future__ import annotations
 

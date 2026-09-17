@@ -1,4 +1,4 @@
-﻿"""Continuation curriculum from demo8 formation morphing to dynamic gates.
+"""Continuation curriculum from demo8 formation morphing to dynamic gates.
 
 This runner deliberately starts from the validated 8-drone demo8 checkpoint
 that can execute line/triangle/rectangle/diamond/circle route morphing.  The

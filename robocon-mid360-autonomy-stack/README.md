@@ -2,7 +2,7 @@
 
 **Simulation-first ROS 2 autonomy for competition robots**
 
-Robocon MID-360 Autonomy Stack is a modular research and engineering platform for LiDAR-driven mobile robotics. It connects Gazebo sensor simulation, Livox `CustomMsg` transport, FAST-LIO2 mapping, fixed-map localization, perception gating, pose-command arbitration, and safety-aware competition control in one reproducible ROS 2 workspace.
+Robocon MID-360 Autonomy Stack is a modular research and engineering platform for LiDAR-driven mobile robotics. It connects Gazebo sensor simulation, Livox `CustomMsg` transport, FAST-LIO2 mapping, fixed-map localization, perception gating, pose-command arbitration, and safety-aware competition control in one deterministic ROS 2 workspace.
 
 <p align="center">
   <a href="https://github.com/yubohann/Robocon-mid360-autonomy-stack/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/yubohann/Robocon-mid360-autonomy-stack/ci.yml?branch=main&label=CI&style=flat-square" alt="CI status"></a>
@@ -31,23 +31,23 @@ Livox CustomMsg + IMU  -->  FAST-LIO2  -->  local odometry
              perception gate --> action arbitration --> competition supervisor
 ```
 
-The public TF contract is:
+The public TF contract is the following chain.
 
 ```text
 map -> odom -> base_link -> imu_link -> lidar_mid360
 ```
 
-Each boundary is explicit, testable, and replaceable. Simulation adapters provide deterministic inputs while the control layer keeps localization freshness, map lock, perception validity, action feedback, heartbeat, expiry, cancellation, and recovery as first-class state.
+Each interface is explicit, testable, and replaceable. Simulation adapters provide deterministic inputs while the control layer keeps localization freshness, map lock, perception validity, action feedback, heartbeat, expiry, cancellation, and recovery as first-class state.
 
 ## Capabilities
 
-- **MID-360 data path**: Livox `CustomMsg`, per-point timing, IMU transport, input validation, and freshness diagnostics.
-- **FAST-LIO2 integration**: ROS 2 launch profiles for mapping and local odometry with controlled motion scripts.
-- **Fixed-map localization**: PCD loading, map metadata, scan matching, `map -> odom` anchoring, tracking states, and recovery transitions.
-- **Competition control**: rule-aware supervisor, versioned action requests, perception gates, protocol handling, and fault-injection tests.
-- **Gazebo environments**: candidate indoor competition scene, open-field degradation scene, field geometry, robot model, hoops, and simulated MID-360 sensor.
-- **Reproducible experiments**: one-command dispatchers, manifests, deterministic ROS domain isolation, metrics exporters, and publication-ready plotting tools.
-- **Public portfolio**: a lightweight GitHub Pages site presents the architecture and selected simulation evidence without exposing private run archives.
+- **MID-360 data path**, Livox `CustomMsg`, per-point timing, IMU transport, input validation and freshness diagnostics.
+- **FAST-LIO2 integration**, ROS 2 launch profiles for mapping and local odometry with controlled motion scripts.
+- **Fixed-map localization**, PCD loading, map metadata, scan matching, `map -> odom` anchoring, tracking states and recovery transitions.
+- **Competition control**, a rule-aware supervisor, versioned action requests, perception gates, protocol handling and fault-injection tests.
+- **Gazebo environments**, a candidate indoor competition scene, an open-field degradation scene, field geometry, robot model, hoops and a simulated MID-360 sensor.
+- **Deterministic experiments**, one-command dispatchers, manifests, deterministic ROS domain isolation, metrics exporters and publication-ready plotting tools.
+- **Public portfolio**, a lightweight GitHub Pages site that presents the architecture and selected simulation evidence from the public source tree.
 
 ## Repository Layout
 
@@ -58,8 +58,8 @@ src/
   mid360_map_tools/              Registered-cloud mapper and occupancy tools
   robocon_game_supervisor/       Competition state machine and safety gates
   robocon_perception_adapter/    Target validity and perception interface
-  robocon_camera_yolo_adapter/   Detector boundary and metric evaluator
-  robocon_pose_command_bridge/   Pose-to-command arbitration boundary
+  robocon_camera_yolo_adapter/   Detector interface and metric scoring
+  robocon_pose_command_bridge/   Pose-to-command arbitration interface
   robocon_mid360_simulation/     Gazebo worlds, robot, sensor, and runners
   vendor_fast_lio/               FAST-LIO2 source and license notice
   vendor_livox_ros_driver2/      Livox ROS 2 driver and license notice
@@ -68,11 +68,11 @@ site/                             GitHub Pages portfolio site
 .github/workflows/                Continuous integration and Pages deployment
 ```
 
-Private run archives, generated maps, bags, internal audits, and development notebooks are kept outside the public source tree and are ignored by Git.
+Private run archives, generated maps, bags, internal audits and development notebooks stay outside the public source tree, and Git ignores them.
 
 ## Quick Start
 
-The supported development environment is Ubuntu 22.04 with ROS 2 Humble. From WSL or a native Ubuntu shell:
+The supported development environment is Ubuntu 22.04 with ROS 2 Humble. From WSL or a native Ubuntu shell, run the following commands.
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -83,7 +83,7 @@ colcon build --symlink-install --cmake-args -DLIVOX_SDK2_ROOT="$LIVOX_SDK2_ROOT"
 source install/setup.bash
 ```
 
-Inspect launch arguments and run the dependency-light validation suite:
+Inspect launch arguments and run the dependency-light validation suite.
 
 ```bash
 ros2 launch robocon_mid360_simulation gazebo_mid360_lio.launch.py --show-args
@@ -91,7 +91,7 @@ python3 tools/validate_project.py
 python3 tools/run_python_contract_tests.py
 ```
 
-Run the bounded experiment groups from one command:
+Run the bounded experiment groups from one command.
 
 ```bash
 bash tools/run_experiments.sh --dry-run all
@@ -100,7 +100,7 @@ bash tools/run_experiments.sh faults
 bash tools/run_experiments.sh rgbd
 ```
 
-For a visible Gazebo and RViz session:
+For a visible Gazebo and RViz session.
 
 ```bash
 bash tools/run_experiments.sh gui
@@ -142,7 +142,7 @@ The following 2025 ROBOCON-style Gazebo and RViz views are presented in sequence
   <img src="site/assets/robocon-mid360-basketball-demo.gif" alt="Live 2025 ROBOCON-style two-robot basketball demonstration" width="90%">
 </p>
 
-For a camera-only recording without RViz's unused 3D render viewport, run:
+For a camera-only recording, run the image view script directly.
 
 ```bash
 bash tools/run_rgbd_image_view.sh robot1 depth
@@ -150,14 +150,14 @@ bash tools/run_rgbd_image_view.sh robot1 depth
 
 ## Verification
 
-The CI workflow runs Python contract tests, validates ROS package manifests, installs ROS dependencies, builds the interface and control packages, and executes the ROS test suite. Local runs can use the same commands:
+The CI workflow runs Python contract tests, validates ROS package manifests, installs ROS dependencies, builds the interface and control packages and executes the ROS test suite. Local runs use the same commands.
 
 ```bash
 colcon test --event-handlers console_direct+
 colcon test-result --verbose
 ```
 
-Additional tools export run summaries and figures from retained JSON/CSV data:
+Additional tools export run summaries and figures from retained JSON and CSV data.
 
 ```bash
 python3 tools/export_run_metrics.py <run-directory> <output-directory>
@@ -166,11 +166,11 @@ python3 tools/plot_run_metrics.py <metrics.csv> <output-directory>
 
 ## Attribution
 
-Third-party components remain in their source boundaries with their original license files and notices. Adapted packages include an `UPSTREAM_NOTICE.md` describing the source repository, revision, and scope of changes. See the notices under `src/` before redistributing a modified build.
+Third-party components remain in their source locations with their original license files and notices. Adapted packages include an `UPSTREAM_NOTICE.md` describing the source repository, revision and scope of changes. Read the notices under `src/` before redistributing a modified build.
 
 ## Portfolio
 
-Explore the visual project overview at:
+Explore the visual project overview at the project site.
 
 **https://yubohann.github.io/Robocon-mid360-autonomy-stack/**
 

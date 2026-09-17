@@ -1,4 +1,4 @@
-﻿"""Configuration for the lightweight experiment-2 internal 2D method stack."""
+"""Configuration for the lightweight experiment-2 internal 2D method stack."""
 
 from __future__ import annotations
 

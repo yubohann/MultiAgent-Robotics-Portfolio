@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict, dataclass
 import math
 import random
-from dataclasses import asdict, dataclass
 
 import numpy as np
+
 
 UNIFIED_GATE_BOTTOM_HEIGHT_M = 0.0
 UNIFIED_GATE_TOP_HEIGHT_M = 8.0
@@ -172,8 +173,6 @@ def generate_gate_layout(
         column_count = max_dense_columns
     xs = np.linspace(cfg.gate_region_x_m[0], cfg.gate_region_x_m[1], max(column_count, 1), dtype=np.float32)
     gates: list[DynamicGate2D] = []
-    yaw_min_deg = float(cfg.gate_yaw_range_deg[0])
-    yaw_max_deg = float(cfg.gate_yaw_range_deg[1])
     for column_index in selected_column_indices:
         active_lane_order = lane_order
         layer_x_offset = 0.0
@@ -189,19 +188,23 @@ def generate_gate_layout(
             if len(gates) >= count:
                 break
             if bool(static_layout):
-                gate_rng = random.Random(int(seed) + 130_363 + int(column_index) * 8_191 + int(lane_index) * 379)
+                gate_rng = random.Random(
+                    int(seed) + 130_363 + int(column_index) * 8_191 + int(lane_index) * 379
+                )
                 lane_base_y = float(cfg.gate_lane_y_m[lane_index])
                 base_y = layer_y_offset if len(lane_order) == 1 else lane_base_y * layer_lane_scale + layer_y_offset
                 jitter_x = gate_rng.uniform(-0.42, 0.42) if count <= 12 else gate_rng.uniform(-0.32, 0.32)
                 jitter_y = gate_rng.uniform(-0.70, 0.70) if len(lane_order) == 1 else gate_rng.uniform(-0.48, 0.48)
                 lane_x_offset = gate_rng.uniform(-0.24, 0.24) if lane_index == 0 else gate_rng.uniform(-0.52, 0.52)
-                yaw = math.radians(gate_rng.uniform(yaw_min_deg, yaw_max_deg))
+                yaw = math.radians(
+                    gate_rng.uniform(float(cfg.gate_yaw_range_deg[0]), float(cfg.gate_yaw_range_deg[1]))
+                )
             else:
                 base_y = float(cfg.gate_lane_y_m[lane_index])
                 jitter_x = rng.uniform(-0.18, 0.18) if count <= 12 else rng.uniform(-0.08, 0.08)
                 jitter_y = rng.uniform(-0.12, 0.12) if lane_index == 0 else rng.uniform(-0.18, 0.18)
                 lane_x_offset = 0.0 if lane_index == 0 else (0.38 if lane_index == 1 else -0.38)
-                yaw = math.radians(rng.uniform(yaw_min_deg, yaw_max_deg))
+                yaw = math.radians(rng.uniform(float(cfg.gate_yaw_range_deg[0]), float(cfg.gate_yaw_range_deg[1])))
             if lane_index == 0:
                 mode = "antiphase" if column_index % 2 else "lateral"
             else:
@@ -276,7 +279,7 @@ def gate_posts_by_gate(
     if len(gates) == 0:
         return np.zeros((0, 2, 2), dtype=np.float32)
     posts: list[list[np.ndarray]] = []
-    for gate, center in zip(gates, centers_xy, strict=True):
+    for gate, center in zip(gates, centers_xy):
         axis = _rotation(gate.yaw_rad) @ np.asarray([0.0, cfg.gate_half_width_m], dtype=np.float32)
         posts.append([np.asarray(center, dtype=np.float32) + axis, np.asarray(center, dtype=np.float32) - axis])
     return np.asarray(posts, dtype=np.float32)
@@ -442,8 +445,8 @@ def swept_post_clearance(
     nxt = np.asarray(next_positions_xy, dtype=np.float32)
     start_posts = np.asarray(start_posts_xy, dtype=np.float32)
     end_posts = np.asarray(end_posts_xy, dtype=np.float32)
-    for agent_start, agent_end in zip(prev, nxt, strict=True):
-        for post_start, post_end in zip(start_posts, end_posts, strict=True):
+    for agent_start, agent_end in zip(prev, nxt):
+        for post_start, post_end in zip(start_posts, end_posts):
             rel0 = agent_start - post_start
             rel1 = agent_end - post_end
             vel = rel1 - rel0
@@ -522,12 +525,18 @@ def validate_height_and_corridor_invariants(
     world_y_abs = min(abs(float(cfg.world_y_bounds_m[0])), abs(float(cfg.world_y_bounds_m[1])))
 
     if opening_top <= opening_bottom:
-        failures.append(f"invalid_gate_opening_height: bottom={opening_bottom:.3f}, top={opening_top:.3f}")
+        failures.append(
+            f"invalid_gate_opening_height: bottom={opening_bottom:.3f}, top={opening_top:.3f}"
+        )
     expected_center = 0.5 * (opening_bottom + opening_top)
     if abs(gate_center - expected_center) > 1.0e-5:
-        failures.append(f"gate_center_not_geometric_center: center={gate_center:.3f}, expected={expected_center:.3f}")
+        failures.append(
+            f"gate_center_not_geometric_center: center={gate_center:.3f}, expected={expected_center:.3f}"
+        )
     if abs(fixed_height - gate_center) > 1.0e-5:
-        failures.append(f"fixed_height_not_gate_center: fixed={fixed_height:.3f}, center={gate_center:.3f}")
+        failures.append(
+            f"fixed_height_not_gate_center: fixed={fixed_height:.3f}, center={gate_center:.3f}"
+        )
     if fixed_height < opening_bottom or fixed_height > (opening_top - top_margin):
         failures.append(
             "fixed_height_not_inside_gate_opening: "
@@ -719,14 +728,15 @@ def validate_dynamic_gate_density_geometry(
         if centers.size > 0
     ]
     max_center_motion = max(center_motion) if center_motion else 0.0
-    sampled_speed_maxima = [
-        float(np.max(np.linalg.norm(velocities, axis=1))) for velocities in sampled_velocities if velocities.size > 0
-    ]
-    max_velocity = max(sampled_speed_maxima, default=0.0)
+    max_velocity = max(
+        (float(np.max(np.linalg.norm(velocities, axis=1))) for velocities in sampled_velocities if velocities.size > 0),
+        default=0.0,
+    )
     min_required_motion = max(0.05, 0.10 * float(amplitude_m))
     if dynamic_motion_required and max_center_motion < min_required_motion:
         failures.append(
-            f"frozen_dynamic_gates: max_center_motion_m={max_center_motion:.4f} < required {min_required_motion:.4f}"
+            f"frozen_dynamic_gates: max_center_motion_m={max_center_motion:.4f} "
+            f"< required {min_required_motion:.4f}"
         )
     if dynamic_motion_required and max_velocity <= 1.0e-4:
         failures.append(f"zero_live_gate_velocity: max_velocity_mps={max_velocity:.6f}")
@@ -777,3 +787,4 @@ def assert_dynamic_gate_density_geometry_sane(**kwargs: object) -> dict[str, obj
         failures = ", ".join(str(item) for item in report.get("failures", []))
         raise AssertionError(f"Dynamic gate-density geometry sanity failed: {failures}")
     return report
+

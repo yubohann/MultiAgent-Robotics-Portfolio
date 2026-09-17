@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import math
-from collections.abc import Mapping
 from dataclasses import dataclass
+import math
+from typing import Mapping
 
 import numpy as np
 
@@ -87,10 +87,7 @@ def build_multi_graph_observation(
         vel = agent_velocities_xy[agent_idx]
         slot = desired_slots_xy[agent_idx]
         slot_error = slot - pos
-        clearance = obstacle_map.min_signed_distance(
-            (float(pos[0]), float(pos[1])),
-            drone_radius_m=env_config.drone_radius_m,
-        )
+        clearance = obstacle_map.min_signed_distance((float(pos[0]), float(pos[1])), drone_radius_m=env_config.drone_radius_m)
         _set_node(
             agent_idx,
             (float(pos[0]), float(pos[1])),
@@ -173,6 +170,11 @@ def build_multi_graph_observation(
 
     obstacle_start = waypoint_start + observation_config.lookahead_waypoint_count
     obstacles = list(obstacle_map.query_local(virtual_center_xy, 28.0))
+    team_velocity_xy = (
+        np.mean(agent_velocities_xy[:num_agents], axis=0)
+        if num_agents > 0 and agent_velocities_xy.size
+        else np.zeros((2,), dtype=np.float32)
+    )
     heading_norm = math.hypot(float(heading_x), float(heading_y))
     if heading_norm <= 1.0e-6:
         heading_unit = (1.0, 0.0)
@@ -199,10 +201,7 @@ def build_multi_graph_observation(
     for offset, obstacle in enumerate(obstacles[: observation_config.nearest_obstacle_count]):
         rel_x = float(obstacle.center_xy[0] - virtual_center_xy[0]) / scale_xy
         rel_y = float(obstacle.center_xy[1] - virtual_center_xy[1]) / scale_xy
-        distance = math.hypot(
-            obstacle.center_xy[0] - virtual_center_xy[0],
-            obstacle.center_xy[1] - virtual_center_xy[1],
-        )
+        distance = math.hypot(obstacle.center_xy[0] - virtual_center_xy[0], obstacle.center_xy[1] - virtual_center_xy[1])
         obstacle_velocity_xy = _dynamic_obstacle_velocity_xy(obstacle)
         is_dynamic_gate_post = obstacle.species == "dynamic_gate_post"
         prediction_horizon_s = 0.75 if is_dynamic_gate_post else 0.0
@@ -285,7 +284,10 @@ def build_multi_graph_observation(
         )
         guidance_count += 1
 
-    if observation_config.guidance_node_count > guidance_count and route_guidance is not None:
+    if (
+        observation_config.guidance_node_count > guidance_count
+        and route_guidance is not None
+    ):
         guidance_target_rel_x = float(route_guidance.get("target_rel_x", 0.0))
         guidance_target_rel_y = float(route_guidance.get("target_rel_y", 0.0))
         _set_node(
@@ -362,3 +364,4 @@ def build_multi_graph_observation(
         node_mask=node_mask,
         action_mask=action_mask,
     )
+

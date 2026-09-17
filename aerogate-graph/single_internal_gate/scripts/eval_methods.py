@@ -1,4 +1,4 @@
-﻿"""Run experiment-2 closed-loop method variants and ablations."""
+"""Run experiment-2 closed-loop method variants and ablations."""
 
 from __future__ import annotations
 

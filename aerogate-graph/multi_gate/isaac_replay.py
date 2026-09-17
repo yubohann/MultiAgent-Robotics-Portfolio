@@ -1,4 +1,4 @@
-"""IsaacLab replay renderer for multi-agent aerogate_graph trajectories."""
+"""IsaacLab replay renderer for multi-agent gate_graph_2d_minimal trajectories."""
 
 from __future__ import annotations
 

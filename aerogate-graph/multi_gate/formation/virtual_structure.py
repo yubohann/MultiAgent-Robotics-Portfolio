@@ -1,4 +1,4 @@
-﻿"""Formation slots and virtual-structure helpers for variable-size teams."""
+"""Formation slots and virtual-structure helpers for variable-size teams."""
 
 from __future__ import annotations
 

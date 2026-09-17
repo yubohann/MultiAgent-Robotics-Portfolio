@@ -7,7 +7,7 @@
 - Shell：PowerShell
 - Python：`python`
 - Python 版本：`Python 3.13.5`
-- 项目根目录：`<aerogate_graph>`
+- 项目根目录：`<gate_graph_2d_minimal>`
 
 ## 依赖版本
 
@@ -25,7 +25,7 @@ networkx==3.4.2
 ## 测试命令
 
 ```powershell
-cd <aerogate_graph>
+cd <gate_graph_2d_minimal>
 python -m pytest tests
 ```
 
@@ -37,10 +37,10 @@ python -m pytest tests
 
 ## 导入烟测命令
 
-该仓库有部分历史文件带 UTF-8 BOM，因此烟测使用 `utf-8-sig` 读取源码。
+该仓库有部分历史文件带 UTF-8 BOM，因此烟测使用 `utf-8` 读取源码。
 
 ```powershell
-cd <aerogate_graph>
+cd <gate_graph_2d_minimal>
 @'
 import ast
 from pathlib import Path
@@ -53,7 +53,7 @@ for path in sorted(root.rglob("*.py")):
         continue
     rel = path.relative_to(root)
     try:
-        ast.parse(path.read_text(encoding="utf-8-sig"), filename=str(rel))
+        ast.parse(path.read_text(encoding="utf-8"), filename=str(rel))
         count += 1
     except Exception as exc:
         failures.append((str(rel), repr(exc)))
@@ -68,7 +68,7 @@ raise SystemExit(1 if failures else 0)
 预期输出：
 
 ```text
-parsed=183 failures=0
+parsed=148 failures=0
 ```
 
 ## 单机动态门评估入口
@@ -76,7 +76,7 @@ parsed=183 failures=0
 需要提供训练好的 checkpoint。随机种子与示例视频一致时使用 `--seed 0`，动态门密度示例使用 `--gate-count 42`。
 
 ```powershell
-cd <aerogate_graph>
+cd <gate_graph_2d_minimal>
 python gate_density_single\scripts\run_gate_density_eval.py `
   --checkpoint <checkpoint.pt> `
   --gate-count 42 `
@@ -94,7 +94,7 @@ python gate_density_single\scripts\run_gate_density_eval.py `
 ## 多机静态/动态评估入口
 
 ```powershell
-cd <aerogate_graph>
+cd <gate_graph_2d_minimal>
 python multi_gate\scripts\run_paper_multi_gate_density_eval.py `
   --checkpoint <checkpoint.pt> `
   --experiments E4_static_multi_8d E5_dynamic_multi_8d `
@@ -114,7 +114,7 @@ python multi_gate\scripts\run_paper_multi_gate_density_eval.py `
 该命令读取已有主方法结果目录，并输出规划器 rows、summary、comparison、audit、metric contract。动态门基线可固定速度/幅值以对齐主方法设置。
 
 ```powershell
-cd <aerogate_graph>
+cd <gate_graph_2d_minimal>
 python scripts\run_classic_planner_baselines.py `
   --mode smoke `
   --results-root outputs\paper_2d_repro `
@@ -173,13 +173,13 @@ python scripts\run_classic_planner_baselines.py `
 全部附件文件的 SHA256 固化在 `results_manifest.json`。可用以下命令复核：
 
 ```powershell
-cd <aerogate_graph>\evaluation_artifacts
+cd <gate_graph_2d_minimal>\evaluation_artifacts
 @'
 import hashlib, json
 from pathlib import Path
 
 root = Path.cwd()
-manifest = json.loads((root / "results_manifest.json").read_text(encoding="utf-8-sig"))
+manifest = json.loads((root / "results_manifest.json").read_text(encoding="utf-8"))
 bad = []
 for item in manifest["files"]:
     path = root / item["relative_path"]
@@ -196,5 +196,5 @@ raise SystemExit(1 if bad else 0)
 预期输出：
 
 ```text
-checked=11 mismatches=0
+checked=7 mismatches=0
 ```

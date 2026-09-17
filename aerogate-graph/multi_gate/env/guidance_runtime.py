@@ -1,16 +1,27 @@
-"""Route-guidance state, deterministic fallback, and request payloads."""
+"""Extracted method helpers for :mod:`multi_gate.env.multi_gate_env`."""
 
 from __future__ import annotations
 
 import math
+import time
+from typing import Any
 
 import numpy as np
+
+
+def bind_runtime(namespace: dict[str, Any]) -> None:
+    """Bind the environment module globals used by extracted methods."""
+
+    for name, value in namespace.items():
+        if not name.startswith("__"):
+            globals()[name] = value
 
 
 def _guidance_runtime_active(self) -> bool:
     reasoning = self.multi_config.reasoning
     return bool(
-        getattr(reasoning, "route_guidance_enabled", False) or getattr(reasoning, "guidance_shadow_mode", False)
+        getattr(reasoning, "route_guidance_enabled", False)
+        or getattr(reasoning, "guidance_shadow_mode", False)
     )
 
 
@@ -107,15 +118,15 @@ def _build_guidance_query_payload(
     route_plan_guidance = self._route_plan_guidance_summary(center_xy)
     return {
         "prompt_version": str(getattr(self.multi_config.reasoning, "guidance_prompt_version", "exp3_v1")),
-        "stage_name": str(
-            getattr(self.multi_config.reasoning, "guidance_stage_name", "") or self.multi_config.paper_variant
-        ),
+        "stage_name": str(getattr(self.multi_config.reasoning, "guidance_stage_name", "") or self.multi_config.paper_variant),
         "scene_mode": str(getattr(self.multi_config.scene, "scene_mode", "")),
         "team_size": int(self._num_agents),
         "virtual_center_xy": [float(center_xy[0]), float(center_xy[1])],
         "goal_distance_m": float(self._goal_distance(center_xy)),
         "min_clearance_m": float(self._min_clearance(positions)),
-        "min_pair_distance_m": (None if not math.isfinite(min_pair_distance_m) else float(min_pair_distance_m)),
+        "min_pair_distance_m": (
+            None if not math.isfinite(min_pair_distance_m) else float(min_pair_distance_m)
+        ),
         "mean_slot_error_m": float(mean_slot_error_m),
         "max_slot_error_m": float(max_slot_error_m),
         "path_index": int(self._path_index),
@@ -204,3 +215,4 @@ def _refresh_route_guidance(
             pending_meta["source"] = "heuristic_pending"
         self._route_guidance_state = dict(heuristic_guidance)
         self._route_guidance_meta = pending_meta
+

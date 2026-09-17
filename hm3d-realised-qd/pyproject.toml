@@ -21,7 +21,6 @@ packages = ["src/aerocity_method"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "/LOCAL_ONLY.md",
   "/README.md",
   "/configs",
   "/docs",

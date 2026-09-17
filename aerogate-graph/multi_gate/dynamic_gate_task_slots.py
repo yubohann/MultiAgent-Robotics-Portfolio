@@ -1,4 +1,4 @@
-﻿"""Dynamic-gate slot targets shared by expert rollout and actor observations."""
+"""Dynamic-gate slot targets shared by expert rollout and actor observations."""
 
 from __future__ import annotations
 

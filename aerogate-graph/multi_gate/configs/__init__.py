@@ -1,4 +1,4 @@
-﻿"""Config entry points and preset registry for the multi-agent experiment."""
+"""Config entry points and preset registry for the multi-agent experiment."""
 
 from __future__ import annotations
 

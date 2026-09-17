@@ -1,4 +1,4 @@
-﻿"""Reusable task suites shared by experiment-1/2."""
+"""Reusable task suites shared by experiment-1/2."""
 
 from shared.task_suites.exp12_gate_scene import (
     EXP1_EXTERNAL_GATE_LAYOUT,

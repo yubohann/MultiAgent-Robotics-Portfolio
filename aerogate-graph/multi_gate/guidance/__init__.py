@@ -1,4 +1,4 @@
-﻿"""Low-frequency guidance utilities for the multi-agent experiment."""
+"""Low-frequency guidance utilities for the multi-agent experiment."""
 
 from __future__ import annotations
 

@@ -1,11 +1,10 @@
-# Runtime connectors (not version-controlled)
+# Runtime connectors
 
-The Flink / Paimon connector jars under `lib/flink-connectors/` are runtime
-dependencies. They are **not** committed to the repository (see `.gitignore`)
-and should be downloaded from Maven Central before running the dual-stream
-lakehouse job.
+The Flink and Paimon connector jars under `lib/flink-connectors/` are runtime
+dependencies. They are listed in `.gitignore` and downloaded from Maven Central
+before running the dual-stream lakehouse job.
 
-Required artifacts:
+Required artifacts.
 
 | Artifact | Version |
 | --- | --- |
@@ -14,7 +13,7 @@ Required artifacts:
 | `hadoop-hdfs-client` | 3.3.4 |
 | `paimon-flink` | 1.18-0.8.0 |
 
-Example (from the `lib/` directory):
+Example commands from the `lib/` directory.
 
 ```bash
 curl -LO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka-3.0.1-1.18.jar

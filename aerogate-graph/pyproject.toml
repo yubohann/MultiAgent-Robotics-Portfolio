@@ -1,40 +1,25 @@
-[build-system]
-requires = ["setuptools>=77"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "aerogate-graph"
-version = "0.2.0"
-description = "A modular 2D drone-racing simulator for graph-based route planning, formation control, and dynamic gate navigation."
+name = "aerogategraph"
+version = "0.1.0"
+description = "2D graph reinforcement learning for dense and dynamic drone gate traversal (single-agent and 8-drone formation)."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "LicenseRef-Proprietary"
-license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
-authors = [{ name = "Bohan Yu" }]
-keywords = ["drone racing", "multi-agent systems", "path planning", "reinforcement learning", "simulation"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Science/Research",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+dependencies = [
+    "numpy>=1.24",
+    "torch>=2.0",
 ]
-dependencies = ["numpy>=1.24,<3"]
 
 [project.optional-dependencies]
-rl = ["torch>=2.2"]
-dev = ["pytest>=7", "ruff>=0.6"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+viz = [
+    "matplotlib>=3.8",
+]
 
 [project.scripts]
-aerogate = "aerogate.cli:main"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["aerogate*", "assets*", "shared*", "single_gate*", "multi_gate*", "single_internal_gate*"]
-exclude = ["tests*"]
+# No console scripts yet; entry points are per-line scripts under scripts/ and <line>/scripts/.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -52,6 +37,3 @@ ignore = ["E501"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
-
-[tool.uv]
-index-url = "https://pypi.org/simple"

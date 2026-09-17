@@ -15,7 +15,7 @@ LOCAL_ASSETS_ROOT = EXPERIMENT_ROOT / "assets"
 class SharedExperimentConfig:
     """Top-level constants shared by the single- and multi-drone gate tracks."""
 
-    experiment_name: str = "aerogate_graph"
+    experiment_name: str = "gate_graph_2d_minimal"
     fixed_flight_height_m: float = 4.0
     planar_dt_s: float = 0.1
     planar_max_speed_mps: float = 3.50

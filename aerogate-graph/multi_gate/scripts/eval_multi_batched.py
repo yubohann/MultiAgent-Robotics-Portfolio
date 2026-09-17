@@ -1,4 +1,4 @@
-"""Batched multi-agent evaluation entry for aerogate_graph."""
+"""Batched multi-agent evaluation entry for gate_graph_2d_minimal."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def main() -> None:
     oversized_team_sizes = [team_size for team_size in team_sizes if team_size > 9]
     if oversized_team_sizes:
         raise SystemExit(
-            "Current aerogate_graph formal Graph-FlashSAC evaluation is capped at 9 drones; "
+            "Current gate_graph_2d_minimal formal Graph-FlashSAC evaluation is capped at 9 drones; "
             f"got oversized team sizes: {oversized_team_sizes}. "
             "Use a historical diagnostic-only path for 12-drone pressure tests."
         )

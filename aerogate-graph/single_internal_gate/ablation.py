@@ -1,4 +1,4 @@
-﻿"""Experiment-2 closed-loop method ablation registry."""
+"""Experiment-2 closed-loop method ablation registry."""
 
 from __future__ import annotations
 

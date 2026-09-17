@@ -33,7 +33,7 @@ def main() -> None:
         AppLauncher = None
         _app_import_error = exc
 
-    parser = argparse.ArgumentParser(description="Replay one multi-agent aerogate_graph trajectory in IsaacLab.")
+    parser = argparse.ArgumentParser(description="Replay one multi-agent gate_graph_2d_minimal trajectory in IsaacLab.")
     parser.add_argument("--trajectory", type=str, required=True)
     parser.add_argument("--report", type=str, default=None)
     parser.add_argument("--output-dir", type=str, default=None)
@@ -84,7 +84,7 @@ def main() -> None:
             "Activate the Isaac Sim / IsaacLab Python environment to run this script."
         )
 
-    ensure_writable_kit_runtime(args_cli, app_name="aerogate_graph_multi_replay")
+    ensure_writable_kit_runtime(args_cli, app_name="gate_graph_2d_minimal_multi_replay")
     app_launcher = AppLauncher(args_cli)
     simulation_app = app_launcher.app
 

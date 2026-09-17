@@ -31,7 +31,7 @@
       "documents": [
         "robocup-cbg-wm/README.md",
         "robocup-cbg-wm/README.zh-CN.md",
-        "robocup-cbg-wm/docs/capability_boundaries.md",
+        "robocup-cbg-wm/docs/capabilities.md",
         "robocup-cbg-wm/docs/media/README.md"
       ]
     },
@@ -55,10 +55,7 @@
       "category": "multi-agent simulation",
       "verification": "aerogate",
       "documents": [
-        "aerogate-graph/README.md",
-        "aerogate-graph/README.zh-CN.md",
-        "aerogate-graph/docs/architecture.md",
-        "aerogate-graph/docs/REPRODUCIBILITY.md"
+        "aerogate-graph/README.md"
       ]
     },
     {
@@ -70,7 +67,6 @@
       "verification": "fraudgraph",
       "documents": [
         "fraudgraph-ml-engineering/README.md",
-        "fraudgraph-ml-engineering/README.zh-CN.md",
         "fraudgraph-ml-engineering/docs/reproducibility-checklist.md"
       ]
     },

@@ -1,28 +1,28 @@
 # Strict SAC Flow Replay Audit
 
-Verdict: **PASS**
+Verdict **PASS**.
 
 This report replays the trained object-centric SAC Flow tactical actor and audits each step against strict rule and physics invariants.
 
 ## Replay Setup
 
-- checkpoint: `~\RoboCupVisionRL_AutoCommit\isaaclab_sim\output\rl\world_model_sacflow_seed260707_rerun\policy.pt`
-- deterministic: `False`
-- device: `cuda`
-- episodes: `8`
-- max step translation: `0.12 m`
-- max step yaw delta: `0.27 rad`
-- static blocker tolerance: `0.012 m`
+- checkpoint `~\RoboCupVisionRL_AutoCommit\isaaclab_sim\output\rl\world_model_sacflow_seed260707_rerun\policy.pt`
+- deterministic `False`
+- device `cuda`
+- episodes `8`
+- max step translation `0.12 m`
+- max step yaw delta `0.27 rad`
+- static blocker tolerance `0.012 m`
 
 ## Strict Checks
 
 - action shape is exactly 6D and bounded to [-1, 1]
-- robot pose is finite, inside the arena boundary, and outside static blockers
-- per-step translation/yaw changes stay within differential-drive limits
+- robot pose is finite, inside the arena extent, and outside static blockers
+- per-step translation and yaw changes stay within differential-drive limits
 - selected targets and fired targets must belong to the opponent
-- own-base hit/collision is an immediate hard violation
+- own-base hit or collision is an immediate hard violation
 - scores and armor only change in rule-compatible directions
-- target contact is recorded as a warning unless it actually knocks down a target
+- target contact grades as a warning, and a contact-induced knockdown grades as a hard violation
 
 ## Summary
 
@@ -47,14 +47,18 @@ This report replays the trained object-centric SAC Flow tactical actor and audit
 
 ## Output Files
 
-- JSON summary: `isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_summary.json`
-- CSV trace: `isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_trace.csv`
-- JSONL event log: `isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_events.jsonl`
+- JSON summary `isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_summary.json`
+- CSV trace `isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_trace.csv`
+- JSONL event log `isaaclab_sim/output/replay/world_model_sacflow_strict_replay_abs/strict_replay_events.jsonl`
 
 ## Notes
 
-Blocked steps are not counted as hard violations because the costmap/barrier logic prevented penetration. Actual penetration after integration is a hard violation.
-A pose that only touches the inflated costmap boundary within the static-blocker tolerance is counted as a warning, not as physical wall penetration.
-Pushable-box contact is allowed only within the tolerance; robot-box penetration is a hard violation.
-Target contact is allowed only as a non-scoring brush/contact event; any contact-induced knockdown remains a hard violation.
-Robot-robot contact is allowed as a tactical event, but it is counted so future training can penalize unsafe or wasteful contact.
+Blocked steps count as prevented penetration events, because the costmap and barrier logic holds the robot outside obstacles. Actual penetration after integration is a hard violation.
+
+A pose that touches the inflated costmap edge within the static-blocker tolerance is recorded as a warning. Physical wall penetration is a hard violation.
+
+Pushable-box contact is allowed within the tolerance, and robot-box penetration is a hard violation.
+
+Target contact is allowed as a non-scoring brush or contact event, and a contact-induced knockdown is a hard violation.
+
+Robot-robot contact is allowed as a tactical event and is counted, so future training can penalize wasteful contact.

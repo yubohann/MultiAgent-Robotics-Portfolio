@@ -1,4 +1,4 @@
-﻿"""Collect heuristic expert trajectories for the multi-agent experiment."""
+"""Collect heuristic expert trajectories for the multi-agent experiment."""
 
 from __future__ import annotations
 

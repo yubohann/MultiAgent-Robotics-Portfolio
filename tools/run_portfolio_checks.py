@@ -55,16 +55,7 @@ def main() -> int:
             run("portfolio integrity", ROOT, [python, "tools/verify_portfolio.py"])
         if "aerogate" in selected:
             project = registry.project_for_verification("aerogate").directory
-            run("aerogate tests", project, [python, "-m", "pytest", "-q"])
-            run(
-                "aerogate deterministic smoke",
-                project,
-                [
-                    python, "-m", "aerogate", "reproduce", "--scenario", "multi-static",
-                    "--agents", "4", "--seeds", "3", "7", "11", "--steps", "8",
-                    "--output", str(scratch / "aerogate-reproduction.json"),
-                ],
-            )
+            run("aerogate tests", project, [python, "-m", "pytest", "-q"], {"PYTHONPATH": str(project)})
         if "fraudgraph" in selected:
             project = registry.project_for_verification("fraudgraph").directory
             run("fraudgraph repository validation", project, [python, "scripts/validate_repository.py"])

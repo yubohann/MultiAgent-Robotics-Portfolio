@@ -1,4 +1,4 @@
-﻿"""Minimal training entry for the single-agent Graph-FlashSAC experiment."""
+"""Minimal training entry for the single-agent Graph-FlashSAC experiment."""
 
 from __future__ import annotations
 

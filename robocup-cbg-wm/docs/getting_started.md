@@ -1,67 +1,67 @@
 # Getting Started Guide
 
-This guide gives a minimal path for reproducing the public repository evidence. The project can be inspected at three levels: Python-only rule tests, ROS2 dry run, and IsaacLab replay.
+This guide gives a minimal path for running the public repository evidence. The project can be inspected at three levels, Python-only rule tests, ROS2 dry run, and IsaacLab replay.
 
 ## 1. Repository Scope
 
-Main directories:
+Main directories.
 
 | Path | Purpose |
 | --- | --- |
 | `crc_robocup_vision_ws/` | ROS2 Jazzy workspace for robot bringup, navigation, vision, behavior, shooter and interfaces |
 | `isaaclab_sim/` | IsaacLab scene, replay utilities, rule environment and RL tooling |
-| `isaaclab_sim/rl/` | Self-play environments, world-model SAC Flow training, evaluation and export scripts |
+| `isaaclab_sim/rl/` | Self-play environments, world-model SAC Flow training, scoring and export scripts |
 | `config/` | Public arena, target layout and scoring contracts |
-| `docs/rl_data/` | Published training summaries, evaluation JSON/CSV and replay audit data |
-| `docs/media/` | Final MP4/GIF replay media |
+| `docs/rl_data/` | Published training summaries, scoring JSON and CSV data and replay audits |
+| `docs/media/` | Final MP4 and GIF replay media |
 | `tests/` | Pytest checks for rule contracts, target layout, strategy logic and Sim2Real configuration |
 
 ## 2. Environment Levels
 
-### Level 0: Python-Only Smoke Test
+### Level 0 Python-Only Smoke Test
 
-Use this first if you only want to validate the rule environment and evaluation utilities.
+Use this level to check the rule environment and scoring utilities.
 
-Requirements:
+Requirements.
 
 - Python 3.10 or newer
 - `pip`
-- Optional CUDA PyTorch for training; CPU is enough for many smoke tests
+- Optional CUDA PyTorch for training, with CPU sufficient for many smoke tests
 
-Commands:
+Commands.
 
 ```bash
 python -m pip install -r isaaclab_sim/rl/requirements.txt
 python -m pytest tests -q
 ```
 
-Quick rule-environment evaluation:
+Quick rule-environment scoring run.
 
 ```bash
 cd isaaclab_sim/rl
 python evaluate_selfplay.py --episodes 8
 ```
 
-Expected behavior:
+Expected behavior.
 
-- tests complete without rule-contract failures;
-- evaluation prints match score, winner, target hits, base hits, collision and penetration fields;
-- no IsaacLab or ROS2 installation is required for this level.
+- tests complete and satisfy the rule contracts.
+- the scoring run prints match score, winner, target hits, base hits, collision and penetration fields.
+- this level runs from the Python package alone.
 
-### Level 1: ROS2 Dry Run
+### Level 1 ROS2 Dry Run
 
-Use this to validate that the ROS2 workspace builds and launch files start without requiring physical robot hardware.
+Use this to check that the ROS2 workspace builds and the launch files start on software alone.
 
-Recommended platform:
+Recommended platform.
 
 - Ubuntu 24.04
 - ROS2 Jazzy
 - `colcon`
 - `rosdep`
 
-If you use WSL, copy `crc_robocup_vision_ws/` to a native Linux path such as `~/crc_robocup_vision_ws`. Building ROS2 packages directly under a Windows-mounted path with non-ASCII characters can break ROSIDL generation.
+If you use WSL, copy `crc_robocup_vision_ws/` to a native Linux path such as `~/crc_robocup_vision_ws`, because ROSIDL generation requires an ASCII path.
 
-Commands:
+Commands.
 
 ```bash
 cd ~/crc_robocup_vision_ws
@@ -71,70 +71,70 @@ source install/setup.bash
 ros2 launch rcvrl_bringup competition.launch.py start_navigation:=false shooter_dry_run:=true auto_start:=false
 ```
 
-Useful launch variants:
+Useful launch variants.
 
 ```bash
 ros2 launch rcvrl_bringup competition.launch.py team_color:=yellow target_file:=$(ros2 pkg prefix rcvrl_navigation)/share/rcvrl_navigation/config/targets.elimination.yellow.yaml
 ros2 launch rcvrl_bringup competition.launch.py team_color:=blue target_file:=$(ros2 pkg prefix rcvrl_navigation)/share/rcvrl_navigation/config/targets.elimination.blue.yaml
 ```
 
-Expected behavior:
+Expected behavior.
 
-- bringup, behavior, navigation, vision and shooter service nodes can be launched;
-- shooter can run in dry-run mode;
-- no physical robot is required for the dry run.
+- bringup, behavior, navigation, vision and shooter service nodes can be launched.
+- shooter can run in dry-run mode.
+- the dry run needs software only.
 
-### Level 2: IsaacLab Replay
+### Level 2 IsaacLab Replay
 
-Use this to inspect the published replay behavior. IsaacLab/Isaac Sim setup is heavier than the Python rule tests, so start here only after Level 0 works.
+Use this to inspect the published replay behavior. IsaacLab and Isaac Sim setup is heavier than the Python rule tests, so start here after Level 0 works.
 
-On Windows, use the project wrapper so runtime files stay under `.isaaclab_runtime/` instead of the global Isaac Sim cache:
+On Windows, use the project wrapper, which keeps runtime files under `.isaaclab_runtime/` inside the project.
 
 ```powershell
 .\scripts\run_isaaclab_project.ps1 -Headless -DemoFlow -Duration 120
 ```
 
-To inspect or stop only this project's IsaacLab processes:
+To inspect or stop this project's IsaacLab processes.
 
 ```powershell
 .\scripts\stop_project_isaaclab.ps1 -WhatIfOnly
 .\scripts\stop_project_isaaclab.ps1
 ```
 
-Published replay media:
+Published replay media.
 
 ```text
 docs/media/最终回放_三视角同步拼接版.gif
 ```
 
-The individual MP4 source views are generated locally and are not required in the compact GitHub checkout.
+The compact GitHub checkout carries the three-view GIF, and the individual MP4 source views are generated locally.
 
-## 3. Training and Evaluation
+## 3. Training and Scoring
 
-The public training and evaluation artifacts are already included under `docs/rl_data/`. If you want to regenerate them, use the commands in `docs/reproducibility.md`.
+The public training and scoring artifacts are already included under `docs/rl_data/`. To regenerate them, use the commands in `docs/reproducibility.md`.
 
-Important generated-output rule:
+Important generated-output rule.
 
-- local training outputs go under `isaaclab_sim/output/`;
-- temporary videos, cache files and debug frames should not be committed unless they are selected final evidence;
-- public claims should point to JSON/CSV metrics, replay audits and MP4/GIF files.
+- local training outputs go under `isaaclab_sim/output/`.
+- temporary videos, cache files and debug frames stay local, and selected final evidence is committed.
+- public claims point to JSON and CSV metrics, replay audits and MP4 or GIF files.
 
 ## 4. First Files to Read
 
-Recommended order:
+Recommended order.
 
 1. `README.md`
 2. `docs/admissions_project_brief.md`
-3. `docs/capability_boundaries.md`
+3. `docs/capabilities.md`
 4. `docs/reproducibility.md`
 5. `docs/parameter_tuning.md`
 6. `docs/scene_adaptation.md`
 
 ## 5. Common Issues
 
-### ROS2 build fails under WSL
+### ROS2 build under WSL
 
-Move the workspace to a native Linux path:
+Move the workspace to a native Linux path.
 
 ```bash
 cp -r /mnt/c/path/to/crc_robocup_vision_ws ~/crc_robocup_vision_ws
@@ -142,19 +142,19 @@ cp -r /mnt/c/path/to/crc_robocup_vision_ws ~/crc_robocup_vision_ws
 
 Then rebuild from `~/crc_robocup_vision_ws`.
 
-### IsaacLab opens global cache or conflicts with another project
+### IsaacLab runtime path conflicts
 
 Use `scripts/run_isaaclab_project.ps1`, which sets project-local runtime paths. Inspect running processes with `scripts/stop_project_isaaclab.ps1 -WhatIfOnly` before stopping anything.
 
-### A result looks too good
+### Checking a surprising score
 
-Do not rely on reward alone. Check:
+Check the published artifacts alongside the reward signal.
 
-- `docs/capability_boundaries.md`
+- `docs/capabilities.md`
 - `docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.json`
 - `docs/rl_data/world_model_sacflow_final/strict_replay_summary.json`
-- replay MP4/GIF files under `docs/media/`
+- replay MP4 and GIF files under `docs/media/`
 
-### A 50v50 claim is being evaluated
+### 50v50 evidence status
 
-Treat 50v50 as simulation-stage rule-level evidence only. The current repository does not claim 100-robot hardware deployment or full rigid-body RL training for all 100 vehicles.
+The 50v50 result is simulation-stage rule-level evidence with an IsaacLab tactical replay.

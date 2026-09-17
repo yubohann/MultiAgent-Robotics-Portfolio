@@ -1,2 +1,2 @@
-﻿"""Single-agent 2D gate experiment namespace."""
+"""Single-agent 2D gate experiment namespace."""
 

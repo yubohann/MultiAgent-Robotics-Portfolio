@@ -29,3 +29,4 @@ def test_empty_layout_is_empty() -> None:
     centers, yaws = _generate_gate_layout(gate_count=0, seed=0, random_yaw=True)
     assert centers == ()
     assert yaws == ()
+

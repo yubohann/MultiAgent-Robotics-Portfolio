@@ -8,19 +8,19 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**A toolchain for collecting, auditing, and evaluating native Isaac Sim data for multi-agent 3D stealth-search (Search3D) research — eight physically simulated CF2X vehicles in a procedural City-Lite scene.**
+**A toolchain for collecting, auditing, and scoring native Isaac Sim data for multi-agent 3D stealth-search research in the Search3D benchmark, with eight physically simulated CF2X vehicles in a procedural City-Lite scene.**
 
-Rivermark is engineered around three goals: **reproducibility**, **data integrity**, and **cross-paradigm evaluation**. It is not a single simulation — it is a benchmark *infrastructure* that binds every capture to cryptographic contracts, audits each episode before admission, and exposes evaluation through a stable, schema-verified interface that classical planning, RL/MARL, QD, and vision-language-action (VLA) agents can all target.
+Rivermark is engineered around three goals, **determinism**, **data integrity**, and **cross-paradigm scoring**. It is a benchmark *infrastructure* that binds every capture to cryptographic contracts, audits each episode before admission, and exposes scoring through a stable, schema-verified interface that classical planning, RL and MARL, QD, and vision-language-action agents can all target.
 
 ---
 
 ## Design Highlights
 
-- **Reproducibility by construction.** Every scene, protocol, runtime, and source tree is pinned by SHA-256 contracts. Episodes are seeded deterministically. A runtime lock (profile `citylite-windows-isaacsim-5.1.0.0-local-isaaclab-2.3.2`) plus CF2X calibration fixes the software stack so that captures can be re-run and compared.
-- **Formal dataset admission.** Captures are rejected unless they pass provenance checks: no unbound files, no stale receipts, no split leakage, no unapproved lineage. A failure ledger and crash-left recovery make long collection runs auditable.
-- **Cross-paradigm evaluation.** A single observation/action ABI serves classical planners, RL/MARL, offline RL, and VLA/LeRobot agents, with projection to RLDS, Zarr, and Parquet. The evaluator scores search episodes against reference metrics and accepts submissions through a validated, schema-checked interface.
-- **Multi-sensor synchronized capture.** Online RGB, depth, semantic labels, RayCaster LiDAR, IMU, contact/safety state, body state, actions, camera extrinsics, and a fixed-world witness — captured for an 8-vehicle fleet in one pass.
-- **Contract-first engineering.** 15+ JSON Schemas (`schemas/`) define every artifact; a 66-file, 411-test suite (`tests/`) runs on CPU without Isaac Sim; supply-chain and asset-provenance modules audit USD assets and dependencies (incl. CycloneDX SBOM generation).
+- **Determinism by construction.** Every scene, protocol, runtime, and source tree is pinned by SHA-256 contracts. Episodes are seeded deterministically. A runtime lock at profile `citylite-windows-isaacsim-5.1.0.0-local-isaaclab-2.3.2` plus CF2X calibration fixes the software stack, so captures re-run and compare.
+- **Formal dataset admission.** Captures enter the formal dataset after provenance checks pass, covering file binding, receipt freshness, split integrity, and lineage approval. A failure ledger and crash-left recovery keep long collection runs auditable.
+- **Cross-paradigm scoring.** A single observation and action ABI serves classical planners, RL and MARL, offline RL, and VLA and LeRobot agents, with projection to RLDS, Zarr, and Parquet. The scorer rates search episodes against reference metrics and accepts submissions through a validated, schema-checked interface.
+- **Multi-sensor synchronized capture.** Online RGB, depth, semantic labels, RayCaster LiDAR, IMU, contact and safety state, body state, actions, camera extrinsics, and a fixed-world witness, captured for an 8-vehicle fleet in one pass.
+- **Contract-first engineering.** 15+ JSON Schemas in `schemas/` define every artifact, a 66-file, 411-test suite in `tests/` runs on CPU, and the supply-chain and asset-provenance modules audit USD assets and dependencies, including CycloneDX SBOM generation.
 
 ---
 
@@ -41,9 +41,9 @@ rivermark/
 
 ---
 
-## Quick Start (reproducible on CPU)
+## Quick Start on the CPU Path
 
-Python 3.10+ required. Install the CPU dependencies, then run the researcher smoke check — it creates a small non-formal fixture, verifies it, reads public arrays, and writes a report **without starting Isaac Sim**:
+Python 3.10+ required. Install the CPU dependencies, then run the researcher smoke check. It creates a small non-formal fixture, verifies it, reads public arrays, and writes a report.
 
 ```powershell
 cd code
@@ -53,7 +53,7 @@ python -m rivermark_benchmark.researcher_entry $output
 Get-Content "$output\researcher_smoke_report.json"
 ```
 
-Run the full CPU test suite:
+Run the full CPU test suite.
 
 ```powershell
 python -m unittest discover -s tests -v
@@ -61,36 +61,34 @@ python -m unittest discover -s tests -v
 
 ---
 
-## Reproducibility Evidence
+## Determinism Evidence
 
-`evidence/same-seed-repeatability*.json` report a bounded same-seed experiment: **two independent captures of the same episode seed**, compared by an analyzer (`rivermark_benchmark.repeatability`) using camera-local, frame-aligned, class-and-agent-ID semantic comparison. The claim is deliberately honest: *bounded same-seed variation, not bitwise determinism* — a realistic and measurable reproducibility statement for physics-based simulation. Every binding is pinned (protocol, runtime lock, source tree, receipt, independent validation), each by SHA-256.
+`evidence/same-seed-repeatability*.json` reports a bounded same-seed experiment, **two independent captures of the same episode seed**, compared by the `rivermark_benchmark.repeatability` analyzer using camera-local, frame-aligned, class and agent ID semantic comparison. The report states bounded same-seed variation under declared tolerances, the measurable determinism story for physics-based simulation. Every binding is pinned by SHA-256, covering the protocol, runtime lock, source tree, receipt, and independent validation.
 
-- Example episode manifests are included in `evidence/` (public and evaluator-private variants).
+- `evidence/` holds example episode manifests in public and scorer-private variants.
 
 ---
 
 ## Media
 
-`media/` contains rendered evidence from train/validation cells:
+`media/` contains rendered evidence from train and validation cells.
 
-- **Overview** — `*_overview.mp4` (top-down overview of the 8-vehicle fleet)
-- **Composite** — `*_composite.mp4` (synchronized multi-camera composite)
-- **Key frames** — `*_first/last/25/50/75pct_frame*.png` stills of both views
+- **Overview**. `*_overview.mp4` renders the 8-vehicle fleet from above.
+- **Composite**. `*_composite.mp4` renders a synchronized multi-camera composite.
+- **Key frames**. `*_first/last/25/50/75pct_frame*.png` stills of both views.
 
-Cells: `train-cell0/1/2/3/9/11`, `validation-cell13/14/15/16/17/18/19`, and `route-witness-r31` (protocol `citylite-t1-expert-coverage-v2`).
+Cells `train-cell0/1/2/3/9/11`, `validation-cell13/14/15/16/17/18/19`, and `route-witness-r31`, under protocol `citylite-t1-expert-coverage-v2`.
 
-For a new multi-start native recording batch, use [the route-family video
-procedure](docs/multistart-native-video-recording.md). It covers both frozen
-City-Lite route families and encodes only native Isaac RGB archives.
+For a new multi-start native recording batch, use [the route-family video procedure](docs/multistart-native-video-recording.md). It covers both frozen City-Lite route families and encodes native Isaac RGB archives.
 
 ---
 
-## Evaluation Pipeline
+## Scoring Pipeline
 
-The evaluator (`evaluator.py`, `search_event_evaluator.py`, `metrics.py`) scores an episode against reference search metrics and returns a validated submission report. Evaluator inputs are kept evaluator-private until admission; submissions are schema-verified before scoring. Baselines are pluggable through `baseline_harness.py`, with reference methods for classical, learned, MARL, and QD pipelines (`methods.py`, `learned.py`, `marl.py`, `qd_train.py`, `torch_train.py`).
+The scorer modules `evaluator.py`, `search_event_evaluator.py`, and `metrics.py` score an episode against reference search metrics and return a validated submission report. Scorer inputs stay scorer-private until admission, and submissions are schema-verified before scoring. Baselines are pluggable through `baseline_harness.py`, with reference methods for classical, learned, MARL, and QD pipelines in `methods.py`, `learned.py`, `marl.py`, `qd_train.py`, and `torch_train.py`.
 
 ---
 
 ## License
 
-Rivermark-authored source code, schemas, and documentation are licensed under **Apache-2.0** (`code/LICENSE`). NVIDIA Isaac Sim, Rivermark content, CF2X USD, and third-party assets are not vendored by this repository — obtain and use them under their applicable terms.
+Rivermark-authored source code, schemas, and documentation are licensed under **Apache-2.0** (`code/LICENSE`). NVIDIA Isaac Sim, Rivermark content, CF2X USD, and third-party assets live outside this repository and follow their applicable terms.

@@ -872,7 +872,7 @@ def _maybe_resume_training(
         "compatibility_findings": findings,
         "applied_resets": applied_resets,
         "limitations": [
-            "Replay buffer snapshots are not persisted in aerogate_graph; resume always starts with an empty replay buffer.",
+            "Replay buffer snapshots are not persisted in gate_graph_2d_minimal; resume always starts with an empty replay buffer.",
         ],
         "checkpoint_metadata": metadata,
     }

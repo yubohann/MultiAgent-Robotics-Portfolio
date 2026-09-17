@@ -6,7 +6,7 @@
 
 **Workload:** 12 weeks, 14--18 hours per week: 4 hours study, 7 hours implementation, 3 hours experiments and 1--4 hours review and writing.
 
-**Final artifact:** A reproducible `Embodied Task Agent` that closes the loop from language task to knowledge and visual perception, sub-goal planning, world-model prediction, robot policy and safety-gated execution in simulation, with an experiment report, ablations and a publishable GitHub repository.
+**Final artifact:** A deterministic `Embodied Task Agent` that closes the loop from language task to knowledge and visual perception, sub-goal planning, world-model prediction, robot policy and safety-gated execution in simulation, with an experiment report, ablations and a publishable GitHub repository.
 
 **Core stack:** PyTorch, Hugging Face, LeRobot and Gymnasium/MuJoCo.
 
@@ -29,7 +29,7 @@
 - [Paper ladder](#paper-ladder)
 - [2026 research index](#2026-research-index)
 - [Course and resource map](#course-and-resource-map)
-- [Evaluation protocol](#evaluation-protocol)
+- [Scoring protocol](#scoring-protocol)
 - [Engineering standards](#engineering-standards)
 - [Graduation rubric](#graduation-rubric)
 - [Research upgrade path](#research-upgrade-path)
@@ -41,12 +41,12 @@ By the end of the core route, you should be able to:
 
 1. Implement a small Transformer in PyTorch and explain tokenization, attention, optimization, training curves and inference bottlenecks.
 2. Build an evaluable LLM application with structured outputs, tool calls, hybrid retrieval, evidence citations, abstention and traceable logs.
-3. Adapt or evaluate a vision-language model on images, video or document pages, reporting calibration, latency and failure categories.
+3. Adapt or benchmark a vision-language model on images, video or document pages, reporting calibration, latency and failure categories.
 4. Train an action-conditioned world model that predicts future state, reward and termination, then plan with CEM or MPC.
 5. Run an ACT, Diffusion Policy or VLA checkpoint in LIBERO, ManiSkill, MuJoCo or Isaac Lab and report episode-level results.
-6. Define ROS 2 and simulator interfaces with action limits, state freshness, human takeover and emergency-stop boundaries.
+6. Define ROS 2 and simulator interfaces with action limits, state freshness, human takeover and emergency-stop conditions.
 7. Run baselines, ablations, multiple seeds and failure analysis, and publish a model card, data card and paper-style report.
-8. Deliver software that is installable, tested, reproducible, observable and reversible.
+8. Deliver software that is installable, tested, deterministic, observable and reversible.
 
 ## Capstone project: Embodied Task Agent
 
@@ -76,7 +76,7 @@ Safety execution layer -> simulator -> human confirmation -> optional robot
 
 ### Choose one task track
 
-All tracks share the same data, evaluation and safety contracts.
+All tracks share the same data, scoring and safety contracts.
 
 | Track | Example task | Observation | Action |
 |---|---|---|---|
@@ -109,7 +109,7 @@ The LLM is responsible for task-level planning and constraints. Low-level contro
 
 | Milestone | Week | Acceptance evidence |
 |---|---:|---|
-| M1: model and evaluation foundations | W3 | small Transformer, inference service and structured evaluation set |
+| M1: model and scoring foundations | W3 | small Transformer, inference service and structured scoring set |
 | M2: multimodal toolchain | W6 | image understanding, image-text retrieval and evidence return |
 | M3: prediction and policy | W9 | world model, CEM/MPC and robot-policy baseline |
 | M4: closed loop and release | W12 | simulator task, failure recovery, report, demo and repository |
@@ -120,12 +120,12 @@ Companies need people who can turn models into reliable systems, not only call a
 
 | Capability | What to demonstrate | 12-week evidence |
 |---|---|---|
-| Python/PyTorch | models, datasets, training loops and tests | Transformer, world model and evaluation code |
+| Python/PyTorch | models, datasets, training loops and tests | Transformer, world model and scoring code |
 | C++/ROS 2 | nodes, messages, QoS, TF, bags and performance limits | ROS 2 bridge or a C++ performance node (advanced) |
 | Linux/GPU | CUDA, memory, profiling, containers and process control | p50/p95 latency, memory, throughput and failure logs |
 | LLM applications | structured output, tools, RAG and model serving | task planner with citations and abstention |
 | Multimodal learning | visual features, VLMs, annotation and calibration | 50--200 item image/page set and error taxonomy |
-| Robot learning | frames, kinematics, imitation learning and policy evaluation | ACT/Diffusion/VLA episode results |
+| Robot learning | frames, kinematics, imitation learning and policy scoring | ACT/Diffusion/VLA episode results |
 | World models/RL | dynamics prediction, planning, uncertainty and OOD | multi-step error, CEM/MPC and safety gate |
 | Data engineering | versions, splits, quality checks, lineage and privacy | manifests, data card and replayable generation script |
 | Production engineering | APIs, logs, monitoring, CI, rollback and budgets | `make test/eval/report`, GitHub Actions |
@@ -136,10 +136,10 @@ Companies need people who can turn models into reliable systems, not only call a
 
 | Target role | Interview evidence | Weeks |
 |---|---|---|
-| LLM/application engineer | structured output, RAG evaluation, tools, latency and cost trade-offs | W2--W4 |
+| LLM/application engineer | structured output, RAG scoring, tools, latency and cost trade-offs | W2--W4 |
 | Multimodal/VLA engineer | image-action data, adaptation, benchmarks and failure replay | W5--W6, W10 |
 | Robot-learning engineer | kinematics, ROS 2, simulation, imitation learning, action interfaces and safety | W7, W9--W11 |
-| Research engineer | paper reproduction, falsifiable hypothesis, baseline, ablation and statistics | W1, W3, W8, W12 |
+| Research engineer | paper rerun, falsifiable hypothesis, baseline, ablation and statistics | W1, W3, W8, W12 |
 | ML platform/inference engineer | GPU profiling, containers, CI, logs, monitoring, versioning and rollback | W2, W11--W12 |
 
 One project can support several roles, but a resume and interview should use one primary positioning label and evidence chain instead of listing model names.
@@ -168,7 +168,7 @@ Create an environment on Linux or WSL and run pytest.
 Plot a loss/accuracy curve and explain an anomaly.
 ```
 
-Use [PyTorch Tutorials](https://pytorch.org/tutorials/), [CS231n Python/NumPy review](https://cs231n.stanford.edu/) and the [Hugging Face LLM Course](https://huggingface.co/learn/llm-course) to close gaps without delaying the whole plan.
+Use [PyTorch Tutorials](https://pytorch.org/tutorials/), [CS231n Python/NumPy review](https://cs231n.stanford.edu/) and the [Hugging Face LLM Course](https://huggingface.co/learn/llm-course) to close gaps on a schedule that keeps the plan on track.
 
 ## Compute and software tracks
 
@@ -188,7 +188,7 @@ Each week has four fixed parts: **study, implement, measure, deliver**. Core tas
 
 **Study:** [Stanford CS336](https://cs336.stanford.edu/), [CS224N](https://web.stanford.edu/class/cs224n/), the [Hugging Face LLM Course](https://huggingface.co/learn/llm-course), and the Transformer, Chinchilla and FlashAttention-2 papers.
 
-**Implement:** A tokenizer, causal self-attention, Transformer block, training loop, checkpoint and sampler in PyTorch. Use public small text such as TinyStories; do not use private data.
+**Implement:** A tokenizer, causal self-attention, Transformer block, training loop, checkpoint and sampler in PyTorch. Use public small text such as TinyStories.
 
 **Measure:** Training loss/perplexity, parameter count, tokens/s, peak memory, sequence length and batch-size effects. Record one overfit and one underfit case.
 
@@ -204,7 +204,7 @@ Each week has four fixed parts: **study, implement, measure, deliver**. Core tas
 
 **Deliver:** locally runnable service, performance report, fault-injection test and deployment notes. Advanced: read FlashAttention-2 code or implement a simplified kernel comparison.
 
-## W3: Instruction tuning, quantization and LLM evaluation
+## W3: Instruction tuning, quantization and LLM scoring
 
 **Study:** the [HF LLM Course](https://huggingface.co/learn/llm-course), [TRL](https://huggingface.co/docs/trl/), [PEFT](https://huggingface.co/docs/peft/), [Generative AI with LLMs](https://www.deeplearning.ai/courses/generative-ai-with-llms/) and [Fine-tuning LLMs](https://www.deeplearning.ai/short-courses/finetuning-large-language-models/).
 
@@ -212,7 +212,7 @@ Each week has four fixed parts: **study, implement, measure, deliver**. Core tas
 
 **Measure:** Format validity, task accuracy, abstention quality, latency, throughput, memory, training stability and overfitting on a 50--80 item test set covering format, facts, reasoning, refusal, tools and long context.
 
-**Deliver:** model card, quantization or LoRA configuration, JSONL evaluation set, error taxonomy and replayable commands.
+**Deliver:** model card, quantization or LoRA configuration, JSONL scoring set, error taxonomy and replayable commands.
 
 ## W4: RAG, tools and task planning
 
@@ -232,13 +232,13 @@ Each week has four fixed parts: **study, implement, measure, deliver**. Core tas
 
 **Measure:** Class F1, region IoU/hit rate, schema validity, calibration, lighting/occlusion degradation and per-image latency. Compare a color-threshold, classical detector or CLIP retrieval baseline.
 
-**Deliver:** visual tool, data card, error table and reproducible visualizations. Advanced: implement a small CLIP contrastive-learning experiment.
+**Deliver:** visual tool, data card, error table and deterministic visualizations. Advanced: implement a small CLIP contrastive-learning experiment.
 
 ## W6: Multimodal retrieval and model adaptation
 
 **Study:** [ColPali](https://huggingface.co/blog/manu/colpali), its [model page](https://huggingface.co/vidore/colpali), [SmolVLM2](https://huggingface.co/HuggingFaceTB/SmolVLM2-2.2B-Instruct) or a Qwen vision model card, and the first sections of the [VLA survey](https://arxiv.org/abs/2505.04769).
 
-**Implement:** Compare OCR+text retrieval with visual late-interaction retrieval over field maps, device screenshots, rule pages and fault photos. Optionally adapt a small VLM with LoRA; without a GPU, focus on prompts, calibration and post-processing.
+**Implement:** Compare OCR+text retrieval with visual late-interaction retrieval over field maps, device screenshots, rule pages and fault photos. Optionally adapt a small VLM with LoRA. On CPU, focus on prompts, calibration and post-processing.
 
 **Measure:** Recall@5, evidence-page hit rate, answer support, citation error, query latency, pre/post adaptation generalization and memory.
 
@@ -252,7 +252,7 @@ Each week has four fixed parts: **study, implement, measure, deliver**. Core tas
 
 **Measure:** Episode success, collision/out-of-bounds rate, action error, control frequency, inference latency and random-seed variance.
 
-**Deliver:** policy checkpoint, data manifest, 10--20 evaluation episodes, trajectory visualization and action-interface document. Advanced: write an `rclcpp` node or bag-replay tool.
+**Deliver:** policy checkpoint, data manifest, 10--20 scoring episodes, trajectory visualization and action-interface document. Advanced: write an `rclcpp` node or bag-replay tool.
 
 ## W8: World models and state prediction
 
@@ -272,7 +272,7 @@ Each week has four fixed parts: **study, implement, measure, deliver**. Core tas
 
 **Measure:** Return, success, collision/out-of-bounds rate, sample efficiency, planning latency, worst percentile and uncertainty-triggered safety stops.
 
-**Deliver:** planner, domain-randomization configuration, one ablation figure and a sim-to-real risk table. Advanced: reproduce the same task on a pinned Isaac Lab release.
+**Deliver:** planner, domain-randomization configuration, one ablation figure and a sim-to-real risk table. Advanced: rerun the same task on a pinned Isaac Lab release.
 
 ## W10: VLA, robot data and standard benchmarks
 
@@ -294,7 +294,7 @@ Each week has four fixed parts: **study, implement, measure, deliver**. Core tas
 
 **Deliver:** end-to-end state machine, fault-injection scripts, timing diagram, QoS/interface document and safety report. Real hardware is allowed only after emergency stop, limits, low-speed mode and human confirmation are verified.
 
-## W12: Research sprint, reproduction and release
+## W12: Research sprint, replay and release
 
 Choose one falsifiable question: does hybrid RAG improve citation support; does uncertainty gating reduce world-model-planning collisions; does LLM sub-goal planning beat a fixed script at acceptable latency; does domain randomization improve unseen-scene success; does quantization improve end-to-end latency at an acceptable success loss; or does state feedback improve LLM recovery?
 
@@ -324,7 +324,7 @@ Change one primary factor, run a baseline and ablation with at least three seeds
 
 ### Frontier reading
 
-Choose 3--5. Use the same one-page note for every paper: problem, hypothesis, method, data, baseline, metrics, ablations, failure boundary, code status, license and reproducibility.
+Choose 3--5. Use the same one-page note for every paper: problem, hypothesis, method, data, baseline, metrics, ablations, failure taxonomy, code status, license and determinism.
 
 | Direction | Resource | Status |
 |---|---|---|
@@ -337,33 +337,33 @@ Choose 3--5. Use the same one-page note for every paper: problem, hypothesis, me
 
 ## 2026 research index
 
-The following entries were retrieved from the official arXiv API on 2026-08-19 and screened by title, abstract and topic. Every entry is a `preprint`. arXiv availability does not imply peer review, public code, public data or local reproducibility. Read the paper, supplements and repository before using a result as evidence.
+The following entries were retrieved from the official arXiv API on 2026-08-19 and screened by title, abstract and topic. Every entry is a `preprint`. Peer review status, public code, public data and local determinism each stand apart from arXiv availability. Read the paper, supplements and repository before using a result as evidence.
 
-### Surveys, evaluation, governance and safety
+### Surveys, scoring, governance and safety
 
 | Paper | Focus |
 |---|---|
 | [Vision-Based Tactile Intelligence for Robotics](https://arxiv.org/abs/2608.15490) | Survey of visual-tactile sensing, learning and manipulation |
 | [Learning Physical Interaction](https://arxiv.org/abs/2608.07558) | Survey of tactile/force-aware robot learning |
 | [Weights or Skills?](https://arxiv.org/abs/2608.01851) | From policy weights to composable robot skills |
-| [How Should World Models Be Evaluated for Embodied Decision-Making?](https://arxiv.org/abs/2606.15032) | Decision-centric world-model evaluation |
+| [How Should World Models Be Evaluated for Embodied Decision-Making?](https://arxiv.org/abs/2606.15032) | Decision-centric world-model scoring |
 | [Security of World-Model-Based Embodied AI](https://arxiv.org/abs/2607.28226) | Lifecycle threats and defenses for world-model systems |
-| [Security of Foundation-Model-Powered Embodied Agents](https://arxiv.org/abs/2608.16843) | Attack surfaces, defenses and evaluation |
-| [A Comprehensive Survey and Systematic Real-World Evaluation of Embodied Vision-and-Language Navigation](https://arxiv.org/abs/2607.09792) | Real-world embodied VLN evaluation |
+| [Security of Foundation-Model-Powered Embodied Agents](https://arxiv.org/abs/2608.16843) | Attack surfaces, defenses and scoring |
+| [A Comprehensive Survey and Systematic Real-World Evaluation of Embodied Vision-and-Language Navigation](https://arxiv.org/abs/2607.09792) | Real-world embodied VLN scoring |
 | [Physical AI Governance](https://arxiv.org/abs/2607.22877) | Lifecycle governance for physical AI |
 | [H2R-Bench](https://arxiv.org/abs/2608.13049) | Human-video to robot-manipulation generation benchmark |
 | [HumanoidVLN](https://arxiv.org/abs/2608.12860) | Physics-grounded VLN benchmark across humanoids |
 | [FlatLab](https://arxiv.org/abs/2608.14049) | Simulation benchmark for flat-object manipulation |
 | [360CityArena](https://arxiv.org/abs/2608.08814) | Open-city embodied navigation benchmark |
-| [Compiling and Benchmarking Task-State Horizons for Embodied Agents](https://arxiv.org/abs/2608.08036) | Task-state horizons and long-horizon evaluation |
+| [Compiling and Benchmarking Task-State Horizons for Embodied Agents](https://arxiv.org/abs/2608.08036) | Task-state horizons and long-horizon scoring |
 | [WorldSimProbe](https://arxiv.org/abs/2608.09298) | Simulator-faithfulness diagnosis for action-conditioned world models |
 | [Explore, Map, Remember, Decide](https://arxiv.org/abs/2608.08077) | Embodied VLMs in safety-critical scenarios |
-| [How Should I Pick a Foundation Model for My Robot?](https://arxiv.org/abs/2608.06898) | Community evaluation framework for robot foundation models |
+| [How Should I Pick a Foundation Model for My Robot?](https://arxiv.org/abs/2608.06898) | Community scoring framework for robot foundation models |
 | [Agentic Harnesses](https://arxiv.org/abs/2608.09857) | LLM verification layers for robot autonomy |
 | [Failing Gracefully](https://arxiv.org/abs/2608.05313) | Mitigating the impact of inevitable robot failures |
 | [Toward Certified Functional Safety for Industrial Humanoid Robots](https://arxiv.org/abs/2608.02809) | Functional safety and the fail-passive gap |
 | [CoCoNav](https://arxiv.org/abs/2608.07751) | Conformal control for safe navigation in crowds |
-| [VLAGuard](https://arxiv.org/abs/2608.01028) | Evaluation and mitigation of physical attention hijacking |
+| [VLAGuard](https://arxiv.org/abs/2608.01028) | Analysis and mitigation of physical attention hijacking |
 | [Hijacking Robots with a Piece of Paper](https://arxiv.org/abs/2608.05715) | Physical prompt injection against VLM-controlled robots |
 | [Structure-Aware Robust Fine-Tuning](https://arxiv.org/abs/2608.03231) | Defense against physical attention hijacking |
 | [Bit-Flip Attacks on Vision-Language-Action Models](https://arxiv.org/abs/2608.15475) | Security weakness of action-decoding architectures |
@@ -436,7 +436,7 @@ The following entries were retrieved from the official arXiv API on 2026-08-19 a
 | [From Passive Video to Editable Experience](https://arxiv.org/abs/2607.26903) | Physically grounded experience synthesis |
 | [Counterfactual Action Sensitivity Coverage](https://arxiv.org/abs/2607.27261) | Counterfactual coverage for robust imitation |
 
-Read in this order: survey and evaluation first, one method paper second, then a same-condition W8--W11 baseline. For each paper record the arXiv ID, version date, code/data status, license, hardware requirements and failure boundary. Do not turn a title, abstract or submission date into a claim of superiority. Re-run the search quarterly and remove withdrawn, duplicate or unlocatable records.
+Read in this order: survey and scoring first, one method paper second, then a same-condition W8--W11 baseline. For each paper record the arXiv ID, version date, code/data status, license, hardware requirements and failure taxonomy. Ground any superiority claim in full-text reading. Re-run the search quarterly and remove withdrawn, duplicate or unlocatable records.
 
 ## Course and resource map
 
@@ -453,11 +453,11 @@ Read in this order: survey and evaluation first, one method paper second, then a
 | [HF Deep RL Course](https://huggingface.co/learn/deep-rl-course) | open course | W9 optional; page marked low-maintenance |
 | [HF Robotics Course](https://huggingface.co/learn/robotics-course) | open course | W7, W10: classic robotics, LeRobot and learning |
 | [Modern Robotics](https://modernrobotics.northwestern.edu/) | textbook and videos | W7: poses, kinematics, dynamics and control |
-| [LeRobot](https://github.com/huggingface/lerobot) | open platform | W7, W10--W11: data, policies, simulation and evaluation |
+| [LeRobot](https://github.com/huggingface/lerobot) | open platform | W7, W10--W11: data, policies, simulation and scoring |
 | [Isaac Lab](https://isaac-sim.github.io/IsaacLab/) | simulation/RL platform | W9 optional; use a pinned release |
 | [MuJoCo](https://mujoco.readthedocs.io/) | physics simulator | W7--W9 light route |
 | [ManiSkill](https://maniskill.ai/) | manipulation benchmark | W7--W10 selective use |
-| [LIBERO](https://libero-project.github.io/) | manipulation benchmark | W10 standard evaluation |
+| [LIBERO](https://libero-project.github.io/) | manipulation benchmark | W10 standard scoring |
 | [RoboMimic](https://robomimic.github.io/) | imitation-learning toolkit | W7, W10 baseline |
 | [Open X-Embodiment](https://robotics-transformer-x.github.io/) | cross-robot data | W10 data and generalization |
 | [NVIDIA Training](https://www.nvidia.com/en-us/training/online/) | engineering training | CUDA, deployment and Isaac topics |
@@ -465,7 +465,7 @@ Read in this order: survey and evaluation first, one method paper second, then a
 
 Run at most two main courses in parallel. Keep videos, assignments, code and project evidence as separate records.
 
-## Evaluation protocol
+## Scoring protocol
 
 ### Run manifest
 
@@ -498,11 +498,11 @@ limitations:
 | Policy/VLA | episode success | collision, out-of-bounds, action violation, intervention, variance |
 | System | end-to-end success | p95 latency, resources, recovery and state age |
 
-Separate paper results, public benchmarks, simulation results and hardware results. Do not compare across evidence levels.
+Separate paper results, public benchmarks, simulation results and hardware results. Keep comparisons within a single evidence level.
 
 ### Research quality gate
 
-Write "improves" only when the result uses the same data, environment, budget and evaluation script as a reasonable baseline; splits, seeds, versions and configurations are traceable; at least one ablation explains the source of the change; failures and scope limits are reported; and resource-limited single-seed or approximate runs are explicitly labeled.
+Write "improves" only when the result uses the same data, environment, budget and scoring script as a reasonable baseline; splits, seeds, versions and configurations are traceable; at least one ablation explains the source of the change; failures and scope limits are reported; and resource-limited single-seed or approximate runs are explicitly labeled.
 
 ## Engineering standards
 
@@ -539,7 +539,7 @@ At minimum, unit-test schema, timeout, retry, data splitting and the safety wrap
 - Model: checkpoint, model card, quantization, memory and input/output contract.
 - Runtime: logs, metrics, traces, resource watermarks, failure replay and rollback.
 - Robot: timestamps, frames, QoS, action limits, emergency stop and human takeover.
-- Collaboration: design docs, issues, PRs, changelog and reproducible README.
+- Collaboration: design docs, issues, PRs, changelog and deterministic README.
 
 ### Safety and licenses
 
@@ -551,45 +551,45 @@ Prefer Apache-2.0, MIT and BSD-compatible sources, but check code, weights, data
 |---|---:|---|
 | Theory and papers | 15 | 12 core paper notes explaining assumptions and limits |
 | Model implementation | 20 | tiny Transformer, VLM/retrieval tool and world model |
-| Experiments and evaluation | 25 | baselines, metrics, ablations, failures and multiple seeds |
+| Experiments and scoring | 25 | baselines, metrics, ablations, failures and multiple seeds |
 | Robotics and system | 20 | policy episodes, simulator/ROS 2 interface and safety tests |
 | Engineering quality | 10 | tests, CI, locks, logs, manifest and licenses |
 | Public communication | 10 | README, architecture diagram, two-minute demo and report |
 
-Pass with at least 70 points, at least half of both the evaluation and robotics categories, and a capstone that runs a smoke test from a clean environment.
+Pass with at least 70 points, at least half of both the scoring and robotics categories, and a capstone that runs a smoke test from a clean environment.
 
 ## Research upgrade path
 
-After 12 weeks, choose one question and iterate as `hypothesis -> baseline -> ablation -> failure boundary -> next hypothesis`.
+After 12 weeks, choose one question and iterate as `hypothesis -> baseline -> ablation -> failure taxonomy -> next hypothesis`.
 
 | Observation | Research question | First experiment |
 |---|---|---|
 | RAG has evidence but the task is still wrong | evidence selection, conflicts or abstention calibration | dense vs hybrid vs evidence reranking |
 | VLM recognition is unstable | confidence, active re-observation or missing modalities | VLM vs VLM plus verifier |
 | World-model rollouts diverge | uncertainty, short-horizon planning or action delay | ensemble gate vs no gate |
-| Simulation success does not generalize | coverage, randomization or invariant representations | no randomization vs three-factor randomization |
+| Simulation success overfits its coverage | coverage, randomization or invariant representations | single randomization vs three-factor randomization |
 | VLA latency is too high | action chunks, quantization, caching or frequency hierarchy | latency-success Pareto curve |
 | LLM sub-goals are unreliable | state feedback and recovery | scripted planner vs LLM planner |
 
-State which results are reproductions, engineering changes or possible new methods. Do not package integration work as algorithmic novelty without new data, a new baseline or new analysis.
+State which results are reruns, engineering changes or possible new methods. Package integration work as algorithmic novelty only alongside new data, a new baseline or new analysis.
 
 ## Public repository checklist
 
 - [ ] The README first screen has the goal, demo image/video, quick start and results table.
-- [ ] One command installs the project, runs a smoke test and executes the smallest evaluation.
+- [ ] One command installs the project, runs a smoke test and executes the smallest scoring.
 - [ ] Public data or download scripts include license, hash and version.
 - [ ] Figures are generated from scripts and JSONL, never hand-edited.
 - [ ] The model card contains source, training data, limitations and use conditions.
 - [ ] The data card describes splits, privacy, bias and deletion.
 - [ ] `LICENSE`, `CITATION.cff` and third-party notices are complete.
 - [ ] No token, private path, network address, map, bag, serial number or unauthorized weight is included.
-- [ ] Issue templates request bug, reproduction and environment information.
+- [ ] Issue templates request bug, replay and environment information.
 - [ ] Release notes state known failures, compatible versions and rollback steps.
 
 ## Maintenance and synchronization
 
 Review the main route quarterly: course pages, repository activity, versions, licenses, model cards, benchmarks and hardware requirements. A new paper enters the frontier index only after its code, data, license and local resource requirements are checked.
 
-The two language files must be updated together. Keep section names, week IDs, milestone names, evaluation thresholds and arXiv IDs aligned. A paper may be added in one language only temporarily during editing; before committing, run a link and ID comparison and resolve the mismatch.
+The two language files must be updated together. Keep section names, week IDs, milestone names, scoring thresholds and arXiv IDs aligned. A paper may be added in one language only temporarily during editing; before committing, run a link and ID comparison and resolve the mismatch.
 
-The goal is not to collect the largest list of models. It is to build transferable ability: understand principles, write implementations, create data, design evaluation, analyze failures, deploy safely and deliver results that another person can reproduce.
+The goal is not to collect the largest list of models. It is to build transferable ability: understand principles, write implementations, create data, design scoring, analyze failures, deploy safely and deliver results that another person can rerun.

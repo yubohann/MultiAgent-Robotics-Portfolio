@@ -1,4 +1,4 @@
-﻿"""Shared gate-course layouts for experiment-1/2 planner evaluation and replay."""
+"""Shared gate-course layouts for experiment-1/2 planner evaluation and replay."""
 
 from __future__ import annotations
 

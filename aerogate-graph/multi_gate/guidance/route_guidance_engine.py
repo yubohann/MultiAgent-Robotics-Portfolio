@@ -1,4 +1,4 @@
-﻿"""Asynchronous low-frequency route guidance bridge with heuristic fallback."""
+"""Asynchronous low-frequency route guidance bridge with heuristic fallback."""
 
 from __future__ import annotations
 

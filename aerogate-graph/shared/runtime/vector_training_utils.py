@@ -1,4 +1,4 @@
-"""Shared helpers for synchronous vectorized aerogate_graph training."""
+"""Shared helpers for synchronous vectorized gate_graph_2d_minimal training."""
 
 from __future__ import annotations
 

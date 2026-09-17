@@ -1,4 +1,4 @@
-﻿"""Graph observation builder for the single-agent 2D gate task."""
+"""Graph observation builder for the single-agent 2D gate task."""
 
 from __future__ import annotations
 

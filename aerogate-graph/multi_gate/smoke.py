@@ -1,4 +1,4 @@
-﻿"""Smoke test helpers for the multi-agent experiment."""
+"""Smoke test helpers for the multi-agent experiment."""
 
 from __future__ import annotations
 

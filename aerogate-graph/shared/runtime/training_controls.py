@@ -1,4 +1,4 @@
-﻿"""Checkpoint aliasing, selection scoring, and formal promotion gates."""
+"""Checkpoint aliasing, selection scoring, and formal promotion gates."""
 
 from __future__ import annotations
 
