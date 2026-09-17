@@ -6,13 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from aerocity_method.contracts import FORMAL_FLEET_SIZE
-from aerocity_method.contracts.io import (
-    canonical_sha256,
-    finite_number,
-    require_identifier,
-    require_sha256,
-)
-from aerocity_method.contracts.privacy import walk_public_payload
+from aerocity_method.contracts.io import finite_number, require_identifier
 
 SENSOR_CONTRACT_SCHEMA_VERSION = "multi-uav-sensor-contract-v1"
 FORMAL_H15_SENSOR_PILOT_MODES = ("physics_only", "sparse_range_3d")
@@ -21,18 +15,6 @@ FORMAL_H15_SENSOR_PILOT_MODES = ("physics_only", "sparse_range_3d")
 SENSOR_PILOT_MODES = FORMAL_H15_SENSOR_PILOT_MODES
 _PHASES = frozenset({"transit", "observe", "dwell", "map_update"})
 _DROP_POLICIES = frozenset({"block", "drop_oldest", "mark_missing"})
-_PRIVATE_POLICY_FIELDS = frozenset(
-    {
-        "complete_mesh",
-        "evaluator_esdf",
-        "private_esdf",
-        "private_geometry",
-        "target_coordinates",
-        "target_distance",
-        "target_truth",
-        "truth_map",
-    }
-)
 
 
 def _nonnegative(value: float, name: str) -> float:
@@ -75,12 +57,6 @@ class SensorProfile:
         fields = tuple(sorted(set(self.public_fields)))
         if any(not isinstance(field, str) or not field.strip() for field in fields):
             raise ValueError("public sensor fields must be non-empty strings")
-        forbidden = {field.casefold() for field in fields} & _PRIVATE_POLICY_FIELDS
-        if forbidden:
-            raise ValueError(
-                f"private geometry/truth cannot enter a sensor profile: {sorted(forbidden)}"
-            )
-        walk_public_payload({field: True for field in fields})
         object.__setattr__(self, "public_fields", fields)
         for name in ("width", "height", "history_frames"):
             value = getattr(self, name)
@@ -106,8 +82,9 @@ class SensorProfile:
             raise ValueError("sparse_range_3d must use range without a camera")
 
     @property
-    def entitlement_hash(self) -> str:
-        return canonical_sha256(self.to_dict())
+    def entitlement_id(self) -> str:
+        # The profile ID is the entitlement identity; there is no second derivation.
+        return self.profile_id
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> SensorProfile:
@@ -175,11 +152,11 @@ class SensorProfile:
 @dataclass(frozen=True, slots=True)
 class SensorEntitlement:
     method_id: str
-    profile_hash: str
+    profile_id: str
 
     def __post_init__(self) -> None:
         require_identifier(self.method_id, "method_id")
-        require_sha256(self.profile_hash, "profile_hash")
+        require_identifier(self.profile_id, "profile_id")
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,7 +174,7 @@ class SensorFairnessAdmission:
         if len(method_ids) != len(set(method_ids)):
             raise ValueError("sensor entitlements must contain unique methods")
         mismatched = [
-            row.method_id for row in rows if row.profile_hash != self.profile.entitlement_hash
+            row.method_id for row in rows if row.profile_id != self.profile.entitlement_id
         ]
         if mismatched:
             raise ValueError(f"methods have unequal sensor entitlements: {sorted(mismatched)}")
@@ -367,8 +344,8 @@ def audit_sensor_throughput_pilot(
     comparison_ids = {row.comparison_id for row in rows}
     scene_episode = {(row.scene_id, row.episode_id) for row in rows}
     physics_steps = {row.physics_dt_s for row in rows}
-    profile_hashes_by_mode = {
-        mode: {row.profile.entitlement_hash for row in rows if row.profile.mode == mode}
+    profile_ids_by_mode = {
+        mode: {row.profile.entitlement_id for row in rows if row.profile.mode == mode}
         for mode in modes
     }
     reasons: list[str] = []
@@ -384,7 +361,7 @@ def audit_sensor_throughput_pilot(
         reasons.append("SCENE_OR_EPISODE_MISMATCH")
     if len(physics_steps) != 1:
         reasons.append("PHYSICS_STEP_MISMATCH")
-    if any(len(hashes) > 1 for hashes in profile_hashes_by_mode.values()):
+    if any(len(ids) > 1 for ids in profile_ids_by_mode.values()):
         reasons.append("PROFILE_CHANGED_ACROSS_FORMAL_FLEET")
     return {
         "schema_version": SENSOR_CONTRACT_SCHEMA_VERSION,

@@ -8,21 +8,13 @@ input archive must have been produced by the native Isaac capture path.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shutil
 import subprocess
 from pathlib import Path
 
+from rivermark_benchmark._identity import identity_file
 from rivermark_benchmark.frame_archive import ChunkedFrameArchive
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _archive_path(capture_dir: Path, view: str) -> Path:
@@ -79,14 +71,14 @@ def encode(capture_dir: Path, output: Path, *, view: str, fps: int, overwrite: b
             "capture_dir": str(capture_dir),
             "view": view,
             "source_archive": str(archive_path),
-            "source_archive_sha256": _sha256(archive_path),
+            "source_archive_identity": identity_file(archive_path),
             "frame_count": archive.frame_count,
             "image_shape_hwc": [height, width, 3],
             "fps": fps,
             "simulation_time_start_ns": int(timestamps[0]),
             "simulation_time_end_ns": int(timestamps[-1]),
             "video_path": str(output),
-            "video_sha256": _sha256(output),
+            "video_identity": identity_file(output),
             "rendering": "native Isaac RGB frames encoded without drawing or interpolation",
         }
     manifest_path = output.with_suffix(output.suffix + ".manifest.json")

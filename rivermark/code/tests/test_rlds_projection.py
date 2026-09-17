@@ -48,7 +48,7 @@ class RldsProjectionTests(unittest.TestCase):
                 rewards=[1.0, 2.0],
                 discounts=[0.99, 0.5],
                 source_provenance={
-                    "source_capture_receipt_sha256": "a" * 64,
+                    "source_capture_receipt_identity": "a" * 16,
                     "source_revision": "b" * 40,
                     "collection_protocol_id": "protocol-v1",
                     "split": "train",
@@ -101,7 +101,7 @@ class RldsProjectionTests(unittest.TestCase):
                     allow_initial_command_drop=True,
                 )
 
-    def test_missing_reward_and_implicit_drop_fail_closed(self) -> None:
+    def test_missing_reward_and_implicit_drop_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaisesRegex(RldsProjectionError, "allow_initial_command_drop"):
                 project_state_action_to_rlds(
@@ -121,7 +121,7 @@ class RldsProjectionTests(unittest.TestCase):
                     allow_initial_command_drop=True,
                 )
 
-    def test_prefix_tampering_is_detected(self) -> None:
+    def test_prefix_alteration_is_detected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "rlds"
             project_state_action_to_rlds(
@@ -138,7 +138,7 @@ class RldsProjectionTests(unittest.TestCase):
             altered["reward"] = 99.0
             lines[1] = json.dumps(altered, sort_keys=True, separators=(",", ":"))
             path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-            with self.assertRaisesRegex(RldsProjectionError, "projection manifest does not bind|prefix hash mismatch"):
+            with self.assertRaisesRegex(RldsProjectionError, "projection manifest does not bind|prefix identity mismatch"):
                 verify_rlds_interchange(root)
 
 

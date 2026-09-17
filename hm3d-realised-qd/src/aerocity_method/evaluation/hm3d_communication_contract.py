@@ -8,12 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from aerocity_method.contracts.io import (
-    canonical_sha256,
-    finite_number,
-    read_json_object,
-    require_identifier,
-)
+from aerocity_method.contracts.io import finite_number, read_json_object, require_identifier
 
 COMMUNICATION_CONTRACT_SCHEMA_VERSION = "hm3d-public-communication-contract-v3"
 COMMUNICATION_MODES = frozenset(
@@ -108,8 +103,8 @@ class HM3DCommunicationContract:
         return cls(read_json_object(path))
 
     @property
-    def digest(self) -> str:
-        return canonical_sha256(self.payload)
+    def contract_id(self) -> str:
+        return str(self.payload["contract_id"])
 
     @property
     def mode(self) -> str:
@@ -213,7 +208,6 @@ class HM3DCommunicationContract:
         }
         return {
             "contract_id": self.payload["contract_id"],
-            "contract_sha256": self.digest,
             "mode": self.mode,
             "telemetry_update_hz": telemetry_update_hz,
             "relay_telemetry_sample_count": total,

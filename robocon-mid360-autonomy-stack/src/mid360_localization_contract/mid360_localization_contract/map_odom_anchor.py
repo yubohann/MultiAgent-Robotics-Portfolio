@@ -6,17 +6,17 @@ import json
 import time
 
 import rclpy
-from rclpy._rclpy_pybind11 import RCLError
-from rclpy.executors import ExternalShutdownException
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from geometry_msgs.msg import PoseWithCovarianceStamped, TransformStamped
 from nav_msgs.msg import Odometry
+from rclpy._rclpy_pybind11 import RCLError
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
 from tf2_ros import TransformBroadcaster
 
 from .geometry import compose_transform, invert_transform, normalize_quaternion
-from .tracking import TrackingState, TrackingStateMachine
+from .tracking import TrackingStateMachine
 
 
 class Mid360MapOdomAnchor(Node):

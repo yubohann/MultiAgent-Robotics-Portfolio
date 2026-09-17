@@ -44,7 +44,7 @@ class RunManifestTests(unittest.TestCase):
                 source_revision_specs=["fast_lio=c8c20962"],
             )
 
-    def test_map_hash_and_json_output_are_deterministic(self):
+    def test_map_file_identity_and_json_output_are_deterministic(self):
         with tempfile.TemporaryDirectory() as directory:
             map_path = Path(directory) / "map.pcd"
             map_path.write_bytes(b"synthetic map")
@@ -57,7 +57,7 @@ class RunManifestTests(unittest.TestCase):
             )
             write_manifest(output, manifest)
             loaded = json.loads(output.read_text(encoding="utf-8"))
-            self.assertEqual(loaded["map"]["sha256"], manifest["map"]["sha256"])
+            self.assertEqual(loaded["map"]["file_size_bytes"], len(b"synthetic map"))
             self.assertEqual(loaded["run_id"], "test-run")
 
 

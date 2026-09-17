@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.metadata
 import json
 import math
@@ -11,13 +10,14 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any
 
+from ._identity import IdentityAccumulator
 from .citylite_scene import resolve_city_lite_authority
 from .provenance import SourceProvenance, detect_source_provenance
-
 
 PREFLIGHT_SCHEMA = "org.rivermark.benchmark.preflight.v1"
 
@@ -59,7 +59,7 @@ class RuntimePreflightRequirements:
     isaac_sim_version: str | None = None
     isaaclab_version: str | None = None
     scene_contract: Path | None = None
-    scene_contract_sha256: str | None = None
+    scene_contract_identity: str | None = None
     python_min_version: tuple[int, int] = (3, 10)
     runtime_lock: Path | None = None
     isaaclab_source: Path | None = None
@@ -157,11 +157,11 @@ def _runtime_checks(requirements: RuntimePreflightRequirements) -> list[Prefligh
         or requirements.minimum_gpu_vram_bytes < 0
     ):
         raise ValueError("minimum_gpu_vram_bytes must be non-negative")
-    if requirements.scene_contract_sha256 is not None and (
-        len(requirements.scene_contract_sha256) != 64
-        or any(char not in "0123456789abcdef" for char in requirements.scene_contract_sha256)
+    if requirements.scene_contract_identity is not None and (
+        len(requirements.scene_contract_identity) != 16
+        or any(char not in "0123456789abcdef" for char in requirements.scene_contract_identity)
     ):
-        raise ValueError("scene_contract_sha256 must be 64 lowercase hexadecimal characters")
+        raise ValueError("scene_contract_identity must be 16 lowercase hexadecimal characters")
 
     actual_python = (sys.version_info.major, sys.version_info.minor)
     python_required = requirements.python_min_version
@@ -200,23 +200,23 @@ def _runtime_checks(requirements: RuntimePreflightRequirements) -> list[Prefligh
     if requirements.scene_contract is not None:
         contract_path = requirements.scene_contract.expanduser().resolve()
         exists = contract_path.is_file()
-        actual_hash = sha256_file(contract_path) if exists else None
-        hash_ok = requirements.scene_contract_sha256 is None or actual_hash == requirements.scene_contract_sha256
+        actual_identity = identity_file(contract_path) if exists else None
+        identity_ok = requirements.scene_contract_identity is None or actual_identity == requirements.scene_contract_identity
         checks.append(
             PreflightCheck(
                 "scene_contract_file",
-                exists and hash_ok,
-                {"path": str(contract_path), "sha256": actual_hash},
-                "City-Lite contract exists" + (" and SHA-256 matches" if requirements.scene_contract_sha256 else ""),
-                "City-Lite contract file is present and hash-bound"
-                if exists and hash_ok
-                else "refusing launch: City-Lite contract is missing or hash-mismatched",
+                exists and identity_ok,
+                {"path": str(contract_path), "identity": actual_identity},
+                "City-Lite contract exists" + (" and IDENTITY matches" if requirements.scene_contract_identity else ""),
+                "City-Lite contract file is present and identity-bound"
+                if exists and identity_ok
+                else "refusing launch: City-Lite contract is missing or identity-mismatched",
             )
         )
         authority_ok = False
         authority_value: dict[str, Any] = {"path": str(contract_path)}
         authority_message = "refusing launch: City-Lite authority validation failed"
-        if exists and hash_ok:
+        if exists and identity_ok:
             try:
                 authority = resolve_city_lite_authority(contract_path)
             except (OSError, RuntimeError, ValueError) as exc:
@@ -226,7 +226,7 @@ def _runtime_checks(requirements: RuntimePreflightRequirements) -> list[Prefligh
                 authority_value.update(
                     {
                         "scene_id": "RIVERMARK_CITY_LITE_v1",
-                        "contract_sha256": authority.contract_sha256,
+                        "contract_identity": authority.contract_identity,
                         "asset_count": len(authority.asset_paths),
                     }
                 )
@@ -236,12 +236,12 @@ def _runtime_checks(requirements: RuntimePreflightRequirements) -> list[Prefligh
                 "scene_contract_authority",
                 authority_ok,
                 authority_value,
-                "approved City-Lite v1_r2 authority and all bound asset hashes",
+                "approved City-Lite v1_r2 authority and all bound asset identities",
                 authority_message,
             )
         )
-    elif requirements.scene_contract_sha256 is not None:
-        raise ValueError("scene_contract is required when scene_contract_sha256 is provided")
+    elif requirements.scene_contract_identity is not None:
+        raise ValueError("scene_contract is required when scene_contract_identity is provided")
 
     gpu_required = (
         requirements.require_gpu
@@ -331,8 +331,8 @@ def _runtime_checks(requirements: RuntimePreflightRequirements) -> list[Prefligh
     return checks
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -404,18 +404,18 @@ def run_preflight(
                 "source worktree is clean" if clean else "source worktree is dirty",
             )
         )
-    for asset, expected_hash in required_assets:
+    for asset, expected_identity in required_assets:
         resolved = asset.expanduser().resolve()
         exists = resolved.is_file()
-        actual_hash = sha256_file(resolved) if exists and expected_hash else None
-        hash_ok = expected_hash is None or actual_hash == expected_hash
+        actual_identity = identity_file(resolved) if exists and expected_identity else None
+        identity_ok = expected_identity is None or actual_identity == expected_identity
         checks.append(
             PreflightCheck(
                 f"asset:{asset}",
-                exists and hash_ok,
-                {"path": str(resolved), "sha256": actual_hash},
-                "file exists" + (" and SHA-256 matches" if expected_hash else ""),
-                "asset is present and hash-bound" if exists and hash_ok else "required asset is missing or hash-mismatched",
+                exists and identity_ok,
+                {"path": str(resolved), "identity": actual_identity},
+                "file exists" + (" and IDENTITY matches" if expected_identity else ""),
+                "asset is present and identity-bound" if exists and identity_ok else "required asset is missing or identity-mismatched",
             )
         )
     if runtime is not None:
@@ -427,8 +427,8 @@ def _parse_asset(value: str) -> tuple[Path, str | None]:
     path, separator, digest = value.partition("=")
     if not path:
         raise argparse.ArgumentTypeError("asset path cannot be empty")
-    if separator and (len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest)):
-        raise argparse.ArgumentTypeError("asset hash must be 64 lowercase hexadecimal characters")
+    if separator and (len(digest) != 16 or any(char not in "0123456789abcdef" for char in digest)):
+        raise argparse.ArgumentTypeError("asset identity must be 16 lowercase hexadecimal characters")
     return Path(path), digest or None
 
 
@@ -448,7 +448,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-root", type=Path)
     parser.add_argument("--asset", action="append", type=_parse_asset, default=[])
     parser.add_argument("--scene-contract", type=Path)
-    parser.add_argument("--scene-contract-sha256")
+    parser.add_argument("--scene-contract-identity")
     parser.add_argument("--require-gpu", action="store_true")
     parser.add_argument("--minimum-gpu-vram-gib", type=float, default=0.0)
     parser.add_argument("--minimum-driver-version", type=_parse_version)
@@ -480,7 +480,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 isaac_sim_version=args.isaac_sim_version,
                 isaaclab_version=args.isaaclab_version,
                 scene_contract=args.scene_contract,
-                scene_contract_sha256=args.scene_contract_sha256,
+                scene_contract_identity=args.scene_contract_identity,
                 runtime_lock=args.runtime_lock,
                 isaaclab_source=args.isaaclab_source,
                 cf2x_usd=args.cf2x_usd,

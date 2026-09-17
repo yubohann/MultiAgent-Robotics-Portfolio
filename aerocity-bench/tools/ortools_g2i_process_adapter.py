@@ -232,7 +232,7 @@ class ORToolsInspectionPlanner:
             or sector.get("frozen_before_sampling") is not True
         ):
             raise ValueError("OR-Tools adapter requires a frozen target-independent sector")
-        if sector.get("atlas_hash") != atlas.get("atlas_hash"):
+        if sector.get("layout_id") != atlas.get("layout_id"):
             raise ValueError("public mission sector is not bound to the public atlas")
 
         starts: dict[str, tuple[float, float, float]] = {}

@@ -13,7 +13,6 @@ lidar_model: "Livox MID-360"
 extrinsic_version: "TBD"
 time_offset_version: "TBD"
 software_commit: "TBD"
-checksum_sha256: "TBD"
 validation:
   registration_method: "TBD"
   initialpose_required: true

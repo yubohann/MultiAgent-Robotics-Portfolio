@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
@@ -15,13 +15,13 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.formal_dataset import sha256_file
+from rivermark_benchmark.formal_dataset import identity_file
 from rivermark_benchmark.research_projection import (
     ProjectionError,
     project_episode_to_zarr,
     read_zarr_array,
-    read_zarr_array_independent,
     read_zarr_array_external,
+    read_zarr_array_independent,
 )
 from tests.test_formal_dataset import _candidate, _write_json
 
@@ -40,13 +40,13 @@ def _append_npz_stream(candidate: Path, stream_id: str, arrays: dict[str, np.nda
             "sample_count": 1,
             "timestamp_field": "sensor_time_ns",
             "path": f"streams/{stream_id}.npz",
-            "sha256": sha256_file(payload_path),
+            "identity": identity_file(payload_path),
         }
     )
     _write_json(manifest_path, manifest)
     receipt_path = candidate / "formal_capture_receipt.json"
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    receipt["episode_manifest_sha256"] = sha256_file(manifest_path)
+    receipt["episode_manifest_identity"] = identity_file(manifest_path)
     _write_json(receipt_path, receipt)
     return payload_path
 
@@ -73,13 +73,13 @@ class ResearchProjectionTests(unittest.TestCase):
                     "sample_count": 3,
                     "timestamp_field": "sensor_time_ns",
                     "path": "streams/demo.npz",
-                    "sha256": sha256_file(payload_path),
+                    "identity": identity_file(payload_path),
                 }
             )
             _write_json(manifest_path, manifest)
             receipt_path = candidate / "formal_capture_receipt.json"
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-            receipt["episode_manifest_sha256"] = sha256_file(manifest_path)
+            receipt["episode_manifest_identity"] = identity_file(manifest_path)
             _write_json(receipt_path, receipt)
 
             output = root / "zarr"
@@ -91,9 +91,9 @@ class ResearchProjectionTests(unittest.TestCase):
             np.testing.assert_array_equal(first, np.asarray([[1, 2], [3, 4], [5, 6]], dtype=np.float32))
             receipt = json.loads((output / "projection_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(receipt["schema"], "org.rivermark.benchmark.zarr-projection.v1")
-            self.assertEqual(receipt["episode_manifest_sha256"], sha256_file(manifest_path))
+            self.assertEqual(receipt["episode_manifest_identity"], identity_file(manifest_path))
             record = next(item for item in receipt["arrays"] if item["path"] == "demo_npz/value")
-            self.assertEqual(record["chunk_sha256"], record["chunk_sha256s"][0])
+            self.assertEqual(record["chunk_identity"], record["chunk_identities"][0])
 
     def test_unsupported_stream_encoding_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -108,7 +108,7 @@ class ResearchProjectionTests(unittest.TestCase):
             with self.assertRaisesRegex(ProjectionError, "reserved Zarr path"):
                 project_episode_to_zarr(candidate, Path(temporary) / "zarr", stream_ids=["reserved"])
 
-    def test_empty_array_and_object_array_fail_closed(self) -> None:
+    def test_empty_array_and_object_array_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             empty_candidate, _ = _candidate(root / "captures", episode_id="formal-episode-zarr-empty")
@@ -161,7 +161,7 @@ class ResearchProjectionTests(unittest.TestCase):
             manifest = json.loads((output / "projection_manifest.json").read_text(encoding="utf-8"))
             record = next(item for item in manifest["arrays"] if item["path"] == "chunked/value")
             self.assertEqual(record["chunks"], [2, 4])
-            self.assertEqual(len(record["chunk_sha256s"]), 3)
+            self.assertEqual(len(record["chunk_identities"]), 3)
 
     def test_npz_projection_streams_members_without_numpy_load(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

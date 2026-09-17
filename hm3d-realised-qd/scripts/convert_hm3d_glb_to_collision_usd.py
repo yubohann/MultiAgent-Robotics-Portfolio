@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -12,19 +11,15 @@ from typing import Any
 from isaaclab.app import AppLauncher
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
-def _canonical_sha256(value: object) -> str:
-    encoded = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    )
-    return hashlib.sha256(encoded).hexdigest()
+def _canonical_file_id(value: object) -> str:
+    # Explicit record label: canonical JSON text length.
+    encoded = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    return f"json:{len(encoded)}b"
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:
@@ -168,11 +163,11 @@ def main() -> int:
             "scene_id": ARGS.scene_id,
             "split": ARGS.split,
             "source_glb": str(source),
-            "source_glb_sha256": _sha256(source),
+            "source_glb_file_id": _file_id(source),
             "output_usd": str(usd_path),
-            "output_usd_sha256": _sha256(usd_path),
+            "output_usd_file_id": _file_id(usd_path),
             "coordinate_transform": transform,
-            "coordinate_transform_sha256": _canonical_sha256(transform),
+            "coordinate_transform_file_id": _canonical_file_id(transform),
             "collision": inspection,
             "formal_runtime_admission": False,
             "required_next_evidence": [

@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import statistics
+from dataclasses import dataclass
 
+from shared.task_suites.exp12_gate_scene import make_exp2_gate_tasks, make_race50_gate_tasks, task_suite_names
 from single_internal_gate.configs.experiment_config import EXP2_SINGLE_INTERNAL_CONFIG, Exp2SingleInternalConfig
 from single_internal_gate.planners.interfaces import PlannerResult, PlannerTask2D
-from shared.core.collision_2d import GateObstacleMap2D
-from shared.task_suites.exp12_gate_scene import make_exp2_gate_tasks, make_race50_gate_tasks, task_suite_names
 
 
 @dataclass(frozen=True)
@@ -37,34 +36,7 @@ def make_tasks(
         return make_exp2_gate_tasks(count, config)
     if normalized_task_suite in {"race50", "race50_gate", "gate50"}:
         return make_race50_gate_tasks(count, config)
-    if normalized_task_suite != "gate":
-        raise ValueError(f"Unsupported experiment-2 task suite: {task_suite}. Expected one of {task_suite_names()}.")
-
-    obstacle_map = GateObstacleMap2D.from_gate()
-    start_min, start_max = config.environment.start_y_range_m
-    goal_min, goal_max = config.environment.goal_y_range_m
-    tasks = []
-    for index in range(count):
-        denom = max(count - 1, 1)
-        start_y = start_min + (start_max - start_min) * index / denom
-        goal_y = goal_max - (goal_max - goal_min) * index / denom
-        tasks.append(
-            PlannerTask2D(
-                start_xy=(config.environment.start_x_m, start_y),
-                goal_xy=(config.environment.goal_x_m, goal_y),
-                obstacles_2d=obstacle_map,
-                fixed_height_m=config.environment.fixed_height_m,
-                task_id=f"exp2_default_{index:03d}",
-                drone_radius_m=config.environment.drone_radius_m,
-                world_x_bounds_m=config.environment.world_x_bounds_m,
-                world_y_bounds_m=config.environment.world_y_bounds_m,
-            )
-        )
-    return tuple(tasks)
-
-
-def make_default_tasks(count: int, config: Exp2SingleInternalConfig = EXP2_SINGLE_INTERNAL_CONFIG) -> tuple[PlannerTask2D, ...]:
-    return make_tasks(count, config, task_suite="gate")
+    raise ValueError(f"Unsupported experiment-2 task suite: {task_suite}. Expected one of {task_suite_names()}.")
 
 
 def summarize_results(
@@ -84,12 +56,12 @@ def summarize_results(
         if result.success
     ]
     latencies = [result.planning_time_ms for result in results]
-    clearances = [_path_min_clearance(task, result) for task, result in zip(tasks, results) if result.success]
+    clearances = [_path_min_clearance(task, result) for task, result in zip(tasks, results, strict=False) if result.success]
     return PlannerMetrics(
         planner_name=planner_name,
         episodes=len(results),
         success_rate=len(successes) / max(len(results), 1),
-        collision_rate=sum(_path_collides(task, result) for task, result in zip(tasks, results)) / max(len(results), 1),
+        collision_rate=sum(_path_collides(task, result) for task, result in zip(tasks, results, strict=False)) / max(len(results), 1),
         normalized_path_length=_mean_or_inf(normalized_lengths),
         normalized_travel_time=_mean_or_inf(normalized_lengths),
         min_clearance=min(clearances) if clearances else float("inf"),
@@ -109,7 +81,7 @@ def _path_collides(task: PlannerTask2D, result: PlannerResult) -> bool:
         return False
     return any(
         task.obstacles_2d.segment_collides(a, b, drone_radius_m=task.drone_radius_m)
-        for a, b in zip(result.path_xy[:-1], result.path_xy[1:])
+        for a, b in zip(result.path_xy[:-1], result.path_xy[1:], strict=False)
     )
 
 

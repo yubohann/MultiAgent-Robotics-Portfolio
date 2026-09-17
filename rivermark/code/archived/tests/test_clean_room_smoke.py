@@ -8,13 +8,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.clean_room_smoke import (  # noqa: E402
+from rivermark_benchmark.clean_room_smoke import (
     CLEAN_ROOM_SMOKE_SCHEMA,
     run_clean_room_smoke,
 )
@@ -47,7 +46,7 @@ class CleanRoomSmokeTests(unittest.TestCase):
             self.assertFalse(result["formal_benchmark_admission"])
             self.assertEqual(sorted(path.name for path in output.iterdir()), ["clean_room_report.json"])
             persisted = json.loads((output / "clean_room_report.json").read_text(encoding="utf-8"))
-            self.assertNotIn("evaluator_truth_sha256", json.dumps(persisted))
+            self.assertNotIn("evaluator_truth_identity", json.dumps(persisted))
             self.assertNotIn(str(repo), json.dumps(persisted))
 
     def test_dirty_source_fails_closed_without_cloning(self) -> None:

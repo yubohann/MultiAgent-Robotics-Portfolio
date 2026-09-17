@@ -1,17 +1,10 @@
-"""Versioned public packets shared by runtimes, adapters, and evaluators.
-
-The packet layer deliberately contains no target coordinates, support-site IDs,
-split labels, or evaluator witnesses.  Private truth is represented only in the
-evaluator module and is never accepted from a method process.
-"""
+"""Versioned public packets shared by runtimes, adapters, and evaluators."""
 
 from __future__ import annotations
 
 import math
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
-
-from .canonical import content_hash
 
 ACTION_KINDS = frozenset({"HOVER", "WAYPOINT", "VELOCITY", "OBSERVE", "RETURN"})
 TERMINAL_REASONS = frozenset(
@@ -245,7 +238,6 @@ class ObservationReceipt:
     timestamp_s: float
     accepted: bool
     reason: str
-    receipt_hash: str
 
     @classmethod
     def create(
@@ -256,14 +248,13 @@ class ObservationReceipt:
         accepted: bool,
         reason: str,
     ) -> ObservationReceipt:
-        payload = {
-            "observation_id": observation_id,
-            "drone_id": drone_id,
-            "timestamp_s": timestamp_s,
-            "accepted": accepted,
-            "reason": reason,
-        }
-        return cls(**payload, receipt_hash=content_hash(payload))
+        return cls(
+            observation_id=observation_id,
+            drone_id=drone_id,
+            timestamp_s=timestamp_s,
+            accepted=accepted,
+            reason=reason,
+        )
 
 
 @dataclass(frozen=True)
@@ -301,12 +292,7 @@ class ExecutionReceipt:
     safety_intervention: bool
     deadline_miss: bool
     execution_level: Literal["L0", "L1", "L2"]
-    action_packet_hash: str
     source_observation_id: str
-    source_observation_hash: str
-    state_before_hash: str
-    state_after_hash: str
-    previous_receipt_hash: str | None
     confirmation_ids: tuple[str, ...] = field(default_factory=tuple)
     planner_invoked: bool = True
 
@@ -331,35 +317,17 @@ class ExecutionReceipt:
             raise ValueError("execution receipt clearance must be finite and non-negative")
         if not self.source_observation_id:
             raise ValueError("execution receipt must bind a source observation")
-        hashes = (
-            self.action_packet_hash,
-            self.source_observation_hash,
-            self.state_before_hash,
-            self.state_after_hash,
-        )
-        if any(
-            len(value) != 64 or any(character not in "0123456789abcdef" for character in value)
-            for value in hashes
-        ):
-            raise ValueError("execution receipt provenance hash is invalid")
-        if self.previous_receipt_hash is not None and (
-            len(self.previous_receipt_hash) != 64
-            or any(character not in "0123456789abcdef" for character in self.previous_receipt_hash)
-        ):
-            raise ValueError("execution receipt previous hash is invalid")
         if len(set(self.confirmation_ids)) != len(self.confirmation_ids):
             raise ValueError("execution receipt contains duplicate confirmation IDs")
         if not isinstance(self.planner_invoked, bool):
             raise ValueError("execution receipt planner_invoked must be boolean")
 
     def to_dict(self) -> dict[str, Any]:
-        payload = {
+        return {
             "schema": "org.aerocity.bench.execution-receipt.v3",
             **asdict(self),
             "confirmation_ids": list(self.confirmation_ids),
         }
-        payload["receipt_hash"] = content_hash(payload)
-        return payload
 
 
 @dataclass(frozen=True)

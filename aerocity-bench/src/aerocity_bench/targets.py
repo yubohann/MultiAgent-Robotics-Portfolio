@@ -7,7 +7,7 @@ import random
 from collections.abc import Iterable
 from typing import Any
 
-from .canonical import content_hash, derived_seed
+from .canonical import derived_seed
 from .config import ReleaseConfig
 from .errors import GenerationRejected
 
@@ -40,7 +40,11 @@ def _site(
         "normal": [round(value, 4) for value in normal],
     }
     payload["altitude_band"] = altitude_band(float(position[2]))
-    payload["site_id"] = f"site-{content_hash(payload)[:16]}"
+    rounded = payload["position"]
+    payload["site_id"] = (
+        f"site-{support_class}-{owner_id.replace('/', '_')}-"
+        f"{rounded[0]}-{rounded[1]}-{rounded[2]}"
+    )
     return payload
 
 
@@ -341,7 +345,7 @@ def _episode_conditions(
         pair_index = episode_index // len(faults)
         fault_name = faults[episode_index % len(faults)]
         process_name = processes[pair_index % len(processes)]
-        condition_seed = derived_seed(config.master_seed, city["layout_hash"], "pair", pair_index)
+        condition_seed = derived_seed(config.master_seed, city["layout_id"], "pair", pair_index)
         group_id = f"pair-{pair_index:04d}"
     else:
         process_name = processes[episode_index % len(processes)]
@@ -349,7 +353,7 @@ def _episode_conditions(
         group_index = episode_index // len(processes)
         condition_seed = derived_seed(
             config.master_seed,
-            city["layout_hash"],
+            city["layout_id"],
             "condition",
             group_index,
         )
@@ -394,7 +398,6 @@ def sample_episode(
     episode = {
         "schema": "org.aerocity.bench.episode-private.v2",
         "layout_id": city["layout_id"],
-        "layout_hash": city["layout_hash"],
         "episode_index": episode_index,
         "episode_seed": seed,
         "condition_group_id": group_id,
@@ -428,5 +431,4 @@ def sample_episode(
         },
         "energy_budget_j": round(size_m * environment_rng.uniform(24.0, 34.0), 4),
     }
-    episode["episode_hash"] = content_hash(episode)
     return episode

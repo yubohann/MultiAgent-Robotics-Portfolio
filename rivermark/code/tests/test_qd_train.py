@@ -5,18 +5,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 try:
-    import ribs  # noqa: F401
+    import ribs
 except ImportError:
     ribs = None
 
-from rivermark_benchmark.qd_train import PyribsMapElitesCheckpointPolicy, train_map_elites
+from rivermark_benchmark.qd_train import (
+    PyribsMapElitesCheckpointPolicy,
+    train_map_elites,
+)
 from rivermark_benchmark.runtime import PilotRuntimeConfig, PilotSwarmRuntime
 
 
@@ -44,7 +46,7 @@ class PyribsMapElitesTests(unittest.TestCase):
             self.assertEqual(set(actions), {0, 1})
             runtime.step(actions)
 
-    def test_archive_hash_tamper_is_rejected(self) -> None:
+    def test_archive_identity_alter_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             result = train_map_elites(
                 Path(temporary) / "archive.npz",
@@ -54,8 +56,8 @@ class PyribsMapElitesTests(unittest.TestCase):
                 seed=83,
             )
             with result.archive_path.open("ab") as stream:
-                stream.write(b"tamper")
-            with self.assertRaisesRegex(ValueError, "SHA-256"):
+                stream.write(b"alter")
+            with self.assertRaisesRegex(ValueError, "IDENTITY"):
                 PyribsMapElitesCheckpointPolicy(result.archive_path)
 
 

@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-import hashlib
 import json
 import os
 import shutil
@@ -59,12 +58,9 @@ def _load_config(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(8 * 1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _authorization(token_id: str, token_secret: str) -> str:
@@ -119,7 +115,7 @@ def _download(
     partial.replace(destination)
     return {
         "bytes": destination.stat().st_size,
-        "sha256": _sha256(destination),
+        "file_id": _file_id(destination),
         "elapsed_s": time.monotonic() - started,
         "resumed_from_bytes": existing,
         "http_status": status,
@@ -191,7 +187,7 @@ def main() -> int:
         if destination.is_file():
             measurement = {
                 "bytes": destination.stat().st_size,
-                "sha256": _sha256(destination),
+                "file_id": _file_id(destination),
                 "elapsed_s": 0.0,
                 "resumed_from_bytes": destination.stat().st_size,
                 "http_status": None,

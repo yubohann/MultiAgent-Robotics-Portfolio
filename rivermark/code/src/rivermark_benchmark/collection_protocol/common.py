@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from .._identity import IdentityAccumulator
 from .constants import _PRIVATE_TOKENS
 
 
@@ -36,8 +36,8 @@ def _canonical_bytes(payload: Any) -> bytes:
         + "\n"
     ).encode("utf-8")
 
-def protocol_sha256(payload: Mapping[str, Any]) -> str:
-    return hashlib.sha256(_canonical_bytes(payload)).hexdigest()
+def protocol_identity(payload: Mapping[str, Any]) -> str:
+    return IdentityAccumulator(_canonical_bytes(payload)).hexdigest()
 
 def _contains_private_token(value: Any) -> bool:
     return isinstance(value, str) and any(token in value.lower() for token in _PRIVATE_TOKENS)

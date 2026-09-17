@@ -1,12 +1,11 @@
 import time
 
 import pytest
-
+from robocon_perception_adapter.synthetic_target_source import normalize_synthetic_truth
 from robocon_perception_adapter.target_gate import (
     parse_observation,
     validate_observation,
 )
-from robocon_perception_adapter.synthetic_target_source import normalize_synthetic_truth
 
 
 def test_camera_example_distance_mm_is_normalized():

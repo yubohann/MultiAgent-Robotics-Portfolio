@@ -124,7 +124,7 @@ class MultiGraphReplayBuffer:
         active_failure_tags = self._failure_tags[: self._size, 0]
         active_reasons = self._failure_reasons[: self._size]
         reason_counts: dict[str, int] = {}
-        for reason, tag in zip(active_reasons.tolist(), active_failure_tags.tolist()):
+        for reason, tag in zip(active_reasons.tolist(), active_failure_tags.tolist(), strict=False):
             if float(tag) <= 0.5:
                 continue
             resolved_reason = str(reason or "risk")

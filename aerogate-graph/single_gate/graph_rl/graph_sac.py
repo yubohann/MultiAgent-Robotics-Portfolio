@@ -7,8 +7,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from torch import Tensor, nn
 import torch.nn.functional as F
+from torch import Tensor, nn
 from torch.distributions import Normal
 
 from single_gate.configs.experiment_config import (
@@ -209,7 +209,7 @@ class GraphSACAgent:
         seed: int = 0,
         obs_config: SingleGraphObservationConfig | None = None,
         sac_config: SingleGraphSACConfig | None = None,
-    ) -> "GraphSACAgent":
+    ) -> GraphSACAgent:
         return cls(
             build_context=GraphSACBuildContext(
                 obs_config=obs_config or SINGLE_EXPERIMENT_CONFIG.observation,
@@ -388,7 +388,7 @@ class GraphSACAgent:
             (self.critic_1, self.target_critic_1),
             (self.critic_2, self.target_critic_2),
         ):
-            for source_param, target_param in zip(source.parameters(), target.parameters()):
+            for source_param, target_param in zip(source.parameters(), target.parameters(), strict=False):
                 target_param.data.mul_(1.0 - tau).add_(tau * source_param.data)
 
     def save_checkpoint(self, path: str | Path, metadata: dict[str, object] | None = None) -> Path:

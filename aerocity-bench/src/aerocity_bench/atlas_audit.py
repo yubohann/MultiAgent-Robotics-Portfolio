@@ -1,4 +1,4 @@
-"""Fail-closed scientific audits for the target-independent G2-I atlas."""
+"""Scientific audits for the target-independent G2-I atlas."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ import math
 from collections import Counter
 from typing import Any
 
-from .canonical import content_hash
 from .contracts import Pose3D
 from .geometry import (
     Vec3,
@@ -200,9 +199,7 @@ def audit_inspection_atlas(
     sampling_frozen = atlas["sampling_policy"]["calibration_status"] == "frozen"
     report: dict[str, Any] = {
         "schema": AUDIT_SCHEMA,
-        "layout_id_hash": content_hash(str(city["layout_id"])),
-        "atlas_hash": atlas["atlas_hash"],
-        "execution_contract_hash": content_hash(execution_contract),
+        "layout_id": str(city["layout_id"]),
         "formal_score_eligible": False,
         "cpu_geometry_status": geometry_status,
         "scientific_gate_status": (
@@ -244,5 +241,4 @@ def audit_inspection_atlas(
             "four_vehicle_public_g2_i_l1_closure": False,
         },
     }
-    report["report_hash"] = content_hash(report)
     return report

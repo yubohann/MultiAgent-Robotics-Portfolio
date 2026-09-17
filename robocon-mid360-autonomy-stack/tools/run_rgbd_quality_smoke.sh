@@ -38,5 +38,4 @@ if (( ready == 0 )); then
 fi
 
 python3 "$workspace/tools/rgbd_quality_probe.py" --run-dir "$run_dir" --duration-sec "${RGBD_DURATION_SEC:-12}" --max-wall-sec "${RGBD_MAX_WALL_SEC:-60}"
-sha256sum "$run_dir/rgbd_quality_summary.json" >"$run_dir/manifest.sha256"
 cat "$run_dir/rgbd_quality_summary.json"

@@ -9,8 +9,9 @@ from typing import Any
 
 
 def _finite_number(value: Any, *, label: str) -> float:
+    # Coercion contract: routes.py converts this ValueError into CityLiteRouteError.
     if isinstance(value, bool):
-        raise ValueError(f"{label} must be a finite number")
+        raise ValueError(f"{label} must be a finite number")  # noqa: TRY004
     try:
         number = float(value)
     except (TypeError, ValueError) as exc:
@@ -91,11 +92,11 @@ def coerce_aabb(value: AABB | Mapping[str, Any]) -> AABB:
     if isinstance(value, AABB):
         return value
     if not isinstance(value, Mapping):
-        raise ValueError("AABB must be an AABB or object")
+        raise ValueError("AABB must be an AABB or object")  # noqa: TRY004 - routes.py converts this into CityLiteRouteError
     minimum = value.get("minimum", value.get("min"))
     maximum = value.get("maximum", value.get("max"))
     if not isinstance(minimum, Sequence) or not isinstance(maximum, Sequence):
-        raise ValueError("AABB object requires minimum/maximum coordinates")
+        raise ValueError("AABB object requires minimum/maximum coordinates")  # noqa: TRY004 - routes.py converts this into CityLiteRouteError
     return AABB(
         _vec3(minimum, label="AABB.minimum"),
         _vec3(maximum, label="AABB.maximum"),

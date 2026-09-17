@@ -2,7 +2,7 @@
 
 import os
 import argparse
-from collections import defaultdict, deque
+from collections import defaultdict
 
 class PageRank:
     

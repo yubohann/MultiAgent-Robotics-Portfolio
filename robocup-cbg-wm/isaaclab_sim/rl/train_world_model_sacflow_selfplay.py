@@ -10,8 +10,11 @@ from pathlib import Path
 import numpy as np
 import torch
 import yaml
+from experiments.paired_interventions import (
+    add_pair_to_replay,
+    generate_paired_intervention,
+)
 from expert_policy import compose_policy_action
-from experiments.paired_interventions import add_pair_to_replay, generate_paired_intervention
 from planning import FlowProposalRiskMPC
 from policies import CentralizedTwinQ, FlowActor, ObjectWorldModel
 from replay import EpisodeSequenceReplay
@@ -171,18 +174,18 @@ def validate_variant_config(cfg: TrainConfig) -> None:
 
     if variant == "no_belief_uncertainty" and cfg.belief_uncertainty_enabled:
         errors.append("no_belief_uncertainty must zero only the explicit uncertainty fields")
-    if variant == "no_interaction_graph":
-        if cfg.graph_layers != 0 or cfg.learned_edge_dynamics:
-            errors.append("no_interaction_graph requires graph_layers=0 and learned_edge_dynamics=false")
-    if variant == "static_rule_graph":
-        if cfg.graph_layers <= 0 or cfg.learned_edge_dynamics:
-            errors.append("static_rule_graph requires message passing with learned_edge_dynamics=false")
-    if variant == "dynamic_graph_no_pairs":
-        if not cfg.learned_edge_dynamics or cfg.paired_intervention_coef != 0.0:
-            errors.append("dynamic_graph_no_pairs requires learned edges and paired_intervention_coef=0")
-    if variant == "full_accgd_cbg_wm":
-        if not cfg.learned_edge_dynamics or cfg.paired_intervention_coef <= 0.0:
-            errors.append("full_accgd_cbg_wm requires learned edges and paired intervention loss")
+    if variant == "no_interaction_graph" and (cfg.graph_layers != 0 or cfg.learned_edge_dynamics):
+        errors.append("no_interaction_graph requires graph_layers=0 and learned_edge_dynamics=false")
+    if variant == "static_rule_graph" and (cfg.graph_layers <= 0 or cfg.learned_edge_dynamics):
+        errors.append("static_rule_graph requires message passing with learned_edge_dynamics=false")
+    if variant == "dynamic_graph_no_pairs" and (
+        not cfg.learned_edge_dynamics or cfg.paired_intervention_coef != 0.0
+    ):
+        errors.append("dynamic_graph_no_pairs requires learned edges and paired_intervention_coef=0")
+    if variant == "full_accgd_cbg_wm" and (
+        not cfg.learned_edge_dynamics or cfg.paired_intervention_coef <= 0.0
+    ):
+        errors.append("full_accgd_cbg_wm requires learned edges and paired intervention loss")
     if variant not in {
         "legacy_sac_flow",
         "no_belief_uncertainty",

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import time
@@ -14,8 +13,8 @@ from typing import Any
 import rclpy
 from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
 from nav_msgs.msg import Odometry
-from rclpy.node import Node
 from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import Bool, String
 
@@ -133,7 +132,6 @@ class FixedMapSmoke(Node):
         self.last_fitness: float | None = None
         self.last_scan_points = 0
         self.events = (run_dir / "localization_telemetry.jsonl").open("w", encoding="utf-8")
-        self.map_sha256 = hashlib.sha256(map_file.read_bytes()).hexdigest()
 
         self.initialpose_pub = self.create_publisher(PoseWithCovarianceStamped, "/initialpose", 10)
         self.cmd_pub = self.create_publisher(Twist, "/cmd_vel_chassis", 10)
@@ -227,12 +225,10 @@ class FixedMapSmoke(Node):
         self._write({"kind": "map_locked", "value": bool(message.data)})
 
     def _send_initialpose(self) -> None:
-        assert self.latest_odom is not None
         message = PoseWithCovarianceStamped()
         message.header.stamp = self.get_clock().now().to_msg()
         message.header.frame_id = "map"
-        # The frozen map was built from this same Gazebo origin, so this is a
-        # controlled initial-pose check in simulation coordinates.
+        # The frozen map shares this Gazebo origin, so the controlled check starts at (0, 0).
         message.pose.pose.position.x = 0.0
         message.pose.pose.position.y = 0.0
         message.pose.pose.position.z = 0.0
@@ -255,7 +251,6 @@ class FixedMapSmoke(Node):
             "outcome": outcome,
             "failure_reason": failure_reason or None,
             "map_file": self.map_file,
-            "map_sha256": self.map_sha256,
             "initialpose_sent": self.initialpose_sent_at is not None,
             "map_status": self.latest_status.get("status", "NO_MAP_DIAGNOSTIC"),
             "correction_count": self.correction_count,
@@ -296,8 +291,8 @@ class FixedMapSmoke(Node):
             if self.latest_status.get("status") == "WAITING_FOR_INITIALPOSE":
                 self._send_initialpose()
             return
-        assert self.started_at is not None
-        elapsed = time.monotonic() - self.started_at
+        started_at = self.initialpose_sent_at
+        elapsed = time.monotonic() - started_at
         command = Twist()
         if elapsed < self.duration_sec:
             command.linear.x = 0.12
@@ -311,7 +306,7 @@ class FixedMapSmoke(Node):
                 self._finish("failed", "No accepted map-to-odom correction and map lock before deadline")
 
     def start(self) -> None:
-        self._write({"kind": "started", "map_sha256": self.map_sha256, "duration_sec": self.duration_sec})
+        self._write({"kind": "started", "map_file": self.map_file, "duration_sec": self.duration_sec})
 
 
 def main() -> int:

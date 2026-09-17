@@ -1,9 +1,8 @@
-"""Fail-closed native Isaac calibration probe for the Rivermark CF2X asset."""
+"""Strict native Isaac calibration probe for the Rivermark CF2X asset."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -17,6 +16,7 @@ from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .capture_lease import repository_app_launcher_lease
 from .provenance import detect_source_provenance
 from .resource_telemetry import (
@@ -30,7 +30,7 @@ from .runtime_lock import (
     configure_simulation_cfg,
     load_runtime_lock,
     locked_launcher_kwargs,
-    runtime_lock_sha256,
+    runtime_lock_identity,
     validate_locked_launcher_environment,
 )
 
@@ -38,7 +38,7 @@ CF2X_RUNTIME_CALIBRATION_SCHEMA = "org.rivermark.cf2x-runtime-calibration.v1"
 CF2X_RUNTIME_CALIBRATION_PRELAUNCH_FAILURE_SCHEMA = (
     "org.rivermark.cf2x-runtime-calibration-prelaunch-failure.v1"
 )
-_SHA256_HEX = frozenset("0123456789abcdef")
+_IDENTITY_HEX = frozenset("0123456789abcdef")
 _EXPECTED_ROTOR_COUNT = 4
 _EXPECTED_ALLOCATION_ROWS = 6
 _PROBE_STEP_ORDER = (
@@ -66,20 +66,20 @@ def _canonical_bytes(value: Any) -> bytes:
     ).encode("utf-8")
 
 
-def _sha256_bytes(value: bytes) -> str:
-    return hashlib.sha256(value).hexdigest()
+def _identity_bytes(value: bytes) -> str:
+    return IdentityAccumulator(value).hexdigest()
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
 
 
-def _is_sha256(value: Any) -> bool:
-    return isinstance(value, str) and len(value) == 64 and set(value) <= _SHA256_HEX
+def _is_identity(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 16 and set(value) <= _IDENTITY_HEX
 
 
 def _finite_number(value: Any) -> bool:
@@ -141,20 +141,20 @@ def _valid_body_physics(row: Any, *, runtime: bool) -> bool:
     )
 
 
-def calibration_report_sha256(report: Mapping[str, Any]) -> str:
-    """Hash the report while excluding its self-reference field."""
+def calibration_report_identity(report: Mapping[str, Any]) -> str:
+    """Identity the report while excluding its self-reference field."""
 
     canonical = dict(report)
-    canonical.pop("report_sha256", None)
-    return _sha256_bytes(_canonical_bytes(canonical))
+    canonical.pop("report_identity", None)
+    return _identity_bytes(_canonical_bytes(canonical))
 
 
-def prelaunch_failure_report_sha256(report: Mapping[str, Any]) -> str:
-    """Hash a minimal pre-AppLauncher failure receipt without self-reference."""
+def prelaunch_failure_report_identity(report: Mapping[str, Any]) -> str:
+    """Identity a minimal pre-AppLauncher failure receipt without self-reference."""
 
     canonical = dict(report)
-    canonical.pop("report_sha256", None)
-    return _sha256_bytes(_canonical_bytes(canonical))
+    canonical.pop("report_identity", None)
+    return _identity_bytes(_canonical_bytes(canonical))
 
 
 def _locked_contrib_source_root(isaaclab_source_checkout: Path, lock: Mapping[str, Any]) -> Path:
@@ -201,7 +201,7 @@ def _as_float_vector(value: Any) -> list[float]:
 
 
 def _read_static_usd_physics(usd_path: Path) -> dict[str, Any]:
-    """Read authored MassAPI values from the exact USD whose bytes are hashed."""
+    """Read authored MassAPI values from the exact USD whose bytes are identified."""
 
     from pxr import Usd
 
@@ -234,7 +234,7 @@ def _read_static_usd_physics(usd_path: Path) -> dict[str, Any]:
         raise CF2XRuntimeCalibrationError("CF2X USD exposes no authored MassAPI values")
     default_prim = stage.GetDefaultPrim()
     return {
-        "usd_sha256": _sha256_file(usd_path),
+        "usd_identity": _identity_file(usd_path),
         "default_prim": str(default_prim.GetPath())
         if default_prim is not None and default_prim.IsValid()
         else None,
@@ -243,13 +243,7 @@ def _read_static_usd_physics(usd_path: Path) -> dict[str, Any]:
 
 
 def _runtime_body_physics(robot: Any) -> list[dict[str, Any]]:
-    """Read body properties from the live PhysX articulation view.
-
-    ``MultirotorData`` intentionally does not populate Articulation's cached
-    ``default_mass`` and ``default_inertia`` fields.  The PhysX view is the
-    authoritative runtime source and is also the source IsaacLab's
-    ``Articulation`` initialization uses for those fields.
-    """
+    """Read body properties from the live PhysX articulation view."""
 
     body_names = list(getattr(robot, "body_names", ()))
     if not body_names:
@@ -420,24 +414,24 @@ def validate_calibration_report(report: Any) -> tuple[str, ...]:
     if (
         not isinstance(source, Mapping)
         or not isinstance(source.get("source_revision"), str)
-        or len(source["source_revision"]) not in {40, 64}
-        or not set(source["source_revision"]) <= _SHA256_HEX
-        or not _is_sha256(source.get("source_tree_sha256"))
+                    or len(source["source_revision"]) not in {16, 40}
+        or not set(source["source_revision"]) <= _IDENTITY_HEX
+        or not _is_identity(source.get("source_tree_identity"))
         or source.get("source_worktree_dirty") is not False
     ):
-        issues.append("calibration source provenance is not clean and hash-bound")
-    if not _is_sha256(report.get("runtime_lock_sha256")):
-        issues.append("runtime lock hash is missing")
+        issues.append("calibration source provenance is not clean and identity-bound")
+    if not _is_identity(report.get("runtime_lock_identity")):
+        issues.append("runtime lock identity is missing")
     runtime_audit = report.get("runtime_audit")
     if not isinstance(runtime_audit, Mapping) or runtime_audit.get("status") != "passed":
         issues.append("runtime lock audit did not pass")
     asset = report.get("asset")
-    if not isinstance(asset, Mapping) or not _is_sha256(asset.get("usd_sha256")):
-        issues.append("asset hash is missing")
+    if not isinstance(asset, Mapping) or not _is_identity(asset.get("usd_identity")):
+        issues.append("asset identity is missing")
     static_usd = report.get("static_usd")
     if (
         not isinstance(static_usd, Mapping)
-        or static_usd.get("usd_sha256") != (asset.get("usd_sha256") if isinstance(asset, Mapping) else None)
+        or static_usd.get("usd_identity") != (asset.get("usd_identity") if isinstance(asset, Mapping) else None)
         or not isinstance(static_usd.get("bodies"), list)
         or not static_usd["bodies"]
         or not all(_valid_body_physics(row, runtime=False) for row in static_usd["bodies"])
@@ -543,8 +537,8 @@ def validate_calibration_report(report: Any) -> tuple[str, ...]:
             for sample in samples
         ):
             issues.append("probe has no post-step state samples")
-    if report.get("report_sha256") != calibration_report_sha256(report):
-        issues.append("report self-hash does not match")
+    if report.get("report_identity") != calibration_report_identity(report):
+        issues.append("report self-identity does not match")
     return tuple(issues)
 
 
@@ -663,9 +657,9 @@ def _make_native_report(args: argparse.Namespace) -> dict[str, Any]:
             "benchmark_score": False,
             "sensor_payload_retained": False,
         },
-        "asset": {"usd_sha256": _sha256_file(args.drone_usd.resolve())},
+        "asset": {"usd_identity": _identity_file(args.drone_usd.resolve())},
         "source": source.as_dict(),
-        "runtime_lock_sha256": runtime_lock_sha256(lock),
+        "runtime_lock_identity": runtime_lock_identity(lock),
         "runtime_audit": runtime_audit,
     }
     lease = repository_app_launcher_lease(
@@ -814,7 +808,7 @@ def _make_native_report(args: argparse.Namespace) -> dict[str, Any]:
                 "resource_telemetry": telemetry.as_dict(),
             }
         )
-        report["report_sha256"] = calibration_report_sha256(report)
+        report["report_identity"] = calibration_report_identity(report)
         issues = validate_calibration_report(report)
         if issues:
             raise CF2XRuntimeCalibrationError("invalid completed calibration: " + "; ".join(issues))
@@ -834,7 +828,7 @@ def _make_native_report(args: argparse.Namespace) -> dict[str, Any]:
         )
         raise
     finally:
-        report["report_sha256"] = calibration_report_sha256(report)
+        report["report_identity"] = calibration_report_identity(report)
         _write_json_atomic(output_dir / "cf2x_runtime_calibration.json", report)
         try:
             if app is not None:
@@ -893,7 +887,7 @@ def _persist_prelaunch_failure(args: argparse.Namespace, error: BaseException) -
         },
         "failure": {"type": type(error).__name__, "message": str(error)},
     }
-    report["report_sha256"] = prelaunch_failure_report_sha256(report)
+    report["report_identity"] = prelaunch_failure_report_identity(report)
     try:
         output_dir.mkdir(parents=False, exist_ok=False)
         path = output_dir / "cf2x_runtime_calibration.prelaunch_failure.json"

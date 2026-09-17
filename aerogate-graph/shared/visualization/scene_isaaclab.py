@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
-from pathlib import Path
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 DEFAULT_DRONE_SCALE = (1.0, 1.0, 1.0)
@@ -100,8 +100,8 @@ def setup_replay_scene(
 ) -> ReplaySceneRig:
     """Spawn the replay scene, optionally with the fixed gate assets."""
 
-    import isaacsim.core.utils.prims as prim_utils
     import isaaclab.sim as sim_utils
+    import isaacsim.core.utils.prims as prim_utils
 
     drone_positions_xyz = [
         (
@@ -415,9 +415,8 @@ def destroy_rgb_annotator(annotator: Any, render_product: Any) -> None:
 def build_pose_handle(prim_path: str) -> PoseHandle:
     """Resolve a prim's translate/orient xform ops for repeated updates."""
 
-    from pxr import UsdGeom
-
     import omni.usd
+    from pxr import UsdGeom
 
     stage = omni.usd.get_context().get_stage()
     prim = stage.GetPrimAtPath(prim_path)
@@ -462,19 +461,11 @@ def yaw_to_quat_wxyz(yaw_rad: float) -> tuple[float, float, float, float]:
     return (math.cos(half), 0.0, 0.0, math.sin(half))
 
 
-def planar_speed_to_spin_scale(speed_mps: float, *, max_speed_mps: float) -> float:
-    """Convert planar speed to a mild rotor-spin multiplier for replay visuals."""
-
-    normalized = max(0.0, min(float(speed_mps) / max(float(max_speed_mps), 1e-6), 1.0))
-    return 0.75 + 0.5 * normalized
-
-
 def _configure_replay_camera(camera_prim_path: str, *, focal_length_mm: float) -> None:
     """Configure one replay camera prim for a clear follow-style gate view."""
 
-    from pxr import Gf, UsdGeom
-
     import omni.usd
+    from pxr import Gf, UsdGeom
 
     stage = omni.usd.get_context().get_stage()
     camera_prim = stage.GetPrimAtPath(camera_prim_path)
@@ -490,9 +481,8 @@ def _configure_replay_camera(camera_prim_path: str, *, focal_length_mm: float) -
 def _apply_replay_drone_materials(drone_prim_paths: list[str]) -> None:
     """Bind bright replay-only materials so the real drone mesh stays visible on video."""
 
-    from pxr import Gf, Sdf, Usd, UsdGeom, UsdShade
-
     import omni.usd
+    from pxr import Gf, Sdf, UsdGeom, UsdShade
 
     stage = omni.usd.get_context().get_stage()
     if stage is None:
@@ -947,7 +937,7 @@ def _resolve_overview_reference_xy(
         anchor_points.append((float(goal_xy[0]), float(goal_xy[1])))
     if not anchor_points:
         return (0.0, 0.0)
-    xs, ys = zip(*anchor_points)
+    xs, ys = zip(*anchor_points, strict=False)
     return (float(sum(xs) / len(xs)), float(sum(ys) / len(ys)))
 
 
@@ -969,9 +959,8 @@ def _iter_replay_drone_mesh_prims(stage: Any, drone_prim_path: str):
 def _disable_replay_scene_physics(*, stage_roots: list[str]) -> None:
     """Make replay/live-preview stages visual-only to avoid unnecessary PhysX load."""
 
-    from pxr import Usd, UsdPhysics
-
     import omni.usd
+    from pxr import Usd, UsdPhysics
 
     stage = omni.usd.get_context().get_stage()
     if stage is None:

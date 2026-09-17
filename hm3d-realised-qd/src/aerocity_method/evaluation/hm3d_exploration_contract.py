@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from aerocity_method.contracts.io import canonical_sha256, read_json_object
+from aerocity_method.contracts.io import read_json_object
 from aerocity_method.runtime.range_sensing import (
     DENSE_26_RAY_PATTERN,
     LEGACY_SIX_AXIS_PATTERN,
@@ -149,8 +149,8 @@ class HM3DExplorationObservationContract:
         return self.payload
 
     @property
-    def digest(self) -> str:
-        return canonical_sha256(self.payload)
+    def contract_id(self) -> str:
+        return str(self.payload["contract_id"])
 
 
 def load_exploration_observation_contract(

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from large_scale_50v50_battle.config import BattleConfig, DEFAULT_THETA
+from large_scale_50v50_battle.config import DEFAULT_THETA, BattleConfig
 from large_scale_50v50_battle.sim import LargeScaleBattle50v50
 
 

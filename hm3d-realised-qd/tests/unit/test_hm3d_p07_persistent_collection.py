@@ -196,7 +196,7 @@ def test_incremental_manifest_is_resume_aware() -> None:
     run = module.CollectionRun("run0", ("--output", "unused"), Path("unused"))
 
     manifest = module._build_manifest(
-        plan_sha256="a" * 64,
+        plan_file_id="a" * 64,
         runs=(run,),
         rows=[],
         failed=0,
@@ -220,7 +220,7 @@ def test_final_manifest_is_fail_closed_for_missing_worker_rows() -> None:
     run = module.CollectionRun("run0", ("--output", "unused"), Path("unused"))
 
     manifest = module._build_manifest(
-        plan_sha256="a" * 64,
+        plan_file_id="a" * 64,
         runs=(run,),
         rows=[],
         failed=0,
@@ -239,7 +239,7 @@ def test_final_manifest_requires_every_worker_to_be_clean() -> None:
     run = module.CollectionRun("run0", ("--output", "unused"), Path("unused"))
 
     manifest = module._build_manifest(
-        plan_sha256="a" * 64,
+        plan_file_id="a" * 64,
         runs=(run,),
         rows=[{"completed": False}],
         failed=1,
@@ -257,7 +257,7 @@ def test_final_manifest_is_complete_only_for_a_clean_full_plan() -> None:
     run = module.CollectionRun("run0", ("--output", "unused"), Path("unused"))
 
     manifest = module._build_manifest(
-        plan_sha256="a" * 64,
+        plan_file_id="a" * 64,
         runs=(run,),
         rows=[{"completed": True}],
         failed=0,
@@ -310,7 +310,7 @@ def test_persistent_collection_rejects_retired_marvel_transition_family(
     output.write_text(
         json.dumps(
             {
-                "runtime_record_sha256": "a" * 64,
+                "runtime_record_id": "a" * 64,
                 "decisions": [{}],
                 "task_reservation": {
                     "schema_version": module.PUBLIC_TASK_RESERVATION_SCHEMA_VERSION,
@@ -320,8 +320,6 @@ def test_persistent_collection_rejects_retired_marvel_transition_family(
         ),
         encoding="utf-8",
     )
-    module.require_sha256 = lambda value, _name: value
-    module.canonical_sha256 = lambda _payload: "a" * 64
     module.require_current_public_schema = lambda _payload, **_kwargs: None
     run = module.CollectionRun("legacy-marvel", (), output)
 

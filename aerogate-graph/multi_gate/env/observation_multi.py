@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
-from typing import Mapping
+from collections.abc import Mapping
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -170,11 +170,6 @@ def build_multi_graph_observation(
 
     obstacle_start = waypoint_start + observation_config.lookahead_waypoint_count
     obstacles = list(obstacle_map.query_local(virtual_center_xy, 28.0))
-    team_velocity_xy = (
-        np.mean(agent_velocities_xy[:num_agents], axis=0)
-        if num_agents > 0 and agent_velocities_xy.size
-        else np.zeros((2,), dtype=np.float32)
-    )
     heading_norm = math.hypot(float(heading_x), float(heading_y))
     if heading_norm <= 1.0e-6:
         heading_unit = (1.0, 0.0)

@@ -7,28 +7,27 @@ from dataclasses import replace
 import pytest
 
 from aerocity_method.adapters.hm3d_baselines import (
-    ConservativeTransitTimingModel,
-    GuardedPath,
     PUBLIC_ROUTE_CONTINUITY_BONUS_MAX,
     PUBLIC_TASK_RESERVATION_ASSOCIATION_RADIUS_M,
+    ConservativeTransitTimingModel,
+    GuardedPath,
     PublicAgentPose,
     PublicFrontier,
-    PublicTaskReservation,
     PublicSearchState,
-    _collision_avoidance_geometric_recovery_candidates,
+    PublicTaskReservation,
     _assignment_route_tube_separation_m,
     _has_meaningful_multi_agent_routes,
     _manifest_for_assignment,
     _nonconverging_recovery_path,
+    _public_gain_proxy,
     _traffic_reservation_variants,
     _vertical_access_count,
     build_public_candidate_pool,
     fixed_altitude_frontiers,
     identity_path_guard,
     is_non_alias_exploration_path,
-    _public_gain_proxy,
-    public_candidate_pool_hash,
     outcome_calibrated_path_length_budget_m,
+    public_candidate_pool_id,
     select_public_baseline,
     task_reservation_matches_frontier,
 )
@@ -96,8 +95,8 @@ def _task_reservation(
     return PublicTaskReservation.from_completed_public_exploration_transit(
         agent_id=agent_id,
         source_decision_id="decision0",
-        source_manifest_hash="a" * 64,
-        source_transit_outcome_sha256="b" * 64,
+        source_manifest_id="a" * 64,
+        source_transit_outcome_id="b" * 64,
         public_path_m=path,
     )
 
@@ -138,15 +137,15 @@ def _guard(agent_id: str, path_m: tuple[tuple[float, float, float], ...]) -> Gua
 
 def test_all_weak_baselines_receive_exactly_the_same_public_candidate_pool():
     pool = build_public_candidate_pool(_state(), _guard, candidate_limit=3)
-    pool_hash = public_candidate_pool_hash(pool)
-    selected_hashes = set()
+    pool_id = public_candidate_pool_id(pool)
+    selected_ids = set()
     for strategy in ("random", "frontier_3d", "auction"):
         selected, selection = select_public_baseline(strategy, pool, random_key=17)
-        assert selected.manifest_hash == selection.selected_manifest_hash
-        assert selected.manifest_hash in {manifest.manifest_hash for manifest in pool}
-        assert public_candidate_pool_hash(pool) == pool_hash
-        selected_hashes.add(selected.manifest_hash)
-    assert selected_hashes
+        assert selected.manifest_id == selection.selected_manifest_id
+        assert selected.manifest_id in {manifest.manifest_id for manifest in pool}
+        assert public_candidate_pool_id(pool) == pool_id
+        selected_ids.add(selected.manifest_id)
+    assert selected_ids
 
 
 @pytest.mark.parametrize("strategy", ("greedy", "strong_planner"))
@@ -237,7 +236,11 @@ def test_joint_conflict_fallback_uses_auditable_collision_avoidance_hold() -> No
             for fragment in manifest.fragments
             if fragment.type_signature.fragment_type == "transit"
         }
-        return "synchronized_fleet_separation" if all(role == "explore" for role in roles.values()) else None
+        return (
+            "synchronized_fleet_separation"
+            if all(role == "explore" for role in roles.values())
+            else None
+        )
 
     pool = build_public_candidate_pool(
         state,
@@ -468,7 +471,9 @@ def test_joint_conflict_uses_outcome_backtrack_when_stationary_yield_is_unsafe()
     )
 
     def guard(_agent_id, path_m):
-        return GuardedPath(True, path_m, reason="stationary_hold" if path_m[0] == path_m[-1] else "")
+        return GuardedPath(
+            True, path_m, reason="stationary_hold" if path_m[0] == path_m[-1] else ""
+        )
 
     def joint_guard(manifest):
         roles = {
@@ -690,7 +695,8 @@ def test_recovery_builder_requires_explicit_hold_metadata() -> None:
         )
 
 
-def test_outcome_backtrack_is_owner_only_and_replaces_hold_when_exploration_is_unavailable() -> None:
+def test_outcome_backtrack_is_owner_only_and_replaces_hold_when_exploration_is_unavailable(
+) -> None:
     state = _state(
         frontiers=(
             PublicFrontier("explore-uav1", (4.0, 0.0, 2.0), 1.0, 0.0),
@@ -902,9 +908,14 @@ def test_frontier_semantic_tie_break_does_not_depend_on_candidate_id() -> None:
     diverse = [manifest for manifest in pool if cluster_count(manifest) == 2]
     lower_complementarity = min(diverse, key=lambda manifest: manifest.planned_descriptor[2])
     higher_complementarity = max(diverse, key=lambda manifest: manifest.planned_descriptor[2])
-    assert higher_complementarity.planned_descriptor[2] > lower_complementarity.planned_descriptor[2]
+    assert (
+        higher_complementarity.planned_descriptor[2]
+        > lower_complementarity.planned_descriptor[2]
+    )
     lower_complementarity = replace(lower_complementarity, candidate_id="zzz-low-complementarity")
-    higher_complementarity = replace(higher_complementarity, candidate_id="aaa-high-complementarity")
+    higher_complementarity = replace(
+        higher_complementarity, candidate_id="aaa-high-complementarity"
+    )
 
     selected, selection = select_public_baseline(
         "frontier_3d", (lower_complementarity, higher_complementarity)
@@ -1000,13 +1011,17 @@ def test_current_public_access_polyline_survives_candidate_construction() -> Non
     )
     received_paths: list[tuple[tuple[float, float, float], ...]] = []
 
-    def guard(_agent_id: str, requested_path_m: tuple[tuple[float, float, float], ...]) -> GuardedPath:
+    def guard(
+        _agent_id: str, requested_path_m: tuple[tuple[float, float, float], ...]
+    ) -> GuardedPath:
         received_paths.append(requested_path_m)
         return GuardedPath(True, requested_path_m)
 
     pool = build_public_candidate_pool(state, guard, candidate_limit=1)
     transit = next(
-        fragment for fragment in pool[0].fragments if fragment.type_signature.fragment_type == "transit"
+        fragment
+        for fragment in pool[0].fragments
+        if fragment.type_signature.fragment_type == "transit"
     )
 
     assert path_m in received_paths
@@ -1037,7 +1052,7 @@ def test_public_search_state_rejects_access_path_from_an_old_agent_pose() -> Non
         )
 
 
-def test_empty_task_reservations_preserve_common_candidate_pool_hash() -> None:
+def test_empty_task_reservations_preserve_common_candidate_pool_id() -> None:
     state = _state()
     explicit_empty = _state(task_reservations=())
 
@@ -1048,7 +1063,7 @@ def test_empty_task_reservations_preserve_common_candidate_pool_hash() -> None:
     assert [manifest.to_dict() for manifest in default_pool] == [
         manifest.to_dict() for manifest in empty_pool
     ]
-    assert public_candidate_pool_hash(default_pool) == public_candidate_pool_hash(empty_pool)
+    assert public_candidate_pool_id(default_pool) == public_candidate_pool_id(empty_pool)
 
 
 def test_task_reservation_rejects_a_settled_endpoint_alias() -> None:
@@ -1298,8 +1313,8 @@ def test_task_reservation_rejects_an_opposite_public_frontier_normal() -> None:
     reservation = PublicTaskReservation.from_completed_public_exploration_transit(
         agent_id="uav0",
         source_decision_id="decision0",
-        source_manifest_hash="a" * 64,
-        source_transit_outcome_sha256="b" * 64,
+        source_manifest_id="a" * 64,
+        source_transit_outcome_id="b" * 64,
         public_path_m=((0.0, 0.0, 1.0), (1.0, 0.0, 1.0)),
         task_anchor_m=(1.0, 0.0, 1.0),
         task_normal_unit=(1.0, 0.0, 0.0),
@@ -1340,8 +1355,8 @@ def test_route_progress_reservation_keeps_public_viewpoint_provenance() -> None:
     reservation = PublicTaskReservation.from_completed_public_exploration_transit(
         agent_id="uav0",
         source_decision_id="decision-progress",
-        source_manifest_hash="c" * 64,
-        source_transit_outcome_sha256="d" * 64,
+        source_manifest_id="c" * 64,
+        source_transit_outcome_id="d" * 64,
         public_path_m=((0.0, 0.0, 1.0), (0.75, 0.0, 1.0)),
         task_anchor_m=(1.0, 0.0, 1.0),
         task_normal_unit=(0.0, 1.0, 0.0),
@@ -2284,7 +2299,7 @@ def test_frontier_3d_prefers_region_access_over_slightly_higher_local_gain() -> 
         )
         return CandidateFragmentManifest(
             candidate_id=candidate_id,
-            context_hash=state.context.digest,
+            context_id=state.context.context_id,
             fragments=(transit, observation),
             planned_descriptor=(0.0, 1.0, 0.0),
             feasible=True,

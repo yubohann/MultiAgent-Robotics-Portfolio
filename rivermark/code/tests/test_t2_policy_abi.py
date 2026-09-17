@@ -49,7 +49,7 @@ def _decision() -> object:
     return runner.decide(_observation())
 
 
-def test_public_observation_is_canonical_and_hash_bound() -> None:
+def test_public_observation_is_canonical_and_identity_bound() -> None:
     observation = _observation()
     payload = observation.public_dict()
     assert payload["claim_boundary"] == T2_CLAIM_BOUNDARY
@@ -63,7 +63,7 @@ def test_public_observation_is_canonical_and_hash_bound() -> None:
         "yaw_rad",
         "yaw_rate_radps",
     ]
-    assert len(observation.sha256) == 64
+    assert len(observation.identity) == 16
     assert "target" not in payload
     assert "private" not in payload
 
@@ -152,7 +152,7 @@ def test_native_step_evidence_requires_actual_post_step_causality() -> None:
     assert payload["decision_command_time_ns"] == decision.observation.command_time_ns
     assert payload["physical_command_time_ns"] == decision.observation.command_time_ns
     assert payload["effective_time_ns"] > payload["physical_command_time_ns"]
-    assert payload["decision_sha256"] == decision.sha256
+    assert payload["decision_identity"] == decision.identity
     with pytest.raises(T2PolicyAbiError, match="after physical_command_time_ns"):
         T2NativeStepEvidence(
             decision=decision,

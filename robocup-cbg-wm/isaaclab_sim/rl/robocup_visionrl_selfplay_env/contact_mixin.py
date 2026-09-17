@@ -3,6 +3,13 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from robocup_visionrl_gym_env import (
+    BLUE_BASE_XY,
+    HALF_ARENA,
+    PUSHABLE_OBSTACLE_HALF,
+    ROBOT_RADIUS,
+    YELLOW_BASE_XY,
+)
 
 from .constants import (
     AGENTS,
@@ -11,18 +18,9 @@ from .constants import (
     POST_HIT_RETREAT_S,
     PUSH_CLEARANCE_MARGIN,
     PUSH_ROBOT_RECOIL_M,
-    PUSH_STEP_M
+    PUSH_STEP_M,
 )
-from .geometry import (
-    robot_pushable_collision
-)
-from robocup_visionrl_gym_env import (
-    BLUE_BASE_XY,
-    HALF_ARENA,
-    PUSHABLE_OBSTACLE_HALF,
-    ROBOT_RADIUS,
-    YELLOW_BASE_XY
-)
+from .geometry import robot_pushable_collision
 
 
 class ContactMixin:
@@ -153,7 +151,7 @@ class ContactMixin:
         corrected = pose.copy()
         for _ in range(4):
             changed = False
-            for _name, center in self.pushable_obstacles.items():
+            for center in self.pushable_obstacles.values():
                 collided, normal, penetration = robot_pushable_collision(
                     corrected,
                     (float(center[0]), float(center[1])),

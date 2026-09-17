@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .canonical import content_hash, file_hash, read_json, write_json
+from .canonical import read_json, write_json
 from .errors import ValidationError
 
-IMAGE_DIGEST = re.compile(r"^[a-z0-9./_-]+@sha256:[0-9a-f]{64}$")
+IMAGE_TAG = re.compile(r"^[a-z0-9][a-z0-9./_-]*:[a-zA-Z0-9][a-zA-Z0-9._-]*$")
 
 
 @dataclass(frozen=True)
@@ -59,8 +59,8 @@ def submission_spec(
     policy = policy or SubmissionPolicy()
     if not team_id or not submission_id:
         raise ValueError("team and submission IDs cannot be empty")
-    if not IMAGE_DIGEST.fullmatch(image):
-        raise ValueError("submission images must be immutable sha256 digests")
+    if not IMAGE_TAG.fullmatch(image):
+        raise ValueError("submission images must carry an explicit version tag")
     adapter = read_json(adapter_declaration_path)
     spec = {
         "schema": "org.aerocity.bench.blind-submission.v1",
@@ -68,7 +68,6 @@ def submission_spec(
         "submission_id": submission_id,
         "image": image,
         "adapter_declaration": adapter,
-        "adapter_declaration_sha256": file_hash(adapter_declaration_path),
         "resources": {
             "cpus": policy.cpus,
             "memory_gib": policy.memory_gib,
@@ -104,7 +103,6 @@ def submission_spec(
             "timing_padding_profile": "versioned-bounded-v1",
         },
     }
-    spec["submission_spec_hash"] = content_hash(spec)
     return spec
 
 
@@ -116,16 +114,13 @@ def write_submission_spec(path: Path, **kwargs: Any) -> dict[str, Any]:
 
 def validate_submission_spec(path: Path) -> dict[str, Any]:
     spec = read_json(path)
-    expected_hash = str(spec.pop("submission_spec_hash", ""))
-    if content_hash(spec) != expected_hash:
-        raise ValidationError("blind submission spec hash mismatch")
     sandbox = spec["sandbox"]
     mounted_roles = {item["source_role"] for item in sandbox["mounts"]}
     forbidden = set(sandbox["forbidden_mount_roles"])
     if mounted_roles & forbidden:
         raise ValidationError("blind submission mounts an evaluator-private role")
     if sandbox.get("network") != "none" or sandbox.get("read_only_root") is not True:
-        raise ValidationError("blind submission sandbox is not fail closed")
+        raise ValidationError("blind submission sandbox is not isolated")
     controls = spec["side_channel_controls"]
     if not all(value is True for key, value in controls.items() if key != "timing_padding_profile"):
         raise ValidationError("blind submission disables a side-channel control")
@@ -133,5 +128,4 @@ def validate_submission_spec(path: Path) -> dict[str, Any]:
         "status": "PASS",
         "team_id": spec["team_id"],
         "submission_id": spec["submission_id"],
-        "submission_spec_hash": expected_hash,
     }

@@ -2,67 +2,47 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
 import math
 import time
+from dataclasses import dataclass, replace
 
 import numpy as np
 
 from multi_gate.configs.experiment_config import (
     MULTI_EXPERIMENT_CONFIG,
-    MultiGateEnvConfig,
     MultiExperimentConfig,
     MultiFormationConfig,
+    MultiGateEnvConfig,
     MultiGraphObservationConfig,
     MultiPlannerConfig,
-    is_exp3_empty_scene_mode,
     is_dynamic_gate_density_scene_mode,
+    is_exp3_empty_scene_mode,
 )
-from multi_gate.dynamic_gate_task_slots import dynamic_gate_task_first_slots
-from multi_gate.env import dynamic_gate_runtime as _dynamic_gate_runtime
-from multi_gate.env import guidance_runtime as _guidance_runtime
-from multi_gate.env import observation_runtime as _observation_runtime
-from multi_gate.env import reward_runtime as _reward_runtime
-from multi_gate.env import safety_shields as _safety_shields
-from multi_gate.env.observation_multi import build_multi_graph_observation
+from multi_gate.env.dynamic_gate_runtime import DynamicGateRuntimeMixin
+from multi_gate.env.guidance_runtime import GuidanceRuntimeMixin
+from multi_gate.env.observation_runtime import ObservationRuntimeMixin
+from multi_gate.env.reward_runtime import RewardRuntimeMixin
+from multi_gate.env.safety_shields import SafetyShieldRuntimeMixin
 from multi_gate.formation.virtual_structure import VirtualStructure2D
 from multi_gate.guidance import RouteGuidanceEngine, build_guidance_engine_from_reasoning
-from multi_gate.planners.global_route_planner import GlobalRoutePlanner2D, GlobalRoutePlan2D
+from multi_gate.planners.global_route_planner import GlobalRoutePlan2D, GlobalRoutePlanner2D
 from multi_gate.rewards.multi_agent_rewards import (
     compute_multi_agent_reward,
     evaluate_multi_agent_termination,
 )
-from shared.core.collision_2d import GateObstacleMap2D, GatePostObstacle2D
+from shared.core.collision_2d import GateObstacleMap2D
 from shared.core.dynamic_gate_density_2d import (
     DynamicGate2D,
     center_has_completed_corridor,
     corridor_region_status,
-    gate_gate_clearance_stats,
-    gate_posts,
-    generate_gate_layout,
-    live_gate_centers,
-    live_gate_velocities,
-    post_clearance,
-    resolved_corridor_half_width_m,
-    swept_post_clearance,
     validate_height_and_corridor_invariants,
 )
 from shared.core.kinematics_2d import (
-    KinematicState2D,
     Kinematics2DConfig,
     Kinematics2DUpdater,
+    KinematicState2D,
     PlanarVelocityCommand2D,
 )
-
-
-for _runtime_module in (
-    _dynamic_gate_runtime,
-    _guidance_runtime,
-    _observation_runtime,
-    _reward_runtime,
-    _safety_shields,
-):
-    _runtime_module.bind_runtime(globals())
 
 
 @dataclass(frozen=True)
@@ -77,7 +57,13 @@ class MultiGateSnapshot:
     path_index: int
 
 
-class MultiGate2DEnv:
+class MultiGate2DEnv(
+    GuidanceRuntimeMixin,
+    DynamicGateRuntimeMixin,
+    SafetyShieldRuntimeMixin,
+    ObservationRuntimeMixin,
+    RewardRuntimeMixin,
+):
     """Variable-size multi-agent environment for 2D gate traversal."""
 
     def __init__(
@@ -99,7 +85,7 @@ class MultiGate2DEnv:
         self.formation_config = formation_config or self.multi_config.formation
         self.planner_config = planner_config or self.multi_config.planner
         self.max_agents_soft = self.multi_config.max_agents_soft
-        resolved_scene_mode = str(getattr(self.multi_config.scene, "scene_mode", "")).strip().lower()
+        resolved_scene_mode = str(self.multi_config.scene.scene_mode).strip().lower()
         self._dynamic_gate_enabled = is_dynamic_gate_density_scene_mode(resolved_scene_mode)
         self._dynamic_gate_config = self.multi_config.dynamic_gate_density
         self._dynamic_gates: list[DynamicGate2D] = []
@@ -151,7 +137,6 @@ class MultiGate2DEnv:
         self._desired_slots = np.zeros((self.max_agents_soft, 2), dtype=np.float32)
         self._previous_action = np.zeros((self.max_agents_soft, 2), dtype=np.float32)
         self._last_action_shield_info = self._default_action_shield_info()
-        self._previous_mean_slot_error = 0.0
         self._previous_goal_distance = 0.0
         self._initial_goal_distance = 0.0
         self._route_morph_active_index: int | None = None
@@ -285,7 +270,7 @@ class MultiGate2DEnv:
             self.env_config.world_x_bounds_m[0] + formation_summary.trailing_length_m + boundary_margin,
         )
         self._start_center_xy = (float(start_x), float(start_y)) if configured_path else self._clamp_center_xy((start_x, start_y))
-        if bool(getattr(self.env_config, "preparation_hold_mode", False)):
+        if bool(self.env_config.preparation_hold_mode):
             sampled_goal_xy = self._start_center_xy
         elif configured_path:
             sampled_goal_xy = (float(preferred_goal_x), float(goal_y))
@@ -322,10 +307,6 @@ class MultiGate2DEnv:
         self._sync_virtual_structure_route_shape()
         initial_virtual_center = self._virtual_center_xy()
         self._desired_slots = self._compute_desired_slots(self._slot_anchor_center_xy(initial_virtual_center))
-        self._previous_mean_slot_error = self._slot_error_stats(
-            self._active_positions_xy(),
-            self._desired_slots[: self._num_agents],
-        )[0]
         self._previous_goal_distance = self._goal_distance(initial_virtual_center)
         self._initial_goal_distance = self._previous_goal_distance
         self._route_guidance_state = None
@@ -398,8 +379,8 @@ class MultiGate2DEnv:
         self._refresh_route_guidance(virtual_center)
         boundary_proximity_deficit = self._boundary_proximity_deficit_m(current_positions)
         min_clearance = self._min_clearance(current_positions)
-        goal_termination_enabled = bool(getattr(self.env_config, "goal_termination_enabled", True))
-        goal_requires_slot_tolerance = bool(getattr(self.env_config, "goal_requires_slot_tolerance", True))
+        goal_termination_enabled = bool(self.env_config.goal_termination_enabled)
+        goal_requires_slot_tolerance = bool(self.env_config.goal_requires_slot_tolerance)
         reached_goal = (
             goal_termination_enabled
             and current_goal_distance <= self.env_config.goal_radius_m
@@ -414,7 +395,7 @@ class MultiGate2DEnv:
         corridor_required = bool(
             self._dynamic_gate_enabled
             and self._dynamic_gates
-            and getattr(self._dynamic_gate_config, "corridor_through_required", False)
+            and self._dynamic_gate_config.corridor_through_required
         )
         self._last_height_escape_failure = bool(
             self._dynamic_gate_enabled and not bool(height_report.get("passed", False))
@@ -469,7 +450,6 @@ class MultiGate2DEnv:
             config=self.env_config,
         )
         self._previous_action[: self._num_agents] = active_action
-        self._previous_mean_slot_error = current_slot_error
         self._previous_goal_distance = current_goal_distance
         self._episode_done = termination.terminated or termination.truncated
 
@@ -490,27 +470,6 @@ class MultiGate2DEnv:
             goal_distance_m=self._goal_distance(self._virtual_center_xy()),
             path_index=self._path_index,
         )
-
-    def _guidance_runtime_active(self, *args, **kwargs):
-        return _guidance_runtime._guidance_runtime_active(self, *args, **kwargs)
-
-    def _route_guidance_visible(self, *args, **kwargs):
-        return _guidance_runtime._route_guidance_visible(self, *args, **kwargs)
-
-    def _default_route_guidance_meta(self, *args, **kwargs):
-        return _guidance_runtime._default_route_guidance_meta(self, *args, **kwargs)
-
-    def _resolve_guidance_query_interval_steps(self, *args, **kwargs):
-        return _guidance_runtime._resolve_guidance_query_interval_steps(self, *args, **kwargs)
-
-    def _heuristic_route_guidance_summary(self, *args, **kwargs):
-        return _guidance_runtime._heuristic_route_guidance_summary(self, *args, **kwargs)
-
-    def _build_guidance_query_payload(self, *args, **kwargs):
-        return _guidance_runtime._build_guidance_query_payload(self, *args, **kwargs)
-
-    def _refresh_route_guidance(self, *args, **kwargs):
-        return _guidance_runtime._refresh_route_guidance(self, *args, **kwargs)
 
     def _resolve_num_agents(self, num_agents: int | None) -> int:
         resolved = int(self.multi_config.default_agents if num_agents is None else num_agents)
@@ -535,36 +494,6 @@ class MultiGate2DEnv:
 
     def _active_velocities_xy(self) -> np.ndarray:
         return np.asarray([(state.vx_mps, state.vy_mps) for state in self._states], dtype=np.float32)
-
-    def _reset_dynamic_gate_layout(self, *args, **kwargs):
-        return _dynamic_gate_runtime._reset_dynamic_gate_layout(self, *args, **kwargs)
-
-    def _clear_dynamic_gate_runtime_cache(self, *args, **kwargs):
-        return _dynamic_gate_runtime._clear_dynamic_gate_runtime_cache(self, *args, **kwargs)
-
-    def _ensure_dynamic_gate_runtime_cache(self, *args, **kwargs):
-        return _dynamic_gate_runtime._ensure_dynamic_gate_runtime_cache(self, *args, **kwargs)
-
-    def _dynamic_gate_time_s(self, *args, **kwargs):
-        return _dynamic_gate_runtime._dynamic_gate_time_s(self, *args, **kwargs)
-
-    def _dynamic_gate_centers_xy(self, *args, **kwargs):
-        return _dynamic_gate_runtime._dynamic_gate_centers_xy(self, *args, **kwargs)
-
-    def _dynamic_gate_posts_xy(self, *args, **kwargs):
-        return _dynamic_gate_runtime._dynamic_gate_posts_xy(self, *args, **kwargs)
-
-    def _dynamic_gate_velocities_xy(self, *args, **kwargs):
-        return _dynamic_gate_runtime._dynamic_gate_velocities_xy(self, *args, **kwargs)
-
-    def _dynamic_gate_obstacle_map(self, *args, **kwargs):
-        return _dynamic_gate_runtime._dynamic_gate_obstacle_map(self, *args, **kwargs)
-
-    def _active_obstacle_map(self, *args, **kwargs):
-        return _dynamic_gate_runtime._active_obstacle_map(self, *args, **kwargs)
-
-    def _dynamic_gate_motion_range_m(self, *args, **kwargs):
-        return _dynamic_gate_runtime._dynamic_gate_motion_range_m(self, *args, **kwargs)
 
     def _virtual_center_xy(self) -> tuple[float, float]:
         positions = self._active_positions_xy()
@@ -649,30 +578,6 @@ class MultiGate2DEnv:
         )
         return np.clip(action, -1.0, 1.0)
 
-    def _default_action_shield_info(self, *args, **kwargs):
-        return _safety_shields._default_action_shield_info(self, *args, **kwargs)
-
-    def _apply_action_safety_shield(self, *args, **kwargs):
-        return _safety_shields._apply_action_safety_shield(self, *args, **kwargs)
-
-    def _apply_post_gate_cruise_velocity_floor(self, *args, **kwargs):
-        return _safety_shields._apply_post_gate_cruise_velocity_floor(self, *args, **kwargs)
-
-    def _apply_pairwise_velocity_shield(self, *args, **kwargs):
-        return _safety_shields._apply_pairwise_velocity_shield(self, *args, **kwargs)
-
-    def _apply_boundary_velocity_shield(self, *args, **kwargs):
-        return _safety_shields._apply_boundary_velocity_shield(self, *args, **kwargs)
-
-    def _apply_guidance_corridor_velocity_shield(self, *args, **kwargs):
-        return _safety_shields._apply_guidance_corridor_velocity_shield(self, *args, **kwargs)
-
-    def _apply_dynamic_gate_channel_velocity_shield(self, *args, **kwargs):
-        return _safety_shields._apply_dynamic_gate_channel_velocity_shield(self, *args, **kwargs)
-
-    def _apply_obstacle_velocity_shield(self, *args, **kwargs):
-        return _safety_shields._apply_obstacle_velocity_shield(self, *args, **kwargs)
-
     def _planner_inflation_radius(self, num_agents: int) -> float:
         self._sync_virtual_structure_route_shape()
         summary = self.virtual_structure.summary(num_agents)
@@ -705,7 +610,7 @@ class MultiGate2DEnv:
             self._path_index += 1
         if int(self._path_index) != previous_path_index:
             morph_index = int(self._path_index) - 2
-            route_morph_paths = tuple(getattr(self.formation_config, "bootstrap_route_morph_paths_xy", ()) or ())
+            route_morph_paths = tuple(self.formation_config.bootstrap_route_morph_paths_xy)
             self._route_morph_active_index = (
                 morph_index if 0 <= morph_index < len(route_morph_paths) else None
             )
@@ -730,7 +635,7 @@ class MultiGate2DEnv:
         return padded
 
     def _active_morph_target_slots_xy(self) -> np.ndarray:
-        route_morph_paths = tuple(getattr(self.formation_config, "bootstrap_route_morph_paths_xy", ()) or ())
+        route_morph_paths = tuple(self.formation_config.bootstrap_route_morph_paths_xy)
         if self._route_morph_active_index is None or self._route_morph_phase_index is None:
             return np.zeros((0, 2), dtype=np.float32)
         morph_index = int(self._route_morph_active_index)
@@ -773,7 +678,7 @@ class MultiGate2DEnv:
         return np.asarray(targets, dtype=np.float32)
 
     def _configured_path_waypoints(self) -> tuple[tuple[float, float], ...]:
-        raw_waypoints = tuple(getattr(self.env_config, "path_waypoints_xy", ()) or ())
+        raw_waypoints = tuple(self.env_config.path_waypoints_xy)
         resolved: list[tuple[float, float]] = []
         for point in raw_waypoints:
             if len(point) != 2:
@@ -793,23 +698,23 @@ class MultiGate2DEnv:
         return GlobalRoutePlan2D(waypoints_xy=waypoints)
 
     def _active_bootstrap_shape_name(self) -> str | None:
-        route_shapes = tuple(str(shape) for shape in (getattr(self.formation_config, "bootstrap_route_shape_names", ()) or ()))
+        route_shapes = tuple(str(shape) for shape in (self.formation_config.bootstrap_route_shape_names))
         if route_shapes:
             segment_index = max(0, min(int(self._path_index) - 1, len(route_shapes) - 1))
             return route_shapes[segment_index]
-        initial_shape = getattr(self.formation_config, "bootstrap_initial_shape_name", None)
-        shape_name = initial_shape or getattr(self.formation_config, "bootstrap_shape_name", None)
+        initial_shape = self.formation_config.bootstrap_initial_shape_name
+        shape_name = initial_shape or self.formation_config.bootstrap_shape_name
         return None if shape_name is None else str(shape_name)
 
     def _active_bootstrap_slot_permutation(self) -> tuple[int, ...]:
-        route_permutations = tuple(getattr(self.formation_config, "bootstrap_route_slot_permutations", ()) or ())
+        route_permutations = tuple(self.formation_config.bootstrap_route_slot_permutations)
         if route_permutations:
             segment_index = max(0, min(int(self._path_index) - 1, len(route_permutations) - 1))
             return tuple(int(idx) for idx in route_permutations[segment_index])
-        return tuple(int(idx) for idx in (getattr(self.formation_config, "bootstrap_slot_permutation", ()) or ()))
+        return tuple(int(idx) for idx in (self.formation_config.bootstrap_slot_permutation))
 
     def _morph_phase_targets_xy(self) -> np.ndarray:
-        route_morph_paths = tuple(getattr(self.formation_config, "bootstrap_route_morph_paths_xy", ()) or ())
+        route_morph_paths = tuple(self.formation_config.bootstrap_route_morph_paths_xy)
         if self._route_morph_active_index is None:
             return np.zeros((0, 2), dtype=np.float32)
         morph_index = int(self._route_morph_active_index)
@@ -821,8 +726,8 @@ class MultiGate2DEnv:
     def _sync_virtual_structure_route_shape(self) -> None:
         active_shape = self._active_bootstrap_shape_name()
         active_permutation = self._active_bootstrap_slot_permutation()
-        current_shape = getattr(self.virtual_structure.config, "bootstrap_shape_name", None)
-        current_permutation = tuple(getattr(self.virtual_structure.config, "bootstrap_slot_permutation", ()) or ())
+        current_shape = self.virtual_structure.config.bootstrap_shape_name
+        current_permutation = tuple(self.virtual_structure.config.bootstrap_slot_permutation)
         if current_shape == active_shape and current_permutation == active_permutation:
             return
         self.virtual_structure.config = replace(
@@ -833,7 +738,7 @@ class MultiGate2DEnv:
 
     def _slot_anchor_center_xy(self, center_xy: tuple[float, float]) -> tuple[float, float]:
         path_anchor_xy = self._path_projection_anchor_xy(center_xy)
-        anchor_blend = float(np.clip(getattr(self.env_config, "slot_anchor_blend", 1.0), 0.0, 1.0))
+        anchor_blend = float(np.clip(self.env_config.slot_anchor_blend, 0.0, 1.0))
         if anchor_blend <= 0.0:
             return (float(center_xy[0]), float(center_xy[1]))
         if anchor_blend >= 1.0:
@@ -1086,7 +991,7 @@ class MultiGate2DEnv:
         return float(low if low == high else min(max(float(y_value), low), high))
 
     def _fixed_team_start_goal_y(self, num_agents: int) -> tuple[float, float] | None:
-        presets = tuple(getattr(self.env_config, "fixed_team_start_goal_y_m", ()) or ())
+        presets = tuple(self.env_config.fixed_team_start_goal_y_m)
         if not presets:
             return None
         for preset in presets:
@@ -1243,48 +1148,6 @@ class MultiGate2DEnv:
             return self._plan.heading_at(self._path_index)
         return (dx / norm, dy / norm)
 
-    def _actor_observation_desired_slots_xy(self, *args, **kwargs):
-        return _observation_runtime._actor_observation_desired_slots_xy(self, *args, **kwargs)
-
-    def _dynamic_gate_task_slots_for_observation(self, *args, **kwargs):
-        return _observation_runtime._dynamic_gate_task_slots_for_observation(self, *args, **kwargs)
-
-    def _dynamic_gate_observation_feedforward_speed_mps(self, *args, **kwargs):
-        return _observation_runtime._dynamic_gate_observation_feedforward_speed_mps(self, *args, **kwargs)
-
-    def _build_observation(self, *args, **kwargs):
-        return _observation_runtime._build_observation(self, *args, **kwargs)
-
-    def _build_info(self, *args, **kwargs):
-        return _reward_runtime._build_info(self, *args, **kwargs)
-
-    def _route_plan_guidance_summary(self, *args, **kwargs):
-        return _reward_runtime._route_plan_guidance_summary(self, *args, **kwargs)
-
-    def _route_guidance_summary(self, *args, **kwargs):
-        return _reward_runtime._route_guidance_summary(self, *args, **kwargs)
-
-    def _guidance_tracking_error_m(self, *args, **kwargs):
-        return _reward_runtime._guidance_tracking_error_m(self, *args, **kwargs)
-
-    def _route_guidance_tracking_error_m(self, *args, **kwargs):
-        return _reward_runtime._route_guidance_tracking_error_m(self, *args, **kwargs)
-
-    def _boundary_proximity_deficit_m(self, *args, **kwargs):
-        return _reward_runtime._boundary_proximity_deficit_m(self, *args, **kwargs)
-
-    def _any_gate_post_collision(self, *args, **kwargs):
-        return _reward_runtime._any_gate_post_collision(self, *args, **kwargs)
-
-    def _any_out_of_bounds(self, *args, **kwargs):
-        return _reward_runtime._any_out_of_bounds(self, *args, **kwargs)
-
-    def _min_clearance(self, *args, **kwargs):
-        return _reward_runtime._min_clearance(self, *args, **kwargs)
-
-    def _pairwise_collision_stats(self, *args, **kwargs):
-        return _reward_runtime._pairwise_collision_stats(self, *args, **kwargs)
-
     @staticmethod
     def _default_formation_shape_status() -> dict[str, object]:
         return {
@@ -1299,9 +1162,6 @@ class MultiGate2DEnv:
             "formation_line_collapse_score": 0.0,
             "formation_line_collapse_failure": False,
         }
-
-    def _formation_shape_status(self, *args, **kwargs):
-        return _reward_runtime._formation_shape_status(self, *args, **kwargs)
 
     @staticmethod
     def _count_lateral_bands(local_lateral_positions_m: np.ndarray, *, band_width_m: float) -> int:

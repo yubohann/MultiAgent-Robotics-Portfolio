@@ -33,14 +33,14 @@ Validate and score a local submission on the CPU path.
 $env:PYTHONPATH = (Resolve-Path .\src)
 python -m rivermark_benchmark.evaluator .\submission.json `
   --dataset-version 0.1.0 --split validation `
-  --dataset-index-sha256 <published-index-sha256> `
+  --dataset-index-identity <published-index-identity> `
   --output .\submission-report.json
 ```
 
 The local scorer enforces denial-of-service guards at 64 MiB per submission, 4096 episodes, and 100,000 samples per trace.
 
-## Threat Model
+## Validation
 
-The design handles truth leakage through private-field rejection, split probing through enforced split binding, replay through duplicate-episode rejection, stale provenance through hash binding, metric manipulation through trace checks, resource exhaustion through caps, and result tampering through input hashing and detached signatures.
+The design limits truth leakage through private-field rejection, split probing through enforced split binding, replay through duplicate-episode rejection, and metric manipulation through trace checks. Resource caps bound local runs, and detached signatures cover release artifacts.
 
-The local validator and the in-process scorer prototype run as engineering controls on the local machine. A production leaderboard adds an independently operated service, key custody, durable logs, and a published incident policy.
+The local validator and the in-process scorer prototype run on the local machine. A production leaderboard adds an independently operated service, key custody, durable logs, and a published incident policy.

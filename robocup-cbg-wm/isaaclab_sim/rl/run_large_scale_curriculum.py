@@ -5,13 +5,12 @@ import csv
 import json
 import shutil
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import large_scale_50v50_battle as battle
-
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE_DATA_DIR = ROOT / "docs" / "rl_data" / "large_scale_50v50"
@@ -232,7 +231,6 @@ def run_curriculum(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Curriculum trainer for 5v5 -> 10v10 -> 25v25 -> 50v50 battle policy.")
     parser.add_argument("--seed", type=int, default=607050)
-    parser.add_argument("--stop-on-failure", action="store_true", help="Kept for compatibility; stages now always stop on failure.")
     return parser
 
 

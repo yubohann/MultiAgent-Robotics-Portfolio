@@ -13,7 +13,7 @@ from aerocity_method.evaluation.hm3d_exploration_contract import (
 def test_frozen_p04_contract_declares_private_geometry_boundary_and_absolute_metrics() -> None:
     contract = load_exploration_observation_contract()
     payload = contract.to_dict()
-    assert len(contract.digest) == 64
+    assert contract.contract_id == "hm3d-sparse-range-public-exploration-v3"
     assert "evaluator_truth_map" in payload["method_forbidden"]
     assert "final_explored_free_volume_m3" in payload["evaluation"]["required_report_fields"]
     assert (

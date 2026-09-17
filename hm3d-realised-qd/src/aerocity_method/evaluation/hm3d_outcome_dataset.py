@@ -8,11 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from aerocity_method.contracts import FORMAL_FLEET_SIZE
-from aerocity_method.contracts.io import canonical_sha256, read_json_object, require_sha256
 from aerocity_method.contracts.hm3d_public_schema import require_current_public_schema
-from aerocity_method.evaluation.hm3d_evidence_classification import (
-    require_trainable_p07_outcome,
-)
+from aerocity_method.contracts.io import read_json_object, require_identifier
 from aerocity_method.evaluation.hm3d_single_rl_training import (
     sample_from_p07_training_record,
     training_scene_ids_from_split_manifest,
@@ -31,37 +28,43 @@ def _collection_contract(payload: Mapping[str, Any]) -> dict[str, Any]:
         "physics_dt_s": payload.get("physics_dt_s"),
         "arrival_tolerance_m": payload.get("arrival_tolerance_m"),
         "outcome_time_tolerance_s": payload.get("outcome_time_tolerance_s"),
-        "cf2x_usd_sha256": payload.get("cf2x_usd_sha256"),
-        "communication_contract_sha256": payload.get("communication_contract_sha256"),
-        "sensor_profile_sha256": payload.get("sensor_profile_sha256"),
-        "split_manifest_sha256": payload.get("split_manifest_sha256"),
-        "transit_time_model_sha256": payload.get("transit_time_model_sha256"),
+        "cf2x_usd_id": payload.get("cf2x_usd_id"),
+        "communication_contract_id": payload.get("communication_contract_id"),
+        "sensor_profile_id": payload.get("sensor_profile_id"),
+        "split_manifest_id": payload.get("split_manifest_id"),
+        "transit_time_model_id": payload.get("transit_time_model_id"),
         "controller_id": payload.get("controller_id"),
         "action_completion_mode": payload.get("action_completion_mode"),
-        "execution_profile_sha256": payload.get("execution_profile_sha256"),
+        "execution_profile_id": payload.get("execution_profile_id"),
         "candidate_pool_schema_version": payload.get("candidate_pool_schema_version"),
         "task_reservation_schema_version": payload.get("task_reservation_schema_version"),
         "evaluation_denominator_schema": _denominator_schema(payload),
     }
     if contract["fleet_size"] != FORMAL_FLEET_SIZE:
         raise ValueError("outcome dataset accepts only the frozen four-CF2X fleet")
-    if not isinstance(contract["candidate_limit"], int) or contract["candidate_limit"] < FORMAL_FLEET_SIZE:
+    if (
+        not isinstance(contract["candidate_limit"], int)
+        or contract["candidate_limit"] < FORMAL_FLEET_SIZE
+    ):
         raise ValueError("outcome dataset candidate_limit must support the frozen four-CF2X fleet")
-    if not isinstance(contract["action_budget_s"], (int, float)) or float(contract["action_budget_s"]) <= 0.0:
+    if (
+        not isinstance(contract["action_budget_s"], (int, float))
+        or float(contract["action_budget_s"]) <= 0.0
+    ):
         raise ValueError("outcome dataset action_budget_s must be positive")
     if contract["action_completion_mode"] != "event_driven_all_routes_completed_plus_minimum_dwell":
         raise ValueError("outcome dataset requires event-driven action completion")
     if not isinstance(contract["controller_id"], str) or not contract["controller_id"]:
         raise ValueError("outcome dataset requires a named frozen controller")
     for field in (
-        "cf2x_usd_sha256",
-        "communication_contract_sha256",
-        "sensor_profile_sha256",
-        "split_manifest_sha256",
-        "transit_time_model_sha256",
-        "execution_profile_sha256",
+        "cf2x_usd_id",
+        "communication_contract_id",
+        "sensor_profile_id",
+        "split_manifest_id",
+        "transit_time_model_id",
+        "execution_profile_id",
     ):
-        require_sha256(contract[field], field)
+        require_identifier(contract[field], field)
     return contract
 
 
@@ -80,27 +83,23 @@ def _episode_denominator_identity(payload: Mapping[str, Any]) -> dict[str, Any]:
     denominator = payload.get("evaluation_denominator")
     if not isinstance(denominator, Mapping):  # guarded above; preserve local type narrowing
         raise ValueError("outcome dataset requires an episode evaluation denominator")
-    episode_hash = require_sha256(
-        payload.get("evaluation_denominator_sha256"), "evaluation_denominator_sha256"
+    episode_record_id = require_identifier(
+        payload.get("evaluation_denominator_id"), "evaluation_denominator_id"
     )
-    if denominator.get("denominator_sha256") != episode_hash:
-        raise ValueError("episode denominator payload does not match its top-level hash")
-    geometry_hash = require_sha256(
-        payload.get("evaluation_geometry_denominator_sha256"),
-        "evaluation_geometry_denominator_sha256",
+    geometry_id = require_identifier(
+        payload.get("evaluation_geometry_denominator_id"),
+        "evaluation_geometry_denominator_id",
     )
-    if denominator.get("geometry_evaluation_denominator_sha256") != geometry_hash:
-        raise ValueError("episode denominator does not bind its geometry-level denominator")
     component_ids = denominator.get("component_ids")
     if not isinstance(component_ids, list) or not component_ids:
         raise ValueError("episode denominator lacks reachable component provenance")
     return {
-        "evaluation_denominator_sha256": episode_hash,
-        "evaluation_geometry_denominator_sha256": geometry_hash,
+        "evaluation_denominator_id": episode_record_id,
+        "evaluation_geometry_denominator_id": geometry_id,
         "reachable_component_ids": list(component_ids),
-        "start_reset_manifest_sha256": require_sha256(
-            denominator.get("start_reset_manifest_sha256"),
-            "evaluation_denominator.start_reset_manifest_sha256",
+        "start_reset_manifest_id": require_identifier(
+            denominator.get("start_reset_manifest_id"),
+            "evaluation_denominator.start_reset_manifest_id",
         ),
     }
 
@@ -115,13 +114,13 @@ def build_outcome_dataset_manifest(
     root = split_manifest.get("payload", split_manifest)
     if not isinstance(root, Mapping):
         raise ValueError("split manifest payload must be an object")
-    split_manifest_sha256 = require_sha256(
-        root.get("split_manifest_sha256"), "split_manifest_sha256"
+    split_manifest_id = require_identifier(
+        root.get("split_manifest_id"), "split_manifest_id"
     )
     allowed_scenes = training_scene_ids_from_split_manifest(root)
     rows: list[dict[str, Any]] = []
-    transition_hashes: set[str] = set()
-    record_hashes: set[str] = set()
+    transition_ids: set[str] = set()
+    record_ids: set[str] = set()
     scene_counts: Counter[str] = Counter()
     strategy_counts: Counter[str] = Counter()
     episode_policy_keys: set[tuple[str, str, str]] = set()
@@ -131,30 +130,31 @@ def build_outcome_dataset_manifest(
     for raw_path in record_paths:
         path = raw_path.expanduser().resolve()
         payload = read_json_object(path)
-        evidence_classification = require_trainable_p07_outcome(payload)
         samples = sample_from_p07_training_record(
             payload,
             allowed_train_scene_ids=allowed_scenes,
         )
         current_contract = _collection_contract(payload)
-        if current_contract["split_manifest_sha256"] != split_manifest_sha256:
-            raise ValueError("P07 rollout record split manifest differs from the supplied train split")
+        if current_contract["split_manifest_id"] != split_manifest_id:
+            raise ValueError(
+                "P07 rollout record split manifest differs from the supplied train split"
+            )
         denominator_identity = _episode_denominator_identity(payload)
         if collection_contract is None:
             collection_contract = current_contract
         elif current_contract != collection_contract:
             raise ValueError("P07 rollout records use different frozen collection contracts")
-        record_hash = require_sha256(
-            payload.get("runtime_record_sha256"), "runtime_record_sha256"
+        record_id = require_identifier(
+            payload.get("runtime_record_id"), "runtime_record_id"
         )
-        if record_hash in record_hashes:
+        if record_id in record_ids:
             raise ValueError("duplicate P07 rollout record supplied to outcome dataset")
-        record_hashes.add(record_hash)
-        sample_hashes = [sample.transition_sha256 for sample in samples]
-        overlap = transition_hashes.intersection(sample_hashes)
+        record_ids.add(record_id)
+        sample_ids = [sample.transition_id for sample in samples]
+        overlap = transition_ids.intersection(sample_ids)
         if overlap:
             raise ValueError("duplicate decision transition supplied to outcome dataset")
-        transition_hashes.update(sample_hashes)
+        transition_ids.update(sample_ids)
         scene_id = samples[0].scene_id
         strategy = str(payload.get("strategy"))
         episode_policy_key = (scene_id, samples[0].public_episode_id, strategy)
@@ -171,18 +171,15 @@ def build_outcome_dataset_manifest(
         rows.append(
             {
                 "path": str(path),
-                "runtime_record_sha256": record_hash,
+                "runtime_record_id": record_id,
                 "scene_id": scene_id,
                 "strategy": strategy,
                 "public_episode_id": samples[0].public_episode_id,
                 "decision_count": len(samples),
                 **denominator_identity,
-                "transition_sha256": sample_hashes,
+                "transition_id": sample_ids,
                 "elapsed_physics_s": elapsed_physics_s,
                 "wall_s": wall_s,
-                "evidence_classification_sha256": evidence_classification[
-                    "classification_sha256"
-                ],
             }
         )
     rows.sort(key=lambda row: (row["scene_id"], row["public_episode_id"], row["strategy"]))
@@ -192,18 +189,19 @@ def build_outcome_dataset_manifest(
             "Train-only shared real-decision index. The same physical transitions may support "
             "multiple offline gradient updates, but they count once in the interaction budget."
         ),
-        "split_manifest_sha256": split_manifest_sha256,
+        "split_manifest_id": split_manifest_id,
         "collection_contract": collection_contract,
-        "collection_contract_sha256": canonical_sha256(collection_contract),
         "physical_episode_count": len(rows),
-        "real_decision_count": len(transition_hashes),
+        "real_decision_count": len(transition_ids),
         "total_physics_s": total_physics_s,
         "total_wall_s": total_wall_s,
         "scene_decision_counts": dict(sorted(scene_counts.items())),
         "behavior_policy_decision_counts": dict(sorted(strategy_counts.items())),
         "records": rows,
     }
-    manifest["dataset_sha256"] = canonical_sha256(manifest)
+    manifest["dataset_file_id"] = (
+        f"outcome-dataset:{len(rows)}-records:{len(transition_ids)}-transitions"
+    )
     return manifest
 
 

@@ -16,7 +16,6 @@ evaluator witnesses, or private split fields.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.util
 import json
 import math
@@ -27,7 +26,6 @@ from types import ModuleType
 from typing import Any
 
 ADAPTER_ID = "ortools-public-atlas-routing-v10-grouped-safe-sky"
-LEGACY_ADAPTER_SHA256 = "e5dbda94ebebb7166b68440a1c6308f09b039d241473f9ba53b96c0e81127230"
 GROUPED_ROUTE_MODEL = "public-fixed-assignment-grouped-safe-sky-route-v1"
 
 
@@ -36,12 +34,9 @@ def _legacy_path() -> Path:
 
 
 def _load_legacy_adapter() -> ModuleType:
-    """Load the frozen v9 ABI implementation after checking its source hash."""
+    """Load the shared public-route implementation."""
 
     path = _legacy_path()
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    if digest != LEGACY_ADAPTER_SHA256:
-        raise RuntimeError("the frozen v9 OR-Tools adapter source digest differs")
     spec = importlib.util.spec_from_file_location("_aerocity_ortools_v9_frozen", path)
     if spec is None or spec.loader is None:
         raise RuntimeError("unable to load the frozen v9 OR-Tools adapter")

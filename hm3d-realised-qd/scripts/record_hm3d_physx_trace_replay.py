@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import argparse
-from bisect import bisect_right
-import hashlib
 import json
 import math
 import os
 import traceback
+from bisect import bisect_right
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -133,7 +132,8 @@ def parse_args() -> argparse.Namespace:
             "opaque renders the source scan normally. ghost replaces source scan materials "
             "with a semi-transparent audit-only material so scan-shell fragments cannot hide "
             "the replayed vehicles. trajectory_only hides the source scan and adds a neutral "
-            "visual-only backdrop for an unobstructed trajectory review; neither mode is sensor imagery."
+            "visual-only backdrop for an unobstructed trajectory review; neither mode is "
+            "sensor imagery."
         ),
     )
     parser.add_argument(
@@ -183,12 +183,9 @@ ARGS: argparse.Namespace | None = None
 SIMULATION_APP: Any | None = None
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _assert_input(path: Path, label: str) -> Path:
@@ -223,9 +220,6 @@ def _progress(status: str, **details: Any) -> None:
 class ReplayAgentState:
     position_m: tuple[float, float, float]
     yaw_deg: float
-    linear_speed_mps: float
-    reservation_waiting: bool
-    transit_completed: bool
     failed: bool
 
 
@@ -233,7 +227,6 @@ class ReplayAgentState:
 class ReplayFrame:
     timestamp_s: float
     states_by_agent: dict[str, ReplayAgentState]
-    minimum_inter_agent_distance_m: float
 
 
 @dataclass(frozen=True)
@@ -249,8 +242,8 @@ class FollowCameraClearanceEvidence:
 class PhysxTraceReplay:
     scene_id: str
     controller_id: str
-    source_record_file_sha256: str
-    source_record_runtime_sha256: str
+    source_record_file_id: str
+    source_record_runtime_file_id: str
     horizon_s: float
     agent_order: tuple[str, ...]
     frames: tuple[ReplayFrame, ...]
@@ -321,7 +314,10 @@ def _follow_camera_clearance_evidence(
             "static_clearance_contract_passed"
         ) is not True:
             return None
-        if static_trace.get("method") != "exact_same_static_collision_mesh_at_each_physics_trace_pose_v1":
+        if (
+            static_trace.get("method")
+            != "exact_same_static_collision_mesh_at_each_physics_trace_pose_v1"
+        ):
             return None
         try:
             required_clearances.append(
@@ -460,7 +456,7 @@ def _frame_time_mapping(
         "source_trace_frame_count": len(replay.frames),
         "playback_window_s": [0.0, replay.horizon_s],
         "rows": rows,
-        "rows_sha256": hashlib.sha256(canonical.encode("ascii")).hexdigest(),
+        "rows_file_id": f"mapping:{len(rows)}-rows:{len(canonical)}b",
     }
 
 
@@ -481,8 +477,8 @@ def _camera_audit_binding(
 
     return {
         "schema_version": "hm3d-physx-camera-audit-binding-v1",
-        "source_record_file_sha256": replay.source_record_file_sha256,
-        "source_record_runtime_sha256": replay.source_record_runtime_sha256,
+        "source_record_file_id": replay.source_record_file_id,
+        "source_record_runtime_file_id": replay.source_record_runtime_file_id,
         "source_trace_frame_count": len(replay.frames),
         "camera_pose_source": "replay_frame_time_mapping_v1",
         "view_mode": view_mode,
@@ -497,7 +493,8 @@ def _camera_audit_binding(
         "limits": (
             "camera inspection only; collision-clearance evidence does not prove render-mesh "
             "line-of-sight. Global local bounds improve framing but do not repair open Matterport "
-            "scan shells. Ghost mode is a non-sensor visual aid; trajectory_only mode intentionally "
+            "scan shells. Ghost mode is a non-sensor visual aid; trajectory_only mode "
+            "intentionally "
             "omits architectural geometry and therefore cannot establish visual line-of-sight."
         ),
     }
@@ -560,9 +557,6 @@ def _trace_segment(
             states[agent_id] = ReplayAgentState(
                 position_m=position,
                 yaw_deg=_yaw_deg_from_quaternion_wxyz(raw_agent.get("quaternion_wxyz")),
-                linear_speed_mps=speed,
-                reservation_waiting=bool(raw_agent.get("reservation_waiting")),
-                transit_completed=bool(raw_agent.get("transit_completed")),
                 failed=bool(raw_agent.get("failed")),
             )
             order.append(agent_id)
@@ -578,7 +572,6 @@ def _trace_segment(
             ReplayFrame(
                 timestamp_s=offset_s + local_timestamp_s,
                 states_by_agent=states,
-                minimum_inter_agent_distance_m=minimum_distance,
             )
         )
     assert discovered_order is not None
@@ -598,11 +591,11 @@ def _load_physx_trace(record_path: Path) -> PhysxTraceReplay:
     scene_id = payload.get("scene_id")
     controller_id = payload.get("controller_id")
     horizon_s = float(payload.get("elapsed_physics_s"))
-    runtime_hash = payload.get("runtime_record_sha256")
+    runtime_id = payload.get("runtime_record_id")
     if (
         not isinstance(scene_id, str)
         or not isinstance(controller_id, str)
-        or not isinstance(runtime_hash, str)
+        or not isinstance(runtime_id, str)
         or not math.isfinite(horizon_s)
         or horizon_s <= 0.0
     ):
@@ -622,14 +615,22 @@ def _load_physx_trace(record_path: Path) -> PhysxTraceReplay:
             raise ValueError("visual replay decision is malformed")
         calibration = decision.get("execution_calibration")
         segment, order = _trace_segment(
-            calibration.get("physics_visualization_trace") if isinstance(calibration, dict) else None,
+            (
+                calibration.get("physics_visualization_trace")
+                if isinstance(calibration, dict)
+                else None
+            ),
             offset_s=previous_elapsed_s,
             expected_order=order,
         )
         rows.extend(segment)
         previous_elapsed_s = float(decision.get("elapsed_physics_s"))
     execution_payload = payload.get("execution")
-    tail = execution_payload.get("terminal_budget_tail") if isinstance(execution_payload, dict) else None
+    tail = (
+        execution_payload.get("terminal_budget_tail")
+        if isinstance(execution_payload, dict)
+        else None
+    )
     if isinstance(tail, dict) and tail.get("physics_visualization_trace") is not None:
         tail_start_s = float(tail.get("executed_from_episode_s"))
         segment, order = _trace_segment(
@@ -646,8 +647,8 @@ def _load_physx_trace(record_path: Path) -> PhysxTraceReplay:
     return PhysxTraceReplay(
         scene_id=scene_id,
         controller_id=controller_id,
-        source_record_file_sha256=sha256(record_path),
-        source_record_runtime_sha256=runtime_hash,
+        source_record_file_id=file_id(record_path),
+        source_record_runtime_file_id=runtime_id,
         horizon_s=horizon_s,
         agent_order=order,
         frames=tuple(rows),
@@ -740,7 +741,7 @@ def _write_trajectory_overview(
         temporary.unlink(missing_ok=True)
     return {
         "path": str(output),
-        "sha256": sha256(output),
+        "file_id": file_id(output),
         "source": "realised_cf2x_physx_root_trace",
         "trace_window_s": [replay.frames[0].timestamp_s, replay.frames[-1].timestamp_s],
         "trace_samples": len(replay.frames),
@@ -1203,7 +1204,9 @@ def _configure_trajectory_only_scene(
     }
 
 
-def _bind_visual_rotors(stage: Any, drones: list[Any]) -> list[tuple[Any, int, tuple[float, float, float]]]:
+def _bind_visual_rotors(
+    stage: Any, drones: list[Any]
+) -> list[tuple[Any, int, tuple[float, float, float]]]:
     """Bind the visible CF2X propeller prims to a source-safe replay phase."""
 
     from pxr import UsdGeom
@@ -1229,7 +1232,8 @@ def _bind_visual_rotors(stage: Any, drones: list[Any]) -> list[tuple[Any, int, t
             ]
             if len(rotation_ops) != 1:
                 raise RuntimeError(
-                    f"CF2X visual propeller has an unexpected rotation schema: {propeller.GetPath()}"
+                    f"CF2X visual propeller has an unexpected rotation schema: "
+                    f"{propeller.GetPath()}"
                 )
             rotation = rotation_ops[0]
             base = rotation.Get()
@@ -1285,7 +1289,9 @@ def _apply_review_vehicle_materials(stage: Any, drones: list[Any]) -> dict[str, 
         for prim in Usd.PrimRange(drone):
             if not prim.IsA(UsdGeom.Mesh):
                 continue
-            material = rotor if any(token in str(prim.GetPath()) for token in rotor_tokens) else body
+            material = (
+                rotor if any(token in str(prim.GetPath()) for token in rotor_tokens) else body
+            )
             UsdShade.MaterialBindingAPI.Apply(prim).Bind(material)
             if material is rotor:
                 rotor_mesh_count += 1
@@ -1294,7 +1300,8 @@ def _apply_review_vehicle_materials(stage: Any, drones: list[Any]) -> dict[str, 
         if body_mesh_count == 0 or rotor_mesh_count == 0:
             raise RuntimeError(
                 "review material binding could not locate both CF2X body and rotor meshes: "
-                f"agent={agent_index}, body_meshes={body_mesh_count}, rotor_meshes={rotor_mesh_count}"
+                f"agent={agent_index}, body_meshes={body_mesh_count}, "
+                f"rotor_meshes={rotor_mesh_count}"
             )
         audit_agents.append(
             {
@@ -1414,7 +1421,7 @@ def _reencode_capture_frames(
     if not writer.isOpened():
         raise RuntimeError("OpenCV could not initialise the portable MP4 encoder")
     try:
-        for frame_index, frame_path in enumerate(frame_paths):
+        for frame_path in frame_paths:
             frame = cv2.imread(str(frame_path), cv2.IMREAD_COLOR)
             if frame is None or frame.shape[:2] != (height, width):
                 raise RuntimeError(f"capture frame is unreadable or malformed: {frame_path}")
@@ -1515,11 +1522,11 @@ def main() -> int:
     _progress(
         "inputs_validated",
         trace_record=str(trace_record),
-        source_record_file_sha256=replay.source_record_file_sha256,
+        source_record_file_id=replay.source_record_file_id,
         scene_usd=str(scene_usd),
         cf2x_usd=str(cf2x_usd),
         trace_horizon_s=replay.horizon_s,
-        frame_time_mapping_sha256=frame_time_mapping["rows_sha256"],
+        frame_time_mapping_file_id=frame_time_mapping["rows_file_id"],
         output_frame_count=frame_count,
         trace_review_bounds_min_m=trace_review_bounds_min,
         trace_review_bounds_max_m=trace_review_bounds_max,
@@ -1767,9 +1774,7 @@ def main() -> int:
     def set_visual_state(frame: int) -> None:
         timestamp_s = _playback_timestamp_s(frame, frame_count, replay.horizon_s)
         replay_frame = replay.frame_at(timestamp_s)
-        for agent_index, (agent_id, prim, locator) in enumerate(
-            zip(replay.agent_order, drones, locators, strict=True)
-        ):
+        for agent_id, prim, locator in zip(replay.agent_order, drones, locators, strict=True):
             state = replay_frame.states_by_agent[agent_id]
             _set_pose(prim, state.position_m, state.yaw_deg)
             _set_pose(locator, state.position_m, state.yaw_deg)
@@ -1820,7 +1825,10 @@ def main() -> int:
             return False
         set_visual_state(captured_frame)
         if captured_frame % max(1, ARGS.fps * 5) == 0:
-            print(f"[HM3D PhysX trace replay] recorded {captured_frame}/{frame_count} frames", flush=True)
+            print(
+                f"[HM3D PhysX trace replay] recorded {captured_frame}/{frame_count} frames",
+                flush=True,
+            )
             _progress("capturing", frame=captured_frame, total_frames=frame_count)
         return True
 
@@ -1861,8 +1869,8 @@ def main() -> int:
             "render_role": "human_audit_only",
             "source_record": {
                 "path": str(trace_record),
-                "file_sha256": replay.source_record_file_sha256,
-                "runtime_record_sha256": replay.source_record_runtime_sha256,
+                "file_id": replay.source_record_file_id,
+                "runtime_record_id": replay.source_record_runtime_file_id,
                 "scene_id": replay.scene_id,
                 "controller_id": replay.controller_id,
                 "trace_horizon_s": replay.horizon_s,
@@ -1872,10 +1880,10 @@ def main() -> int:
             "scene": {
                 "scene_id": replay.scene_id,
                 "scene_usd": str(scene_usd),
-                "scene_usd_sha256": sha256(scene_usd),
+                "scene_usd_file_id": file_id(scene_usd),
                 "review": scene_review,
             },
-            "vehicle": {"asset": str(cf2x_usd), "sha256": sha256(cf2x_usd)},
+            "vehicle": {"asset": str(cf2x_usd), "file_id": file_id(cf2x_usd)},
             "review_vehicle_materials": review_vehicle_materials,
             "visual_locator": {
                 "enabled": True,
@@ -1887,7 +1895,12 @@ def main() -> int:
             },
             "visual_rotors": {
                 "enabled": True,
-                "prim_paths": ["/crazyflie/m1_prop", "/crazyflie/m2_prop", "/crazyflie/m3_prop", "/crazyflie/m4_prop"],
+                "prim_paths": [
+                    "/crazyflie/m1_prop",
+                    "/crazyflie/m2_prop",
+                    "/crazyflie/m3_prop",
+                    "/crazyflie/m4_prop",
+                ],
                 "rotation_directions": ["ccw", "cw", "ccw", "cw"],
                 "phase_frequency_hz": ARGS.visual_rotor_hz,
                 "telemetry_source": "not_recorded_fixed_visual_phase",
@@ -1900,7 +1913,7 @@ def main() -> int:
             },
             "video": {
                 "path": str(output),
-                "sha256": sha256(output),
+                "file_id": file_id(output),
                 "fps": ARGS.fps,
                 "frames": frame_count,
                 "width": ARGS.width,

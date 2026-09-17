@@ -3,6 +3,17 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from robocup_visionrl_gym_env import (
+    ARENA_SIZE,
+    BLUE_BASE_XY,
+    HALF_ARENA,
+    PUSHABLE_OBSTACLE_HALF,
+    ROBOT_LENGTH,
+    YELLOW_BASE_XY,
+    Target,
+    active_base_armor_blockers,
+    wrap_angle,
+)
 
 from .constants import (
     ACCEL_DRIFT_ANGULAR_THRESHOLD,
@@ -14,22 +25,9 @@ from .constants import (
     FUSION_JAMMED_PUSH_LOSS,
     RECOVERY_COOLDOWN_S,
     TOF_SENSOR_LATERAL_OFFSET_M,
-    TOF_SENSOR_RANGE_M
+    TOF_SENSOR_RANGE_M,
 )
-from .geometry import (
-    team_frame_sign
-)
-from robocup_visionrl_gym_env import (
-    ARENA_SIZE,
-    BLUE_BASE_XY,
-    HALF_ARENA,
-    PUSHABLE_OBSTACLE_HALF,
-    ROBOT_LENGTH,
-    Target,
-    YELLOW_BASE_XY,
-    active_base_armor_blockers,
-    wrap_angle
-)
+from .geometry import team_frame_sign
 
 
 class ObsMixin:

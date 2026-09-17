@@ -1,68 +1,10 @@
 from __future__ import annotations
 
-from .rules import (
-    angled_wall_target_yaw,
-    base_attack_pose_quality,
-    base_hit_success_cap,
-    base_removed_side_lane_quality,
-    empty_opponent_estimate,
-    inward_45deg_target_yaws,
-    laser_dwell_success_probability,
-    normal_hits_against,
-    normalized_laser_dwell_factor,
-    opponent_bearing_estimate,
-    opponent_team,
-    shooting_range_limits,
-    static_fire_pose,
-    target_name_from_path,
-    team_base_xy,
-    team_score
-)
-from .transforms import (
-    create_xform,
-    get_xform,
-    local_to_world,
-    quat_from_euler,
-    quat_rotate,
-    rotate_local,
-    set_visibility,
-    set_xform
-)
-from .spawn import (
-    material,
-    register_laser_blocker,
-    register_nav_blocker,
-    register_pushable_obstacle,
-    rigid_physics_material,
-    segment_intersects_aabb,
-    spawn_apriltag,
-    spawn_base_armor,
-    spawn_box,
-    spawn_cylinder,
-    spawn_local_box,
-    spawn_local_cylinder,
-    spawn_marker_cell,
-    spawn_nav_blocker,
-    spawn_pushable_obstacle,
-    spawn_route_markers,
-    spawn_target,
-    spawn_target_id_badge,
-    target_path_from_name,
-    unregister_blocker,
-    validate_route
-)
-from .replay import (
-    apply_replay_box_positions,
-    apply_trained_replay_events,
-    load_trained_replay,
-    point_blocked,
-    pushable_collision_path,
-    pushable_position_valid,
-    replay_row_at,
-    reset_pushable_obstacles,
-    segment_blocked,
-    sync_pushable_obstacles_from_stage,
-    trained_replay_pushable_pose
+from .controllers import (
+    PolicyReplayController,
+    StrategyTeamController,
+    initialize_demo_flow_controllers,
+    initialize_match_controllers,
 )
 from .costmap import (
     aabb_clearance,
@@ -88,30 +30,7 @@ from .costmap import (
     smooth_path,
     snap_to_grid,
     warn_costmap,
-    wrap_angle
-)
-from .controllers import (
-    PolicyReplayController,
-    StrategyTeamController,
-    initialize_demo_flow_controllers,
-    initialize_match_controllers
-)
-from .scene import (
-    create_lidar_proxy_mesh,
-    create_sensor_streams,
-    demo_flow_pose,
-    demo_segment_path,
-    design_arena,
-    design_robot,
-    finite_path_pose,
-    resolve_robot_contact,
-    route_pose,
-    target_xy_for_name,
-    trigger_demo_flow_events,
-    update_demo_flow_animation,
-    update_robot_animation,
-    update_robot_parts,
-    update_trained_replay_animation
+    wrap_angle,
 )
 from .laser import (
     apply_fire_rule,
@@ -130,16 +49,91 @@ from .laser import (
     update_laser_lock,
     update_match_rules,
     update_target_contacts,
-    update_target_falls
+    update_target_falls,
 )
-from .recorder import (
-    MatchVideoRecorder
+from .recorder import MatchVideoRecorder
+from .replay import (
+    apply_replay_box_positions,
+    apply_trained_replay_events,
+    load_trained_replay,
+    point_blocked,
+    pushable_collision_path,
+    pushable_position_valid,
+    replay_row_at,
+    reset_pushable_obstacles,
+    segment_blocked,
+    sync_pushable_obstacles_from_stage,
+    trained_replay_pushable_pose,
 )
-from .simulator import (
-    main,
-    run_simulator
+from .rules import (
+    angled_wall_target_yaw,
+    base_attack_pose_quality,
+    base_hit_success_cap,
+    base_removed_side_lane_quality,
+    empty_opponent_estimate,
+    inward_45deg_target_yaws,
+    laser_dwell_success_probability,
+    normal_hits_against,
+    normalized_laser_dwell_factor,
+    opponent_bearing_estimate,
+    opponent_team,
+    shooting_range_limits,
+    static_fire_pose,
+    target_name_from_path,
+    team_base_xy,
+    team_score,
 )
-
+from .scene import (
+    create_lidar_proxy_mesh,
+    create_sensor_streams,
+    demo_flow_pose,
+    demo_segment_path,
+    design_arena,
+    design_robot,
+    finite_path_pose,
+    resolve_robot_contact,
+    route_pose,
+    target_xy_for_name,
+    trigger_demo_flow_events,
+    update_demo_flow_animation,
+    update_robot_animation,
+    update_robot_parts,
+    update_trained_replay_animation,
+)
+from .simulator import main, run_simulator
+from .spawn import (
+    material,
+    register_laser_blocker,
+    register_nav_blocker,
+    register_pushable_obstacle,
+    rigid_physics_material,
+    segment_intersects_aabb,
+    spawn_apriltag,
+    spawn_base_armor,
+    spawn_box,
+    spawn_cylinder,
+    spawn_local_box,
+    spawn_local_cylinder,
+    spawn_marker_cell,
+    spawn_nav_blocker,
+    spawn_pushable_obstacle,
+    spawn_route_markers,
+    spawn_target,
+    spawn_target_id_badge,
+    target_path_from_name,
+    unregister_blocker,
+    validate_route,
+)
+from .transforms import (
+    create_xform,
+    get_xform,
+    local_to_world,
+    quat_from_euler,
+    quat_rotate,
+    rotate_local,
+    set_visibility,
+    set_xform,
+)
 
 __all__ = [
     'MatchVideoRecorder',

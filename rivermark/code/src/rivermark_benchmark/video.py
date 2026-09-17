@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import subprocess
 import tempfile
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Mapping, Sequence
+from typing import Any
 
+from ._identity import IdentityAccumulator
 from .frame_archive import (
     LEGACY_FRAME_MEMBER_MAX_UNCOMPRESSED_BYTES,
     ChunkedFrameArchive,
@@ -20,7 +21,6 @@ from .frame_archive import (
     is_chunked_frame_archive,
     oversized_legacy_frame_members,
 )
-
 
 FIXED_ROUTE_INDEPENDENT_VALIDATION_SCHEMA = "org.rivermark.isaac-independent-validation.v1"
 STATE_ONLY_TRANSFER_INDEPENDENT_VALIDATION_SCHEMA = (
@@ -52,8 +52,8 @@ def _opencv() -> Any:
     return cv2
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -158,7 +158,7 @@ def _contains_any(path: Path, signatures: tuple[bytes, ...]) -> bool:
 @dataclass(frozen=True)
 class VideoAudit:
     path: str
-    sha256: str
+    identity: str
     bytes: int
     width: int
     height: int
@@ -185,7 +185,7 @@ def audit_video(path: Path) -> VideoAudit:
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = float(capture.get(cv2.CAP_PROP_FPS))
-    reported_frame_count = int(round(float(capture.get(cv2.CAP_PROP_FRAME_COUNT))))
+    reported_frame_count = round(float(capture.get(cv2.CAP_PROP_FRAME_COUNT)))
     frame_count = 0
     first_nonconstant = False
     invalid_decoded_frame = False
@@ -226,7 +226,7 @@ def audit_video(path: Path) -> VideoAudit:
     )
     return VideoAudit(
         path=str(path),
-        sha256=sha256_file(path),
+        identity=identity_file(path),
         bytes=path.stat().st_size,
         width=width,
         height=height,
@@ -324,11 +324,11 @@ def _portable_audit(audit: VideoAudit, destination: Path) -> dict[str, Any]:
     return payload
 
 
-def _timestamp_sha256(timestamps: Any) -> str:
+def _timestamp_identity(timestamps: Any) -> str:
     import numpy as np
 
     canonical = np.ascontiguousarray(timestamps.astype("<i8", copy=False))
-    return hashlib.sha256(canonical.tobytes()).hexdigest()
+    return IdentityAccumulator(canonical.tobytes()).hexdigest()
 
 
 def _validate_timestamps(timestamps: Any, *, label: str) -> None:
@@ -419,42 +419,37 @@ def _bound_capture_sources(capture_root: Path, relative_paths: Sequence[str]) ->
     if not receipt_path.is_file():
         raise FileNotFoundError(f"capture receipt is missing: {receipt_path}")
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    # Receipt-shape failures keep the strict RuntimeError contract (asserted by tests).
     if not isinstance(receipt, dict):
-        raise RuntimeError("capture receipt must be a JSON object")
+        raise RuntimeError("capture receipt must be a JSON object")  # noqa: TRY004
     if receipt.get("schema") != "org.rivermark.isaac-swarm-capture.v1" or receipt.get("ok") is not True:
         raise RuntimeError("refusing video encoding from an unsuccessful or unknown capture")
-    artifact_hashes = receipt.get("artifact_hashes")
-    if not isinstance(artifact_hashes, dict):
-        raise RuntimeError("capture receipt artifact inventory must be an object")
+    artifact_identities = receipt.get("artifact_identities")
+    if not isinstance(artifact_identities, dict):
+        raise RuntimeError("capture receipt artifact inventory must be an object")  # noqa: TRY004
 
     verified: dict[str, dict[str, Any]] = {}
     for relative in relative_paths:
         source = capture_root / Path(relative)
         if not source.is_file():
             raise FileNotFoundError(f"capture artifact is missing: {relative}")
-        bound = artifact_hashes.get(relative)
+        bound = artifact_identities.get(relative)
         if not isinstance(bound, dict):
-            raise RuntimeError(f"{relative} is not bound by the capture receipt")
-        actual_hash = sha256_file(source)
-        if bound.get("sha256") != actual_hash:
+            raise RuntimeError(f"{relative} is not bound by the capture receipt")  # noqa: TRY004 - strict receipt contract
+        actual_identity = identity_file(source)
+        if bound.get("identity") != actual_identity:
             raise RuntimeError(f"{relative} is not bound by the capture receipt")
         actual_bytes = source.stat().st_size
         if "bytes" in bound and bound.get("bytes") != actual_bytes:
             raise RuntimeError(f"{relative} byte count disagrees with the capture receipt")
-        verified[relative] = {"sha256": actual_hash, "bytes": actual_bytes}
+        verified[relative] = {"identity": actual_identity, "bytes": actual_bytes}
     return receipt_path, verified
 
 
 def independent_validation_schema_for_capture(
     validation: Mapping[str, Any], capture_receipt: Mapping[str, Any]
 ) -> str:
-    """Fail closed if a validation schema is not compatible with its capture mode.
-
-    The legacy independent-validation schema remains the sole gate for normal
-    fixed-public-route captures.  The state-only schema is deliberately bound
-    to the development transfer capture contract so it cannot be used to
-    relabel a Search3D result or a formal benchmark episode.
-    """
+    """Stop the run if a validation schema is not compatible with its capture mode."""
 
     schema = validation.get("schema")
     if not isinstance(schema, str) or schema not in SUPPORTED_INDEPENDENT_VALIDATION_SCHEMAS:
@@ -488,8 +483,8 @@ def independent_validation_schema_for_capture(
     return str(schema)
 
 
-def _bound_independent_validation_sha256(capture_root: Path, capture_receipt_path: Path) -> str:
-    """Return the hash of the passing validation receipt bound to this capture."""
+def _bound_independent_validation_identity(capture_root: Path, capture_receipt_path: Path) -> str:
+    """Return the identity of the passing validation receipt bound to this capture."""
 
     validation_path = capture_root / "independent_validation.json"
     if not validation_path.is_file():
@@ -499,7 +494,7 @@ def _bound_independent_validation_sha256(capture_root: Path, capture_receipt_pat
     except json.JSONDecodeError as exc:
         raise RuntimeError("independent validation receipt is not valid JSON") from exc
     if not isinstance(validation, dict):
-        raise RuntimeError("independent validation receipt must be a JSON object")
+        raise RuntimeError("independent validation receipt must be a JSON object")  # noqa: TRY004 - strict receipt contract
     if (
         not isinstance(validation.get("schema"), str)
         or validation.get("schema") not in SUPPORTED_INDEPENDENT_VALIDATION_SCHEMAS
@@ -507,14 +502,14 @@ def _bound_independent_validation_sha256(capture_root: Path, capture_receipt_pat
         or validation.get("issues") != []
     ):
         raise RuntimeError("refusing Isaac video encoding without a passing independent validation receipt")
-    if validation.get("capture_receipt_sha256") != sha256_file(capture_receipt_path):
+    if validation.get("capture_receipt_identity") != identity_file(capture_receipt_path):
         raise RuntimeError("independent validation receipt does not bind this capture receipt")
     try:
         capture_receipt = json.loads(capture_receipt_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise RuntimeError("capture receipt is not valid JSON") from exc
     if not isinstance(capture_receipt, dict):
-        raise RuntimeError("capture receipt must be a JSON object")
+        raise RuntimeError("capture receipt must be a JSON object")  # noqa: TRY004 - strict receipt contract
     try:
         independent_validation_schema_for_capture(validation, capture_receipt)
     except ValueError as exc:
@@ -522,7 +517,7 @@ def _bound_independent_validation_sha256(capture_root: Path, capture_receipt_pat
             "refusing Isaac video encoding without a compatible passing independent validation receipt: "
             f"{exc}"
         ) from exc
-    return sha256_file(validation_path)
+    return identity_file(validation_path)
 
 
 def _encode_rgb_frames(
@@ -630,14 +625,14 @@ def _single_view_frames(frames: Any, *, output_height: int, output_width: int) -
 
 
 def encode_isaac_overview(capture_root: Path, destination: Path, *, fps: float | None = None) -> dict[str, Any]:
-    """Encode the overview frames from one hash-bound raw Isaac capture."""
+    """Encode the overview frames from one identity-bound raw Isaac capture."""
 
     import numpy as np
 
     capture_root = capture_root.resolve()
     relative = "sensors/overview_rgb.npz"
     receipt_path, artifacts = _bound_capture_sources(capture_root, [relative])
-    validation_sha256 = _bound_independent_validation_sha256(capture_root, receipt_path)
+    validation_identity = _bound_independent_validation_identity(capture_root, receipt_path)
     with _open_rgb_frames(capture_root / relative, label="overview") as (timestamps, frames):
         _validate_timestamps(timestamps, label="overview")
         if (
@@ -663,24 +658,24 @@ def encode_isaac_overview(capture_root: Path, destination: Path, *, fps: float |
             fps=output_fps,
             label="Isaac overview",
         )
-    timestamp_hash = _timestamp_sha256(timestamps)
+    timestamp_identity = _timestamp_identity(timestamps)
     result = {
         "schema": "org.rivermark.isaac-demo-video.v1",
         "ok": True,
-        "capture_receipt_sha256": sha256_file(receipt_path),
-        "independent_validation_sha256": validation_sha256,
-        "overview_npz_sha256": artifacts[relative]["sha256"],
-        "timestamps_sha256": timestamp_hash,
+        "capture_receipt_identity": identity_file(receipt_path),
+        "independent_validation_identity": validation_identity,
+        "overview_npz_identity": artifacts[relative]["identity"],
+        "timestamps_identity": timestamp_identity,
         "input_artifacts": {relative: artifacts[relative]},
         "timestamps": {
             "dtype": "int64",
-            "count": int(len(timestamps)),
+            "count": len(timestamps),
             "first_ns": int(timestamps[0]),
             "last_ns": int(timestamps[-1]),
-            "sha256": timestamp_hash,
+            "identity": timestamp_identity,
         },
         "fps": output_fps,
-        "video_sha256": audit.sha256,
+        "video_identity": audit.identity,
         "audit": _portable_audit(audit, destination),
     }
     _write_json_atomic(destination.with_suffix(destination.suffix + ".receipt.json"), result)
@@ -696,8 +691,8 @@ def _fit_rgb(view: Any, *, target_height: int, target_width: int) -> Any:
     source = np.ascontiguousarray(view[..., :3])
     height, width = (int(value) for value in source.shape[:2])
     scale = min(target_height / height, target_width / width)
-    resized_height = max(1, min(target_height, int(round(height * scale))))
-    resized_width = max(1, min(target_width, int(round(width * scale))))
+    resized_height = max(1, min(target_height, round(height * scale)))
+    resized_width = max(1, min(target_width, round(width * scale)))
     if (resized_height, resized_width) == (height, width):
         resized = source
     else:
@@ -772,7 +767,7 @@ def encode_isaac_composite(capture_root: Path, destination: Path, *, fps: float 
     overview_relative = "sensors/overview_rgb.npz"
     onboard_relative = "sensors/onboard_rgbd.npz"
     receipt_path, artifacts = _bound_capture_sources(capture_root, [overview_relative, onboard_relative])
-    validation_sha256 = _bound_independent_validation_sha256(capture_root, receipt_path)
+    validation_identity = _bound_independent_validation_identity(capture_root, receipt_path)
     with (
         _open_rgb_frames(capture_root / overview_relative, label="overview") as (overview_timestamps, overview),
         _open_rgb_frames(capture_root / onboard_relative, label="onboard") as (onboard_timestamps, onboard),
@@ -804,7 +799,7 @@ def encode_isaac_composite(capture_root: Path, destination: Path, *, fps: float 
         overview_height = ((int(overview.shape[1]) + 3) // 4) * 4
         overview_width = int(overview.shape[2]) + int(overview.shape[2]) % 2
         cell_height = overview_height // 4
-        cell_width = max(2, int(round(cell_height * onboard.shape[3] / onboard.shape[2])))
+        cell_width = max(2, round(cell_height * onboard.shape[3] / onboard.shape[2]))
         cell_width += cell_width % 2
         output_fps = _output_fps(overview_timestamps, fps)
         destination = destination.resolve()
@@ -825,7 +820,7 @@ def encode_isaac_composite(capture_root: Path, destination: Path, *, fps: float 
             fps=output_fps,
             label="Isaac native-overview plus eight-onboard composite",
         )
-    timestamp_hash = _timestamp_sha256(overview_timestamps)
+    timestamp_identity = _timestamp_identity(overview_timestamps)
     mapping = [
         {
             "overview_frame_index": int(overview_frame_index),
@@ -859,18 +854,18 @@ def encode_isaac_composite(capture_root: Path, destination: Path, *, fps: float 
     result = {
         "schema": "org.rivermark.isaac-swarm-composite-video.v1",
         "ok": True,
-        "capture_receipt_sha256": sha256_file(receipt_path),
-        "independent_validation_sha256": validation_sha256,
-        "overview_npz_sha256": artifacts[overview_relative]["sha256"],
-        "onboard_npz_sha256": artifacts[onboard_relative]["sha256"],
-        "timestamps_sha256": timestamp_hash,
+        "capture_receipt_identity": identity_file(receipt_path),
+        "independent_validation_identity": validation_identity,
+        "overview_npz_identity": artifacts[overview_relative]["identity"],
+        "onboard_npz_identity": artifacts[onboard_relative]["identity"],
+        "timestamps_identity": timestamp_identity,
         "input_artifacts": {
             overview_relative: artifacts[overview_relative],
             onboard_relative: artifacts[onboard_relative],
         },
         "timestamp_bindings": {
-            overview_relative: _timestamp_sha256(overview_timestamps),
-            onboard_relative: _timestamp_sha256(onboard_timestamps),
+            overview_relative: _timestamp_identity(overview_timestamps),
+            onboard_relative: _timestamp_identity(onboard_timestamps),
         },
         "onboard_frame_mapping": {
             "schema": "org.rivermark.exact-timestamp-subset-mapping.v1",
@@ -879,10 +874,10 @@ def encode_isaac_composite(capture_root: Path, destination: Path, *, fps: float 
         },
         "timestamps": {
             "dtype": "int64",
-            "count": int(len(overview_timestamps)),
+            "count": len(overview_timestamps),
             "first_ns": int(overview_timestamps[0]),
             "last_ns": int(overview_timestamps[-1]),
-            "sha256": timestamp_hash,
+            "identity": timestamp_identity,
         },
         "layout": {
             "kind": "native-overview-left-plus-eight-onboard",
@@ -897,7 +892,7 @@ def encode_isaac_composite(capture_root: Path, destination: Path, *, fps: float 
             "slots": layout,
         },
         "fps": output_fps,
-        "video_sha256": audit.sha256,
+        "video_identity": audit.identity,
         "audit": _portable_audit(audit, destination),
     }
     _write_json_atomic(destination.with_suffix(destination.suffix + ".receipt.json"), result)

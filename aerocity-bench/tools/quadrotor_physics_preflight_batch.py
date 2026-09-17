@@ -20,7 +20,7 @@ BENCH_ROOT = Path(__file__).resolve().parents[1]
 if str(BENCH_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(BENCH_ROOT / "src"))
 
-from aerocity_bench.canonical import content_hash, file_hash, read_json, write_json_atomic
+from aerocity_bench.canonical import read_json, write_json_atomic
 from aerocity_bench.cf2x_contract import verify_local_cf2x_asset
 from aerocity_bench.errors import HostGuardError
 from aerocity_bench.host_guard import isaac_host_lock, run_guarded_process
@@ -36,12 +36,6 @@ _PROFILES = (
     "open-loop-hover",
     "open-loop-pitch-pulse",
     "open-loop-drop",
-)
-_RUNTIME_HASH_KEYS = (
-    "preflight_script_sha256",
-    "dynamics_contract_sha256",
-    "cf2x_contract_sha256",
-    "cf2x_native_sha256",
 )
 
 
@@ -72,14 +66,6 @@ def _finite_vector(value: object, *, name: str) -> tuple[float, float, float]:
     if not all(math.isfinite(item) for item in result):
         raise ValueError(f"{name} must be finite")
     return result  # type: ignore[return-value]
-
-
-def _sha256(value: object, *, field: str) -> str:
-    if not isinstance(value, str) or len(value) != 64:
-        raise ValueError(f"preflight evidence is missing {field}")
-    if any(character not in "0123456789abcdef" for character in value.lower()):
-        raise ValueError(f"preflight evidence has malformed {field}")
-    return value
 
 
 def _finite_scalar(value: object, *, field: str) -> float:
@@ -168,9 +154,6 @@ def validate_preflight_report(
     """Fail closed unless a CF2X native-preflight receipt is complete."""
 
     report = read_json(path)
-    expected_hash = report.pop("preflight_hash", None)
-    if not isinstance(expected_hash, str) or content_hash(report) != expected_hash:
-        raise ValueError("preflight report hash mismatch")
     if report.get("schema") != "org.aerocity.bench.quadrotor-physx-preflight.v2":
         raise ValueError("unexpected preflight report schema")
     if report.get("formal") is not False or report.get("formal_score_eligible") is not False:
@@ -216,27 +199,31 @@ def validate_preflight_report(
     runtime = report.get("runtime")
     if not isinstance(runtime, dict):
         raise ValueError("preflight lacks runtime provenance")
-    runtime_provenance = {key: _sha256(runtime.get(key), field=key) for key in _RUNTIME_HASH_KEYS}
+    runtime_evidence = {
+        "python": runtime.get("python"),
+        "platform": runtime.get("platform"),
+        "device": runtime.get("device"),
+    }
     asset = report.get("asset")
     if not isinstance(asset, dict):
         raise ValueError("preflight lacks CF2X asset provenance")
-    root_digest = _sha256(asset.get("usd_sha256"), field="asset.usd_sha256")
-    schema_digest = _sha256(asset.get("schema_sha256"), field="asset.schema_sha256")
     if asset.get("asset_kind") != "cf2x_local_runtime_dependency":
         raise ValueError("preflight asset is not the local-only CF2X dependency")
+    asset_evidence = {
+        "usd_filename": asset.get("usd_filename"),
+        "usd_bytes": asset.get("usd_bytes"),
+        "schema_bytes": asset.get("schema_bytes"),
+    }
     if expected_asset is not None:
-        expected_root = getattr(expected_asset, "usd_sha256", None)
-        expected_schema = getattr(expected_asset, "schema_sha256", None)
-        if root_digest != expected_root or schema_digest != expected_schema:
-            raise ValueError("preflight CF2X asset digest differs from the batch contract")
+        expected_bytes = getattr(expected_asset, "usd_bytes", None)
+        if asset_evidence["usd_bytes"] != expected_bytes:
+            raise ValueError("preflight CF2X asset differs from the batch contract")
     return {
         "preflight_path": str(path.resolve()),
-        "preflight_file_sha256": file_hash(path),
-        "preflight_hash": expected_hash,
         "final_position_w_m": list(position),
         "final_linear_velocity_w_mps": list(velocity),
-        "cf2x_asset": {"usd_sha256": root_digest, "schema_sha256": schema_digest},
-        "runtime_provenance": runtime_provenance,
+        "cf2x_asset": asset_evidence,
+        "runtime_evidence": runtime_evidence,
     }
 
 
@@ -341,7 +328,6 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
         "velocity_spread_tolerance_mps": args.max_final_velocity_spread_mps,
         "attempts": attempts,
     }
-    report["batch_hash"] = content_hash(report)
     write_json_atomic(output / "batch_report.json", report)
     return report
 

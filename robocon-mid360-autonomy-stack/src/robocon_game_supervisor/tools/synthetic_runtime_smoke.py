@@ -12,7 +12,6 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
 
-
 STEPS = (
     ("preflight", "WAIT_START"),
     ("start", "ACTIVE"),
@@ -30,7 +29,6 @@ class SmokeClient(Node):
         super().__init__("robocon_synthetic_smoke_client")
         self.publisher = self.create_publisher(String, "/robocon/operator_command", 10)
         self.create_subscription(String, "/robocon/game/state", self._state_callback, 10)
-        self.create_subscription(String, "/robocon/game/action_decision", self._decision_callback, 10)
         self.create_subscription(
             Bool, "/mid360/preflight_ready", lambda message: self._bool_signal("preflight", message), 10
         )
@@ -40,7 +38,6 @@ class SmokeClient(Node):
         self.step_index = 0
         self.awaiting_step = False
         self.latest_state: dict[str, object] | None = None
-        self.latest_decision: dict[str, object] | None = None
         self._signals = {"preflight": False, "target": False}
         self._signal_seen_at: dict[str, float | None] = {"preflight": None, "target": None}
         self.exit_code: int | None = None
@@ -86,12 +83,6 @@ class SmokeClient(Node):
         if task_state.get("shooter") == "shot_executed":
             self.get_logger().info("synthetic competition path reached shot_executed")
             self.exit_code = 0
-
-    def _decision_callback(self, message: String) -> None:
-        try:
-            self.latest_decision = json.loads(message.data)
-        except json.JSONDecodeError:
-            return
 
     def _step_completed(self, expected: str) -> bool:
         if self.latest_state is None:

@@ -9,15 +9,9 @@ from typing import Any
 
 import numpy as np
 
-from .config import (
-    DATA_DIR,
-    DEFAULT_THETA,
-    config_from_args,
-    policy_params
-)
-from .sim import (
-    LargeScaleBattle50v50
-)
+from .config import DATA_DIR, DEFAULT_THETA, config_from_args, policy_params
+from .sim import LargeScaleBattle50v50
+
 
 def side_fitness(metrics: dict[str, Any], side: str) -> float:
     sign = 1.0 if side == "yellow" else -1.0

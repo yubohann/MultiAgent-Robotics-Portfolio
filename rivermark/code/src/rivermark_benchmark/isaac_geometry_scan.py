@@ -16,7 +16,7 @@ from .citylite_scene import (
     AABB,
     CityLiteAuthority,
     resolve_city_lite_authority,
-    sha256_file,
+    identity_file,
 )
 from .isaac_capture import (
     _activate_local_isaaclab_source,
@@ -31,7 +31,7 @@ from .private_evaluator_manifest import (
     NATIVE_GEOMETRY_SCAN_GENERATOR,
     NATIVE_GEOMETRY_SCAN_SCHEMA,
     NATIVE_GEOMETRY_SCAN_TOOL_PATH,
-    native_geometry_scan_sha256,
+    native_geometry_scan_identity,
 )
 from .provenance import SourceProvenance, require_clean_source
 from .resource_telemetry import (
@@ -42,7 +42,7 @@ from .runtime_lock import (
     audit_runtime_lock,
     load_runtime_lock,
     locked_launcher_kwargs,
-    runtime_lock_sha256,
+    runtime_lock_identity,
     validate_locked_launcher_environment,
 )
 
@@ -111,21 +111,21 @@ def build_native_geometry_scan_payload(
     authority: CityLiteAuthority,
     structural_aabbs: Sequence[AABB],
     source: SourceProvenance,
-    tool_sha256: str,
+    tool_identity: str,
     stage_evidence: Mapping[str, Any],
     runtime_lock_digest: str,
     runtime_profile_id: str,
     system_commit: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    """Build one self-hashed scan payload from native composition evidence."""
+    """Build one self-identified scan payload from native composition evidence."""
 
     if source.source_worktree_dirty:
         raise IsaacGeometryScanError("native geometry scan requires a clean Git worktree")
     if not structural_aabbs:
         raise IsaacGeometryScanError("native geometry scan requires at least one structural AABB")
-    for name, value in (("tool_sha256", tool_sha256), ("runtime_lock_sha256", runtime_lock_digest)):
-        if not isinstance(value, str) or len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
-            raise IsaacGeometryScanError(f"{name} must be a lowercase SHA-256")
+    for name, value in (("tool_identity", tool_identity), ("runtime_lock_identity", runtime_lock_digest)):
+        if not isinstance(value, str) or len(value) != 16 or any(char not in "0123456789abcdef" for char in value):
+            raise IsaacGeometryScanError(f"{name} must be a lowercase IDENTITY")
     if not isinstance(runtime_profile_id, str) or not runtime_profile_id:
         raise IsaacGeometryScanError("runtime_profile_id must be non-empty")
     active_count = stage_evidence.get("active_static_prim_count")
@@ -142,15 +142,15 @@ def build_native_geometry_scan_payload(
         "generator": NATIVE_GEOMETRY_SCAN_GENERATOR,
         "geometry_evidence_kind": NATIVE_GEOMETRY_SCAN_EVIDENCE_KIND,
         "tool_path": NATIVE_GEOMETRY_SCAN_TOOL_PATH,
-        "tool_sha256": tool_sha256,
+        "tool_identity": tool_identity,
         "source_revision": source.source_revision,
-        "source_tree_sha256": source.source_tree_sha256,
+        "source_tree_identity": source.source_tree_identity,
         "source_worktree_dirty": False,
         "scene_id": authority.provenance()["environment_id"],
-        "scene_content_sha256": authority.contract_payload_sha256,
-        "scene_contract_sha256": authority.contract_sha256,
+        "scene_content_identity": authority.contract_payload_identity,
+        "scene_contract_identity": authority.contract_identity,
         "runtime_lock": {
-            "sha256": runtime_lock_digest,
+            "identity": runtime_lock_digest,
             "profile_id": runtime_profile_id,
             "audit_status": "passed",
         },
@@ -176,7 +176,7 @@ def build_native_geometry_scan_payload(
             "formal_episode_created": False,
         },
     }
-    payload["scan_sha256"] = native_geometry_scan_sha256(payload)
+    payload["scan_identity"] = native_geometry_scan_identity(payload)
     return payload
 
 
@@ -253,9 +253,9 @@ def _run_native_scan(args: argparse.Namespace, authority: CityLiteAuthority, sou
             authority=authority,
             structural_aabbs=structural_aabbs,
             source=source,
-            tool_sha256=sha256_file(Path(__file__).resolve()),
+            tool_identity=identity_file(Path(__file__).resolve()),
             stage_evidence=static_evidence,
-            runtime_lock_digest=runtime_lock_sha256(runtime_lock),
+            runtime_lock_digest=runtime_lock_identity(runtime_lock),
             runtime_profile_id=str(runtime_lock["profile_id"]),
             system_commit=after_compose_commit or preflight_commit,
         )
@@ -282,7 +282,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--drone-usd",
         type=Path,
         required=True,
-        help="CF2X USD hash-bound by the same runtime lock; it is not spawned by this scan.",
+        help="CF2X USD identity-bound by the same runtime lock; it is not spawned by this scan.",
     )
     parser.add_argument(
         "--preflight-commit-percent", type=float, default=DEFAULT_PREFLIGHT_COMMIT_PERCENT
@@ -312,7 +312,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "status": "passed",
                 "scan": str(args.output.expanduser().resolve()),
-                "scan_sha256": payload["scan_sha256"],
+                "scan_identity": payload["scan_identity"],
                 "structural_aabb_count": len(payload["domains"]),
             },
             ensure_ascii=True,

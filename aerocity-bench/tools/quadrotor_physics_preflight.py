@@ -209,7 +209,6 @@ def _run(args: argparse.Namespace) -> dict[str, Any]:
     from isaaclab.sim import SimulationCfg, SimulationContext
     from isaaclab_contrib.assets import Multirotor
 
-    from aerocity_bench.canonical import content_hash, file_hash
     from aerocity_bench.cf2x_contract import (
         CF2X_THRUSTER_BODY_NAMES,
         inspect_verified_cf2x_structure,
@@ -238,7 +237,7 @@ def _run(args: argparse.Namespace) -> dict[str, Any]:
     if args.sample_every <= 0:
         raise ValueError("sample-every must be positive")
     asset = verify_local_cf2x_asset(args.cf2x_usd)
-    _write_progress(output_path, "cf2x_asset_hash_verified", asset=asset.fingerprint_payload())
+    _write_progress(output_path, "cf2x_asset_verified", asset=asset.fingerprint_payload())
     asset_structure = inspect_verified_cf2x_structure(asset)
 
     spec = project_asset_spec()
@@ -484,16 +483,6 @@ def _run(args: argparse.Namespace) -> dict[str, Any]:
             "device": str(robot.device),
             "physics_dt_s": spec.physics_dt_s,
             "gravity_mps2": spec.gravity_mps2,
-            "preflight_script_sha256": file_hash(Path(__file__).resolve()),
-            "dynamics_contract_sha256": file_hash(
-                BENCH_ROOT / "src" / "aerocity_bench" / "quadrotor_dynamics.py"
-            ),
-            "cf2x_contract_sha256": file_hash(
-                BENCH_ROOT / "src" / "aerocity_bench" / "cf2x_contract.py"
-            ),
-            "cf2x_native_sha256": file_hash(
-                BENCH_ROOT / "src" / "aerocity_bench" / "cf2x_native.py"
-            ),
         },
         "asset": {
             **asset_structure,
@@ -638,7 +627,6 @@ def _run(args: argparse.Namespace) -> dict[str, Any]:
             ),
         },
     }
-    report["preflight_hash"] = content_hash(report)
     _write_json_atomic(output_path, report)
     return report
 

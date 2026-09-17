@@ -724,7 +724,6 @@ def bundle_from_ieee_graph(
         clients.append(
             ClientShard(
                 client_id=0,
-                owned_global_nodes=owned_nodes,
                 subgraph=working_graph,
                 train_nodes=int(owned_nodes.numel()),
             )
@@ -746,7 +745,6 @@ def bundle_from_ieee_graph(
             clients.append(
                 ClientShard(
                     client_id=int(client_id),
-                    owned_global_nodes=owned_nodes,
                     subgraph=subgraph,
                     train_nodes=int(subgraph.nodes[NODE_TYPE].data["train_mask"].sum().item()),
                 )
@@ -774,14 +772,9 @@ def bundle_from_ieee_graph(
         clients=clients,
         base_lr=1e-3,
         data_summary=copy.deepcopy(dict(metadata.get("data_summary", {}) or {})),
-        data_profile=str(data_profile),
-        loader_view=str(loader_view),
-        feature_profile=str(feature_profile),
-        relation_profile=str(relation_profile),
-        history_len=int(history_len),
     )
     bundle.data_summary = copy.deepcopy(dict(metadata.get("data_summary", {}) or {}))
-    bundle.data_summary["num_clients"] = int(len(clients))
+    bundle.data_summary["num_clients"] = len(clients)
     bundle.data_summary["client_subgraph_mode"] = str(client_subgraph_mode)
     bundle.data_summary["label_fraction"] = float(label_fraction)
     bundle.data_summary["active_learning_feedback_path"] = str(active_learning_feedback_path or "")

@@ -20,7 +20,7 @@ def main() -> None:
     # Verification runs the default local multimodal model.
     set_active_model(DEFAULT_MODEL_ID)
     pipeline = ShortVideoPipeline()
-    for item in ensure_demo_videos(overwrite=True):
+    for item in ensure_demo_videos():
         pipeline.process_video(
             Path(item["path"]),
             title=item["title"],

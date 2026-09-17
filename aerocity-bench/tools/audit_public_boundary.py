@@ -11,7 +11,7 @@ _SOURCE_ROOT = _REPOSITORY_ROOT / "src"
 if str(_SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(_SOURCE_ROOT))
 
-from aerocity_bench.canonical import content_hash, write_json  # noqa: E402
+from aerocity_bench.canonical import write_json  # noqa: E402
 from aerocity_bench.public_boundary import audit_public_layout  # noqa: E402
 
 
@@ -35,8 +35,6 @@ def main(argv: list[str] | None = None) -> int:
             "exception_type": type(exc).__name__,
             "exception": str(exc),
         }
-    report["tool_source_sha256"] = content_hash(Path(__file__).read_text(encoding="utf-8"))
-    report["report_hash"] = content_hash(report)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     write_json(args.output, report)
     print(f"PUBLIC_BOUNDARY_AUDIT={report['status']}")

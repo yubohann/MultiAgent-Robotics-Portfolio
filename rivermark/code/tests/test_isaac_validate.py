@@ -8,35 +8,40 @@ from pathlib import Path
 
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from rivermark_benchmark.citylite_scene import (
-    AUTHORITY_SHA256,
-    CityLiteAuthority,
-    ENVIRONMENT_ID,
+    AABB,
+    AUTHORITY_IDENTITY,
     CITY_LITE_ROUTE_FAMILY_A_ID,
     CITY_LITE_START_ANCHOR_A_ID,
     CITY_LITE_TARGET_REGION_A_ID,
+    ENVIRONMENT_ID,
     EXPECTED_NATIVE_COLLISION_COUNTS,
     EXPECTED_UPSTREAM_PERMISSIONS,
-    PUBLIC_ROUTES_W_M,
     PUBLIC_ROUTES_B_W_M,
+    PUBLIC_ROUTES_W_M,
     ROUTE_CLEARANCE_M,
     SCENE_CONTRACT_GATE_STATUS,
-    SCENE_CONTRACT_PAYLOAD_SHA256,
+    SCENE_CONTRACT_PAYLOAD_IDENTITY,
     SCENE_CONTRACT_SCHEMA,
-    SCENE_CONTRACT_SHA256,
+    SCENE_CONTRACT_IDENTITY,
     SELECTIVE_REFERENCES,
-    AABB,
-    aabb_geometry_sha256,
-    canonical_payload_sha256,
+    CityLiteAuthority,
+    aabb_geometry_identity,
+    canonical_payload_identity,
     city_task_obstacle_material_closure_receipt_template,
     make_rivermark_layer_inventory,
 )
+from rivermark_benchmark.citylite_task import (
+    sample_private_targets,
+    target_visibility_execution_window,
+    target_visibility_geometry_contract,
+)
+from rivermark_benchmark.frame_archive import write_chunked_frame_archive
 from rivermark_benchmark.isaac_capture import (
     HOVER_THRUST_PER_ROTOR_N,
     IDENTITY_MARKER_RADIUS_M,
@@ -60,19 +65,19 @@ from rivermark_benchmark.isaac_capture import (
     PRIVATE_TARGET_ORIGIN,
     PRIVATE_TARGET_PLACEMENT_SCHEMA,
     SWARM_AGENT_LITERAL_PRIM_PATHS,
-    TARGET_COUNT,
     T1_DATA_TRACK_ID,
     T1_OBSERVABILITY_OUTCOME_SCHEMA,
+    TARGET_COUNT,
     TASK_VARIANT_ID,
     THRUST_COEFFICIENT_N_PER_RPS_SQUARED,
     VISUAL_INTRUSION_GATE_SCHEMA,
-    _city_lite_spawn_states,
     _captured_frame_indices,
+    _city_lite_spawn_states,
+    _onboard_content_gate_contract,
     _overview_archive_frame_indices,
     _public_route_witness_schedule,
     _public_route_witness_view_at_time_ns,
     _visual_intrusion_gate_contract,
-    _onboard_content_gate_contract,
 )
 from rivermark_benchmark.isaac_runtime_safety import (
     CONTACT_ABORT_FORCE_FLOAT32_CUTOFF_N,
@@ -89,18 +94,12 @@ from rivermark_benchmark.isaac_runtime_safety import (
     runtime_safety_receipt_template,
     sensor_phase_array_digest,
 )
-from rivermark_benchmark.frame_archive import write_chunked_frame_archive
-from rivermark_benchmark.citylite_task import (
-    sample_private_targets,
-    target_visibility_execution_window,
-    target_visibility_geometry_contract,
-)
 from rivermark_benchmark.isaac_validate import (
     AGENT_COUNT,
     CAPTURE_SCHEMA,
     EXPECTED_ARTIFACTS,
-    IsaacValidationReport,
     OVERVIEW_CONTENT_GATE_SCHEMA,
+    IsaacValidationReport,
     ValidationIssue,
     _overview_content_gate_contract,
     _validate_literal_city_lite_fleet_spawn,
@@ -111,8 +110,8 @@ from rivermark_benchmark.private_evaluator_manifest import (
     PRIVATE_MANIFEST_RETENTION_KIND,
     PRIVATE_MANIFEST_RETENTION_MAX_BYTES,
 )
-from rivermark_benchmark.video import sha256_file
-from rivermark_benchmark.runtime_lock import runtime_lock_sha256
+from rivermark_benchmark.runtime_lock import runtime_lock_identity
+from rivermark_benchmark.video import identity_file
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -153,8 +152,8 @@ def _private_manifest(path: Path) -> None:
         {
             "schema": PRIVATE_EVALUATOR_SCHEMA,
             "environment_id": ENVIRONMENT_ID,
-            "city_lite_scene_contract_sha256": SCENE_CONTRACT_SHA256,
-            "city_lite_scene_payload_sha256": SCENE_CONTRACT_PAYLOAD_SHA256,
+            "city_lite_scene_contract_identity": SCENE_CONTRACT_IDENTITY,
+            "city_lite_scene_payload_identity": SCENE_CONTRACT_PAYLOAD_IDENTITY,
             "task_variant_id": TASK_VARIANT_ID,
             "sampled_before_policy_start": True,
             "route_conditioning": "public_only",
@@ -173,7 +172,7 @@ def _private_manifest(path: Path) -> None:
             "target_visibility_contract": target_visibility_geometry_contract(
                 route_family_id=CITY_LITE_ROUTE_FAMILY_A_ID,
                 routes_w_m=PUBLIC_ROUTES_W_M,
-                aabb_geometry_sha256=_aabb_hash(rows),
+                aabb_geometry_identity=_aabb_identity(rows),
                 target_region_id=CITY_LITE_TARGET_REGION_A_ID,
                 visibility_bucket="direct-visible-v1",
             ),
@@ -196,13 +195,13 @@ def _rivermark_layer_inventory(root: Path) -> dict[str, object]:
 
     authority_root = root.parent / "fixture_city_lite_authority"
     asset_paths: dict[str, Path] = {}
-    hashes: dict[str, str] = {}
-    for index, filename in enumerate(sorted(AUTHORITY_SHA256), start=1):
+    identities: dict[str, str] = {}
+    for index, filename in enumerate(sorted(AUTHORITY_IDENTITY), start=1):
         path = authority_root / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f"#usda 1.0\n# fixture authority layer {index}\n", encoding="ascii")
         asset_paths[filename] = path
-        hashes[filename] = sha256_file(path)
+        identities[filename] = identity_file(path)
 
     external_root = root.parent / "RivermarkSrc51"
     external_layer = external_root / "dsready_content" / "scene" / "city_lite.usda"
@@ -213,11 +212,11 @@ def _rivermark_layer_inventory(root: Path) -> dict[str, object]:
         contract_path=authority_root / "contract.json",
         final_scene_path=next(iter(asset_paths.values())),
         asset_paths=asset_paths,
-        sha256=hashes,
-        contract_sha256="0" * 64,
-        contract_payload_sha256="1" * 64,
+        identity=identities,
+        contract_identity="0" * 16,
+        contract_payload_identity="1" * 16,
     )
-    local_layers = [asset_paths[filename] for filename in sorted(AUTHORITY_SHA256)]
+    local_layers = [asset_paths[filename] for filename in sorted(AUTHORITY_IDENTITY)]
     return make_rivermark_layer_inventory(
         authority,
         ["anon:fixture-root", *local_layers, external_layer],
@@ -246,7 +245,7 @@ def _structural_aabbs() -> list[dict[str, object]]:
     ]
 
 
-def _aabb_hash(rows: list[dict[str, object]]) -> str:
+def _aabb_identity(rows: list[dict[str, object]]) -> str:
     boxes = [
         AABB(
             tuple(row["min"]),  # type: ignore[arg-type]
@@ -256,7 +255,7 @@ def _aabb_hash(rows: list[dict[str, object]]) -> str:
         )
         for row in rows
     ]
-    return aabb_geometry_sha256(boxes)
+    return aabb_geometry_identity(boxes)
 
 
 def _runtime_safety_guard_fixture(
@@ -376,7 +375,7 @@ def _bind_receipt(
     artifacts = {}
     for relative in sorted(EXPECTED_ARTIFACTS):
         path = root / relative
-        artifacts[relative] = {"bytes": path.stat().st_size, "sha256": sha256_file(path)}
+        artifacts[relative] = {"bytes": path.stat().st_size, "identity": identity_file(path)}
     existing: dict[str, object] = {}
     receipt_path = root / "capture_receipt.json"
     if receipt_path.is_file():
@@ -391,7 +390,7 @@ def _bind_receipt(
         phase_binding = {
             "schema": SENSOR_PHASE_TRACE_SCHEMA,
             "path": SENSOR_PHASE_TRACE_RELATIVE_PATH,
-            "sha256": sha256_file(phase_path),
+            "identity": identity_file(phase_path),
             "frame_count": phase_count,
             "sensor_names": list(SENSOR_PHASE_SENSOR_NAMES),
             "event_codes": list(SENSOR_PHASE_EVENT_SEQUENCE),
@@ -403,9 +402,9 @@ def _bind_receipt(
         "task_kind": "search3d",
         "information_profile": "multisensor_rgbd_lidar_imu_state",
         "source_revision": "0123456789abcdef",
-        "source_tree_sha256": "a" * 64,
+        "source_tree_identity": "a" * 16,
         "source_worktree_dirty": dirty,
-        "evaluator_manifest_sha256": sha256_file(evaluator_manifest),
+        "evaluator_manifest_identity": identity_file(evaluator_manifest),
         "command": command or existing.get("command") or {"seed": 20260723},
         "provenance": {"legacy_route_target_trace_or_evaluator_migrated": False},
         "runtime_lock": existing.get("runtime_lock"),
@@ -433,11 +432,11 @@ def _bind_receipt(
         or existing.get("runtime_safety_guard"),
         "sensor_phase_trace": phase_binding,
         "physics": physics or existing.get("physics"),
-        "artifact_hashes": artifacts,
+        "artifact_identities": artifacts,
     }
     _write_json(receipt_path, receipt)
-    (root / "capture_receipt.sha256").write_text(
-        f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+    (root / "capture_receipt.identity").write_text(
+        f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
     )
 
 
@@ -487,7 +486,7 @@ def _capture_fixture(
 
     routes = _city_lite_routes()
     structural_aabbs = _structural_aabbs()
-    geometry_sha256 = _aabb_hash(structural_aabbs)
+    geometry_identity = _aabb_identity(structural_aabbs)
     runtime_safety_guard = _runtime_safety_guard_fixture(
         structural_aabbs, steps=steps, warmup_steps=warmup_steps
     )
@@ -514,8 +513,8 @@ def _capture_fixture(
             "route_contract": {
                 "geometry_source": "citylite_structural_aabb_v1",
                 "clearance_m": ROUTE_CLEARANCE_M,
-                "aabb_geometry_sha256": geometry_sha256,
-                "routes_sha256": canonical_payload_sha256(PUBLIC_ROUTES_W_M),
+                "aabb_geometry_identity": geometry_identity,
+                "routes_identity": canonical_payload_identity(PUBLIC_ROUTES_W_M),
                 "all_waypoints_in_command_volume": True,
                 "all_segments_clear": True,
             },
@@ -544,15 +543,15 @@ def _capture_fixture(
             "forbidden_decoration_prim_count": 0,
             "city_task_obstacle_material_closure": city_task_obstacle_material_closure_receipt_template(),
             "scene_contract": {
-                "sha256": SCENE_CONTRACT_SHA256,
-                "payload_sha256": SCENE_CONTRACT_PAYLOAD_SHA256,
+                "identity": SCENE_CONTRACT_IDENTITY,
+                "payload_identity": SCENE_CONTRACT_PAYLOAD_IDENTITY,
                 "schema": SCENE_CONTRACT_SCHEMA,
                 "gate_status": SCENE_CONTRACT_GATE_STATUS,
                 "permissions": dict(EXPECTED_UPSTREAM_PERMISSIONS),
             },
             "authority_assets": {
-                filename: {"path": f"authority/{filename}", "sha256": digest}
-                for filename, digest in AUTHORITY_SHA256.items()
+                filename: {"path": f"authority/{filename}", "identity": digest}
+                for filename, digest in AUTHORITY_IDENTITY.items()
             },
             "selective_references": [
                 {"source_prim": source, "destination_prim": destination}
@@ -573,8 +572,8 @@ def _capture_fixture(
             "structural_aabbs": structural_aabbs,
             "collision_proxies": {
                 "count": len(structural_aabbs),
-                "aabb_geometry_sha256": geometry_sha256,
-                "source_aabb_geometry_sha256": geometry_sha256,
+                "aabb_geometry_identity": geometry_identity,
+                "source_aabb_geometry_identity": geometry_identity,
                 "representation": "conservative_world_aabb",
                 "prim_root": "/World/StaticScene/CollisionProxies",
                 "collision_enabled": True,
@@ -584,9 +583,9 @@ def _capture_fixture(
                 "includes_city": True,
                 "includes_city_task_obstacles": True,
                 "includes_collision_proxies": True,
-                "geometry_aabb_sha256": geometry_sha256,
+                "geometry_aabb_identity": geometry_identity,
             },
-            "private_evaluator_manifest_sha256": sha256_file(evaluator_manifest),
+            "private_evaluator_manifest_identity": identity_file(evaluator_manifest),
             "formal_benchmark_admission": False,
             "search_object_prim_count": TARGET_COUNT,
             "search_object_paths_listed": False,
@@ -615,7 +614,7 @@ def _capture_fixture(
                 ],
             },
             "overview_route_witness_schedule": _public_route_witness_schedule(),
-            "public_task_sha256": sha256_file(root / "public_task.json"),
+            "public_task_identity": identity_file(root / "public_task.json"),
         },
     )
     _write_json(
@@ -719,7 +718,7 @@ def _capture_fixture(
                     ],
                 },
             },
-            "radar": {"status": "not_captured", "fail_closed": True},
+            "radar": {"status": "not_captured", "strict": True},
         },
     )
 
@@ -931,7 +930,7 @@ def _capture_fixture(
             sample_count,
             axis=0,
         ),
-        retained_contact_sha256=np.repeat(
+        retained_contact_identity=np.repeat(
             np.frombuffer(sensor_phase_array_digest(contact_frame), dtype=np.uint8)[None, :],
             sample_count,
             axis=0,
@@ -974,7 +973,7 @@ def _capture_fixture(
     )
     finalize_runtime_safety_guard(
         runtime_safety_guard,
-        trace_sha256=sha256_file(runtime_trace_path),
+        trace_identity=identity_file(runtime_trace_path),
         physics_frame_count=runtime_frame_count,
     )
     scene_path = root / "scene.json"
@@ -1039,8 +1038,8 @@ def _capture_fixture(
             "observation_rule": "native onboard semantic anonymous-slot-class visibility",
             "policy_confirmation_events_present": False,
             "closed_loop_scoring_eligible": False,
-            "private_manifest_commitment_sha256": sha256_file(evaluator_manifest),
-            "state_action_sha256": sha256_file(root / "streams/state_action.npz"),
+            "private_manifest_commitment_identity": identity_file(evaluator_manifest),
+            "state_action_identity": identity_file(root / "streams/state_action.npz"),
             "private_coordinates_released": False,
         },
     )
@@ -1123,20 +1122,20 @@ def _rewrite_low_rate_overview_fixture(root: Path) -> tuple[int, ...]:
 def _rebind_state_outcome(root: Path, evaluator_manifest: Path) -> None:
     outcome_path = root / "task_outcome.json"
     outcome = json.loads(outcome_path.read_text(encoding="utf-8"))
-    outcome["state_action_sha256"] = sha256_file(root / "streams/state_action.npz")
+    outcome["state_action_identity"] = identity_file(root / "streams/state_action.npz")
     _write_json(outcome_path, outcome)
     _bind_receipt(root, evaluator_manifest)
 
 
 def _rebind_evaluator_commitments(root: Path, evaluator_manifest: Path) -> None:
-    commitment = sha256_file(evaluator_manifest)
+    commitment = identity_file(evaluator_manifest)
     scene_path = root / "scene.json"
     scene = json.loads(scene_path.read_text(encoding="utf-8"))
-    scene["private_evaluator_manifest_sha256"] = commitment
+    scene["private_evaluator_manifest_identity"] = commitment
     _write_json(scene_path, scene)
     outcome_path = root / "task_outcome.json"
     outcome = json.loads(outcome_path.read_text(encoding="utf-8"))
-    outcome["private_manifest_commitment_sha256"] = commitment
+    outcome["private_manifest_commitment_identity"] = commitment
     _write_json(outcome_path, outcome)
     _bind_receipt(root, evaluator_manifest)
 
@@ -1154,8 +1153,8 @@ def _set_evaluator_manifest_retention(
     else:
         receipt["evaluator_manifest_retention"] = retention
     _write_json(receipt_path, receipt)
-    (root / "capture_receipt.sha256").write_text(
-        f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+    (root / "capture_receipt.identity").write_text(
+        f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
     )
 
 
@@ -1172,7 +1171,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             report = validate_isaac_capture(root, evaluator_manifest=private, require_clean_source=True)
             self.assertTrue(report.valid, report.issues)
 
-            self.assertEqual(set(json.loads((root / "capture_receipt.json").read_text())["artifact_hashes"]), EXPECTED_ARTIFACTS)
+            self.assertEqual(set(json.loads((root / "capture_receipt.json").read_text())["artifact_identities"]), EXPECTED_ARTIFACTS)
             self.assertEqual(report.checks["physics_steps"], 4)
             self.assertEqual(report.checks["sensor_samples"], 4)
             self.assertTrue(report.checks["evaluator_manifest_verified"])
@@ -1201,14 +1200,14 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             )["target_observability"]
             self.assertEqual(report.checks["target_observability"], declared_outcome)
 
-    def test_private_manifest_retention_commitment_is_public_and_fail_closed(self) -> None:
+    def test_private_manifest_retention_commitment_is_public_and_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private" / "evaluator.json"
             _capture_fixture(root, private)
             valid = {
                 "kind": PRIVATE_MANIFEST_RETENTION_KIND,
-                "sha256": sha256_file(private),
+                "identity": identity_file(private),
                 "bytes": private.stat().st_size,
                 "path_released": False,
                 "payload_released": False,
@@ -1221,7 +1220,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
 
             invalid_commitments = (
                 {**valid, "kind": "unrecognized-retention-kind"},
-                {**valid, "sha256": "0" * 64},
+                {**valid, "identity": "0" * 16},
                 {**valid, "bytes": 0},
                 {**valid, "path_released": True},
                 {**valid, "payload_released": True},
@@ -1250,7 +1249,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             self.assertTrue(report.checks["overview_live_depth_gate_verified"])
             self.assertTrue(report.checks["overview_archive_visual_verified"])
 
-    def test_low_rate_overview_rejects_schedule_tamper_and_extra_depth(self) -> None:
+    def test_low_rate_overview_rejects_schedule_alter_and_extra_depth(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
@@ -1323,15 +1322,15 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             video = root / "videos" / "overview.mp4"
             video.parent.mkdir(parents=True)
             video.write_bytes(b"fixture-mp4")
-            video_sha256 = sha256_file(video)
+            video_identity = identity_file(video)
             video_receipt = {
                 "schema": "org.rivermark.isaac-demo-video.v1",
                 "ok": True,
-                "capture_receipt_sha256": sha256_file(root / "capture_receipt.json"),
-                "video_sha256": video_sha256,
-                "audit": {"bytes": video.stat().st_size, "sha256": video_sha256},
+                "capture_receipt_identity": identity_file(root / "capture_receipt.json"),
+                "video_identity": video_identity,
+                "audit": {"bytes": video.stat().st_size, "identity": video_identity},
                 "input_artifacts": {
-                    "sensors/overview_rgb.npz": receipt["artifact_hashes"]["sensors/overview_rgb.npz"]
+                    "sensors/overview_rgb.npz": receipt["artifact_identities"]["sensors/overview_rgb.npz"]
                 },
             }
             _write_json(video.with_suffix(".mp4.receipt.json"), video_receipt)
@@ -1342,22 +1341,22 @@ class IsaacIndependentValidationTests(unittest.TestCase):
                 {
                     "schema": "org.rivermark.isaac-independent-validation.v1",
                     "status": "passed",
-                    "capture_receipt_sha256": sha256_file(root / "capture_receipt.json"),
+                    "capture_receipt_identity": identity_file(root / "capture_receipt.json"),
                 },
             )
-            # Re-read the receipt hash after the fixture helper refreshed it.
-            video_receipt["capture_receipt_sha256"] = sha256_file(root / "capture_receipt.json")
-            video_receipt["independent_validation_sha256"] = sha256_file(validation)
+            # Re-read the receipt identity after the fixture helper refreshed it.
+            video_receipt["capture_receipt_identity"] = identity_file(root / "capture_receipt.json")
+            video_receipt["independent_validation_identity"] = identity_file(validation)
             _write_json(video.with_suffix(".mp4.receipt.json"), video_receipt)
             report = validate_isaac_capture(root, evaluator_manifest=private)
             self.assertTrue(report.valid, [issue.code for issue in report.issues])
 
-            video_receipt["independent_validation_sha256"] = "0" * 64
+            video_receipt["independent_validation_identity"] = "0" * 16
             _write_json(video.with_suffix(".mp4.receipt.json"), video_receipt)
             report = validate_isaac_capture(root, evaluator_manifest=private)
             self.assertIn("video_artifact", _codes(report))
 
-            video_receipt["independent_validation_sha256"] = sha256_file(validation)
+            video_receipt["independent_validation_identity"] = identity_file(validation)
             _write_json(video.with_suffix(".mp4.receipt.json"), video_receipt)
             video_receipt_path = video.with_suffix(".mp4.receipt.json")
             video_receipt_path.unlink()
@@ -1377,18 +1376,18 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             _write_json(root / "capture_start.json", marker)
             receipt_path = root / "capture_receipt.json"
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-            receipt["artifact_hashes"]["capture_start.json"] = {
+            receipt["artifact_identities"]["capture_start.json"] = {
                 "bytes": (root / "capture_start.json").stat().st_size,
-                "sha256": sha256_file(root / "capture_start.json"),
+                "identity": identity_file(root / "capture_start.json"),
             }
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
             )
             report = validate_isaac_capture(root, evaluator_manifest=private)
             self.assertTrue(report.valid, report.issues)
 
-    def test_runtime_lock_binding_requires_external_hash_preflight_and_live_match(self) -> None:
+    def test_runtime_lock_binding_requires_external_identity_preflight_and_live_match(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
@@ -1397,7 +1396,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             if not lock_path.is_file():
                 self.skipTest("local runtime lock fixture is unavailable")
             lock = json.loads(lock_path.read_text(encoding="utf-8"))
-            digest = runtime_lock_sha256(lock)
+            digest = runtime_lock_identity(lock)
             simulation = lock["simulation"]
             launcher = lock["launcher"]
             receipt_path = root / "capture_receipt.json"
@@ -1405,7 +1404,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             receipt["runtime_lock"] = {
                 "path": str(lock_path.resolve()),
                 "profile_id": lock["profile_id"],
-                "sha256": digest,
+                "identity": digest,
             }
             receipt["capture_integrity"]["sensor_step_order"] = [
                 "command_write",
@@ -1428,7 +1427,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
                         "value": {
                             "status": "passed",
                             "profile_id": lock["profile_id"],
-                            "runtime_lock_sha256": digest,
+                            "runtime_lock_identity": digest,
                         },
                     }
                 ]
@@ -1444,14 +1443,14 @@ class IsaacIndependentValidationTests(unittest.TestCase):
                 "rendering_mode": launcher["rendering_mode"],
                 "rtx_sensors_active": True,
                 "config_digests": {
-                    name: value["sha256"]
+                    name: value["identity"]
                     for name, value in simulation["config_digests"].items()
                 },
                 "configuration_observation": "public_simulation_context_and_locked_cfg",
             }
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
             )
             report = validate_isaac_capture(
                 root,
@@ -1466,8 +1465,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
                 -9.8100004196167,
             ]
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
             )
             self.assertTrue(
                 validate_isaac_capture(
@@ -1478,8 +1477,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             )
             receipt["runtime_live"]["physics_dt_s"] = 0.01
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
             )
             self.assertIn(
                 "runtime_lock_live",
@@ -1488,8 +1487,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             receipt["runtime_live"]["physics_dt_s"] = simulation["dt_s"]
             receipt["runtime_live"]["gravity_w_mps2"] = [0.0, 0.0, -9.81001]
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
             )
             self.assertIn(
                 "runtime_lock_live",
@@ -1626,7 +1625,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             _write_json(public_path, public_task)
             scene_path = root / "scene.json"
             scene = json.loads(scene_path.read_text(encoding="utf-8"))
-            scene["public_task_sha256"] = sha256_file(public_path)
+            scene["public_task_identity"] = identity_file(public_path)
             _write_json(scene_path, scene)
             _bind_receipt(root, private)
 
@@ -1635,7 +1634,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             self.assertFalse(report.valid)
             self.assertIn("route_start", _codes(report))
 
-    def test_runtime_safety_trace_and_scene_guard_tampering_are_rejected(self) -> None:
+    def test_runtime_safety_trace_and_scene_guard_alteration_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
@@ -1706,7 +1705,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             self.assertTrue(report.checks["runtime_safety_trace_timing_bound"])
             self.assertTrue(report.checks["sensor_phase_trace_verified"])
 
-    def test_timing_tampering_is_rejected_even_when_timestamps_remain_monotonic(self) -> None:
+    def test_timing_alteration_is_rejected_even_when_timestamps_remain_monotonic(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
@@ -1744,7 +1743,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             codes = _codes(validate_isaac_capture(root, evaluator_manifest=private))
             self.assertTrue({"capture_timing", "runtime_safety_trace_binding"}.issubset(codes))
 
-    def test_runtime_trace_time_outcome_and_float32_contact_tampering_are_rejected(self) -> None:
+    def test_runtime_trace_time_outcome_and_float32_contact_alteration_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
@@ -1820,8 +1819,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
             receipt["command"]["evaluator_seed"] = 7
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n",
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n",
                 encoding="ascii",
             )
             report = validate_isaac_capture(root, evaluator_manifest=private)
@@ -1843,8 +1842,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
                 waypoint_segment_seconds=5.0,
             )
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n",
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n",
                 encoding="ascii",
             )
             report = validate_isaac_capture(root, evaluator_manifest=private)
@@ -1859,7 +1858,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
             receipt["collection_binding"] = {
                 "protocol_id": "citylite-coverage-v1",
-                "protocol_sha256": "c" * 64,
+                "protocol_identity": "c" * 16,
                 "cell_id": "train-route-0",
                 "split": "train",
                 "episode_index": 3,
@@ -1883,8 +1882,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             receipt["runtime_target_usd_pre_reset"] = target_closure
             receipt["runtime_target_usd_post_reset"] = dict(target_closure)
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n",
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n",
                 encoding="ascii",
             )
             report = validate_isaac_capture(root, evaluator_manifest=private)
@@ -1894,8 +1893,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
 
             receipt["collection_binding"]["episode_seed"] += 1
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n",
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n",
                 encoding="ascii",
             )
             report = validate_isaac_capture(root, evaluator_manifest=private)
@@ -1911,7 +1910,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
             receipt["collection_binding"] = {
                 "protocol_id": "citylite-coverage-v1",
-                "protocol_sha256": "c" * 64,
+                "protocol_identity": "c" * 16,
                 "cell_id": "train-route-0",
                 "split": "train",
                 "episode_index": 3,
@@ -1935,8 +1934,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             receipt["runtime_target_usd_pre_reset"] = closure
             receipt["runtime_target_usd_post_reset"] = dict(closure)
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
             )
             passed = validate_isaac_capture(root, evaluator_manifest=private)
             self.assertTrue(passed.valid, passed.issues)
@@ -1944,8 +1943,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
 
             receipt.pop("runtime_target_usd_post_reset")
             _write_json(receipt_path, receipt)
-            (root / "capture_receipt.sha256").write_text(
-                f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+            (root / "capture_receipt.identity").write_text(
+                f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
             )
             report = validate_isaac_capture(root, evaluator_manifest=private)
             self.assertIn("runtime_target_usd_closure", _codes(report))
@@ -2017,8 +2016,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             self.assertFalse(report.checks["camera_fabric_pose_finite"])
             self.assertIsNone(report.checks["camera_fabric_pose_max_error_m"])
 
-    def test_rivermark_layer_inventory_is_required_and_hash_bound(self) -> None:
-        for scenario in ("missing", "wrong_type", "tampered_hash"):
+    def test_rivermark_layer_inventory_is_required_and_identity_bound(self) -> None:
+        for scenario in ("missing", "wrong_type", "altered_identity"):
             with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
                 base = Path(temporary)
                 root, private = base / "capture", base / "private.json"
@@ -2030,7 +2029,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
                 elif scenario == "wrong_type":
                     scene["rivermark_layer_inventory"] = []
                 else:
-                    scene["rivermark_layer_inventory"]["inventory_sha256"] = "0" * 64
+                    scene["rivermark_layer_inventory"]["inventory_identity"] = "0" * 16
                 _write_json(scene_path, scene)
                 _bind_receipt(root, private)
 
@@ -2078,7 +2077,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             _write_json(public_path, public)
             scene_path = root / "scene.json"
             scene = json.loads(scene_path.read_text(encoding="utf-8"))
-            scene["public_task_sha256"] = sha256_file(public_path)
+            scene["public_task_identity"] = identity_file(public_path)
             _write_json(scene_path, scene)
             _bind_receipt(root, private)
             self.assertIn(
@@ -2100,7 +2099,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             self.assertIn("trajectory_clearance", _codes(report))
             self.assertFalse(report.checks["trajectory_segment_clearance_verified"])
 
-    def test_city_lite_authority_and_composition_tamper_are_rejected(self) -> None:
+    def test_city_lite_authority_and_composition_alter_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
@@ -2108,8 +2107,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             scene_path = root / "scene.json"
             scene = json.loads(scene_path.read_text(encoding="utf-8"))
             scene["environment_id"] = "RIVERMARK_GRAYBOX_v0"
-            first_asset = next(iter(AUTHORITY_SHA256))
-            scene["authority_assets"][first_asset]["sha256"] = "0" * 64
+            first_asset = next(iter(AUTHORITY_IDENTITY))
+            scene["authority_assets"][first_asset]["identity"] = "0" * 16
             scene["selective_references"] = scene["selective_references"][:1]
             scene["unresolved_reference_count"] = 1
             scene["legacy_prim_count"] = 1
@@ -2138,7 +2137,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             self.assertFalse(report.checks["city_lite_scene_audit_passed"])
             self.assertFalse(report.checks["city_task_obstacle_material_closure_verified"])
 
-    def test_route_volume_clearance_proxy_and_lidar_tamper_are_rejected(self) -> None:
+    def test_route_volume_clearance_proxy_and_lidar_alter_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
@@ -2150,7 +2149,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             routes[5, 2] = np.asarray([0.0, 0.0, 11.0])
             routes[0, -1] = np.asarray([47.0, 18.0, 11.0])
             public["routes_w_m"] = routes.tolist()
-            public["route_contract"]["aabb_geometry_sha256"] = "1" * 64
+            public["route_contract"]["aabb_geometry_identity"] = "1" * 16
             _write_json(public_path, public)
 
             task_path = root / "streams/public_task.npz"
@@ -2164,11 +2163,11 @@ class IsaacIndependentValidationTests(unittest.TestCase):
 
             scene_path = root / "scene.json"
             scene = json.loads(scene_path.read_text(encoding="utf-8"))
-            scene["public_task_sha256"] = sha256_file(public_path)
+            scene["public_task_identity"] = identity_file(public_path)
             scene["route_clearance_m"] = 0.5
             scene["flight_volume_m"]["z"] = [0.0, 15.0]
             scene["command_volume_m"]["x"] = [-50.0, 50.0]
-            scene["collision_proxies"]["source_aabb_geometry_sha256"] = "2" * 64
+            scene["collision_proxies"]["source_aabb_geometry_identity"] = "2" * 16
             scene["lidar_geometry_coverage"]["includes_collision_proxies"] = False
             _write_json(scene_path, scene)
             _bind_receipt(root, private)
@@ -2205,12 +2204,12 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             )
             outcome_path = root / "task_outcome.json"
             outcome = json.loads(outcome_path.read_text(encoding="utf-8"))
-            outcome["state_action_sha256"] = sha256_file(state_path)
-            outcome["private_manifest_commitment_sha256"] = "3" * 64
+            outcome["state_action_identity"] = identity_file(state_path)
+            outcome["private_manifest_commitment_identity"] = "3" * 16
             _write_json(outcome_path, outcome)
             scene_path = root / "scene.json"
             scene = json.loads(scene_path.read_text(encoding="utf-8"))
-            scene["private_evaluator_manifest_sha256"] = "4" * 64
+            scene["private_evaluator_manifest_identity"] = "4" * 16
             _write_json(scene_path, scene)
             _bind_receipt(root, private)
 
@@ -2226,21 +2225,21 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             self.assertEqual(
                 binding_paths,
                 {
-                    "scene.json.private_evaluator_manifest_sha256",
+                    "scene.json.private_evaluator_manifest_identity",
                     "task_outcome.json",
                 },
             )
 
-    def test_payload_and_private_manifest_hash_tamper_are_detected(self) -> None:
+    def test_payload_and_private_manifest_identity_alter_are_detected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
             _capture_fixture(root, private)
             with (root / "sensors/lidar.npz").open("ab") as stream:
-                stream.write(b"tamper")
-            self.assertIn("artifact_hash", _codes(validate_isaac_capture(root, evaluator_manifest=private)))
+                stream.write(b"alter")
+            self.assertIn("artifact_identity", _codes(validate_isaac_capture(root, evaluator_manifest=private)))
             private.write_text("{}\n", encoding="utf-8")
-            self.assertIn("evaluator_manifest_hash", _codes(validate_isaac_capture(root, evaluator_manifest=private)))
+            self.assertIn("evaluator_manifest_identity", _codes(validate_isaac_capture(root, evaluator_manifest=private)))
 
     def test_private_manifest_inside_capture_is_rejected_and_closed_world(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -2465,7 +2464,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             report = validate_isaac_capture(root, evaluator_manifest=private)
             self.assertIn("route_witness_camera_pose", _codes(report))
 
-    def test_route_witness_schedule_and_frame_shot_tampering_are_rejected(self) -> None:
+    def test_route_witness_schedule_and_frame_shot_alteration_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
@@ -2557,12 +2556,12 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             report = validate_isaac_capture(root, evaluator_manifest=private)
             self.assertTrue(report.valid, report.issues)
 
-    def test_radar_claim_and_calibration_fail_closed(self) -> None:
+    def test_radar_claim_and_calibration_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
             _capture_fixture(root, private)
-            _write_json(root / "calibration.json", {"radar": {"status": "captured", "fail_closed": False}})
+            _write_json(root / "calibration.json", {"radar": {"status": "captured", "strict": False}})
             _bind_receipt(
                 root,
                 private,
@@ -2648,8 +2647,8 @@ class IsaacIndependentValidationTests(unittest.TestCase):
                     lambda arrays: arrays["event_codes"].__setitem__((0, 0), 99),
                 ),
                 (
-                    "retained_contact_sha256",
-                    lambda arrays: arrays["retained_contact_sha256"].__setitem__((0, 0), 1),
+                    "retained_contact_identity",
+                    lambda arrays: arrays["retained_contact_identity"].__setitem__((0, 0), 1),
                 ),
                 (
                     "archive_frame_index",
@@ -2683,7 +2682,7 @@ class IsaacIndependentValidationTests(unittest.TestCase):
                 _codes(validate_isaac_capture(root, evaluator_manifest=private)),
             )
 
-    def test_validation_receipt_is_hash_bound_and_invalid_report_cannot_be_written(self) -> None:
+    def test_validation_receipt_is_identity_bound_and_invalid_report_cannot_be_written(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             root, private = base / "capture", base / "private.json"
@@ -2692,14 +2691,14 @@ class IsaacIndependentValidationTests(unittest.TestCase):
             destination = base / "validation.json"
             write_validation_receipt(report, destination)
             payload = json.loads(destination.read_text(encoding="utf-8"))
-            self.assertEqual(payload["capture_receipt_sha256"], sha256_file(root / "capture_receipt.json"))
-            self.assertEqual(payload["checks"]["evaluator_manifest_sha256"], sha256_file(private))
+            self.assertEqual(payload["capture_receipt_identity"], identity_file(root / "capture_receipt.json"))
+            self.assertEqual(payload["checks"]["evaluator_manifest_identity"], identity_file(private))
             self.assertFalse(payload["formal_benchmark_admission"])
             invalid = IsaacValidationReport(
                 root,
-                report.receipt_sha256,
+                report.receipt_identity,
                 {},
-                (ValidationIssue("tampered", ".", "fixture"),),
+                (ValidationIssue("altered", ".", "fixture"),),
             )
             with self.assertRaisesRegex(RuntimeError, "invalid capture"):
                 write_validation_receipt(invalid, destination)

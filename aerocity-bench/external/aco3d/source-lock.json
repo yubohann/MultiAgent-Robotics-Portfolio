@@ -7,12 +7,11 @@
     "commit": "c395f5b61f6746b2d39310dbc55a7ec3e1eae2d5",
     "paper_doi": "10.1109/SII58957.2024.10417512",
     "license": "MIT",
-    "license_sha256": "aa0694b92ccfeea65c810794c1f16dd368c0f9bbe0ac92c1189078f813abe1ba",
-    "source_file_sha256": {
-      "CreateModel.m": "25febad2847eb93792332c32b62b7e63dbd5fa9deed80c2472976fe7d972e62f",
-      "TourCost.m": "8aead9209c4464cc7e6e5e8f9aab0508b27d7a0366089f503d8c75ac8431273d",
-      "main.m": "3e5226ab265732ec70ff902a2e11b0c146cb289b9482e16c4a1fdca754c263a0"
-    }
+    "source_files": [
+      "CreateModel.m",
+      "TourCost.m",
+      "main.m"
+    ]
   },
   "adapter": {
     "execution_boundary": "separate Python JSONL process",

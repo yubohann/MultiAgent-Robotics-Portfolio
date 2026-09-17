@@ -30,7 +30,6 @@ class MPCResult:
     actions: torch.Tensor
     candidate_indices: torch.Tensor
     scores: torch.Tensor
-    expected_return: torch.Tensor
     cvar_return: torch.Tensor
     expected_risk: torch.Tensor
     cvar_cost: torch.Tensor
@@ -223,7 +222,6 @@ class FlowProposalRiskMPC:
             actions=actions,
             candidate_indices=candidate_indices,
             scores=scores,
-            expected_return=expected_return,
             cvar_return=cvar_return,
             expected_risk=expected_risk,
             cvar_cost=cvar_cost,

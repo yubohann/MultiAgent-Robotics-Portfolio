@@ -1,4 +1,3 @@
-import sys
 
 print("="*60)
 print("🔍 检查推荐系统依赖")

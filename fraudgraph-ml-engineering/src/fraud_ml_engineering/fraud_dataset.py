@@ -8,7 +8,7 @@ import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
 try:
     import dgl
@@ -162,13 +162,13 @@ def _process_rss_bytes() -> int | None:
                     parts = line.split()
                     if len(parts) >= 2:
                         return int(parts[1]) * 1024
-        except Exception:
+        except (OSError, ValueError):
             pass
     try:
         import psutil  # type: ignore
 
         return int(psutil.Process(os.getpid()).memory_info().rss)
-    except Exception:
+    except (ImportError, OSError, AttributeError):
         return None
 
 
@@ -226,7 +226,6 @@ class ClientShard:
     """Data partition owned by one client in the training protocol."""
 
     client_id: int
-    owned_global_nodes: torch.Tensor
     subgraph: dgl.DGLHeteroGraph
     train_nodes: int
 
@@ -238,17 +237,12 @@ class DatasetBundle:
     name: str
     graph: dgl.DGLHeteroGraph
     node_type: str
-    relation_order: List[str]
+    relation_order: list[str]
     class_weights: torch.Tensor
     class_counts: torch.Tensor
-    clients: List[ClientShard]
+    clients: list[ClientShard]
     base_lr: float = 1e-3
     data_summary: dict[str, Any] | None = None
-    data_profile: str = ""
-    loader_view: str = ""
-    feature_profile: str = ""
-    relation_profile: str = ""
-    history_len: int = 0
 
 
 def _supervised_training_mask(graph: dgl.DGLHeteroGraph) -> torch.Tensor:
@@ -258,15 +252,7 @@ def _supervised_training_mask(graph: dgl.DGLHeteroGraph) -> torch.Tensor:
     return graph.nodes[node_type].data["train_mask"].bool()
 
 
-def _unlabeled_training_mask(graph: dgl.DGLHeteroGraph) -> torch.Tensor:
-    node_type = graph.ntypes[0]
-    if "train_unlabeled_mask" in graph.nodes[node_type].data:
-        return graph.nodes[node_type].data["train_unlabeled_mask"].bool()
-    return torch.zeros_like(graph.nodes[node_type].data["train_mask"].bool())
-
-
 def _refresh_homo_edge_train_mask(graph: dgl.DGLHeteroGraph) -> None:
-    node_type = graph.ntypes[0]
     if "homo" not in graph.etypes:
         return
     supervised_mask = _supervised_training_mask(graph).bool()
@@ -309,7 +295,7 @@ def _apply_label_scarcity(graph: dgl.DGLHeteroGraph, label_fraction: float, seed
         label_positions = np.flatnonzero(train_labels == label)
         if label_positions.size == 0:
             continue
-        target_count = max(1, int(round(label_positions.size * label_fraction)))
+        target_count = max(1, round(label_positions.size * label_fraction))
         target_count = min(target_count, label_positions.size)
         chosen_positions = rng.choice(label_positions, size=target_count, replace=False)
         selected_global_nodes.extend(train_node_ids[chosen_positions].tolist())
@@ -539,7 +525,7 @@ def _attach_dataset_context_defaults(graph: dgl.DGLHeteroGraph, dataset_name: st
         )
 
 
-def _sequence_relation_order(graph: dgl.DGLHeteroGraph) -> List[str]:
+def _sequence_relation_order(graph: dgl.DGLHeteroGraph) -> list[str]:
     relation_order = [relation for relation in graph.etypes if relation != "homo"]
     if "homo" in graph.etypes:
         relation_order.append("homo")
@@ -597,8 +583,8 @@ def _sequence_profile_for_graph(
         )
     else:
         profile.setdefault("compact_feature_dim", None)
-        profile.setdefault("excluded_relations", tuple())
-        profile.setdefault("priority_relations", tuple())
+        profile.setdefault("excluded_relations", ())
+        profile.setdefault("priority_relations", ())
         profile.setdefault("streaming_mode", False)
         profile.setdefault("lazy_materialize", False)
         profile.setdefault("runtime_dynamic", False)
@@ -634,8 +620,8 @@ def _build_sequence_base_features(
 def _sequence_candidate_relations(
     graph: dgl.DGLHeteroGraph,
     profile: dict,
-) -> List[str]:
-    excluded_relations = {str(item) for item in tuple(profile.get("excluded_relations", tuple()) or tuple())}
+) -> list[str]:
+    excluded_relations = {str(item) for item in tuple(profile.get("excluded_relations", ()) or ())}
     return [relation for relation in _sequence_relation_order(graph) if str(relation) not in excluded_relations]
 
 
@@ -798,7 +784,7 @@ def _materialize_relation_sequence_chunk(
 
     relation_count = int(relation_mean_feature.shape[1]) if relation_mean_feature.ndim >= 3 else 0
     profile = _sequence_profile_for_graph(graph, dataset_name)
-    token_order = tuple(str(item) for item in tuple(profile.get("token_order", ("local", "motif", "reliability"))) or tuple())
+    token_order = tuple(str(item) for item in tuple(profile.get("token_order", ("local", "motif", "reliability"))) or ())
     total_context_slots = max(len(token_order) * max(relation_count, 1), 1)
     if relation_count > 0:
         degree_strength_bank = torch.log1p(relation_degree).unsqueeze(-1)
@@ -938,8 +924,7 @@ def _build_relation_sequence(
     *,
     ieee_full_compact_sequences: bool | None = None,
     ieee_sequence_feature_dim: int | None = None,
-) -> dict[str, torch.Tensor | List[str] | str]:
-    node_type = graph.ntypes[0]
+) -> dict[str, torch.Tensor | list[str] | str]:
     profile = _sequence_profile_for_graph(
         graph,
         dataset_name,
@@ -948,7 +933,7 @@ def _build_relation_sequence(
     )
     if bool(profile.get("runtime_dynamic", False)):
         candidate_relations = _sequence_candidate_relations(graph, profile)
-        priority_relations = tuple(str(item) for item in tuple(profile.get("priority_relations", tuple()) or tuple()))
+        priority_relations = tuple(str(item) for item in tuple(profile.get("priority_relations", ()) or ()))
         relation_order = [relation for relation in priority_relations if relation in candidate_relations]
         relation_order.extend([relation for relation in candidate_relations if relation not in relation_order])
         return {
@@ -960,22 +945,22 @@ def _build_relation_sequence(
     _memory_log(
         "relation_sequence: streaming_scan_begin "
         f"dataset={dataset_name} feature_dim={int(features.shape[1])} candidates={len(candidate_relations)} "
-        f"profile={str(profile.get('name', 'default'))}"
+        f"profile={profile.get('name', 'default')!s}"
     )
     relation_payloads: list[dict[str, float | str]] = []
     for relation_index, relation in enumerate(candidate_relations, start=1):
         _memory_log(
             "relation_sequence: scan_relation_begin "
-            f"index={int(relation_index)}/{int(len(candidate_relations))} relation={str(relation)}"
+            f"index={int(relation_index)}/{len(candidate_relations)} relation={relation!s}"
         )
         payload = _scan_relation_payload(graph, relation, features)
         relation_payloads.append(payload)
         _memory_log(
             "relation_sequence: scan_relation_complete "
-            f"index={int(relation_index)}/{int(len(candidate_relations))} relation={str(relation)} "
+            f"index={int(relation_index)}/{len(candidate_relations)} relation={relation!s} "
             f"score={float(payload['score']):.4f} coverage={float(payload['coverage']):.4f}"
         )
-    priority_relations = tuple(str(item) for item in tuple(profile.get("priority_relations", tuple()) or tuple()))
+    priority_relations = tuple(str(item) for item in tuple(profile.get("priority_relations", ()) or ()))
     priority_relation_set = set(priority_relations)
     relation_payloads = sorted(
         relation_payloads,
@@ -1017,7 +1002,7 @@ def _build_relation_sequence(
 
     num_nodes = int(features.shape[0])
     feature_dim = int(features.shape[1])
-    token_order = tuple(str(item) for item in tuple(profile.get("token_order", ("local", "motif", "reliability"))) or tuple())
+    token_order = tuple(str(item) for item in tuple(profile.get("token_order", ("local", "motif", "reliability"))) or ())
     total_context_slots = max(len(token_order) * max(len(relation_order), 1), 1)
     sequence_length = 2 + (len(relation_order) * len(token_order))
     token_feature_dim = feature_dim + 8
@@ -1134,7 +1119,7 @@ def _build_relation_sequence(
         for relation_index, relation in enumerate(relation_order):
             _memory_log(
                 "relation_sequence: materialize_relation_begin "
-                f"index={int(relation_index + 1)}/{int(len(relation_order))} relation={str(relation)}"
+                f"index={int(relation_index + 1)}/{len(relation_order)} relation={relation!s}"
             )
             mean_feature, max_feature, relation_degree = _aggregate_relation_features(graph, relation, features)
             relation_delta = mean_feature - features
@@ -1230,7 +1215,7 @@ def _build_relation_sequence(
                     _fill_dense_token_slot(slot_index, **token_kwargs)
             _memory_log(
                 "relation_sequence: materialize_relation_complete "
-                f"index={int(relation_index + 1)}/{int(len(relation_order))} relation={str(relation)}"
+                f"index={int(relation_index + 1)}/{len(relation_order)} relation={relation!s}"
             )
         global_token = torch.where(has_relation_context, weighted_context, features)
     else:
@@ -1288,7 +1273,7 @@ def _build_relation_sequence(
         "relation_sequence: materialize_complete "
         f"sequence_length={int(sequence_length)} token_feature_dim={int(token_feature_dim)}"
     )
-    payload: dict[str, torch.Tensor | List[str] | str] = {
+    payload: dict[str, torch.Tensor | list[str] | str] = {
         "storage_mode": "lazy" if lazy_materialize else "dense",
         "relation_order": relation_order,
         "sequence_mask": sequence_mask,
@@ -1319,7 +1304,7 @@ def _attach_relation_sequence(
     *,
     ieee_full_compact_sequences: bool | None = None,
     ieee_sequence_feature_dim: int | None = None,
-) -> List[str]:
+) -> list[str]:
     _memory_log(f"relation_sequence: begin dataset={dataset_name}")
     payload = _build_relation_sequence(
         graph,
@@ -1417,7 +1402,7 @@ def _attach_relation_sequence(
 
 def _sequence_quality_summary(
     graph: dgl.DGLHeteroGraph,
-    relation_order: List[str],
+    relation_order: list[str],
     dataset_name: str,
 ) -> dict:
     node_type = graph.ntypes[0]
@@ -1434,7 +1419,7 @@ def _sequence_quality_summary(
             return {}
         relation_degree = node_data["sequence_relation_degree"].float()
         raw_feature_dim = int(node_data["feature"].shape[1]) if "feature" in node_data else 0
-        token_order = tuple(profile.get("token_order", tuple()) or tuple())
+        token_order = tuple(profile.get("token_order", ()) or ())
         relation_coverage = {}
         for relation_index, relation_name in enumerate(relation_order):
             if relation_index >= relation_degree.size(1):
@@ -1452,9 +1437,9 @@ def _sequence_quality_summary(
             "raw_feature_dim": int(raw_feature_dim),
             "compact_mode_enabled": False,
             "semantic_feature_dim": 8,
-            "selected_relation_count": int(len(relation_order)),
+            "selected_relation_count": len(relation_order),
             "relation_order": [str(item) for item in relation_order],
-            "priority_relations": [str(item) for item in tuple(profile.get("priority_relations", tuple()) or tuple())],
+            "priority_relations": [str(item) for item in tuple(profile.get("priority_relations", ()) or ())],
             "token_order": [str(item) for item in token_order],
             "relation_coverage": relation_coverage,
             "runtime_projector": True,
@@ -1532,10 +1517,10 @@ def _sequence_quality_summary(
         "raw_feature_dim": int(raw_feature_dim),
         "compact_mode_enabled": bool(base_feature_dim != raw_feature_dim),
         "semantic_feature_dim": int(semantic_feature_dim),
-        "selected_relation_count": int(len(relation_order)),
+        "selected_relation_count": len(relation_order),
         "relation_order": [str(item) for item in relation_order],
-        "priority_relations": [str(item) for item in tuple(profile.get("priority_relations", tuple()) or tuple())],
-        "token_order": [str(item) for item in tuple(profile.get("token_order", tuple()) or tuple())],
+        "priority_relations": [str(item) for item in tuple(profile.get("priority_relations", ()) or ())],
+        "token_order": [str(item) for item in tuple(profile.get("token_order", ()) or ())],
         "valid_ratio_mean": float(valid_ratio.mean().item()),
         "valid_ratio_std": float(valid_ratio.std(unbiased=False).item()),
         "valid_length_mean": float(valid_length.mean().item()),
@@ -1554,7 +1539,7 @@ def _stratified_partition(
     labels: torch.Tensor,
     num_clients: int,
     seed: int,
-) -> List[torch.Tensor]:
+) -> list[torch.Tensor]:
     rng = np.random.default_rng(seed)
     node_ids_np = node_ids.cpu().numpy()
     labels_np = labels.cpu().numpy()
@@ -1582,7 +1567,7 @@ def _random_partition(
     node_ids: torch.Tensor,
     num_clients: int,
     seed: int,
-) -> List[torch.Tensor]:
+) -> list[torch.Tensor]:
     rng = np.random.default_rng(seed)
     node_ids_np = node_ids.cpu().numpy().copy()
     rng.shuffle(node_ids_np)
@@ -1595,7 +1580,7 @@ def _random_partition(
     return partitions
 
 
-def _merge_partitions(*partition_sets: List[torch.Tensor]) -> List[torch.Tensor]:
+def _merge_partitions(*partition_sets: list[torch.Tensor]) -> list[torch.Tensor]:
     if not partition_sets:
         return []
     num_clients = len(partition_sets[0])
@@ -1789,7 +1774,6 @@ def load_splitgnn_dataset(
         clients.append(
             ClientShard(
                 client_id=client_id,
-                owned_global_nodes=owned_nodes,
                 subgraph=subgraph,
                 train_nodes=local_train_nodes,
             )
@@ -1806,7 +1790,7 @@ def load_splitgnn_dataset(
     )
     bundle.data_summary = {
         "dataset": str(dataset_name),
-        "num_clients": int(len(clients)),
+        "num_clients": len(clients),
         "label_fraction": float(label_fraction),
         "active_learning_feedback_path": str(active_learning_feedback_path or ""),
         "sequence_quality": _sequence_quality_summary(graph, relation_order, dataset_name=dataset_name),
@@ -1818,7 +1802,7 @@ def load_graph_for_inference(
     dataset_name: str,
     data_dir: str | None = None,
     graph_path: str | None = None,
-) -> tuple[dgl.DGLHeteroGraph, str, List[str]]:
+) -> tuple[dgl.DGLHeteroGraph, str, list[str]]:
     """Load an inference graph from the repository layout or an external DGL file."""
 
     if graph_path is None:

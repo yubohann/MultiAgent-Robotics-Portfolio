@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-from concurrent.futures import Future, ThreadPoolExecutor
-from dataclasses import dataclass
 import copy
-import hashlib
 import json
 import math
 import threading
-from typing import Any, Mapping
+from collections.abc import Mapping
+from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
+from typing import Any
 
-from multi_gate.guidance.local_guidance_client import LocalGuidanceClient, LocalGuidanceClientError
-
+from multi_gate.guidance.local_guidance_client import LocalGuidanceClient
 
 GUIDANCE_FIELD_DEFAULTS: dict[str, float] = {
     "target_rel_x": 0.0,
@@ -198,8 +197,7 @@ class RouteGuidanceEngine:
         }
 
     def _cache_key(self, payload: Mapping[str, Any]) -> str:
-        serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-        return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+        return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
     def _normalize_payload(self, payload: Mapping[str, Any]) -> dict[str, Any]:
         def _normalize(value: Any) -> Any:

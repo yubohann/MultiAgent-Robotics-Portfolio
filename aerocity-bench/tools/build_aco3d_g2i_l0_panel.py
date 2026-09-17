@@ -18,7 +18,7 @@ _SOURCE_ROOT = _REPOSITORY_ROOT / "src"
 if str(_SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(_SOURCE_ROOT))
 
-from aerocity_bench.canonical import content_hash, read_json, write_json  # noqa: E402
+from aerocity_bench.canonical import read_json, write_json  # noqa: E402
 
 REPORT_SCHEMA = "org.aerocity.bench.aco3d-public-atlas-smoke.v1"
 PANEL_SCHEMA = "org.aerocity.bench.aco3d-g2i-l0-calibration-panel.v1"
@@ -81,7 +81,7 @@ def build_panel(report_paths: dict[str, Path]) -> dict[str, Any]:
     if set(report_paths) != _REQUIRED_ANCESTORS:
         raise ValueError("panel requires exactly ancestors 00, 01, and 02")
     baseline: dict[str, object] | None = None
-    city_hashes: set[str] = set()
+    city_ids: set[str] = set()
     entries: list[dict[str, Any]] = []
     for label, path in sorted(report_paths.items()):
         raw = _required_mapping(read_json(path), f"{label} report")
@@ -97,7 +97,7 @@ def build_panel(report_paths: dict[str, Path]) -> dict[str, Any]:
             raise ValueError(f"{label} execution-integrity replay did not pass")
         upstream = _required_mapping(raw.get("upstream"), f"{label}.upstream")
         adapter = _required_mapping(raw.get("adapter"), f"{label}.adapter")
-        inputs = _required_mapping(raw.get("public_input_hashes"), f"{label}.public_input_hashes")
+        inputs = _required_mapping(raw.get("public_inputs"), f"{label}.public_inputs")
         execution = _required_mapping(raw.get("execution"), f"{label}.execution")
         if upstream.get("source_checkout_verified") is not True:
             raise ValueError(f"{label} did not verify its locked upstream checkout")
@@ -119,21 +119,21 @@ def build_panel(report_paths: dict[str, Path]) -> dict[str, Any]:
             for field in zero_fields
         ):
             raise ValueError(f"{label} has a safety or deadline failure")
-        city_hash = inputs.get("city")
-        if not isinstance(city_hash, str) or len(city_hash) != 64:
-            raise ValueError(f"{label} has no public city hash")
-        if city_hash in city_hashes:
-            raise ValueError("calibration ancestors must use distinct public city hashes")
-        city_hashes.add(city_hash)
+        city_id = inputs.get("city")
+        if not isinstance(city_id, str) or not city_id:
+            raise ValueError(f"{label} has no public city identity")
+        if city_id in city_ids:
+            raise ValueError("calibration ancestors must use distinct public cities")
+        city_ids.add(city_id)
         comparable = {
             "upstream_url": upstream.get("url"),
             "upstream_commit": upstream.get("commit"),
             "upstream_license": upstream.get("license"),
-            "source_lock_sha256": upstream.get("source_lock_sha256"),
+            "source_lock": upstream.get("source_lock"),
             "adapter_version": upstream.get("adapter_version"),
-            "adapter_source_sha256": adapter.get("adapter_source_sha256"),
-            "runner_source_sha256": adapter.get("runner_source_sha256"),
-            "release_config_sha256": inputs.get("release_config"),
+            "adapter_source": adapter.get("adapter_source"),
+            "runner": adapter.get("runner"),
+            "release_config": inputs.get("release_config"),
             "pass_semantics": raw.get("pass_semantics"),
         }
         if baseline is None:
@@ -144,8 +144,7 @@ def build_panel(report_paths: dict[str, Path]) -> dict[str, Any]:
         entries.append(
             {
                 "ancestor": label,
-                "city_sha256": city_hash,
-                "report_sha256": content_hash(raw),
+                "city": city_id,
                 "task_time_s": float(execution.get("task_time_s", 0.0)),
                 "receipt_count": _nonnegative_int(
                     execution.get("receipt_count"), f"{label}.receipt_count"
@@ -192,7 +191,6 @@ def build_panel(report_paths: dict[str, Path]) -> dict[str, Any]:
             ),
         },
     }
-    report["report_hash"] = content_hash(report)
     return report
 
 

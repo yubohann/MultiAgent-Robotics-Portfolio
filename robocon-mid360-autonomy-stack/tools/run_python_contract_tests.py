@@ -8,7 +8,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 ROS_RUNTIME_IMPORTS = ("import rclpy", "from rclpy", "from std_msgs", "import std_msgs")

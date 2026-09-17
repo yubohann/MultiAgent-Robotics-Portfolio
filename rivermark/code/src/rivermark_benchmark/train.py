@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.metadata
 import json
 import platform
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, ClassVar
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .provenance import detect_source_provenance
 from .runtime import HighLevelAction, PilotRuntimeConfig, PilotSwarmRuntime
-
 
 SB3_ADAPTER_V2_SCHEMA = "org.rivermark.sb3-adapter.v2"
 STATE_ONLY_PROPRIOCEPTION_ABI = "org.rivermark.state-only-proprioception.v1"
@@ -44,8 +44,8 @@ def _runtime_versions() -> dict[str, str]:
     }
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -61,15 +61,9 @@ except ImportError:  # Keep module importable when training extras are absent.
 
 
 class _SingleAgentStateEnv(gym.Env if gym is not None else object):
-    """Gymnasium adapter with six non-learning coverage peers.
+    """Gymnasium adapter with six non-learning coverage peers."""
 
-    The learned agent sees only its own public state.  Peers use deterministic
-    public coverage actions, so no hidden target/reward signal enters their
-    policy input.  Reward is training-only and never becomes policy-visible
-    rollout data during evaluation.
-    """
-
-    metadata = {"render_modes": []}
+    metadata: ClassVar[dict[str, Any]] = {"render_modes": []}
 
     def __init__(self, *, seed: int, agent_count: int, max_steps: int) -> None:
         if gym is None or spaces is None:
@@ -101,7 +95,7 @@ class _SingleAgentStateEnv(gym.Env if gym is not None else object):
 
     def _peer_action(self, agent_id: int) -> HighLevelAction:
         state = self._observations[agent_id].proprioception
-        width, height = self.runtime.config.world_size_xy_m
+        _width, height = self.runtime.config.world_size_xy_m
         lane_y = 1.8 + (agent_id + 0.5) * (height - 3.6) / self.agent_count
         direction = 1.0 if (self.runtime.current_frame().step_index // 10 + agent_id) % 2 == 0 else -1.0
         desired = np.array((direction * 1.7, (lane_y - state[1]) * 0.45, (2.8 - state[2]) * 0.7))
@@ -225,9 +219,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         },
         "formal_benchmark_admission": False,
         "source_revision": source.source_revision,
-        "source_tree_sha256": source.source_tree_sha256,
+        "source_tree_identity": source.source_tree_identity,
         "source_worktree_dirty": source.source_worktree_dirty,
-        "checkpoint_sha256": _sha256_file(checkpoint),
+        "checkpoint_identity": _identity_file(checkpoint),
     }
     metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps({"checkpoint": str(checkpoint), "metadata": str(metadata_path), "algorithm": args.algorithm}, indent=2))

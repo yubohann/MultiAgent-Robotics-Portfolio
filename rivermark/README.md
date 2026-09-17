@@ -6,7 +6,7 @@
 
 **A physics-grounded benchmark toolchain for multi-agent 3D stealth search, built on native Isaac Sim captures of eight CF2X quadrotors in a procedural City-Lite scene.**
 
-Cities hide targets. A quadrotor can pass a building and miss a courtyard, lose a target behind an obstacle edge, or cross the visible window too fast to confirm anything. Rivermark records those cases as synchronized multi-sensor episodes. Every step writes the control command first and then advances the simulation, so the causal chain from observation to action stays intact. Scene, protocol, runtime, and source revision are bound to SHA-256 contracts, and an episode enters the formal dataset after independent validation passes. Hidden target truth stays on the scorer side, and a search method earns credit through real observations in flight.
+Cities hide targets. A quadrotor can pass a building and miss a courtyard, lose a target behind an obstacle edge, or cross the visible window too fast to confirm anything. Rivermark records those cases as synchronized multi-sensor episodes. Every step writes the control command first and then advances the simulation, so the causal chain from observation to action stays intact. Scene, protocol, runtime, and source revision are bound to identity contracts, and an episode enters the formal dataset after independent validation passes. Hidden target truth stays on the scorer side, and a search method earns credit through real observations in flight.
 
 **Status.** Protocol `citylite-t1-expert-coverage-v2` is frozen with the full four train and four validation episode sequence captured. The native capture path targets Isaac Sim 5.1 with Isaac Lab 2.3.2, and the CPU toolchain verifies from a clean checkout.
 
@@ -35,9 +35,9 @@ A fixed-world overview camera acts as a route witness, rendered and checked at e
 
 ## Determinism and Admission
 
-Every scene, protocol, runtime, and source tree is pinned by SHA-256. The runtime lock profile `citylite-windows-isaacsim-5.1.0.0-local-isaaclab-2.3.2` fixes the interpreter, package versions, GPU floor, and renderer and physics configuration. A same-seed analyzer compares two captures of one episode seed under predeclared tolerances, frame-aligned by class and agent ID.
+Every scene, protocol, runtime, and source tree is pinned by content identity. The runtime lock profile `citylite-windows-isaacsim-5.1.0.0-local-isaaclab-2.3.2` fixes the interpreter, package versions, GPU floor, and renderer and physics configuration. A same-seed analyzer compares two captures of one episode seed under predeclared tolerances, frame-aligned by class and agent ID.
 
-An independent validator reopens the raw artifacts and checks stage identity, sensor synchronization, action causality, visual and LiDAR intrusion gates, contacts, route realization, target visibility evidence, provenance, and hash bindings. Cleared episodes enter the formal dataset, and failed artifacts stay visible in a failure ledger with crash-left recovery for long collection runs.
+An independent validator reopens the raw artifacts and checks stage identity, sensor synchronization, action causality, visual and LiDAR intrusion gates, contacts, route realization, target visibility evidence, provenance, and identity bindings. Cleared episodes enter the formal dataset, and failed artifacts stay visible in a failure ledger with crash-left recovery for long collection runs.
 
 ## Scoring
 

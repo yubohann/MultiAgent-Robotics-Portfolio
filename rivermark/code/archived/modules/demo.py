@@ -5,12 +5,19 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 
+from .learned import (
+    LearnedWorldModelMpcCheckpointPolicy,
+    TinyVlaCheckpointPolicy,
+    TinyVlmGroundingCheckpointPolicy,
+)
+from .marl import SharedMarlCheckpointPolicy
 from .methods import (
     NATIVE_DESCRIPTORS,
     MethodDescriptor,
@@ -18,14 +25,8 @@ from .methods import (
     create_sb3_checkpoint_policy,
     list_methods,
 )
-from .learned import (
-    LearnedWorldModelMpcCheckpointPolicy,
-    TinyVlaCheckpointPolicy,
-    TinyVlmGroundingCheckpointPolicy,
-)
-from .marl import SharedMarlCheckpointPolicy
-from .qd_train import PyribsMapElitesCheckpointPolicy
 from .provenance import source_revision
+from .qd_train import PyribsMapElitesCheckpointPolicy
 from .recording import EpisodeRecorder, _write_json
 from .runtime import PilotRuntimeConfig, PilotSwarmRuntime, RuntimeFrame
 
@@ -442,7 +443,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.backend != "pilot":
         raise SystemExit(
-            "The IsaacLab backend is fail-closed until a local Kit/scene/radar smoke receipt exists. Use --backend pilot for the executable kinematic pilot."
+            "The IsaacLab backend is strict until a local Kit/scene/radar smoke receipt exists. Use --backend pilot for the executable kinematic pilot."
         )
     selected = sorted(NATIVE_DESCRIPTORS) if args.all else args.method or []
     checkpoint_options = (

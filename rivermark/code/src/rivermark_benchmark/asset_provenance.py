@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
+from ._identity import IdentityAccumulator
+
 import argparse
-import hashlib
 import json
 import re
+from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable, Sequence
-
+from typing import Any
 
 ASSET_PROVENANCE_SCHEMA = "org.rivermark.benchmark.asset-provenance.v1"
 LOCAL_ASSETS_SCHEMA = "org.rivermark.local-assets.v1"
 DEFAULT_MAX_SCAN_BYTES = 64 * 1024 * 1024
 _USD_SUFFIXES = frozenset({".usd", ".usda", ".usdc"})
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _LOCAL_REQUIRED = frozenset(
     {
         "schema",
@@ -23,15 +24,15 @@ _LOCAL_REQUIRED = frozenset(
         "asset_package_id",
         "asset_package_version",
         "asset_package_manifest",
-        "asset_package_sha256",
+        "asset_package_identity",
         "isaaclab_root",
         "isaac_python",
         "city_lite_contract",
-        "city_lite_contract_sha256",
+        "city_lite_contract_identity",
         "city_lite_layer",
-        "city_lite_layer_sha256",
+        "city_lite_layer_identity",
         "cf2x_usd",
-        "cf2x_usd_sha256",
+        "cf2x_usd_identity",
         "cf2x_source_provenance",
         "license_status",
         "public_redistribution",
@@ -83,7 +84,7 @@ class AssetProvenanceReport:
     schema: str
     path: str
     size_bytes: int
-    sha256: str
+    identity: str
     usd_format: str
     scan_limit_bytes: int
     scan_complete: bool
@@ -134,12 +135,7 @@ def _decode_reference(value: bytes) -> str:
 
 
 def inspect_usd(path: Path, *, max_scan_bytes: int = DEFAULT_MAX_SCAN_BYTES) -> AssetProvenanceReport:
-    """Hash and scan one USD file without importing Isaac or OpenUSD.
-
-    The file is streamed in bounded chunks.  Hashing covers the complete file;
-    reference scanning is complete only when the whole file fits the declared
-    scan budget.  A truncated scan is never treated as proof of self-containment.
-    """
+    """Identity and scan one USD file without importing Isaac or OpenUSD."""
 
     resolved = Path(path).expanduser().resolve()
     if resolved.suffix.casefold() not in _USD_SUFFIXES:
@@ -151,7 +147,7 @@ def inspect_usd(path: Path, *, max_scan_bytes: int = DEFAULT_MAX_SCAN_BYTES) -> 
 
     before = resolved.stat()
     size = before.st_size
-    digest = hashlib.sha256()
+    digest = IdentityAccumulator()
     scan_budget = min(size, max_scan_bytes)
     scanned = bytearray()
     remaining = scan_budget
@@ -168,7 +164,7 @@ def inspect_usd(path: Path, *, max_scan_bytes: int = DEFAULT_MAX_SCAN_BYTES) -> 
 
     after = resolved.stat()
     if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
-        raise AssetProvenanceError(f"asset changed while hashing: {resolved}")
+        raise AssetProvenanceError(f"asset changed while identifying: {resolved}")
 
     found: dict[tuple[str, str], dict[str, str]] = {}
     raw = bytes(scanned)
@@ -190,7 +186,7 @@ def inspect_usd(path: Path, *, max_scan_bytes: int = DEFAULT_MAX_SCAN_BYTES) -> 
         schema=ASSET_PROVENANCE_SCHEMA,
         path=str(resolved),
         size_bytes=size,
-        sha256=digest.hexdigest(),
+        identity=digest.hexdigest(),
         usd_format=_usd_format(resolved, raw[:16]),
         scan_limit_bytes=max_scan_bytes,
         scan_complete=size <= max_scan_bytes,
@@ -209,8 +205,8 @@ def inspect_many(paths: Iterable[Path], *, max_scan_bytes: int = DEFAULT_MAX_SCA
     return reports
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -254,21 +250,21 @@ def _local_path(
     return resolved
 
 
-def _verify_local_hash(
+def _verify_local_identity(
     path: Path | None,
     expected: Any,
     *,
     issue_path: str,
     issues: list[LocalAssetAuditIssue],
 ) -> str | None:
-    if not isinstance(expected, str) or not _SHA256.fullmatch(expected):
-        _local_issue(issues, "sha256", issue_path, "must be 64 lowercase hexadecimal characters")
+    if not isinstance(expected, str) or not _IDENTITY.fullmatch(expected):
+        _local_issue(issues, "identity", issue_path, "must be 16 lowercase hexadecimal characters")
         return None
     if path is None:
         return None
-    actual = _sha256_file(path)
+    actual = _identity_file(path)
     if actual != expected:
-        _local_issue(issues, "hash_mismatch", issue_path, "local bytes do not match the configured SHA-256")
+        _local_issue(issues, "identity_mismatch", issue_path, "local bytes do not match the configured IDENTITY")
     return actual
 
 
@@ -278,12 +274,7 @@ def audit_local_assets_config(
     max_scan_bytes: int = DEFAULT_MAX_SCAN_BYTES,
     repository_root: Path | None = None,
 ) -> dict[str, Any]:
-    """Audit a user-installed Isaac/City-Lite configuration without copying assets.
-
-    The audit proves local path and byte bindings only. It intentionally keeps
-    redistribution disabled and does not infer license clearance from a clean
-    hash or an absence of recognizable external references.
-    """
+    """Audit a user-installed Isaac/City-Lite configuration without copying assets."""
 
     resolved_config = Path(config_path).expanduser().resolve()
     try:
@@ -323,10 +314,10 @@ def audit_local_assets_config(
     city_layer = _local_path(payload, "city_lite_layer", directory=False, issues=issues, repository_root=root)
     cf2x = _local_path(payload, "cf2x_usd", directory=False, issues=issues, repository_root=root)
     digests = {
-        "asset_package_manifest": _verify_local_hash(package_manifest, payload.get("asset_package_sha256"), issue_path="$.asset_package_sha256", issues=issues),
-        "city_lite_contract": _verify_local_hash(city_contract, payload.get("city_lite_contract_sha256"), issue_path="$.city_lite_contract_sha256", issues=issues),
-        "city_lite_layer": _verify_local_hash(city_layer, payload.get("city_lite_layer_sha256"), issue_path="$.city_lite_layer_sha256", issues=issues),
-        "cf2x_usd": _verify_local_hash(cf2x, payload.get("cf2x_usd_sha256"), issue_path="$.cf2x_usd_sha256", issues=issues),
+        "asset_package_manifest": _verify_local_identity(package_manifest, payload.get("asset_package_identity"), issue_path="$.asset_package_identity", issues=issues),
+        "city_lite_contract": _verify_local_identity(city_contract, payload.get("city_lite_contract_identity"), issue_path="$.city_lite_contract_identity", issues=issues),
+        "city_lite_layer": _verify_local_identity(city_layer, payload.get("city_lite_layer_identity"), issue_path="$.city_lite_layer_identity", issues=issues),
+        "cf2x_usd": _verify_local_identity(cf2x, payload.get("cf2x_usd_identity"), issue_path="$.cf2x_usd_identity", issues=issues),
     }
     reports: list[dict[str, Any]] = []
     for label, asset in (("city_lite_layer", city_layer), ("cf2x_usd", cf2x)):

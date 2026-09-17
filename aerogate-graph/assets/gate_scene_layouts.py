@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from pathlib import Path
-
 
 ASSETS_ROOT = Path(__file__).resolve().parent
 DEFAULT_GATE_USD = ASSETS_ROOT / "gate" / "gate.usd"

@@ -1,18 +1,14 @@
-"""Create an auditable comparison report from explicit experiment records that declare their data
-revision, split policy, selection policy, seed and metrics.
-"""
+"""Create an auditable comparison report from explicit experiment records."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
@@ -21,7 +17,6 @@ if str(SRC_ROOT) not in sys.path:
 
 from fraud_ml_engineering.paths import ARTIFACTS_ROOT
 from fraud_ml_engineering.run_artifacts import write_json
-
 
 DEFAULT_OUTPUT_ROOT = ARTIFACTS_ROOT / "experiments" / "auditable_comparison"
 REQUIRED_RECORD_FIELDS = (
@@ -62,12 +57,8 @@ def parse_args() -> argparse.Namespace:
 def _read_record(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(payload, dict):
-        raise ValueError(f"Record must be a JSON object: {path}")
+        raise TypeError(f"Record must be a JSON object: {path}")
     return payload
-
-
-def _record_digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _validate_metric_block(record_path: Path, name: str, value: Any) -> dict[str, float]:
@@ -76,7 +67,7 @@ def _validate_metric_block(record_path: Path, name: str, value: Any) -> dict[str
     normalized: dict[str, float] = {}
     for metric_name, metric_value in value.items():
         if isinstance(metric_value, bool) or not isinstance(metric_value, (int, float)):
-            raise ValueError(f"Record {record_path.name} has a non-numeric metrics.{name}.{metric_name}")
+            raise TypeError(f"Record {record_path.name} has a non-numeric metrics.{name}.{metric_name}")
         metric = float(metric_value)
         if not math.isfinite(metric):
             raise ValueError(f"Record {record_path.name} has a non-finite metrics.{name}.{metric_name}")
@@ -105,7 +96,7 @@ def validate_record(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
 
     metrics = payload["metrics"]
     if not isinstance(metrics, dict):
-        raise ValueError(f"Record {path.name} requires a metrics object")
+        raise TypeError(f"Record {path.name} requires a metrics object")
     validation = _validate_metric_block(path, "validation", metrics.get("validation"))
     test = _validate_metric_block(path, "test", metrics.get("test"))
 
@@ -122,7 +113,6 @@ def validate_record(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
         "seed": seed,
         "metrics": {"validation": validation, "test": test},
         "source_record": path.name,
-        "source_sha256": _record_digest(path),
     }
 
 

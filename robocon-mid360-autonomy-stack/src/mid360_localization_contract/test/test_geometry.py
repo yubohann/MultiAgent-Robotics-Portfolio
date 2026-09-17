@@ -1,4 +1,3 @@
-import math
 import unittest
 
 from mid360_localization_contract.geometry import (

@@ -14,13 +14,13 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.abi import observation_abi_sha256
-from rivermark_benchmark.formal_dataset import sha256_file
+from rivermark_benchmark.abi import observation_abi_identity
+from rivermark_benchmark.formal_dataset import identity_file
 from rivermark_benchmark.isaac_pack import PACK_SPEC_SCHEMA, PACK_SPEC_SCHEMA_V2
 from rivermark_benchmark.isaac_pack_readiness import audit_isaac_pack_readiness
 from rivermark_benchmark.isaac_public_manifest import (
     build_public_scene_manifest,
-    public_manifest_sha256,
+    public_manifest_identity,
 )
 from rivermark_benchmark.policy_projection import (
     PolicyProjectionError,
@@ -43,19 +43,19 @@ def _scene() -> dict[str, object]:
         "static_scene_authority_verified": True,
         "legacy_route_or_target_imported": False,
         "unresolved_reference_count": 0,
-        "private_evaluator_manifest_sha256": "e" * 64,
+        "private_evaluator_manifest_identity": "e" * 16,
         "source_scene": r"C:\private\rivermark.usd",
         "scene_contract": {
             "schema": "citylite-contract-v1",
             "gate_status": "pass_city_lite_static_construction",
-            "payload_sha256": "1" * 64,
-            "sha256": "2" * 64,
+            "payload_identity": "1" * 16,
+            "identity": "2" * 16,
         },
         "rivermark_layer_inventory": {
             "schema": "resolved-layer-inventory-v1",
-            "inventory_sha256": "3" * 64,
-            "local_authority_inventory_sha256": "4" * 64,
-            "rivermarksrc51_external_inventory_sha256": "5" * 64,
+            "inventory_identity": "3" * 16,
+            "local_authority_inventory_identity": "4" * 16,
+            "rivermarksrc51_external_inventory_identity": "5" * 16,
             "local_authority_layer_count": 2,
             "rivermarksrc51_external_layer_count": 3,
             "input_resolved_layer_count": 5,
@@ -95,7 +95,7 @@ def _capture(root: Path) -> tuple[Path, PolicySourceInspection]:
     _json(root / "public_task.json", _public_task())
     binding = {
         "protocol_id": "citylite-t1-expert-coverage-v2",
-        "protocol_sha256": "b" * 64,
+        "protocol_identity": "b" * 16,
         "cell_id": "train-citylite-direct-v2",
         "split": "train",
         "episode_index": 1,
@@ -163,18 +163,18 @@ def _capture(root: Path) -> tuple[Path, PolicySourceInspection]:
     receipt = {
         "schema": "org.rivermark.isaac-swarm-capture.v1",
         "source_revision": "a" * 40,
-        "evaluator_manifest_sha256": "e" * 64,
+        "evaluator_manifest_identity": "e" * 16,
         "collection_binding": binding,
         "condition_request": {"fixture": True},
         "capture_backend": {
             "kind": "isaaclab",
             "build": "isaac-sim-test",
-            "sensor_physics_smoke_receipt_sha256": "d" * 64,
+            "sensor_physics_smoke_receipt_identity": "d" * 16,
         },
-        "artifact_hashes": {
+        "artifact_identities": {
             relative: {
                 "bytes": (root / relative).stat().st_size,
-                "sha256": sha256_file(root / relative),
+                "identity": identity_file(root / relative),
             }
             for relative in artifact_paths
         },
@@ -186,17 +186,17 @@ def _capture(root: Path) -> tuple[Path, PolicySourceInspection]:
         "schema": "org.rivermark.isaac-independent-validation.v1",
         "status": "passed",
         "issues": [],
-        "capture_receipt_sha256": sha256_file(root / "capture_receipt.json"),
-        "validator_source_sha256": sha256_file(Path(isaac_validate.__file__).resolve()),
+        "capture_receipt_identity": identity_file(root / "capture_receipt.json"),
+        "validator_source_identity": identity_file(Path(isaac_validate.__file__).resolve()),
         "checks": {
-            "evaluator_manifest_sha256": "e" * 64,
+            "evaluator_manifest_identity": "e" * 16,
             "condition_realization_verified": True,
         },
     }
     _json(root / "independent_validation.json", validation)
     inspection = PolicySourceInspection(
-        capture_receipt_sha256=sha256_file(root / "capture_receipt.json"),
-        independent_validation_sha256=sha256_file(root / "independent_validation.json"),
+        capture_receipt_identity=identity_file(root / "capture_receipt.json"),
+        independent_validation_identity=identity_file(root / "independent_validation.json"),
         source_revision="a" * 40,
         collection_binding=binding,
         frame_count=2,
@@ -285,7 +285,7 @@ def _pack_spec(source: str, fields: list[str]) -> dict[str, object]:
         },
         "capture_backend": {
             "build": "isaac-sim-test",
-            "sensor_physics_smoke_receipt_sha256": "d" * 64,
+            "sensor_physics_smoke_receipt_identity": "d" * 16,
         },
     }
 
@@ -368,8 +368,8 @@ def _v2_pack_spec(
     streams: dict[str, object],
     *,
     abi_name: str,
-    abi_sha256: str,
-    capture_sha256: str,
+    abi_identity: str,
+    capture_identity: str,
 ) -> dict[str, object]:
     packed_streams = []
     for stream_id, raw_stream in streams.items():
@@ -400,10 +400,10 @@ def _v2_pack_spec(
         "split": "train",
         "layout": {
             "layout_id": "citylite-v1",
-            "layout_hash": public_manifest_sha256(
+            "layout_identity": public_manifest_identity(
                 build_public_scene_manifest(_scene())
             ),
-            "layout_lineage_hash": "1" * 64,
+            "layout_lineage_identity": "1" * 16,
             "source": "scene.json",
         },
         "task": {
@@ -420,8 +420,8 @@ def _v2_pack_spec(
             "source": abi_name,
             "source_scope": "pack_spec",
             "path": "metadata/observation_abi.json",
-            "sha256": abi_sha256,
-            "capture_receipt_sha256": capture_sha256,
+            "identity": abi_identity,
+            "capture_receipt_identity": capture_identity,
         },
         "streams": packed_streams,
         "provenance": {"code_commit": "a" * 40},
@@ -436,13 +436,13 @@ def _v2_pack_spec(
         },
         "capture_backend": {
             "build": "isaac-sim-test",
-            "sensor_physics_smoke_receipt_sha256": "d" * 64,
+            "sensor_physics_smoke_receipt_identity": "d" * 16,
         },
     }
 
 
 class IsaacPackReadinessTests(unittest.TestCase):
-    def test_external_v2_abi_is_hash_and_capture_bound_without_mutating_capture(self) -> None:
+    def test_external_v2_abi_is_identity_and_capture_bound_without_mutating_capture(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture, inspection = _capture(root / "capture")
@@ -461,8 +461,8 @@ class IsaacPackReadinessTests(unittest.TestCase):
             spec = _v2_pack_spec(
                 streams,
                 abi_name=abi_path.name,
-                abi_sha256=observation_abi_sha256(abi),
-                capture_sha256=sha256_file(capture / "capture_receipt.json"),
+                abi_identity=observation_abi_identity(abi),
+                capture_identity=identity_file(capture / "capture_receipt.json"),
             )
             _json(spec_path, spec)
             before = sorted(path.relative_to(capture) for path in capture.rglob("*"))
@@ -481,21 +481,21 @@ class IsaacPackReadinessTests(unittest.TestCase):
             self.assertTrue(report.checks["formal_observation_abi"])
             self.assertTrue(report.checks["pack_spec"])
 
-            spec["observation_abi"]["capture_receipt_sha256"] = "0" * 64
+            spec["observation_abi"]["capture_receipt_identity"] = "0" * 16
             _json(spec_path, spec)
             with patch(
                 "rivermark_benchmark.isaac_pack_readiness.inspect_policy_observation_sources",
                 return_value=inspection,
             ):
-                tampered = audit_isaac_pack_readiness(
+                altered = audit_isaac_pack_readiness(
                     capture,
                     observation_abi=abi_path,
                     pack_spec=spec_path,
                 )
-            self.assertFalse(tampered.checks["pack_spec"])
-            self.assertIn("pack_abi_mismatch", {issue.code for issue in tampered.issues})
+            self.assertFalse(altered.checks["pack_spec"])
+            self.assertIn("pack_abi_mismatch", {issue.code for issue in altered.issues})
 
-            spec["observation_abi"]["capture_receipt_sha256"] = sha256_file(
+            spec["observation_abi"]["capture_receipt_identity"] = identity_file(
                 capture / "capture_receipt.json"
             )
             depth = next(
@@ -518,7 +518,7 @@ class IsaacPackReadinessTests(unittest.TestCase):
                 {issue.code for issue in duplicated.issues},
             )
 
-    def test_v2_spec_rejects_public_task_leak_and_layout_hash_tampering(self) -> None:
+    def test_v2_spec_rejects_public_task_leak_and_layout_identity_alteration(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture, inspection = _capture(root / "capture")
@@ -537,8 +537,8 @@ class IsaacPackReadinessTests(unittest.TestCase):
             spec = _v2_pack_spec(
                 streams,
                 abi_name=abi_path.name,
-                abi_sha256=observation_abi_sha256(abi),
-                capture_sha256=sha256_file(capture / "capture_receipt.json"),
+                abi_identity=observation_abi_identity(abi),
+                capture_identity=identity_file(capture / "capture_receipt.json"),
             )
             _json(spec_path, spec)
             leaked_task = _public_task()
@@ -561,19 +561,19 @@ class IsaacPackReadinessTests(unittest.TestCase):
             )
 
             _json(capture / "public_task.json", _public_task())
-            spec["layout"]["layout_hash"] = "0" * 64
+            spec["layout"]["layout_identity"] = "0" * 16
             _json(spec_path, spec)
             with patch(
                 "rivermark_benchmark.isaac_pack_readiness.inspect_policy_observation_sources",
                 return_value=inspection,
             ):
-                tampered = audit_isaac_pack_readiness(
+                altered = audit_isaac_pack_readiness(
                     capture,
                     observation_abi=abi_path,
                     pack_spec=spec_path,
                 )
-            self.assertFalse(tampered.checks["pack_spec"])
-            self.assertIn("layout_hash", {issue.code for issue in tampered.issues})
+            self.assertFalse(altered.checks["pack_spec"])
+            self.assertIn("layout_identity", {issue.code for issue in altered.issues})
 
     def test_missing_prerequisites_are_explicit_and_do_not_mutate_capture(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -632,7 +632,7 @@ class IsaacPackReadinessTests(unittest.TestCase):
             self.assertNotIn(str(evaluator), json.dumps(report.as_dict()))
             self.assertEqual(issue.path, "evaluator_manifest")
 
-    def test_missing_evaluator_path_is_distinguished_from_hash_mismatch(self) -> None:
+    def test_missing_evaluator_path_is_distinguished_from_identity_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture, inspection = _capture(root / "capture")
@@ -674,7 +674,7 @@ class IsaacPackReadinessTests(unittest.TestCase):
             self.assertIn("source_revision_mismatch", codes)
             self.assertIn("private_or_unsafe_source", codes)
 
-    def test_partial_chunked_archive_selection_and_malformed_sources_fail_closed(self) -> None:
+    def test_partial_chunked_archive_selection_and_malformed_sources_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture, inspection = _capture(root / "capture")

@@ -1,7 +1,7 @@
 # Build with the clean, locked FUEL checkout as the context, not this repository.
 # The resulting GPL image remains an external container and must not be published
 # as an AeroCityBench package artifact.
-ARG ROS_BASE=ros@sha256:72b8bc59035dc0a5b8e07aae28c16caa84192971d72d207c72ed734fb1d5e97d
+ARG ROS_BASE=ros:noetic
 FROM ${ROS_BASE}
 
 ARG FUEL_UPSTREAM_URL

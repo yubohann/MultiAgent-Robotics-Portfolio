@@ -3,21 +3,17 @@
 from __future__ import annotations
 
 import argparse
-from bisect import bisect_right
-import hashlib
 import json
 import math
 import os
+from bisect import bisect_right
 from pathlib import Path
 from typing import Any
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -65,8 +61,8 @@ def _source_summary(path: Path) -> dict[str, Any]:
         "controller_id": payload["controller_id"],
         "elapsed_physics_s": float(payload["elapsed_physics_s"]),
         "decision_count": int(payload["decision_count"]),
-        "runtime_record_sha256": payload["runtime_record_sha256"],
-        "file_sha256": _sha256(path),
+        "runtime_record_id": payload["runtime_record_id"],
+        "file_id": _file_id(path),
     }
 
 
@@ -82,9 +78,10 @@ def _playback_timestamp_s(frame_index: int, frame_count: int, horizon_s: float) 
     return horizon_s * frame_index / float(frame_count - 1)
 
 
-def _canonical_mapping_sha256(rows: list[dict[str, Any]]) -> str:
+def _canonical_mapping_file_id(rows: list[dict[str, Any]]) -> str:
+    # Explicit mapping label: row count and canonical JSON text length.
     canonical = json.dumps(rows, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
-    return hashlib.sha256(canonical.encode("ascii")).hexdigest()
+    return f"mapping:{len(rows)}-rows:{len(canonical)}b"
 
 
 def _require_dict(value: Any, label: str) -> dict[str, Any]:
@@ -131,7 +128,9 @@ def _validate_frame_time_mapping(
             output_frame_index, frame_count, horizon_s
         )
         if abs(playback_timestamp_s - expected_timestamp_s) > 1.0e-9:
-            raise ValueError("replay manifest frame-time mapping has a mismatched playback timestamp")
+            raise ValueError(
+                "replay manifest frame-time mapping has a mismatched playback timestamp"
+            )
         source_index = int(row_dict.get("source_trace_frame_index", -1))
         expected_source_index = min(
             len(source_trace_timestamps) - 1,
@@ -139,10 +138,16 @@ def _validate_frame_time_mapping(
         )
         if source_index != expected_source_index:
             raise ValueError("replay manifest frame-time mapping selects the wrong source sample")
-        if abs(float(row_dict.get("source_trace_timestamp_s")) - source_trace_timestamps[source_index]) > 1.0e-9:
+        if (
+            abs(
+                float(row_dict.get("source_trace_timestamp_s"))
+                - source_trace_timestamps[source_index]
+            )
+            > 1.0e-9
+        ):
             raise ValueError("replay manifest frame-time mapping has a wrong source timestamp")
-    expected_digest = _canonical_mapping_sha256(rows)
-    if payload.get("rows_sha256") != expected_digest:
+    expected_digest = _canonical_mapping_file_id(rows)
+    if payload.get("rows_file_id") != expected_digest:
         raise ValueError("replay manifest frame-time mapping digest does not match its rows")
     return {
         "schema_version": payload["schema_version"],
@@ -150,7 +155,7 @@ def _validate_frame_time_mapping(
         "output_frame_count": frame_count,
         "source_trace_frame_count": len(source_trace_timestamps),
         "playback_window_s": [0.0, horizon_s],
-        "rows_sha256": expected_digest,
+        "rows_file_id": expected_digest,
         "rows": rows,
     }
 
@@ -165,7 +170,9 @@ def _load_and_validate_replay_manifest(
 ) -> dict[str, Any]:
     """Reject a video whose sidecar is not bound to this trace and view role."""
 
-    manifest_path = _require_file(video_path.with_suffix(".manifest.json"), f"{label} replay manifest")
+    manifest_path = _require_file(
+        video_path.with_suffix(".manifest.json"), f"{label} replay manifest"
+    )
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     if payload.get("schema_version") != "hm3d-physx-trace-replay-v2":
         raise ValueError(f"{label} replay must use hm3d-physx-trace-replay-v2")
@@ -173,15 +180,18 @@ def _load_and_validate_replay_manifest(
         raise ValueError(f"{label} replay manifest is incomplete")
     source_record = _require_dict(payload.get("source_record"), f"{label} replay source record")
     expected_source_pairs = {
-        "file_sha256": source["file_sha256"],
-        "runtime_record_sha256": source["runtime_record_sha256"],
+        "file_id": source["file_id"],
+        "runtime_record_id": source["runtime_record_id"],
         "scene_id": source["scene_id"],
         "controller_id": source["controller_id"],
     }
     for key, expected in expected_source_pairs.items():
         if source_record.get(key) != expected:
             raise ValueError(f"{label} replay is bound to a different {key}")
-    if abs(float(source_record.get("trace_horizon_s")) - float(source["elapsed_physics_s"])) > 1.0e-9:
+    if (
+        abs(float(source_record.get("trace_horizon_s")) - float(source["elapsed_physics_s"]))
+        > 1.0e-9
+    ):
         raise ValueError(f"{label} replay has a different trace horizon")
     if tuple(source_record.get("agent_order", ())) != agent_order:
         raise ValueError(f"{label} replay has a different agent order")
@@ -190,9 +200,9 @@ def _load_and_validate_replay_manifest(
     video = _require_dict(payload.get("video"), f"{label} replay video")
     if Path(str(video.get("path", ""))).expanduser().resolve() != video_path:
         raise ValueError(f"{label} replay manifest path does not match its supplied video")
-    actual_video_hash = _sha256(video_path)
-    if video.get("sha256") != actual_video_hash:
-        raise ValueError(f"{label} replay video hash does not match its manifest")
+    actual_video_id = _file_id(video_path)
+    if video.get("file_id") != actual_video_id:
+        raise ValueError(f"{label} replay video id does not match its manifest")
     frames = int(video.get("frames", -1))
     fps = float(video.get("fps", 0.0))
     if frames <= 0 or fps <= 0.0:
@@ -204,10 +214,12 @@ def _load_and_validate_replay_manifest(
         source_trace_timestamps=source_trace_timestamps,
     )
     view = _require_dict(payload.get("view"), f"{label} replay view")
-    camera_binding = _require_dict(payload.get("camera_audit_binding"), f"{label} camera audit binding")
+    camera_binding = _require_dict(
+        payload.get("camera_audit_binding"), f"{label} camera audit binding"
+    )
     for key, expected in (
-        ("source_record_file_sha256", source["file_sha256"]),
-        ("source_record_runtime_sha256", source["runtime_record_sha256"]),
+        ("source_record_file_id", source["file_id"]),
+        ("source_record_runtime_file_id", source["runtime_record_id"]),
         ("source_trace_frame_count", len(source_trace_timestamps)),
         ("camera_pose_source", "replay_frame_time_mapping_v1"),
     ):
@@ -216,7 +228,11 @@ def _load_and_validate_replay_manifest(
     if camera_binding.get("view_mode") != view.get("mode"):
         raise ValueError(f"{label} camera audit view mode disagrees with its replay view")
     if label == "global":
-        if view.get("mode") != "global" or view.get("fpv_agent") is not None or view.get("follow_agent") is not None:
+        if (
+            view.get("mode") != "global"
+            or view.get("fpv_agent") is not None
+            or view.get("follow_agent") is not None
+        ):
             raise ValueError("global input must be the global review view")
     else:
         expected_agent = int(label.removeprefix("uav").removesuffix("_follow"))
@@ -232,8 +248,8 @@ def _load_and_validate_replay_manifest(
             raise ValueError(f"{label} follow camera certificate refers to a different UAV")
     return {
         "manifest_path": str(manifest_path),
-        "manifest_sha256": _sha256(manifest_path),
-        "video_sha256": actual_video_hash,
+        "manifest_id": _file_id(manifest_path),
+        "video_file_id": actual_video_id,
         "frames": frames,
         "fps": fps,
         "mapping": mapping,
@@ -263,20 +279,30 @@ def _load_trace_timeline(
             raise ValueError("trace source has a malformed decision")
         calibration = decision.get("execution_calibration")
         segments.append(
-            (previous_elapsed_s, calibration.get("physics_visualization_trace") if isinstance(calibration, dict) else None)
+            (
+                previous_elapsed_s,
+                calibration.get("physics_visualization_trace")
+                if isinstance(calibration, dict)
+                else None,
+            )
         )
         previous_elapsed_s = float(decision["elapsed_physics_s"])
     terminal_tail = payload.get("execution", {}).get("terminal_budget_tail")
     if isinstance(terminal_tail, dict):
         segments.append(
-            (float(terminal_tail["executed_from_episode_s"]), terminal_tail.get("physics_visualization_trace"))
+            (
+                float(terminal_tail["executed_from_episode_s"]),
+                terminal_tail.get("physics_visualization_trace"),
+            )
         )
 
     rows: list[dict[str, Any]] = []
     agent_order: tuple[str, ...] | None = None
     for offset_s, trace in segments:
         if not isinstance(trace, dict) or trace.get("purpose") != "engineering_visual_audit_only":
-            raise ValueError("trace source has a missing or invalid audit-only visual trace segment")
+            raise ValueError(
+                "trace source has a missing or invalid audit-only visual trace segment"
+            )
         samples = trace.get("samples")
         if not isinstance(samples, list) or not samples:
             raise ValueError("trace source has an empty visual trace segment")
@@ -291,7 +317,11 @@ def _load_trace_timeline(
                     raise ValueError("trace source has a malformed agent state")
                 agent_id = raw_agent.get("agent_id")
                 raw_position = raw_agent.get("position_m")
-                if not isinstance(agent_id, str) or not isinstance(raw_position, list | tuple) or len(raw_position) != 3:
+                if (
+                    not isinstance(agent_id, str)
+                    or not isinstance(raw_position, list | tuple)
+                    or len(raw_position) != 3
+                ):
                     raise ValueError("trace source has an invalid agent identity or position")
                 position = tuple(float(value) for value in raw_position)
                 if not all(value == value and abs(value) < float("inf") for value in position):
@@ -307,7 +337,12 @@ def _load_trace_timeline(
                 agent_order = order_tuple
             if order_tuple != agent_order:
                 raise ValueError("trace source changes the agent order")
-            rows.append({"timestamp_s": offset_s + float(sample["physics_timestamp_s"]), "states": states})
+            rows.append(
+                {
+                    "timestamp_s": offset_s + float(sample["physics_timestamp_s"]),
+                    "states": states,
+                }
+            )
     if agent_order is None or len(agent_order) != 4:
         raise ValueError("trajectory mosaic requires exactly four traced UAVs")
     rows.sort(key=lambda row: float(row["timestamp_s"]))
@@ -410,7 +445,11 @@ def _draw_trajectory_panel(
         draw_segment((x, lower_y, lower_z), (x, upper_y, lower_z), (224, 228, 232))
         draw_segment((lower_x, y, lower_z), (upper_x, y, lower_z), (224, 228, 232))
     origin = (lower_x, lower_y, lower_z)
-    axis_ends = ((upper_x, lower_y, lower_z), (lower_x, upper_y, lower_z), (lower_x, lower_y, upper_z))
+    axis_ends = (
+        (upper_x, lower_y, lower_z),
+        (lower_x, upper_y, lower_z),
+        (lower_x, lower_y, upper_z),
+    )
     axis_names = ("X", "Y", "Z")
     for name, end in zip(axis_names, axis_ends, strict=True):
         draw_segment(origin, end, (92, 104, 114), 2)
@@ -433,7 +472,7 @@ def _draw_trajectory_panel(
             project(row["states"][agent_id]["position_m"])
             for row in rows[: current_index + 1]
         ]
-        for start, end in zip(trail, trail[1:]):
+        for start, end in zip(trail, trail[1:], strict=False):
             cv2.line(frame, start, end, color, 4, cv2.LINE_AA)
         state = current_row["states"][agent_id]
         marker = project(state["position_m"])
@@ -507,10 +546,10 @@ def main() -> int:
                 )
             metadata.append(
                 {"name": name, "path": str(path), "frames": frame_count, "fps": fps,
-                 "width": width, "height": height, "sha256": audit["video_sha256"],
+                 "width": width, "height": height, "file_id": audit["video_file_id"],
                  "replay_manifest_path": audit["manifest_path"],
-                 "replay_manifest_sha256": audit["manifest_sha256"],
-                 "frame_time_mapping_sha256": audit["mapping"]["rows_sha256"],
+                 "replay_manifest_id": audit["manifest_id"],
+                 "frame_time_mapping_file_id": audit["mapping"]["rows_file_id"],
                  "view": audit["view"]}
             )
         reference = metadata[0]
@@ -521,7 +560,9 @@ def main() -> int:
             or item["height"] != reference["height"]
             for item in metadata[1:]
         ):
-            raise RuntimeError("all replay views must have exactly matching frame, FPS, and dimensions")
+            raise RuntimeError(
+                "all replay views must have exactly matching frame, FPS, and dimensions"
+            )
         width, height, fps, frame_count = (
             reference["width"],
             reference["height"],
@@ -530,8 +571,8 @@ def main() -> int:
         )
         reference_mapping = replay_audits["global"]["mapping"]
         if any(
-            replay_audits[item["name"]]["mapping"]["rows_sha256"]
-            != reference_mapping["rows_sha256"]
+            replay_audits[item["name"]]["mapping"]["rows_file_id"]
+            != reference_mapping["rows_file_id"]
             for item in metadata[1:]
         ):
             raise RuntimeError("all replay views must have the same validated frame-time mapping")
@@ -594,14 +635,14 @@ def main() -> int:
         "frame_time_mapping": reference_mapping,
         "input_compatibility": {
             "status": "SOURCE_AND_CAMERA_AUDIT_BINDINGS_VALIDATED",
-            "source_record_file_sha256": source["file_sha256"],
-            "runtime_record_sha256": source["runtime_record_sha256"],
-            "frame_time_mapping_sha256": reference_mapping["rows_sha256"],
+            "source_record_file_id": source["file_id"],
+            "runtime_record_id": source["runtime_record_id"],
+            "frame_time_mapping_file_id": reference_mapping["rows_file_id"],
             "validated_input_count": len(metadata),
         },
         "output": {
             "path": str(output),
-            "sha256": _sha256(output),
+            "file_id": _file_id(output),
             "frames": frame_count,
             "fps": fps,
             "width": width * 3,
@@ -610,7 +651,10 @@ def main() -> int:
             "decoded_mean_max": max(means),
             "decoder": "opencv-readback-verified",
         },
-        "layout": "top: global, UAV0 follow, UAV1 follow; bottom: UAV2 follow, UAV3 follow, dynamic actual-XYZ audit trace",
+        "layout": (
+            "top: global, UAV0 follow, UAV1 follow; bottom: UAV2 follow, UAV3 follow, "
+            "dynamic actual-XYZ audit trace"
+        ),
         "caveat": (
             "The mosaic combines trace-driven audit views. It is excluded from candidate "
             "selection, control, sensing, rewards, training, QD, OGFR, and formal metrics."

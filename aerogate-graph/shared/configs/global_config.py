@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-
 EXPERIMENT_ROOT = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = EXPERIMENT_ROOT
 LOCAL_ASSETS_ROOT = EXPERIMENT_ROOT / "assets"

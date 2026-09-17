@@ -1,7 +1,6 @@
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -15,5 +14,5 @@ class CommunityContractTests(unittest.TestCase):
         text = (ROOT / "docs" / "security-and-integrity.md").read_text(encoding="utf-8")
         self.assertIn("private GitHub security-advisory channel", text)
         self.assertIn("private target manifests", text)
-        self.assertIn("hash-bound defect and tombstone", text)
+        self.assertIn("recorded defect and tombstone", text)
 

@@ -129,9 +129,7 @@ def _summary_matches(
         return False
     if str(summary.get("planner_mode", "")).lower() != "deterministic":
         return False
-    if str(summary.get("fusion_variant", "")).lower() != _expected_fusion_variant(experiment_name, fusion_variant):
-        return False
-    return True
+    return str(summary.get("fusion_variant", "")).lower() == _expected_fusion_variant(experiment_name, fusion_variant)
 
 
 def _summary_continue_compatible(
@@ -326,7 +324,7 @@ def _aggregate_runs(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "label_fraction": float(label_fraction),
                 "experiment": experiment_name,
                 "description": str(EXPERIMENTS[experiment_name]["description"]),
-                "seed_count": int(len(grouped_records)),
+                "seed_count": len(grouped_records),
                 "seeds": [int(item["seed"]) for item in grouped_records],
                 "best_valid_auc": mean_std_metric(best_valid_auc_values),
                 "test_auc": mean_std_metric(test_auc_values),
@@ -385,8 +383,8 @@ def _build_markdown(aggregates: list[dict[str, Any]], *, args: argparse.Namespac
         f"- local_epochs: `{int(args.local_epochs)}`",
         f"- extra_local_epochs: `{int(args.extra_local_epochs)}`",
         f"- device: `{args.device}`",
-        f"- planner_mode: `deterministic`",
-        f"- disable_federated: `True`",
+        "- planner_mode: `deterministic`",
+        "- disable_federated: `True`",
         f"- fusion_variant: `{args.fusion_variant}`",
         f"- graph_warmup_rounds: `{int(args.graph_warmup_rounds)}`",
         f"- fusion_bootstrap_rounds: `{int(args.fusion_bootstrap_rounds)}`",

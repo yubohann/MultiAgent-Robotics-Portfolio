@@ -1,18 +1,12 @@
 from __future__ import annotations
 
-import math
-import random
+from typing import Any
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
-from ._helpers import (
-    _class_centroids,
-    _mask_to_index,
-    _novelty_scores
-)
+from ._helpers import _class_centroids, _mask_to_index, _novelty_scores
 
 
 class SslMixin:
@@ -97,7 +91,7 @@ class SslMixin:
             else float(self.pseudo_label_threshold)
         )
         if self.pseudo_label_top_fraction > 0.0 and confidence.numel() > 0:
-            top_count = int(round(confidence.numel() * self.pseudo_label_top_fraction))
+            top_count = round(confidence.numel() * self.pseudo_label_top_fraction)
             top_count = int(np.clip(top_count, 1, confidence.numel()))
             top_confidence = torch.topk(confidence, k=top_count).values[-1]
             dynamic_candidate = min(

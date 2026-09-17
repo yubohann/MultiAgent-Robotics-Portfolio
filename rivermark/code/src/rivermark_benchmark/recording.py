@@ -2,22 +2,28 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .methods import MethodDescriptor, NativePolicy
-from .runtime import EvaluationReport, PilotSwarmRuntime, PublicObservation, RuntimeFrame
+from .runtime import (
+    EvaluationReport,
+    PilotSwarmRuntime,
+    PublicObservation,
+    RuntimeFrame,
+)
 from .schema import INFORMATION_PROFILE_MODALITIES
 from .validate import ValidationIssue, validate_episode_manifest
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -42,8 +48,8 @@ def _write_npz(path: Path, **payload: np.ndarray) -> None:
         np.savez_compressed(stream, **payload)
 
 
-def _hash_json(payload: Any) -> str:
-    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+def _identity_json(payload: Any) -> str:
+    return IdentityAccumulator(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -55,7 +61,7 @@ class RecordingResult:
 
 
 class EpisodeRecorder:
-    """Record a single online runtime episode into a hash-bound directory."""
+    """Record a single online runtime episode into an identity-bound directory."""
 
     def __init__(
         self,
@@ -179,9 +185,9 @@ class EpisodeRecorder:
             "method": self.descriptor.__dict__,
             "policy_provenance": self.policy.provenance(),
             "information_profile": self.descriptor.information_profile,
-            "scene_sha256": sha256_file(scene_path),
-            "task_sha256": sha256_file(task_path),
-            "episode_manifest_sha256": sha256_file(manifest_path),
+            "scene_identity": identity_file(scene_path),
+            "task_identity": identity_file(task_path),
+            "episode_manifest_identity": identity_file(manifest_path),
             "video": self._video_receipt(video_path),
             "metrics": evaluation.as_dict(),
             "validation": [asdict(issue) for issue in issues],
@@ -269,7 +275,7 @@ class EpisodeRecorder:
     def _task_payload(self) -> dict[str, Any]:
         config = self.runtime.config
         def marker(value: str) -> str:
-            return _hash_json({"pilot_contract": value})
+            return _identity_json({"pilot_contract": value})
         return {
             "schema": "org.rivermark.benchmark.search3d_task.v1",
             "task_spec_id": "pilot-multisensor-search-v1",
@@ -280,7 +286,7 @@ class EpisodeRecorder:
             "agent_count": config.agent_count,
             "reset": {
                 "spawn_set_id": "kinematic-pilot-spawn-v1",
-                "spawn_set_sha256": marker("spawn"),
+                "spawn_set_identity": marker("spawn"),
                 "paired_initial_conditions": True,
                 "reset_deterministic": True,
             },
@@ -291,7 +297,7 @@ class EpisodeRecorder:
             },
             "hidden_task_generator": {
                 "generator_id": "kinematic-private-target-generator-v1",
-                "generator_sha256": marker("private_target_generator"),
+                "generator_identity": marker("private_target_generator"),
                 "target_count": self.runtime.mission.target_count_disclosed,
                 "difficulty_axes": ["height", "region", "occlusion", "density"],
                 "sampled_before_policy_start": True,
@@ -302,16 +308,16 @@ class EpisodeRecorder:
                 "modes": ["transit", "dwell", "hold", "return"],
                 "reference_frames": ["world", "body"],
                 "controller_profile_id": "fixed-velocity-yaw-kinematic-pilot-v1",
-                "controller_profile_sha256": marker("fixed_velocity_yaw"),
+                "controller_profile_identity": marker("fixed_velocity_yaw"),
                 "preemption_rule": "next_control_tick",
             },
             "sensor_profile": {
                 "profile_id": "rgbd-lidar-radar-imu-kinematic-pilot-v1",
-                "profile_sha256": marker("sensors"),
+                "profile_identity": marker("sensors"),
             },
             "communication_profile": {
                 "profile_id": "explicit-public-team-messages-v1",
-                "profile_sha256": marker("communication"),
+                "profile_identity": marker("communication"),
                 "observation_scope": "decentralized_explicit_comm",
             },
             "confirmation_contract": {
@@ -323,7 +329,7 @@ class EpisodeRecorder:
             },
             "evaluator": {
                 "evaluator_id": "kinematic-private-search-evaluator-v1",
-                "evaluator_sha256": marker("evaluator"),
+                "evaluator_identity": marker("evaluator"),
                 "truth_partition": "evaluator_private",
                 "match_radius_m": config.candidate_match_radius_m,
                 "deduplication_radius_m": 1.2,
@@ -361,7 +367,7 @@ class EpisodeRecorder:
                 "sample_count": sample_count,
                 "timestamp_field": "sensor_time_ns" if path.suffix == ".npz" else "sim_time_ns",
                 "path": relative(path),
-                "sha256": sha256_file(path),
+                "identity": identity_file(path),
             }
         partition = lambda modality: "policy_visible" if modality in modalities else "learning_labels"
         frame_samples = len(self._frames) * self.runtime.config.agent_count
@@ -388,7 +394,7 @@ class EpisodeRecorder:
             "quality_diversity": "qd",
         }.get(self.descriptor.family, "scripted")
         timestamp_monotonic = all(later >= earlier for earlier, later in zip(self._timestamps_ns, self._timestamps_ns[1:]))
-        scene_hash = sha256_file(scene_path)
+        scene_identity = identity_file(scene_path)
         return {
             "schema": "org.rivermark.benchmark.episode.v1",
             "dataset_version": "0.1.0-pilot",
@@ -396,25 +402,25 @@ class EpisodeRecorder:
             "split": "pilot",
             "layout": {
                 "layout_id": "rivermark-kinematic-pilot-l0",
-                "layout_hash": _hash_json(self._scene_payload()),
-                "layout_lineage_hash": _hash_json({"lineage": "rivermark-kinematic-pilot-family"}),
+                "layout_identity": _identity_json(self._scene_payload()),
+                "layout_lineage_identity": _identity_json({"lineage": "rivermark-kinematic-pilot-family"}),
                 "scene_manifest_ref": relative(scene_path),
-                "scene_manifest_sha256": scene_hash,
+                "scene_manifest_identity": scene_identity,
             },
             "task": {
                 "task_id": "multi_uav_search3d",
                 "task_variant_id": "pilot-multisensor-search-v1",
                 "task_spec_ref": relative(task_path),
-                "task_spec_sha256": sha256_file(task_path),
+                "task_spec_identity": identity_file(task_path),
                 "information_profile": self.descriptor.information_profile,
                 "observation_scope": "decentralized_explicit_comm",
                 "agent_count": self.runtime.config.agent_count,
             },
             "timebase": {
                 "unit": "ns",
-                "physics_dt_ns": int(round(self.runtime.config.dt_s * 1_000_000_000)),
-                "proprioception_period_ns": int(round(self.runtime.config.dt_s * 1_000_000_000)),
-                "camera_period_ns": int(round(self.runtime.config.dt_s * 1_000_000_000)),
+                "physics_dt_ns": round(self.runtime.config.dt_s * 1_000_000_000),
+                "proprioception_period_ns": round(self.runtime.config.dt_s * 1_000_000_000),
+                "camera_period_ns": round(self.runtime.config.dt_s * 1_000_000_000),
             },
             "coordinate_frames": {
                 "handedness": "right",
@@ -439,7 +445,7 @@ class EpisodeRecorder:
             "evaluator_private": {
                 "distributed": False,
                 "server_only": True,
-                "manifest_sha256": evaluation.evaluator_truth_sha256,
+                "manifest_identity": evaluation.evaluator_truth_identity,
             },
             "provenance": {
                 "route_conditioning": "public_only",
@@ -463,12 +469,12 @@ class EpisodeRecorder:
     @staticmethod
     def _video_receipt(video_path: Path | None) -> dict[str, Any]:
         if video_path is None:
-            return {"rendered": False, "path": None, "sha256": None}
+            return {"rendered": False, "path": None, "identity": None}
         if not video_path.is_file() or video_path.stat().st_size == 0:
-            return {"rendered": False, "path": str(video_path), "sha256": None}
+            return {"rendered": False, "path": str(video_path), "identity": None}
         return {
             "rendered": True,
             "path": video_path.name,
-            "sha256": sha256_file(video_path),
+            "identity": identity_file(video_path),
             "bytes": video_path.stat().st_size,
         }

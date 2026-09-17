@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.util
 import json
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .runtime import HighLevelAction, PublicMission, PublicObservation
 
 
@@ -56,7 +57,7 @@ class NativePolicy:
             "method_id": self.method_id,
             "implementation_kind": "native_pilot_reference",
             "checkpoint": None,
-            "checkpoint_sha256": None,
+            "checkpoint_identity": None,
             "external_dependency": None,
         }
 
@@ -230,7 +231,7 @@ class SubmodularCoveragePolicy(NativePolicy):
                 for x in range(8)
                 for y in range(6)
             ]
-            def value(goal: np.ndarray) -> float:
+            def value(goal: np.ndarray, position: np.ndarray = position) -> float:
                 travel = float(np.linalg.norm(goal - position))
                 separation = min((float(np.linalg.norm(goal - other)) for other in claimed), default=9.0)
                 border = min(goal[0], goal[1], width - goal[0], height - goal[1])
@@ -302,7 +303,7 @@ class ActorCriticPilotPolicy(_RoutePolicy):
             features = np.concatenate((delta[:3] / 12.0, observation.proprioception[3:6] / 3.0))
             mean = np.tanh(features @ self._actor) * 1.8
             candidates = [mean, np.array((mean[0], mean[1] + 0.65, mean[2])), np.array((mean[0], mean[1] - 0.65, mean[2]))]
-            def critic_value(velocity: np.ndarray) -> float:
+            def critic_value(velocity: np.ndarray, delta: np.ndarray = delta) -> float:
                 next_delta = delta - velocity * 0.2
                 critic_features = np.concatenate((next_delta / 12.0, velocity / 3.0))
                 return -float(np.dot(critic_features, critic_features)) + float(np.dot(critic_features, self._critic))
@@ -505,7 +506,13 @@ class ActionConditionedWorldModelMpcPolicy(_RoutePolicy):
             clearance_penalty = 0.0
             if observation.lidar_ranges_m is not None:
                 clearance_penalty = max(0.0, 1.4 - float(np.min(observation.lidar_ranges_m))) * 9.0
-            def score(candidate: np.ndarray) -> float:
+            def score(
+                candidate: np.ndarray,
+                position: np.ndarray = position,
+                velocity: np.ndarray = velocity,
+                goal: np.ndarray = goal,
+                clearance_penalty: float = clearance_penalty,
+            ) -> float:
                 predicted, model_risk = self._rollout(position, velocity, candidate)
                 return -float(np.linalg.norm(goal - predicted)) - 3.0 * model_risk - clearance_penalty
             selected = max(candidates, key=score)
@@ -576,7 +583,7 @@ def create_native_policy(method_id: str) -> NativePolicy:
 
 
 def validate_external_checkpoint(method_id: str, checkpoint: Path) -> MethodDescriptor:
-    """Fail closed before an external policy can be represented as executed."""
+    """Stop the run before an external policy can be represented as executed."""
 
     descriptor = EXTERNAL_DESCRIPTORS.get(method_id)
     if descriptor is None:
@@ -591,8 +598,8 @@ def validate_external_checkpoint(method_id: str, checkpoint: Path) -> MethodDesc
     )
 
 
-def _checkpoint_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
+def _checkpoint_identity(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -600,13 +607,7 @@ def _checkpoint_sha256(path: Path) -> str:
 
 
 class StableBaselines3CheckpointPolicy(NativePolicy):
-    """A real SB3 checkpoint wrapper for the single-UAV state-only track.
-
-    The wrapper is intentionally constrained: a checkpoint has to declare its
-    observation normalisation in an adjacent JSON file and can only control one
-    policy-visible state vector at a time.  Multi-agent execution is obtained
-    by independent weight sharing, which is recorded in the receipt.
-    """
+    """A real SB3 checkpoint wrapper for the single-UAV state-only track."""
 
     method_id = "sb3_checkpoint_policy"
 
@@ -632,9 +633,9 @@ class StableBaselines3CheckpointPolicy(NativePolicy):
             raise ValueError("unsupported SB3 adapter metadata schema")
         if self.metadata.get("information_profile") != "state_only":
             raise ValueError("SB3 adapter accepts only state_only checkpoints")
-        expected_hash = self.metadata.get("checkpoint_sha256")
-        if not isinstance(expected_hash, str) or expected_hash != _checkpoint_sha256(self.checkpoint):
-            raise ValueError("SB3 checkpoint SHA-256 does not match its immutable metadata")
+        expected_identity = self.metadata.get("checkpoint_identity")
+        if not isinstance(expected_identity, str) or expected_identity != _checkpoint_identity(self.checkpoint):
+            raise ValueError("SB3 checkpoint IDENTITY does not match its immutable metadata")
         algorithm = self.metadata.get("algorithm")
         if algorithm == "ppo":
             self.model = PPO.load(str(self.checkpoint), device="cpu")
@@ -675,9 +676,9 @@ class StableBaselines3CheckpointPolicy(NativePolicy):
             "implementation_kind": self.metadata.get("implementation_kind", "external_checkpoint_adapter"),
             "external_dependency": "stable_baselines3",
             "checkpoint": str(self.checkpoint),
-            "checkpoint_sha256": _checkpoint_sha256(self.checkpoint),
+            "checkpoint_identity": _checkpoint_identity(self.checkpoint),
             "adapter_metadata": str(self.metadata_path),
-            "adapter_metadata_sha256": _checkpoint_sha256(self.metadata_path),
+            "adapter_metadata_identity": _checkpoint_identity(self.metadata_path),
             "algorithm": self.metadata["algorithm"],
             "parameter_sharing": "independent_shared_policy_per_agent",
         }

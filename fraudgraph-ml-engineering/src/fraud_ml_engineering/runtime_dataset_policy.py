@@ -20,10 +20,6 @@ def active_runtime_datasets() -> tuple[str, ...]:
     return ACTIVE_RUNTIME_DATASETS
 
 
-def is_dataset_enabled(dataset_name: str) -> bool:
-    return str(dataset_name).strip().lower() in ACTIVE_RUNTIME_DATASET_SET
-
-
 def ensure_dataset_enabled(dataset_name: str, *, context: str = "") -> None:
     normalized_name = str(dataset_name).strip().lower()
     if normalized_name in ACTIVE_RUNTIME_DATASET_SET:

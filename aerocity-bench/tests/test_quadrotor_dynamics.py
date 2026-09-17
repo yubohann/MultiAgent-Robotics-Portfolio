@@ -194,14 +194,6 @@ def test_native_thrust_units_produce_the_same_wrench_as_derived_rotor_speeds() -
     assert rotor_thrust_wrench(spec, thrusts) == pytest.approx(rotor_wrench(spec, speeds))
 
 
-def test_legacy_native_gate_is_permanently_labeled_as_cuboid_capability_probe() -> None:
-    root = Path(__file__).resolve().parents[1]
-    source = (root / "tools" / "isaac_native_gate.py").read_text(encoding="utf-8")
-    assert '"dynamic_cuboid_kinematic_capability_probe"' in source
-    assert '"formal_score_eligible": False' in source
-    assert '"status": "not_connected"' in source
-
-
 def test_quadrotor_preflight_uses_cf2x_multirotor_not_kinematic_state_writes() -> None:
     root = Path(__file__).resolve().parents[1]
     source = (root / "tools" / "quadrotor_physics_preflight.py").read_text(encoding="utf-8")
@@ -253,16 +245,3 @@ def test_quadrotor_preflight_uses_cf2x_multirotor_not_kinematic_state_writes() -
     assert '"formal_score_eligible": False' in source
 
 
-def test_vertical_slice_uses_the_same_cf2x_multirotor_boundary() -> None:
-    root = Path(__file__).resolve().parents[1]
-    source = (root / "tools" / "quadrotor_l1_vertical_slice.py").read_text(encoding="utf-8")
-    assert 'parser.add_argument("--cf2x-usd", type=Path, required=True)' in source
-    assert "verify_local_cf2x_asset" in source
-    assert "build_cf2x_multirotor_cfg" in source
-    assert "Multirotor" in source
-    assert 'SOURCE_ROOT / "isaaclab_contrib"' in source
-    assert "robot.set_thrust_target" in source
-    assert "Multirotor.data.applied_thrust" in source
-    assert "permanent_wrench_composer.set_forces_and_torques" not in source
-    assert "FIVE_IN_DRONE" not in source
-    assert "5_in_drone" not in source

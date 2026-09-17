@@ -24,7 +24,7 @@ from aerocity_bench.adapters import (  # noqa: E402
     ExternalProcessPlannerBridge,
     arbitrate_public_fleet_actions,
 )
-from aerocity_bench.canonical import content_hash, file_hash, read_json, write_json  # noqa: E402
+from aerocity_bench.canonical import read_json, write_json  # noqa: E402
 from aerocity_bench.ordinary_config import load_ordinary_config  # noqa: E402
 from aerocity_bench.public_boundary import audit_public_layout  # noqa: E402
 from aerocity_bench.runtime import L0FleetRuntime  # noqa: E402
@@ -157,7 +157,7 @@ def run_smoke(
     private_episode = read_json(private_episode_path)
     config = load_ordinary_config(release_config.resolve())
     public_boundary_audit = audit_public_layout(city_root)
-    if content_hash(public_episode_projection(private_episode)) != content_hash(public_episode):
+    if public_episode_projection(private_episode) != public_episode:
         raise ValueError("ACO3D smoke input is not the public episode projection")
     declaration = AdapterDeclaration(
         adapter_id="aco3d-public-atlas-ordering-translation-v1",
@@ -217,30 +217,26 @@ def run_smoke(
             "url": UPSTREAM_URL,
             "commit": UPSTREAM_COMMIT,
             "license": UPSTREAM_LICENSE,
-            "source_lock_sha256": file_hash(source_lock_path),
+            "source_lock": source_lock_path.name,
             "source_checkout_verified": True,
             "upstream_runtime_executed": False,
             "adapter_version": external_version,
         },
         "adapter": {
             "declaration": declaration.to_dict(),
-            "runner_source_sha256": file_hash(Path(__file__).resolve()),
-            "adapter_source_sha256": file_hash(adapter_path),
-            "public_safety_arbiter_source_sha256": file_hash(
-                _SOURCE_ROOT / "aerocity_bench" / "adapters.py"
-            ),
+            "runner": Path(__file__).name,
+            "adapter_source": adapter_path.name,
             "public_safety_arbiter": "deterministic_segment_yield_v1",
             "adapter_tax": adapter_tax,
             "maximum_reset_bytes": MAXIMUM_RESET_BYTES,
         },
-        "public_input_hashes": {
-            "city": file_hash(city_path),
-            "task_spec": file_hash(task_path),
-            "public_episode": file_hash(public_episode_path),
-            "release_config": file_hash(release_config.resolve()),
-            "public_boundary_audit": content_hash(public_boundary_audit),
+        "public_inputs": {
+            "city": city_path.name,
+            "task_spec": task_path.name,
+            "public_episode": public_episode_path.name,
+            "release_config": release_config.name,
+            "public_boundary_audit": public_boundary_audit["status"],
         },
-        "private_evaluator_commitment": content_hash(private_episode),
         "execution": summary,
         "pass": (
             summary["receipt_count"] == max_steps * len(public_episode["starts"])
@@ -251,7 +247,6 @@ def run_smoke(
             and (not require_return or summary["all_returned_home"])
         ),
     }
-    report["report_hash"] = content_hash(report)
     return report
 
 

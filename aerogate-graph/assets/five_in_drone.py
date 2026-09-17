@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
-
 
 ASSETS_ROOT = Path(__file__).resolve().parent
 DEFAULT_FIVE_IN_DRONE_USD = ASSETS_ROOT / "5_in_drone" / "5_in_drone.usd"

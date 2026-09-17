@@ -118,9 +118,7 @@ def _summary_is_usable(
         return False
     if str(summary.get("fusion_variant", "")).lower() != str(config["fusion_variant"]).lower():
         return False
-    if abs(float(summary.get("label_fraction", -1.0)) - 1.0) > 1e-12:
-        return False
-    return True
+    return not abs(float(summary.get("label_fraction", -1.0)) - 1.0) > 1e-12
 
 
 def _summary_continue_compatible(

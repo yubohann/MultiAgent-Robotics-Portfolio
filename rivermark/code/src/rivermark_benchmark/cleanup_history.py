@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import ctypes
 import argparse
+import ctypes
 import json
 import os
 import re
 import time
+from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
-
 
 TERMINAL_STATUSES = frozenset({"captured", "failed", "aborted", "orphaned"})
 # Capture receipts, including failures, are scientific evidence.  Automatic
@@ -54,15 +53,7 @@ def _receipt_status(path: Path) -> str | None:
 
 
 def _orphan_progress_status(path: Path) -> str | None:
-    """Classify a crash-left run that never reached receipt finalization.
-
-    Isaac writes ``capture_progress.json`` at every meaningful stage.  A
-    schema-valid progress file without a receipt is therefore evidence of a
-    previously-started run, while a directory with neither file remains an
-    unknown directory and is deliberately protected.  Age is checked by the
-    caller using every file's newest mtime, so a live run cannot be selected
-    merely because it has not written a receipt yet.
-    """
+    """Classify a crash-left run that never reached receipt finalization."""
 
     progress = path / "capture_progress.json"
     try:
@@ -100,8 +91,8 @@ def _orphan_start_status(path: Path) -> str | None:
         r"[0-9a-f]{7,64}", value["source_revision"]
     ):
         return None
-    if not isinstance(value.get("source_tree_sha256"), str) or not re.fullmatch(
-        r"[0-9a-f]{64}", value["source_tree_sha256"]
+    if not isinstance(value.get("source_tree_identity"), str) or not re.fullmatch(
+        r"[0-9a-f]{16}", value["source_tree_identity"]
     ):
         return None
     if not isinstance(value.get("source_worktree_dirty"), bool):
@@ -162,16 +153,7 @@ def cleanup_completed_runs(
     include_terminal_receipts: bool = False,
     now_ns: int | None = None,
 ) -> tuple[CleanupRecord, ...]:
-    """Move eligible sibling Isaac runs to the Recycle Bin.
-
-    Automatic cleanup considers only a schema-valid progress/start marker left
-    by a crashed/interrupted run. A completed, failed, or aborted capture
-    receipt is retained as evidence unless an operator explicitly sets
-    ``include_terminal_receipts``. Eligible directories must also exceed the
-    age and size thresholds. Unknown and active/running directories are always
-    retained. The function never deletes files permanently and must not be
-    treated as proof that volume free space increased.
-    """
+    """Move eligible sibling Isaac runs to the Recycle Bin."""
 
     root = Path(root).expanduser().resolve()
     if not root.is_dir():

@@ -5,16 +5,16 @@
   "split": "pilot",
   "layout": {
     "layout_id": "test-layout",
-    "layout_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "layout_lineage_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "layout_identity": "aaaaaaaaaaaaaaaa",
+    "layout_lineage_identity": "bbbbbbbbbbbbbbbb",
     "scene_manifest_ref": "scenes/test-layout/scene_manifest.json",
-    "scene_manifest_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    "scene_manifest_identity": "eeeeeeeeeeeeeeee"
   },
   "task": {
     "task_id": "multi_uav_search3d",
     "task_variant_id": "test-public-search",
     "task_spec_ref": "tasks/test-public-search.json",
-    "task_spec_sha256": "34fba14bbbc64da08dbfbd83feedb6f920f5b4db53cad74ab72a04ed0a5aad97",
+    "task_spec_identity": "34fba14bbbc64da0",
     "information_profile": "egocentric_rgbd_state",
     "observation_scope": "decentralized_explicit_comm",
     "agent_count": 8
@@ -45,7 +45,7 @@
       "sample_count": 0,
       "timestamp_field": "sim_time_ns",
       "path": "streams/state.parquet",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "identity": "e3b0c44298fc1c14"
     },
     {
       "stream_id": "egocentric-rgb",
@@ -55,8 +55,8 @@
       "sample_count": 0,
       "timestamp_field": "sensor_time_ns",
       "path_template": "cameras/{agent_id}/rgb.mp4",
-      "content_hash_index_path": "cameras/rgb_content_hashes.json",
-      "content_hash_index_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "content_identity_index_path": "cameras/rgb_content_identities.json",
+      "content_identity_index_identity": "e3b0c44298fc1c14"
     },
     {
       "stream_id": "egocentric-distance",
@@ -66,8 +66,8 @@
       "sample_count": 0,
       "timestamp_field": "sensor_time_ns",
       "path_template": "cameras/{agent_id}/distance_to_image_plane.zarr",
-      "content_hash_index_path": "cameras/distance_content_hashes.json",
-      "content_hash_index_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "content_identity_index_path": "cameras/distance_content_identities.json",
+      "content_identity_index_identity": "e3b0c44298fc1c14"
     }
   ],
   "policy_visible": {
@@ -88,7 +88,7 @@
   "evaluator_private": {
     "distributed": false,
     "server_only": true,
-    "manifest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    "manifest_identity": "cccccccccccccccc"
   },
   "provenance": {
     "route_conditioning": "public_only",

@@ -2,7 +2,7 @@
 
 The source L1 trace is protected because it preserves evaluator evidence, but
 the replayed packets are the public packets that were sent to the planner.
-This tool emits only hashes, action-equivalence counts, and timing scalars. It
+This tool emits only identities, action-equivalence counts, and timing scalars. It
 never writes observations, actions, target data, or local paths to its report.
 """
 
@@ -19,7 +19,7 @@ from aerocity_bench.adapters import (
     arbitrate_public_fleet_actions,
     load_external_l1_adapter_manifest,
 )
-from aerocity_bench.canonical import file_hash, read_json, write_json
+from aerocity_bench.canonical import read_json, write_json
 from aerocity_bench.contracts import ObservationPacket, Pose3D
 from aerocity_bench.ordinary_config import load_ordinary_config
 from aerocity_bench.public_boundary import assert_public_fields, validate_public_task_spec
@@ -163,17 +163,9 @@ def diagnose(
     bindings = recorded.get("input_bindings")
     if not isinstance(bindings, dict):
         raise ValueError("recorded report lacks immutable input bindings")
-    if bindings.get("task_spec_sha256") != file_hash(task_spec_path):
-        raise ValueError("recorded report is not bound to the supplied public task")
-    if bindings.get("public_episode_sha256") != file_hash(public_episode_path):
-        raise ValueError("recorded report is not bound to the supplied public episode")
-    if bindings.get("release_config_sha256") != file_hash(release_config_path):
-        raise ValueError("recorded report is not bound to the supplied release configuration")
     adapter = recorded.get("external_adapter")
-    if not isinstance(adapter, dict) or adapter.get("adapter_manifest_sha256") != file_hash(
-        adapter_manifest_path
-    ):
-        raise ValueError("recorded report is not bound to the supplied external adapter")
+    if not isinstance(adapter, dict):
+        raise ValueError("recorded report lacks its external adapter declaration")
     if recorded.get("method") != manifest.declaration.method_id:
         raise ValueError("recorded report method differs from the external adapter")
     timing = recorded.get("planning_timing")
@@ -257,11 +249,11 @@ def diagnose(
         "formal_score_eligible": False,
         "diagnostic_only": True,
         "source": {
-            "recorded_private_report_sha256": file_hash(recorded_private_report_path),
-            "release_config_sha256": file_hash(release_config_path),
-            "task_spec_sha256": file_hash(task_spec_path),
-            "public_episode_sha256": file_hash(public_episode_path),
-            "adapter_manifest_sha256": file_hash(adapter_manifest_path),
+            "recorded_private_report": recorded_private_report_path.name,
+            "release_config": release_config_path.name,
+            "task_spec": task_spec_path.name,
+            "public_episode": public_episode_path.name,
+            "adapter_manifest": adapter_manifest_path.name,
         },
         "replay": {
             "sequence": sequence,

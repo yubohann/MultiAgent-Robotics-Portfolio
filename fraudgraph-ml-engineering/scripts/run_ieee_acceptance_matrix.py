@@ -9,7 +9,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RESULT_ROOT = REPO_ROOT / "artifacts" / "experiments" / "ieee_acceptance_matrix"
 PEAK_RSS_PATTERN = re.compile(r"peak=(?P<peak>[0-9.]+)GiB")
@@ -320,6 +319,7 @@ def main() -> None:
             text=True,
             encoding="utf-8",
             errors="replace",
+            check=False,
         )
         stdout_path = stage_result_root / "stdout.log"
         stderr_path = stage_result_root / "stderr.log"

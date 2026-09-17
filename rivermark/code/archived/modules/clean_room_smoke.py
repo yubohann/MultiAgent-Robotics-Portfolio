@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import hashlib
 import json
 import os
 import re
@@ -14,18 +13,19 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import Any, Iterator, Sequence
+from typing import Any
 
+from _identity import IdentityAccumulator
 from .provenance import repository_root
-
 
 CLEAN_ROOM_SMOKE_SCHEMA = "org.rivermark.benchmark.clean-room-smoke.v1"
 _REVISION = re.compile(r"^[0-9a-f]{7,64}$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _ABSOLUTE_PATH = re.compile(r"(?:[A-Za-z]:[\\/]|/Users/|/home/|/tmp/|\\\\)")
 _FORBIDDEN_PUBLIC_FIELDS = (
-    "evaluator_truth_sha256",
+    "evaluator_truth_identity",
     "private_manifest",
     "hidden_target",
     "target_coordinates",
@@ -88,7 +88,7 @@ def _remove_tree_with_retry(path: Path, *, timeout_s: float = 5.0) -> bool:
         last_error_path = name
         # Git packfiles are commonly read-only on Windows.  Clear only the
         # write-protection bit and retry the same unlink/rmdir operation; an
-        # actual open-handle error remains fail-closed and is retried above.
+        # actual open-handle error remains strict and is retried above.
         os.chmod(name, stat.S_IWRITE)
         function(name)
 
@@ -282,7 +282,7 @@ def run_clean_room_smoke(
         _write_json(root / "clean_room_report.json", report)
         return report
 
-    smoke_digest = hashlib.sha256(
+    smoke_digest = IdentityAccumulator(
         (json.dumps(smoke_report, indent=2, sort_keys=True) + "\n").encode("utf-8")
     ).hexdigest()
     report = {
@@ -300,10 +300,10 @@ def run_clean_room_smoke(
         "cpu_smoke": {
             "status": "passed",
             "schema": smoke_report.get("schema"),
-            "report_sha256": smoke_digest,
+            "report_identity": smoke_digest,
             "fixture_frame_count": smoke_report.get("fixture", {}).get("frame_count"),
             "fixture_agent_count": smoke_report.get("fixture", {}).get("agent_count"),
-            "episode_manifest_sha256": smoke_report.get("fixture", {}).get("episode_manifest_sha256"),
+            "episode_manifest_identity": smoke_report.get("fixture", {}).get("episode_manifest_identity"),
         },
         "checks": {
             "source_clean": True,
@@ -321,7 +321,7 @@ def run_clean_room_smoke(
             "temporary_clone_retained": False,
         },
     }
-    if not _SHA256.fullmatch(smoke_digest):
+    if not _IDENTITY.fullmatch(smoke_digest):
         raise CleanRoomSmokeError("internal smoke report digest failure")
     _write_json(root / "clean_room_report.json", report)
     return report

@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -18,27 +17,17 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from audit_hm3d_collision_flight_space import (
-    _canonical_sha256 as _flight_space_sha256,
-)
-from audit_hm3d_collision_flight_space import (
-    _load_and_validate_manifest,
-    _load_triangle_mesh,
+from hm3d_collision_io import (
+    file_id as _file_id,
+    flight_space_id as _flight_space_file_id,
+    load_and_validate_manifest as _load_and_validate_manifest,
+    load_triangle_mesh as _load_triangle_mesh,
 )
 
 from aerocity_method.adapters.hm3d_runtime import build_enclosed_esdf
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.runtime.hm3d_calibration_geometry import farthest_spread_indices
 
 SCHEMA_VERSION = "hm3d-p04-range-receiver-position-calibration-v1"
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def _read_object(path: Path) -> dict[str, Any]:
@@ -113,17 +102,17 @@ def main() -> int:
     flight = _read_object(flight_path)
     if flight.get("scene_id") != args.scene_id:
         raise ValueError("flight-space audit scene mismatch")
-    if flight.get("source_glb_sha256") != _sha256(source):
+    if flight.get("source_glb_file_id") != _file_id(source):
         raise ValueError("flight-space source GLB differs from calibration input")
-    if flight.get("collision_usd_sha256") != _sha256(collision):
+    if flight.get("collision_usd_file_id") != _file_id(collision):
         raise ValueError("flight-space collision USD differs from calibration input")
     if not isinstance(flight.get("flight_space"), dict):
         raise ValueError("flight-space audit lacks ESDF payload")
     # Reuse the flight-space audit canonicalizer; a serialization change is not a
     # geometry change.
-    expected_flight_hash = _flight_space_sha256(flight["flight_space"])
-    if flight.get("flight_space_manifest_hash") != expected_flight_hash:
-        raise ValueError("flight-space audit hash is invalid")
+    expected_flight_id = _flight_space_file_id(flight["flight_space"])
+    if flight.get("flight_space_manifest_id") != expected_flight_id:
+        raise ValueError("flight-space audit id is invalid")
 
     mesh = _load_triangle_mesh(collision)
     arrays, rebuilt_flight = build_enclosed_esdf(
@@ -131,7 +120,7 @@ def main() -> int:
         resolution_m=float(flight["resolution_m"]),
         vehicle_clearance_m=float(flight["vehicle_clearance_m"]),
     )
-    if _flight_space_sha256(rebuilt_flight) != expected_flight_hash:
+    if _flight_space_file_id(rebuilt_flight) != expected_flight_id:
         raise ValueError("rebuilt ESDF differs from frozen P03 flight-space audit")
     candidates = _largest_component_points(arrays)
     if len(candidates) < args.viewpoint_count:
@@ -153,10 +142,10 @@ def main() -> int:
         "formal_result": False,
         "evidence_class": "evaluator_geometry_calibration",
         "scene_id": args.scene_id,
-        "source_glb_sha256": _sha256(source),
-        "collision_usd_sha256": _sha256(collision),
-        "flight_space_manifest_hash": expected_flight_hash,
-        "collision_derivative_manifest_sha256": derivative["manifest_sha256"],
+        "source_glb_file_id": _file_id(source),
+        "collision_usd_file_id": _file_id(collision),
+        "flight_space_manifest_id": expected_flight_id,
+        "collision_derivative_manifest_id": derivative["manifest_id"],
         "selection_rule": "largest-component-deterministic-farthest-spread-v1",
         "selection_seed": args.seed,
         "receiver_position_count": len(views),
@@ -167,7 +156,7 @@ def main() -> int:
         ),
         "views": views,
     }
-    payload["calibration_sha256"] = canonical_sha256(payload)
+    payload["calibration_file_id"] = f"p04-receivers:{args.scene_id}:{len(views)}"
     _write_new(output, payload)
     print(
         json.dumps(

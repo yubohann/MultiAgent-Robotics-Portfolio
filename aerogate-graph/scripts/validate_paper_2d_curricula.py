@@ -6,10 +6,9 @@ import argparse
 import importlib.util
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
-
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = ROOT / "outputs"
@@ -102,9 +101,9 @@ def _validate_multi_gate_runner(failures: list[str]) -> dict[str, object]:
     from shared.configs.global_config import GLOBAL_CONFIG
     from shared.core.dynamic_gate_density_2d import (
         TRAINING_DRONE_ACCEL_AXIS_MPS2,
+        TRAINING_DRONE_SPEED_AXIS_MPS,
         TRAINING_DRONE_STAGE_ACCEL_SCHEDULE_MPS2,
         TRAINING_DRONE_STAGE_SPEED_SCHEDULE_MPS,
-        TRAINING_DRONE_SPEED_AXIS_MPS,
         drone_accel_limit_for_speed_mps2,
         eval_drone_speed_axis_mps,
         validate_dynamic_gate_density_geometry,

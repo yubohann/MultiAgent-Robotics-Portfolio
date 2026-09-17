@@ -1,8 +1,4 @@
-"""Run the Gazebo localization and competition safety chain together.
-
-This integration profile carries ``gazebo_simulation`` evidence with an
-explicit synthetic action executor and target gate as ROS contract adapters.
-"""
+"""Run the Gazebo localization and competition safety chain together."""
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription

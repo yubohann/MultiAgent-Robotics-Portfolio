@@ -1,16 +1,12 @@
-"""Checkpoint aliasing, selection scoring, and formal promotion gates."""
+"""Checkpoint aliasing and selection scoring."""
 
 from __future__ import annotations
 
 import json
 import math
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
-
-
-class PromotionGateError(RuntimeError):
-    """Raised when a trained checkpoint fails the formal promotion gate."""
 
 
 def _safe_mean(values: list[float]) -> float:
@@ -234,12 +230,6 @@ def build_checkpoint_selection_details(eval_summary: dict[str, object]) -> dict[
     return _single_selection_details(eval_summary)
 
 
-def compute_checkpoint_selection_score(eval_summary: dict[str, object]) -> float:
-    """Score one checkpoint from robust deterministic scoring results."""
-
-    return float(build_checkpoint_selection_details(eval_summary)["score"])
-
-
 def refresh_best_checkpoint_alias(
     checkpoint_path: str | Path,
     *,
@@ -361,142 +351,4 @@ def reselect_best_checkpoint_alias(
         resolved_report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
         report["report_path"] = str(resolved_report_path)
     return report
-
-
-def assess_single_promotion_gate(
-    eval_summary: dict[str, object],
-    gate_config: object,
-    *,
-    override_min_success_rate: float = 0.0,
-) -> dict[str, object]:
-    """Check the single-agent promotion gate."""
-
-    episodes = max(int(eval_summary.get("episodes") or 0), 1)
-    success_rate = float(eval_summary.get("success_rate") or 0.0)
-    mean_episode_reward = float(eval_summary.get("mean_episode_reward") or 0.0)
-    done_reason_counts = {
-        str(key): int(value)
-        for key, value in dict(eval_summary.get("done_reason_counts") or {}).items()
-    }
-    collision_out_of_bounds_rate = (
-        done_reason_counts.get("collision", 0) + done_reason_counts.get("out_of_bounds", 0)
-    ) / episodes
-    effective_min_success_rate = max(
-        float(getattr(gate_config, "min_success_rate", 0.0) or 0.0),
-        float(override_min_success_rate or 0.0),
-    )
-    min_mean_episode_reward = getattr(gate_config, "min_mean_episode_reward", None)
-    checks = {
-        "success_rate": success_rate >= effective_min_success_rate,
-        "collision_out_of_bounds_rate": collision_out_of_bounds_rate <= float(
-            getattr(gate_config, "max_collision_out_of_bounds_rate", 1.0) or 1.0
-        ),
-        "mean_episode_reward": (
-            True
-            if min_mean_episode_reward is None
-            else mean_episode_reward >= float(min_mean_episode_reward)
-        ),
-    }
-    failed_checks = [name for name, passed in checks.items() if not passed]
-    return {
-        "enabled": bool(getattr(gate_config, "enabled", True)),
-        "passed": not failed_checks,
-        "failed_checks": failed_checks,
-        "episodes": episodes,
-        "success_rate": success_rate,
-        "effective_min_success_rate": effective_min_success_rate,
-        "collision_out_of_bounds_rate": collision_out_of_bounds_rate,
-        "max_collision_out_of_bounds_rate": float(
-            getattr(gate_config, "max_collision_out_of_bounds_rate", 1.0) or 1.0
-        ),
-        "mean_episode_reward": mean_episode_reward,
-        "min_mean_episode_reward": (
-            None if min_mean_episode_reward is None else float(min_mean_episode_reward)
-        ),
-        "done_reason_counts": done_reason_counts,
-    }
-
-
-def assess_multi_promotion_gate(
-    eval_summary: dict[str, object],
-    gate_config: object,
-    *,
-    override_min_success_rate: float = 0.0,
-) -> dict[str, object]:
-    """Check the multi-agent promotion gate."""
-
-    episodes = max(int(eval_summary.get("episodes") or 0), 1)
-    success_rate = float(eval_summary.get("success_rate") or 0.0)
-    mean_episode_reward = float(eval_summary.get("mean_episode_reward") or 0.0)
-    done_reason_counts = {
-        str(key): int(value)
-        for key, value in dict(eval_summary.get("done_reason_counts") or {}).items()
-    }
-    agent_collision_rate = done_reason_counts.get("agent_collision", 0) / episodes
-    hard_failure_rate = (
-        done_reason_counts.get("gate_post_collision", 0)
-        + done_reason_counts.get("agent_collision", 0)
-        + done_reason_counts.get("out_of_bounds", 0)
-    ) / episodes
-    safety_violation_rate = eval_summary.get("safety_violation_rate")
-    safety_violation_rate = None if safety_violation_rate is None else float(safety_violation_rate)
-    min_bucket_success_rate = eval_summary.get("min_bucket_success_rate")
-    min_bucket_success_rate = None if min_bucket_success_rate is None else float(min_bucket_success_rate)
-    effective_min_success_rate = max(
-        float(getattr(gate_config, "min_success_rate", 0.0) or 0.0),
-        float(override_min_success_rate or 0.0),
-    )
-    min_mean_episode_reward = getattr(gate_config, "min_mean_episode_reward", None)
-    max_safety_violation_rate = getattr(gate_config, "max_safety_violation_rate", None)
-    gate_min_bucket_success_rate = getattr(gate_config, "min_bucket_success_rate", None)
-    checks = {
-        "success_rate": success_rate >= effective_min_success_rate,
-        "agent_collision_rate": agent_collision_rate <= float(
-            getattr(gate_config, "max_agent_collision_rate", 1.0) or 1.0
-        ),
-        "hard_failure_rate": hard_failure_rate <= float(
-            getattr(gate_config, "max_hard_failure_rate", 1.0) or 1.0
-        ),
-        "mean_episode_reward": (
-            True
-            if min_mean_episode_reward is None
-            else mean_episode_reward >= float(min_mean_episode_reward)
-        ),
-        "safety_violation_rate": (
-            True
-            if max_safety_violation_rate is None or safety_violation_rate is None
-            else safety_violation_rate <= float(max_safety_violation_rate)
-        ),
-        "bucket_success_rate": (
-            True
-            if gate_min_bucket_success_rate is None or min_bucket_success_rate is None
-            else min_bucket_success_rate >= float(gate_min_bucket_success_rate)
-        ),
-    }
-    failed_checks = [name for name, passed in checks.items() if not passed]
-    return {
-        "enabled": bool(getattr(gate_config, "enabled", True)),
-        "passed": not failed_checks,
-        "failed_checks": failed_checks,
-        "episodes": episodes,
-        "success_rate": success_rate,
-        "effective_min_success_rate": effective_min_success_rate,
-        "agent_collision_rate": agent_collision_rate,
-        "max_agent_collision_rate": float(getattr(gate_config, "max_agent_collision_rate", 1.0) or 1.0),
-        "hard_failure_rate": hard_failure_rate,
-        "max_hard_failure_rate": float(getattr(gate_config, "max_hard_failure_rate", 1.0) or 1.0),
-        "safety_violation_rate": safety_violation_rate,
-        "max_safety_violation_rate": (
-            None if max_safety_violation_rate is None else float(max_safety_violation_rate)
-        ),
-        "min_bucket_success_rate": min_bucket_success_rate,
-        "required_min_bucket_success_rate": (
-            None if gate_min_bucket_success_rate is None else float(gate_min_bucket_success_rate)
-        ),
-        "mean_episode_reward": mean_episode_reward,
-        "min_mean_episode_reward": (
-            None if min_mean_episode_reward is None else float(min_mean_episode_reward)
-        ),
-        "done_reason_counts": done_reason_counts,
-    }
 

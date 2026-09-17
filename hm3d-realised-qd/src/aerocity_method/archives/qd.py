@@ -5,12 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Any
 
-from aerocity_method.contracts.io import (
-    canonical_sha256,
-    finite_number,
-    require_identifier,
-    require_sha256,
-)
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.contracts.models import ABI_VERSION
 
 
@@ -81,15 +76,16 @@ class ArchiveSpec:
         }
 
     @property
-    def digest(self) -> str:
-        return canonical_sha256(self.to_dict())
+    def spec_id(self) -> str:
+        # A readable identity: axis names with their bin counts in fixed order.
+        return "|".join(f"{axis.name}:{axis.bins}" for axis in self.axes)
 
 
 @dataclass(frozen=True, slots=True)
 class Elite:
     candidate_id: str
-    manifest_hash: str
-    behavior_hash: str
+    manifest_id: str
+    behavior_id: str
     realised_descriptor: tuple[float, ...]
     quality: float
     cost: float
@@ -105,8 +101,8 @@ class Elite:
             raise ValueError("unsupported elite schema version")
         require_identifier(self.candidate_id, "candidate_id")
         require_identifier(self.source, "source")
-        require_sha256(self.manifest_hash, "manifest_hash")
-        require_sha256(self.behavior_hash, "behavior_hash")
+        require_identifier(self.manifest_id, "manifest_id")
+        require_identifier(self.behavior_id, "behavior_id")
         descriptor = tuple(
             finite_number(value, "realised_descriptor") for value in self.realised_descriptor
         )
@@ -164,8 +160,8 @@ class Elite:
         return {
             "schema_version": self.schema_version,
             "candidate_id": self.candidate_id,
-            "manifest_hash": self.manifest_hash,
-            "behavior_hash": self.behavior_hash,
+            "manifest_id": self.manifest_id,
+            "behavior_id": self.behavior_id,
             "realised_descriptor": self.realised_descriptor,
             "quality": self.quality,
             "cost": self.cost,
@@ -180,8 +176,8 @@ class Elite:
     def from_dict(cls, payload: dict[str, Any]) -> Elite:
         return cls(
             candidate_id=payload["candidate_id"],
-            manifest_hash=payload["manifest_hash"],
-            behavior_hash=payload["behavior_hash"],
+            manifest_id=payload["manifest_id"],
+            behavior_id=payload["behavior_id"],
             realised_descriptor=tuple(payload["realised_descriptor"]),
             quality=payload["quality"],
             cost=payload["cost"],
@@ -199,7 +195,7 @@ class AdmissionDecision:
     admitted: bool
     reason: str
     cell: tuple[int, ...] | None
-    replaced_manifest_hash: str | None
+    replaced_manifest_id: str | None
     revision: int
 
 
@@ -208,7 +204,7 @@ def _is_better(candidate: Elite, incumbent: Elite) -> bool:
     incumbent_key = (incumbent.corrected_quality, -incumbent.cost)
     if candidate_key != incumbent_key:
         return candidate_key > incumbent_key
-    return candidate.manifest_hash < incumbent.manifest_hash
+    return candidate.manifest_id < incumbent.manifest_id
 
 
 class QDArchive:
@@ -230,70 +226,70 @@ class QDArchive:
     def get(self, cell: tuple[int, ...]) -> Elite | None:
         return self._cells.get(tuple(cell))
 
-    def _remove_behavior(self, behavior_hash: str) -> Elite | None:
-        old_cell = self._behavior_cells.pop(behavior_hash, None)
+    def _remove_behavior(self, behavior_id: str) -> Elite | None:
+        old_cell = self._behavior_cells.pop(behavior_id, None)
         if old_cell is None:
             return None
         elite = self._cells.pop(old_cell, None)
         if elite is not None:
-            self._manifest_cells.pop(elite.manifest_hash, None)
+            self._manifest_cells.pop(elite.manifest_id, None)
         return elite
 
     def add_or_update(self, elite: Elite) -> AdmissionDecision:
         if not elite.feasible:
             return AdmissionDecision(False, "INFEASIBLE", None, None, self.revision)
         cell = self.spec.cell(elite.realised_descriptor)
-        old_behavior_cell = self._behavior_cells.get(elite.behavior_hash)
+        old_behavior_cell = self._behavior_cells.get(elite.behavior_id)
         if old_behavior_cell is not None:
             old_behavior_elite = self._cells[old_behavior_cell]
-            if old_behavior_elite.manifest_hash != elite.manifest_hash:
+            if old_behavior_elite.manifest_id != elite.manifest_id:
                 return AdmissionDecision(
                     False,
                     "DUPLICATE_BEHAVIOR",
                     cell,
-                    old_behavior_elite.manifest_hash,
+                    old_behavior_elite.manifest_id,
                     self.revision,
                 )
-        old_manifest_cell = self._manifest_cells.get(elite.manifest_hash)
+        old_manifest_cell = self._manifest_cells.get(elite.manifest_id)
         if old_manifest_cell == cell:
             old_manifest_elite = self._cells[cell]
             updated = old_manifest_elite.reevaluated(elite.quality, elite.cost)
             updated = replace(
                 updated,
-                behavior_hash=elite.behavior_hash,
+                behavior_id=elite.behavior_id,
                 realised_descriptor=elite.realised_descriptor,
                 source=elite.source,
             )
-            self._behavior_cells.pop(old_manifest_elite.behavior_hash, None)
-            self._behavior_cells[updated.behavior_hash] = cell
+            self._behavior_cells.pop(old_manifest_elite.behavior_id, None)
+            self._behavior_cells[updated.behavior_id] = cell
             self._cells[cell] = updated
             self.revision += 1
             return AdmissionDecision(True, "REEVALUATED", cell, None, self.revision)
         incumbent = self._cells.get(cell)
         if incumbent is not None and not _is_better(elite, incumbent):
             return AdmissionDecision(
-                False, "NOT_BETTER", cell, incumbent.manifest_hash, self.revision
+                False, "NOT_BETTER", cell, incumbent.manifest_id, self.revision
             )
-        replaced_hash = None
+        replaced_id = None
         if incumbent is not None:
-            replaced_hash = incumbent.manifest_hash
-            self._behavior_cells.pop(incumbent.behavior_hash, None)
-            self._manifest_cells.pop(incumbent.manifest_hash, None)
+            replaced_id = incumbent.manifest_id
+            self._behavior_cells.pop(incumbent.behavior_id, None)
+            self._manifest_cells.pop(incumbent.manifest_id, None)
         if old_manifest_cell is not None:
             old_manifest_elite = self._cells.pop(old_manifest_cell)
-            self._behavior_cells.pop(old_manifest_elite.behavior_hash, None)
+            self._behavior_cells.pop(old_manifest_elite.behavior_id, None)
         self._cells[cell] = elite
-        self._behavior_cells[elite.behavior_hash] = cell
-        self._manifest_cells[elite.manifest_hash] = cell
+        self._behavior_cells[elite.behavior_id] = cell
+        self._manifest_cells[elite.manifest_id] = cell
         self.revision += 1
-        return AdmissionDecision(True, "ADMITTED", cell, replaced_hash, self.revision)
+        return AdmissionDecision(True, "ADMITTED", cell, replaced_id, self.revision)
 
     def best(self) -> Elite | None:
         if not self._cells:
             return None
         return sorted(
             self._cells.values(),
-            key=lambda elite: (-elite.corrected_quality, elite.cost, elite.manifest_hash),
+            key=lambda elite: (-elite.corrected_quality, elite.cost, elite.manifest_id),
         )[0]
 
     def metrics(self) -> dict[str, float]:
@@ -323,23 +319,17 @@ class QDArchive:
         }
 
     def state_dict(self) -> dict[str, Any]:
-        payload = {
+        return {
             "schema_version": ABI_VERSION,
             "spec": self.spec.to_dict(),
             "revision": self.revision,
             "cells": [{"cell": cell, "elite": elite.to_dict()} for cell, elite in self.items()],
         }
-        payload["checkpoint_hash"] = canonical_sha256(payload)
-        return payload
 
     @classmethod
     def from_state_dict(cls, state: dict[str, Any]) -> QDArchive:
         if state.get("schema_version") != ABI_VERSION:
             raise ValueError("archive checkpoint schema version mismatch")
-        supplied_hash = state.get("checkpoint_hash")
-        unsigned = {key: value for key, value in state.items() if key != "checkpoint_hash"}
-        if canonical_sha256(unsigned) != supplied_hash:
-            raise ValueError("archive checkpoint content hash mismatch")
         spec_payload = state["spec"]
         spec = ArchiveSpec(
             tuple(
@@ -355,7 +345,7 @@ class QDArchive:
         )
         archive = cls(spec)
         occupied_cells: set[tuple[int, ...]] = set()
-        manifest_hashes: set[str] = set()
+        manifest_ids: set[str] = set()
         for row in state.get("cells", []):
             cell = tuple(row["cell"])
             elite = Elite.from_dict(row["elite"])
@@ -363,21 +353,17 @@ class QDArchive:
                 raise ValueError("checkpoint cell does not match realised descriptor")
             if cell in occupied_cells:
                 raise ValueError("checkpoint contains duplicate archive cell")
-            if elite.manifest_hash in manifest_hashes:
+            if elite.manifest_id in manifest_ids:
                 raise ValueError("checkpoint contains one manifest in multiple cells")
             archive._cells[cell] = elite
-            if elite.behavior_hash in archive._behavior_cells:
-                raise ValueError("checkpoint contains duplicate behavior hash")
-            archive._behavior_cells[elite.behavior_hash] = cell
-            archive._manifest_cells[elite.manifest_hash] = cell
+            if elite.behavior_id in archive._behavior_cells:
+                raise ValueError("checkpoint contains duplicate behavior id")
+            archive._behavior_cells[elite.behavior_id] = cell
+            archive._manifest_cells[elite.manifest_id] = cell
             occupied_cells.add(cell)
-            manifest_hashes.add(elite.manifest_hash)
+            manifest_ids.add(elite.manifest_id)
         revision = state.get("revision", len(archive._cells))
         if not isinstance(revision, int) or revision < len(archive._cells):
             raise ValueError("invalid archive revision")
         archive.revision = revision
         return archive
-
-    @property
-    def digest(self) -> str:
-        return canonical_sha256(self.state_dict())

@@ -8,18 +8,10 @@ import imageio.v2 as imageio
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from .config import (
-    BattleConfig,
-    DATA_DIR,
-    MEDIA_DIR,
-    config_from_args
-)
-from .sim import (
-    LargeScaleBattle50v50
-)
-from .train import (
-    load_checkpoint
-)
+from .config import DATA_DIR, MEDIA_DIR, BattleConfig, config_from_args
+from .sim import LargeScaleBattle50v50
+from .train import load_checkpoint
+
 
 def _font(size: int) -> ImageFont.ImageFont:
     candidates = [

@@ -8,11 +8,12 @@ import math
 import os
 import shutil
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
-from .schema import is_sha256
+from .schema import is_identity
 from .video import (
     STATE_ONLY_TRANSFER_INDEPENDENT_VALIDATION_SCHEMA,
     SUPPORTED_INDEPENDENT_VALIDATION_SCHEMAS,
@@ -20,9 +21,8 @@ from .video import (
     audit_video,
     independent_validation_schema_for_capture,
     require_release_video,
-    sha256_file,
+    identity_file,
 )
-
 
 CAPTURE_SCHEMA = "org.rivermark.isaac-swarm-capture.v1"
 EVIDENCE_MANIFEST_SCHEMA = "org.rivermark.isaac-development-evidence-manifest.v1"
@@ -48,7 +48,7 @@ _FORBIDDEN_SOURCE_PARTS = frozenset(
 
 @dataclass(frozen=True)
 class IsaacEvidenceIssue:
-    """One fail-closed reason why a development evidence pack was rejected."""
+    """One strict reason why a development evidence pack was rejected."""
 
     code: str
     path: str
@@ -60,8 +60,8 @@ class IsaacEvidenceResult:
     """The externally materialized bundle, if all input bindings passed."""
 
     bundle_root: Path | None
-    manifest_sha256: str | None
-    receipt_sha256: str | None
+    manifest_identity: str | None
+    receipt_identity: str | None
     issues: tuple[IsaacEvidenceIssue, ...]
 
     @property
@@ -148,13 +148,13 @@ def _capture_contract(capture_root: Path) -> tuple[Mapping[str, Any], str]:
     task_kind = receipt.get("task_kind")
     if not isinstance(task_kind, str) or not task_kind:
         raise _EvidenceError("capture_task_kind", "capture_receipt.json.task_kind", "must be a non-empty string")
-    return receipt, sha256_file(receipt_path)
+    return receipt, identity_file(receipt_path)
 
 
 def _validation_contract(
     validation_receipt: Path,
     capture: Mapping[str, Any],
-    capture_sha256: str,
+    capture_identity: str,
 ) -> tuple[Mapping[str, Any], str]:
     validation = _read_object(validation_receipt, label="independent_validation")
     if (
@@ -170,20 +170,20 @@ def _validation_contract(
             "independent_validation.formal_benchmark_admission",
             "independent validation must not claim formal admission",
         )
-    if validation.get("capture_receipt_sha256") != capture_sha256:
+    if validation.get("capture_receipt_identity") != capture_identity:
         raise _EvidenceError(
             "validation_binding",
-            "independent_validation.capture_receipt_sha256",
+            "independent_validation.capture_receipt_identity",
             "validation receipt does not bind this raw capture receipt",
         )
     validator_id = validation.get("validator_id")
     if not isinstance(validator_id, str) or not validator_id.strip():
         raise _EvidenceError("validator_id", "independent_validation.validator_id", "must be a non-empty string")
-    if not is_sha256(validation.get("validator_source_sha256")):
+    if not is_identity(validation.get("validator_source_identity")):
         raise _EvidenceError(
             "validator_source",
-            "independent_validation.validator_source_sha256",
-            "must be a SHA-256 digest",
+            "independent_validation.validator_source_identity",
+            "must be an identity value",
         )
     if not isinstance(validation.get("checks"), Mapping):
         raise _EvidenceError("validation_checks", "independent_validation.checks", "must be an object")
@@ -195,12 +195,12 @@ def _validation_contract(
             "independent_validation.schema",
             str(exc),
         ) from exc
-    return validation, sha256_file(validation_receipt)
+    return validation, identity_file(validation_receipt)
 
 
 def _audit_matches_receipt(audit: VideoAudit, receipt_audit: Mapping[str, Any], *, label: str) -> None:
     expected: dict[str, Any] = {
-        "sha256": audit.sha256,
+        "identity": audit.identity,
         "bytes": audit.bytes,
         "width": audit.width,
         "height": audit.height,
@@ -240,8 +240,8 @@ def _audit_matches_receipt(audit: VideoAudit, receipt_audit: Mapping[str, Any], 
 def _video_contract(
     video_path: Path,
     *,
-    capture_sha256: str,
-    validation_sha256: str,
+    capture_identity: str,
+    validation_identity: str,
 ) -> dict[str, Any]:
     source = _require_public_source(video_path, label=str(video_path))
     if source.suffix.lower() != ".mp4":
@@ -253,23 +253,23 @@ def _video_contract(
     receipt = _read_object(receipt_path, label=f"{source.name}.receipt.json")
     if receipt.get("schema") not in _ALLOWED_VIDEO_RECEIPT_SCHEMAS or receipt.get("ok") is not True:
         raise _EvidenceError("video_status", receipt_path.name, "unsupported or unsuccessful Isaac video receipt")
-    actual_sha256 = sha256_file(source)
-    if receipt.get("video_sha256") != actual_sha256:
-        raise _EvidenceError("video_hash", receipt_path.name, "video receipt does not bind the MP4 bytes")
-    if receipt.get("capture_receipt_sha256") != capture_sha256:
+    actual_identity = identity_file(source)
+    if receipt.get("video_identity") != actual_identity:
+        raise _EvidenceError("video_identity", receipt_path.name, "video receipt does not bind the MP4 bytes")
+    if receipt.get("capture_receipt_identity") != capture_identity:
         raise _EvidenceError("video_capture_binding", receipt_path.name, "video receipt does not bind this capture")
-    if receipt.get("independent_validation_sha256") != validation_sha256:
+    if receipt.get("independent_validation_identity") != validation_identity:
         raise _EvidenceError(
             "video_validation_binding",
             receipt_path.name,
             "video receipt does not bind this passing validation receipt",
         )
-    timestamp_sha256 = receipt.get("timestamps_sha256")
+    timestamp_identity = receipt.get("timestamps_identity")
     timestamps = receipt.get("timestamps")
     if (
-        not is_sha256(timestamp_sha256)
+        not is_identity(timestamp_identity)
         or not isinstance(timestamps, Mapping)
-        or timestamps.get("sha256") != timestamp_sha256
+        or timestamps.get("identity") != timestamp_identity
     ):
         raise _EvidenceError("video_timestamps", receipt_path.name, "video receipt lacks a self-consistent timestamp digest")
     receipt_audit = receipt.get("audit")
@@ -284,11 +284,11 @@ def _video_contract(
     return {
         "source": source,
         "source_receipt": receipt_path,
-        "sha256": actual_sha256,
+        "identity": actual_identity,
         "bytes": source.stat().st_size,
-        "receipt_sha256": sha256_file(receipt_path),
+        "receipt_identity": identity_file(receipt_path),
         "receipt_schema": receipt["schema"],
-        "timestamps_sha256": timestamp_sha256,
+        "timestamps_identity": timestamp_identity,
         "audit": {
             "width": audit.width,
             "height": audit.height,
@@ -302,9 +302,9 @@ def _video_contract(
 
 def _public_manifest(
     capture: Mapping[str, Any],
-    capture_sha256: str,
+    capture_identity: str,
     validation: Mapping[str, Any],
-    validation_sha256: str,
+    validation_identity: str,
     videos: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     return {
@@ -313,26 +313,26 @@ def _public_manifest(
         "formal_benchmark_admission": False,
         "dataset_episode": False,
         "capture": {
-            "capture_receipt_sha256": capture_sha256,
+            "capture_receipt_identity": capture_identity,
             "schema": CAPTURE_SCHEMA,
             "status": "captured",
             "task_kind": capture["task_kind"],
         },
         "independent_validation": {
-            "validation_receipt_sha256": validation_sha256,
+            "validation_receipt_identity": validation_identity,
             "schema": validation["schema"],
             "status": "passed",
             "validator_id": validation["validator_id"],
-            "validator_source_sha256": validation["validator_source_sha256"],
+            "validator_source_identity": validation["validator_source_identity"],
         },
         "videos": [
             {
                 "path": video["path"],
-                "sha256": video["sha256"],
+                "identity": video["identity"],
                 "bytes": video["bytes"],
-                "receipt_sha256": video["receipt_sha256"],
+                "receipt_identity": video["receipt_identity"],
                 "receipt_schema": video["receipt_schema"],
-                "timestamps_sha256": video["timestamps_sha256"],
+                "timestamps_identity": video["timestamps_identity"],
                 "audit": video["audit"],
             }
             for video in videos
@@ -340,7 +340,7 @@ def _public_manifest(
     }
 
 
-def _public_receipt(manifest: Mapping[str, Any], manifest_sha256: str) -> dict[str, Any]:
+def _public_receipt(manifest: Mapping[str, Any], manifest_identity: str) -> dict[str, Any]:
     capture = manifest["capture"]
     validation = manifest["independent_validation"]
     videos = manifest["videos"]
@@ -354,14 +354,14 @@ def _public_receipt(manifest: Mapping[str, Any], manifest_sha256: str) -> dict[s
         "development_only": True,
         "formal_benchmark_admission": False,
         "dataset_episode": False,
-        "evidence_manifest_sha256": manifest_sha256,
-        "capture_receipt_sha256": capture["capture_receipt_sha256"],
-        "independent_validation_sha256": validation["validation_receipt_sha256"],
+        "evidence_manifest_identity": manifest_identity,
+        "capture_receipt_identity": capture["capture_receipt_identity"],
+        "independent_validation_identity": validation["validation_receipt_identity"],
         "videos": [
             {
                 "path": video["path"],
-                "sha256": video["sha256"],
-                "receipt_sha256": video["receipt_sha256"],
+                "identity": video["identity"],
+                "receipt_identity": video["receipt_identity"],
             }
             for video in videos
         ],
@@ -384,7 +384,7 @@ def _verify_staged_bundle(root: Path) -> None:
             raise _EvidenceError("bundle_claim_boundary", label, "evidence bundle claim boundary is invalid")
     if receipt.get("status") != "packed" or receipt.get("ok") is not True:
         raise _EvidenceError("bundle_status", "evidence_receipt.json", "evidence receipt must be successful")
-    if receipt.get("evidence_manifest_sha256") != sha256_file(manifest_path):
+    if receipt.get("evidence_manifest_identity") != identity_file(manifest_path):
         raise _EvidenceError("manifest_binding", "evidence_receipt.json", "receipt does not bind manifest bytes")
     capture = manifest.get("capture")
     validation = manifest.get("independent_validation")
@@ -406,9 +406,9 @@ def _verify_staged_bundle(root: Path) -> None:
             "evidence_manifest.json",
             "state-only transfer validation is bound to the wrong capture task kind",
         )
-    if receipt.get("capture_receipt_sha256") != capture.get("capture_receipt_sha256"):
+    if receipt.get("capture_receipt_identity") != capture.get("capture_receipt_identity"):
         raise _EvidenceError("capture_binding", "evidence_receipt.json", "receipt/capture binding mismatch")
-    if receipt.get("independent_validation_sha256") != validation.get("validation_receipt_sha256"):
+    if receipt.get("independent_validation_identity") != validation.get("validation_receipt_identity"):
         raise _EvidenceError("validation_binding", "evidence_receipt.json", "receipt/validation binding mismatch")
     receipt_videos = receipt.get("videos")
     if not isinstance(receipt_videos, list) or len(receipt_videos) != len(videos):
@@ -422,10 +422,10 @@ def _verify_staged_bundle(root: Path) -> None:
             raise _EvidenceError("video_path", f"evidence_manifest.json.videos[{index}]", "invalid bundle video path")
         video_path = root / relative
         expected_files.add(relative)
-        if not video_path.is_file() or video.get("sha256") != sha256_file(video_path):
-            raise _EvidenceError("video_hash", relative, "bundle video digest does not match")
+        if not video_path.is_file() or video.get("identity") != identity_file(video_path):
+            raise _EvidenceError("video_identity", relative, "bundle video digest does not match")
         bound = receipt_videos[index]
-        if not isinstance(bound, Mapping) or any(bound.get(key) != video.get(key) for key in ("path", "sha256", "receipt_sha256")):
+        if not isinstance(bound, Mapping) or any(bound.get(key) != video.get(key) for key in ("path", "identity", "receipt_identity")):
             raise _EvidenceError("video_binding", f"evidence_receipt.json.videos[{index}]", "receipt video binding mismatch")
     actual_files = {
         path.relative_to(root).as_posix()
@@ -442,11 +442,7 @@ def pack_isaac_development_evidence(
     destination: Path,
     videos: Sequence[Path],
 ) -> IsaacEvidenceResult:
-    """Copy validated MP4 evidence into one external development-only bundle.
-
-    The function never modifies ``capture_root`` and never invokes formal
-    candidate packing, admission, or an Isaac runtime.
-    """
+    """Copy validated MP4 evidence into one external development-only bundle."""
 
     temporary: Path | None = None
     try:
@@ -458,19 +454,19 @@ def pack_isaac_development_evidence(
         if not videos:
             raise _EvidenceError("video_inventory", "videos", "at least one explicit MP4 input is required")
 
-        capture, capture_sha256 = _capture_contract(capture_root)
+        capture, capture_identity = _capture_contract(capture_root)
         validation_path = _require_public_source(validation_receipt, label="independent_validation")
-        validation, validation_sha256 = _validation_contract(
+        validation, validation_identity = _validation_contract(
             validation_path,
             capture,
-            capture_sha256,
+            capture_identity,
         )
 
         video_contracts = [
             _video_contract(
                 video,
-                capture_sha256=capture_sha256,
-                validation_sha256=validation_sha256,
+                capture_identity=capture_identity,
+                validation_identity=validation_identity,
             )
             for video in videos
         ]
@@ -491,14 +487,14 @@ def pack_isaac_development_evidence(
             copied = temporary / relative
             copied.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, copied)
-            if sha256_file(copied) != contract["sha256"]:
+            if identity_file(copied) != contract["identity"]:
                 raise _EvidenceError("video_copy", relative, "copied video digest does not match the verified source")
             public_videos.append({**contract, "path": relative})
 
-        manifest = _public_manifest(capture, capture_sha256, validation, validation_sha256, public_videos)
+        manifest = _public_manifest(capture, capture_identity, validation, validation_identity, public_videos)
         manifest_path = temporary / "evidence_manifest.json"
         _write_json(manifest_path, manifest)
-        receipt = _public_receipt(manifest, sha256_file(manifest_path))
+        receipt = _public_receipt(manifest, identity_file(manifest_path))
         receipt_path = temporary / "evidence_receipt.json"
         _write_json(receipt_path, receipt)
         _verify_staged_bundle(temporary)
@@ -506,8 +502,8 @@ def pack_isaac_development_evidence(
         temporary = None
         return IsaacEvidenceResult(
             bundle_root=destination,
-            manifest_sha256=sha256_file(destination / "evidence_manifest.json"),
-            receipt_sha256=sha256_file(destination / "evidence_receipt.json"),
+            manifest_identity=identity_file(destination / "evidence_manifest.json"),
+            receipt_identity=identity_file(destination / "evidence_receipt.json"),
             issues=(),
         )
     except _EvidenceError as exc:
@@ -541,8 +537,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "valid": result.valid,
                 "bundle_root": str(result.bundle_root) if result.bundle_root else None,
-                "manifest_sha256": result.manifest_sha256,
-                "receipt_sha256": result.receipt_sha256,
+                "manifest_identity": result.manifest_identity,
+                "receipt_identity": result.receipt_identity,
                 "issues": [asdict(issue) for issue in result.issues],
             },
             indent=2,

@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import math
 import sys
 import time
 from pathlib import Path
@@ -11,21 +10,34 @@ from pathlib import Path
 import numpy as np
 import torch
 
-
 RL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(RL_ROOT) not in sys.path:
     sys.path.insert(0, str(RL_ROOT))
 
 from evaluate_policy import actor_action, load_policy
-from expert_policy import compose_policy_action
 from experiments.paper_statistics import equal_mass_ece, fixed_tail_cvar
-from experiments.scenario_protocol import SCENARIOS, aggressive_action, apply_scenario, tracker_overrides
+from experiments.scenario_protocol import (
+    SCENARIOS,
+    aggressive_action,
+    apply_scenario,
+    tracker_overrides,
+)
+from expert_policy import compose_policy_action
 from robocup_visionrl_selfplay_env import AGENTS, RoboCupVisionRLSelfPlayEnv
-from world_model import BeliefTracker, build_typed_edges, canonical_node_types_torch, extract_rule_risks, tokens_from_flat
+from world_model import (
+    BeliefTracker,
+    build_typed_edges,
+    canonical_node_types_torch,
+    extract_rule_risks,
+    tokens_from_flat,
+)
 from world_model.belief_graph import PHYSICAL_TOKEN_DIM, TOKEN_PRESENT, TOKEN_X, TOKEN_Y
-from world_model.constraint_graph_dynamics import duration_bucket_targets, edge_transition_targets, typed_edge_valid_mask
-
+from world_model.constraint_graph_dynamics import (
+    duration_bucket_targets,
+    edge_transition_targets,
+    typed_edge_valid_mask,
+)
 
 RISK_NAMES = ("collision", "penetration", "illegal_fire", "los_or_range")
 
@@ -254,10 +266,10 @@ def evaluate_interventions(
                 (build_typed_edges(intervention_final, node_types) - build_typed_edges(factual_final, node_types)).sum(dim=(1, 2, 3)).numpy()
             )
             actual_return_effect.append(
-                (data["intervention_rewards"][selection].sum(axis=(1, 2)) - data["factual_rewards"][selection].sum(axis=(1, 2)))
+                data["intervention_rewards"][selection].sum(axis=(1, 2)) - data["factual_rewards"][selection].sum(axis=(1, 2))
             )
             actual_risk_effect.append(
-                (data["intervention_risks"][selection].sum(axis=(1, 2, 3)) - data["factual_risks"][selection].sum(axis=(1, 2, 3)))
+                data["intervention_risks"][selection].sum(axis=(1, 2, 3)) - data["factual_risks"][selection].sum(axis=(1, 2, 3))
             )
         predicted_edge = np.concatenate(predicted_edge_effect)
         actual_edge = np.concatenate(actual_edge_effect)

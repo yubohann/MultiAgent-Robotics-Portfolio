@@ -16,14 +16,7 @@ def required_paired_episodes(
     difference_standard_deviation: float,
     comparison_count: int,
 ) -> int:
-    """Return the predeclared paired-sample normal approximation.
-
-    ``difference_standard_deviation`` is the standard deviation of per-episode
-    paired method differences, not the marginal score standard deviation. A
-    Bonferroni-adjusted two-sided alpha is used for every declared comparison.
-    Final reporting still requires confidence intervals and the frozen public
-    metric implementation.
-    """
+    """Return the predeclared paired-sample normal approximation."""
 
     if not _valid_number(familywise_alpha, minimum=0.0, maximum=1.0):
         raise ValueError("familywise_alpha must be in (0, 1)")

@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
 
-
-Point3D = Tuple[float, float, float]
+Point3D = tuple[float, float, float]
 
 
 @dataclass(frozen=True)
@@ -29,15 +27,4 @@ def planar_xy_to_fixed_xyz(x_m: float, y_m: float, config: FixedHeightConfig) ->
 
     return (float(x_m), float(y_m), fixed_height_z(config))
 
-
-def enforce_fixed_height(position_xyz: Point3D, config: FixedHeightConfig) -> Point3D:
-    """Project any 3D point onto the configured flight height."""
-
-    return (float(position_xyz[0]), float(position_xyz[1]), fixed_height_z(config))
-
-
-def is_at_fixed_height(position_xyz: Point3D, config: FixedHeightConfig) -> bool:
-    """Check whether a 3D point lies on the configured height plane."""
-
-    return abs(float(position_xyz[2]) - fixed_height_z(config)) <= float(config.tolerance_m)
 

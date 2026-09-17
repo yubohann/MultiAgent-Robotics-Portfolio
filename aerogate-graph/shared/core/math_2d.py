@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import math
-from typing import Tuple
 
-
-Point2D = Tuple[float, float]
-Vector2D = Tuple[float, float]
+Point2D = tuple[float, float]
+Vector2D = tuple[float, float]
 
 
 def vector_norm(vec: Vector2D) -> float:
@@ -34,9 +32,4 @@ def yaw_from_velocity(velocity: Vector2D, fallback_yaw_rad: float = 0.0) -> floa
         return float(fallback_yaw_rad)
     return math.atan2(float(velocity[1]), float(velocity[0]))
 
-
-def subtract_points(a: Point2D, b: Point2D) -> Vector2D:
-    """Return vector a - b in the XY plane."""
-
-    return (float(a[0]) - float(b[0]), float(a[1]) - float(b[1]))
 

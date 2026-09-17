@@ -13,7 +13,7 @@ def fixed_tail_cvar(values: Sequence[float] | np.ndarray, beta: float = 0.90) ->
         raise ValueError("CVaR requires at least one observation")
     if not 0.0 <= beta < 1.0:
         raise ValueError("beta must be in [0, 1)")
-    count = max(1, int(math.ceil((1.0 - beta) * array.size)))
+    count = max(1, math.ceil((1.0 - beta) * array.size))
     return float(np.sort(array)[-count:].mean())
 
 

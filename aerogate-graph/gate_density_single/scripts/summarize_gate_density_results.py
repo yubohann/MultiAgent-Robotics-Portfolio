@@ -10,7 +10,6 @@ from typing import Any
 
 import numpy as np
 
-
 CURVE_FIELDS = (
     "success_rate",
     "collision_rate",

@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Compare an estimator odometry stream with Gazebo truth from one replay.
-
-The comparison aligns both trajectories at the first timestamped pair, which
-removes the arbitrary estimator origin and the fixed sensor mounting offset
-while retaining drift and motion error as a simulation and bag diagnostic.
-"""
+"""Compare an estimator odometry stream with Gazebo truth from one replay."""
 
 from __future__ import annotations
 
@@ -52,7 +47,7 @@ def _percentile(values: list[float], fraction: float) -> float | None:
     if not values:
         return None
     ordered = sorted(values)
-    index = min(len(ordered) - 1, max(0, int(round((len(ordered) - 1) * fraction))))
+    index = min(len(ordered) - 1, max(0, round((len(ordered) - 1) * fraction)))
     return ordered[index]
 
 

@@ -8,21 +8,20 @@ from dataclasses import asdict
 from pathlib import Path
 from unittest.mock import patch
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.isaac_evidence import (  # noqa: E402
+from rivermark_benchmark.isaac_evidence import (
     EVIDENCE_MANIFEST_SCHEMA,
     EVIDENCE_RECEIPT_SCHEMA,
     pack_isaac_development_evidence,
 )
-from rivermark_benchmark.video import (  # noqa: E402
+from rivermark_benchmark.video import (
     STATE_ONLY_TRANSFER_INDEPENDENT_VALIDATION_SCHEMA,
     VideoAudit,
-    sha256_file,
+    identity_file,
 )
 
 
@@ -34,7 +33,7 @@ def _write_json(path: Path, value: object) -> None:
 def _audit(path: Path) -> VideoAudit:
     return VideoAudit(
         path=str(path),
-        sha256=sha256_file(path),
+        identity=identity_file(path),
         bytes=path.stat().st_size,
         width=960,
         height=540,
@@ -77,10 +76,10 @@ def _fixture(
                 if state_only_transfer
                 else {}
             ),
-            "evaluator_manifest_sha256": "f" * 64,
+            "evaluator_manifest_identity": "f" * 16,
         },
     )
-    capture_sha256 = sha256_file(capture / "capture_receipt.json")
+    capture_identity = identity_file(capture / "capture_receipt.json")
     validation = root / "independent_validation.json"
     _write_json(
         validation,
@@ -93,13 +92,13 @@ def _fixture(
             "status": "passed",
             "issues": [],
             "formal_benchmark_admission": False,
-            "capture_receipt_sha256": capture_sha256,
+            "capture_receipt_identity": capture_identity,
             "validator_id": "independent-test-validator",
-            "validator_source_sha256": "a" * 64,
-            "checks": {"evaluator_manifest_sha256": "f" * 64},
+            "validator_source_identity": "a" * 16,
+            "checks": {"evaluator_manifest_identity": "f" * 16},
         },
     )
-    validation_sha256 = sha256_file(validation)
+    validation_identity = identity_file(validation)
     videos: list[Path] = []
     for name, schema in (
         ("overview.mp4", "org.rivermark.isaac-demo-video.v1"),
@@ -112,11 +111,11 @@ def _fixture(
         receipt = {
             "schema": schema,
             "ok": True,
-            "capture_receipt_sha256": capture_sha256,
-            "independent_validation_sha256": validation_sha256,
-            "video_sha256": audit.sha256,
-            "timestamps_sha256": "b" * 64,
-            "timestamps": {"sha256": "b" * 64, "count": 180},
+            "capture_receipt_identity": capture_identity,
+            "independent_validation_identity": validation_identity,
+            "video_identity": audit.identity,
+            "timestamps_identity": "b" * 16,
+            "timestamps": {"identity": "b" * 16, "count": 180},
             "audit": {**asdict(audit), "path": video.name},
         }
         _write_json(video.with_suffix(".mp4.receipt.json"), receipt)
@@ -131,16 +130,16 @@ class IsaacDevelopmentEvidenceTests(unittest.TestCase):
         ):
             return pack_isaac_development_evidence(capture, validation, destination, videos)
 
-    def test_external_bundle_is_hash_bound_and_explicitly_not_formal(self) -> None:
+    def test_external_bundle_is_identity_bound_and_explicitly_not_formal(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture, validation, videos = _fixture(root)
-            before = sha256_file(capture / "capture_receipt.json")
+            before = identity_file(capture / "capture_receipt.json")
             destination = root / "evidence-bundle"
             result = self._pack(capture, validation, destination, videos)
 
             self.assertTrue(result.valid, result.issues)
-            self.assertEqual(before, sha256_file(capture / "capture_receipt.json"))
+            self.assertEqual(before, identity_file(capture / "capture_receipt.json"))
             self.assertFalse((destination / "capture_receipt.json").exists())
             self.assertFalse((destination / "independent_validation.json").exists())
             self.assertFalse((destination / "evaluator_private").exists())
@@ -152,16 +151,16 @@ class IsaacDevelopmentEvidenceTests(unittest.TestCase):
                 self.assertTrue(payload["development_only"])
                 self.assertFalse(payload["formal_benchmark_admission"])
                 self.assertFalse(payload["dataset_episode"])
-            self.assertEqual(manifest["capture"]["capture_receipt_sha256"], before)
+            self.assertEqual(manifest["capture"]["capture_receipt_identity"], before)
             self.assertEqual(
-                manifest["independent_validation"]["validation_receipt_sha256"], sha256_file(validation)
+                manifest["independent_validation"]["validation_receipt_identity"], identity_file(validation)
             )
-            self.assertEqual(receipt["evidence_manifest_sha256"], sha256_file(destination / "evidence_manifest.json"))
+            self.assertEqual(receipt["evidence_manifest_identity"], identity_file(destination / "evidence_manifest.json"))
             self.assertEqual(len(manifest["videos"]), 2)
             for record in manifest["videos"]:
                 copied = destination / record["path"]
                 self.assertTrue(copied.is_file())
-                self.assertEqual(record["sha256"], sha256_file(copied))
+                self.assertEqual(record["identity"], identity_file(copied))
 
     def test_state_only_transfer_validation_is_projected_as_development_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -198,7 +197,7 @@ class IsaacDevelopmentEvidenceTests(unittest.TestCase):
             root = Path(temporary)
             capture, validation, videos = _fixture(root)
             payload = json.loads(validation.read_text(encoding="utf-8"))
-            payload["capture_receipt_sha256"] = "0" * 64
+            payload["capture_receipt_identity"] = "0" * 16
             _write_json(validation, payload)
             destination = root / "evidence-bundle"
             result = self._pack(capture, validation, destination, videos)
@@ -233,13 +232,13 @@ class IsaacDevelopmentEvidenceTests(unittest.TestCase):
             self.assertIn("validation_schema", {issue.code for issue in result.issues})
             self.assertFalse(destination.exists())
 
-    def test_rejects_video_receipt_with_wrong_validation_hash_without_creating_destination(self) -> None:
+    def test_rejects_video_receipt_with_wrong_validation_identity_without_creating_destination(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture, validation, videos = _fixture(root)
             video_receipt = videos[0].with_suffix(".mp4.receipt.json")
             payload = json.loads(video_receipt.read_text(encoding="utf-8"))
-            payload["independent_validation_sha256"] = "0" * 64
+            payload["independent_validation_identity"] = "0" * 16
             _write_json(video_receipt, payload)
             destination = root / "evidence-bundle"
             result = self._pack(capture, validation, destination, videos)
@@ -247,18 +246,18 @@ class IsaacDevelopmentEvidenceTests(unittest.TestCase):
             self.assertIn("video_validation_binding", {issue.code for issue in result.issues})
             self.assertFalse(destination.exists())
 
-    def test_rejects_video_receipt_with_wrong_video_hash_without_creating_destination(self) -> None:
+    def test_rejects_video_receipt_with_wrong_video_identity_without_creating_destination(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture, validation, videos = _fixture(root)
             video_receipt = videos[0].with_suffix(".mp4.receipt.json")
             payload = json.loads(video_receipt.read_text(encoding="utf-8"))
-            payload["video_sha256"] = "0" * 64
+            payload["video_identity"] = "0" * 16
             _write_json(video_receipt, payload)
             destination = root / "evidence-bundle"
             result = self._pack(capture, validation, destination, videos)
             self.assertFalse(result.valid)
-            self.assertIn("video_hash", {issue.code for issue in result.issues})
+            self.assertIn("video_identity", {issue.code for issue in result.issues})
             self.assertFalse(destination.exists())
 
     def test_rejects_destination_inside_raw_capture(self) -> None:

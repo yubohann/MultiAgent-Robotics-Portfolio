@@ -21,7 +21,7 @@ private reply.
 Use the corresponding issue template for public schema, shard, download, or
 replay problems. Redact absolute paths, tokens, private scorer fields, and raw
 sensor payloads. Released bytes stay fixed, and maintainers publish corrections
-through the hash-bound defect and tombstone mechanism in a new version.
+through the recorded defect and tombstone mechanism in a new version.
 
 ## Response scope
 

@@ -4,13 +4,13 @@ import ast
 import re
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOT = REPO_ROOT / "src" / "fraud_ml_engineering"
 
 
 def test_runtime_paths_resolve_to_repository_layout() -> None:
-    from fraud_ml_engineering.paths import ARTIFACTS_ROOT, CACHE_ROOT, CONFIG_ROOT, DATA_ROOT, GRAPH_ROOT, REPO_ROOT as runtime_root
+    from fraud_ml_engineering.paths import ARTIFACTS_ROOT, CACHE_ROOT, CONFIG_ROOT, DATA_ROOT, GRAPH_ROOT
+    from fraud_ml_engineering.paths import REPO_ROOT as runtime_root
 
     assert runtime_root == REPO_ROOT
     assert DATA_ROOT == REPO_ROOT / "data"

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import sys
 import tempfile
 import unittest
@@ -13,12 +12,13 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from rivermark_benchmark._identity import IdentityAccumulator
 from rivermark_benchmark.formal_dataset import rebuild_dataset_index
 from rivermark_benchmark.release_readiness import audit_release_readiness
 
 
 class ReleaseReadinessTests(unittest.TestCase):
-    def test_empty_index_and_missing_manifests_fail_closed(self) -> None:
+    def test_empty_index_and_missing_manifests_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "dataset"
             self.assertTrue(rebuild_dataset_index(root, write=True).valid)
@@ -34,7 +34,7 @@ class ReleaseReadinessTests(unittest.TestCase):
             self.assertIn("release_manifest", codes)
             self.assertIn("manifest_read", codes)
 
-    def test_local_payload_hash_and_bindings_are_checked(self) -> None:
+    def test_local_payload_identity_and_bindings_are_checked(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "dataset"
             root.mkdir()
@@ -46,21 +46,21 @@ class ReleaseReadinessTests(unittest.TestCase):
             payload = root / "validation" / "episode-001" / "state.bin"
             payload.parent.mkdir(parents=True)
             payload.write_bytes(b"immutable state")
-            digest = hashlib.sha256(payload.read_bytes()).hexdigest()
+            digest = IdentityAccumulator(payload.read_bytes()).hexdigest()
             release = {
                 "release_id": "pilot-test-001",
                 "dataset_version": "0.1.0",
                 "source_revision": "a" * 40,
-                "supply_chain_manifest_sha256": "c" * 64,
+                "supply_chain_manifest_identity": "c" * 16,
                 "shards": [{
                     "shard_id": "episode-001-state",
                     "path": "validation/episode-001/state.bin",
                     "size_bytes": payload.stat().st_size,
-                    "sha256": digest,
+                    "identity": digest,
                 }],
             }
             integrity = SimpleNamespace(issues=(), episode_count=1)
-            supply = {"status": "valid", "manifest_sha256": "c" * 64, "release_id": "pilot-test-001", "issues": []}
+            supply = {"status": "valid", "manifest_identity": "c" * 16, "release_id": "pilot-test-001", "issues": []}
             with patch("rivermark_benchmark.release_readiness.verify_dataset_integrity", return_value=integrity), \
                 patch("rivermark_benchmark.release_readiness.load_release_manifest", return_value=release), \
                 patch("rivermark_benchmark.release_readiness.verify_supply_chain_manifest", return_value=supply):
@@ -69,13 +69,13 @@ class ReleaseReadinessTests(unittest.TestCase):
             self.assertEqual(report.shard_count, 1)
             self.assertEqual(report.checks["release_bindings"], "passed")
 
-            payload.write_bytes(b"tampered state")
+            payload.write_bytes(b"altered state")
             with patch("rivermark_benchmark.release_readiness.verify_dataset_integrity", return_value=integrity), \
                 patch("rivermark_benchmark.release_readiness.load_release_manifest", return_value=release), \
                 patch("rivermark_benchmark.release_readiness.verify_supply_chain_manifest", return_value=supply):
-                tampered = audit_release_readiness(root, root / "release.json", root / "supply.json")
-            self.assertFalse(tampered.valid)
-            self.assertIn("local_payload_hash", {issue.code for issue in tampered.issues})
+                altered = audit_release_readiness(root, root / "release.json", root / "supply.json")
+            self.assertFalse(altered.valid)
+            self.assertIn("local_payload_identity", {issue.code for issue in altered.issues})
 
     def test_failure_ledger_is_verified_without_a_shard_id(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -87,26 +87,26 @@ class ReleaseReadinessTests(unittest.TestCase):
             )
             ledger = root / "manifests" / "failure_ledger.jsonl"
             ledger.write_bytes(b'{"schema":"org.rivermark.benchmark.failure-ledger.v1"}\n')
-            digest = hashlib.sha256(ledger.read_bytes()).hexdigest()
+            digest = IdentityAccumulator(ledger.read_bytes()).hexdigest()
             release = {
                 "release_id": "pilot-test-001",
                 "dataset_version": "0.1.0",
                 "source_revision": "a" * 40,
-                "supply_chain_manifest_sha256": "c" * 64,
+                "supply_chain_manifest_identity": "c" * 16,
                 "shards": [{
                     "shard_id": "episode-001-state",
                     "path": "manifests/failure_ledger.jsonl",
                     "size_bytes": ledger.stat().st_size,
-                    "sha256": digest,
+                    "identity": digest,
                 }],
                 "accounting": {"failure_ledger": {
                     "path": "manifests/failure_ledger.jsonl",
                     "size_bytes": ledger.stat().st_size,
-                    "sha256": digest,
+                    "identity": digest,
                 }},
             }
             integrity = SimpleNamespace(issues=(), episode_count=1)
-            supply = {"status": "valid", "manifest_sha256": "c" * 64, "release_id": "pilot-test-001", "issues": []}
+            supply = {"status": "valid", "manifest_identity": "c" * 16, "release_id": "pilot-test-001", "issues": []}
             with patch("rivermark_benchmark.release_readiness.verify_dataset_integrity", return_value=integrity), \
                 patch("rivermark_benchmark.release_readiness.load_release_manifest", return_value=release), \
                 patch("rivermark_benchmark.release_readiness.verify_supply_chain_manifest", return_value=supply):

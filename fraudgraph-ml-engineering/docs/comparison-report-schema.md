@@ -40,4 +40,4 @@ python scripts/generate_auditable_comparison_report.py `
   --output_root artifacts/experiments/auditable_comparison
 ```
 
-The output directory contains `auditable_comparison.json` and `auditable_comparison.md`. Each row includes the source filename and SHA-256 digest, so provenance traces back to the source artifact.
+The output directory contains `auditable_comparison.json` and `auditable_comparison.md`. Each row names its source record file, so provenance traces back to the input artifact.

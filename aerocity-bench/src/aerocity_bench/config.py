@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .canonical import content_hash, read_json
+from .canonical import read_json
 
 EXPECTED_SPLITS = (
     "train",
@@ -45,7 +45,7 @@ OBSERVATION_TIERS = (
 class ReleaseConfig:
     path: Path
     raw: dict[str, Any]
-    config_hash: str
+    config_id: str
 
     @property
     def version(self) -> str:
@@ -488,4 +488,8 @@ def load_release_config(path: Path) -> ReleaseConfig:
     _validate_dynamics(raw)
     _validate_target_processes(raw)
     _validate_faults(raw)
-    return ReleaseConfig(path=path.resolve(), raw=raw, config_hash=content_hash(raw))
+    return ReleaseConfig(
+        path=path.resolve(),
+        raw=raw,
+        config_id=f"{raw['release_version']}-{raw['generator_version']}",
+    )

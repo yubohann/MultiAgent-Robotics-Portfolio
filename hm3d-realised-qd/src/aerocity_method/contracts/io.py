@@ -1,9 +1,8 @@
-"""Deterministic, finite-only serialization helpers."""
+"""JSON serialization helpers shared by the public contracts."""
 
 from __future__ import annotations
 
 import dataclasses
-import hashlib
 import json
 import math
 import os
@@ -13,11 +12,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
 
 
 def require_identifier(value: str, name: str) -> str:
+    # Identifiers cross process boundaries, so reject empty or control-character strings.
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
     if _CONTROL_RE.search(value):
@@ -25,13 +24,8 @@ def require_identifier(value: str, name: str) -> str:
     return value
 
 
-def require_sha256(value: str, name: str) -> str:
-    if not isinstance(value, str) or _SHA256_RE.fullmatch(value) is None:
-        raise ValueError(f"{name} must be a lowercase SHA-256 digest")
-    return value
-
-
 def finite_number(value: int | float, name: str) -> float:
+    # NaN and infinity corrupt every downstream metric, so they stop here.
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{name} must be numeric and not boolean")
     resolved = float(value)
@@ -62,15 +56,15 @@ def _primitive(value: Any, path: str = "$") -> Any:
         return normalized
     if isinstance(value, (set, frozenset)):
         normalized = [_primitive(child, f"{path}[]") for child in value]
-        return sorted(normalized, key=lambda item: canonical_json_bytes(item))
+        # Sets have no order, so sort by their encoded form for stable output.
+        return sorted(normalized, key=lambda item: json.dumps(item, sort_keys=True))
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return [_primitive(child, f"{path}[{index}]") for index, child in enumerate(value)]
     raise ValueError(f"{path} contains unsupported value type {type(value).__name__}")
 
 
 def to_primitive(value: Any) -> Any:
-    """Return a JSON-safe snapshot while rejecting non-finite or ambiguous values."""
-
+    """Return a JSON-safe snapshot of a contract object."""
     return _primitive(value)
 
 
@@ -85,8 +79,27 @@ def canonical_json_bytes(payload: Any) -> bytes:
     return (encoded + "\n").encode("utf-8")
 
 
-def canonical_sha256(payload: Any) -> str:
-    return hashlib.sha256(canonical_json_bytes(payload)).hexdigest()
+def payload_label(payload: Any, *, prefix: str = "record") -> str:
+    """Explicit identity label for a JSON record: prefix plus its named identity fields."""
+    data = to_primitive(payload)
+    parts: list[str] = []
+    if isinstance(data, Mapping):
+        for key in (
+            "schema_version",
+            "status",
+            "scene_id",
+            "episode_id",
+            "decision_id",
+            "manifest_id",
+            "runtime_record_id",
+            "split_manifest_id",
+            "plan_file_id",
+            "start_reset_file_id",
+        ):
+            value = data.get(key)
+            if isinstance(value, (str, int)) and not isinstance(value, bool):
+                parts.append(f"{key}={value}")
+    return f"{prefix}:{len(parts)}-fields:" + ";".join(parts)
 
 
 def validate_finite_diagnostics(
@@ -102,6 +115,7 @@ def validate_finite_diagnostics(
 
 
 def write_json_atomic(path: str | Path, payload: Any) -> None:
+    # Write to a sibling temp file first so a crash never leaves a partial JSON file.
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f".{destination.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
@@ -115,15 +129,11 @@ def write_json_atomic(path: str | Path, payload: Any) -> None:
         ).encode("utf-8")
         + b"\n"
     )
-    try:
-        with temporary.open("xb") as stream:
-            stream.write(encoded)
-            stream.flush()
-            os.fsync(stream.fileno())
-        temporary.replace(destination)
-    except BaseException:
-        temporary.unlink(missing_ok=True)
-        raise
+    with temporary.open("xb") as stream:
+        stream.write(encoded)
+        stream.flush()
+        os.fsync(stream.fileno())
+    temporary.replace(destination)
 
 
 def read_json_object(path: str | Path) -> dict[str, Any]:

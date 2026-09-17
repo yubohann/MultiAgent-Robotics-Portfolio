@@ -16,7 +16,6 @@ from aerocity_method.adapters.hm3d_execution import (
     FragmentExecutionSample,
     execute_hm3d_manifest,
 )
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.contracts.models import (
     ActionToken,
     CandidateFragmentManifest,
@@ -95,13 +94,13 @@ def _manifest_and_token() -> tuple[CandidateFragmentManifest, ActionToken]:
 def _sample(fragment, *, observation_source: bool = True, **changes) -> FragmentExecutionSample:
     source = f"observation-{fragment.instance_fragment_id}" if observation_source else None
     values = dict(
-        planned_fragment_hash=fragment.digest,
+        planned_fragment_id=fragment.instance_fragment_id,
         executed=True,
         actual_start_s=fragment.planned_start,
         actual_end_s=fragment.planned_end,
         command_path_m=fragment.path,
         actual_path_m=fragment.path,
-        execution_trace_hash=canonical_sha256({"fragment": fragment.digest, "trace": 1}),
+        execution_trace_id=f"trace-{fragment.instance_fragment_id}-1",
         minimum_clearance_m=0.4,
         energy_used_j=1.5,
         communication_connected_at_every_telemetry_tick=True,
@@ -155,16 +154,16 @@ class _Backend:
         )
 
 
-def test_successful_concurrent_manifest_keeps_trace_provenance_and_observation_outcomes():
+def test_successful_concurrent_manifest_keeps_trace_ids_and_observation_outcomes():
     manifest, token = _manifest_and_token()
     ledger = execute_hm3d_manifest(manifest, token, _Backend())
     assert ledger.executed_fragment_count == len(manifest.fragments)
     assert ledger.failed_fragment_count == 0
     assert ledger.reusable_fragment_count == len(manifest.fragments)
     assert ledger.engineering_only is True
-    assert len(ledger.trace_hashes) == len(manifest.fragments)
+    assert len(ledger.trace_ids) == len(manifest.fragments)
     assert all(outcome.executed for outcome in ledger.outcomes)
-    assert all(decision.allowed for decision in ledger.provenance_decisions)
+    assert all(decision.allowed for decision in ledger.replay_decisions)
 
 
 def test_explicit_replay_exclusion_retains_real_outcomes_but_prevents_reuse() -> None:
@@ -181,36 +180,36 @@ def test_explicit_replay_exclusion_retains_real_outcomes_but_prevents_reuse() ->
     assert ledger.executed_fragment_count == len(manifest.fragments)
     assert ledger.failed_fragment_count == 0
     assert ledger.total_energy_used_j == pytest.approx(1.5 * len(manifest.fragments))
-    assert len(ledger.trace_hashes) == len(manifest.fragments)
+    assert len(ledger.trace_ids) == len(manifest.fragments)
     assert all(outcome.executed for outcome in ledger.outcomes)
     assert ledger.reusable_fragment_count == 0
     assert all(record is None for record in ledger.replay_records)
-    assert all(not decision.allowed for decision in ledger.provenance_decisions)
-    assert {decision.reason_code for decision in ledger.provenance_decisions} == {
+    assert all(not decision.allowed for decision in ledger.replay_decisions)
+    assert {decision.reason_code for decision in ledger.replay_decisions} == {
         "COLLISION_AVOIDANCE_RECOVERY"
     }
-    assert {
-        decision.evidence_hash for decision in ledger.provenance_decisions
-    } == {outcome.digest for outcome in ledger.outcomes}
+    assert all(
+        record is None for record in ledger.replay_records
+    )
 
 
-def test_missing_observation_outcome_fails_closed_but_the_attempt_stays_in_ledger():
+def test_missing_observation_outcome_is_excluded_from_replay_but_stays_in_ledger():
     manifest, token = _manifest_and_token()
     ledger = execute_hm3d_manifest(manifest, token, _Backend(missing_observation_source=True))
     decisions = {
-        outcome.planned_fragment_hash: decision.reason_code
-        for outcome, decision in zip(ledger.outcomes, ledger.provenance_decisions, strict=True)
+        outcome.planned_fragment_id: decision.reason_code
+        for outcome, decision in zip(ledger.outcomes, ledger.replay_decisions, strict=True)
     }
-    observation_hashes = {
-        fragment.digest
+    observation_ids = {
+        fragment.instance_fragment_id
         for fragment in manifest.fragments
         if fragment.type_signature.fragment_type == "observation"
     }
     assert all(
-        decisions[digest] == "MISSING_SOURCE_OBSERVATION_ID" for digest in observation_hashes
+        decisions[digest] == "MISSING_SOURCE_OBSERVATION_ID" for digest in observation_ids
     )
     assert ledger.executed_fragment_count == len(manifest.fragments)
-    assert ledger.reusable_fragment_count == len(manifest.fragments) - len(observation_hashes)
+    assert ledger.reusable_fragment_count == len(manifest.fragments) - len(observation_ids)
 
 
 def test_started_timeout_keeps_its_real_trace_in_the_denominator_but_never_enters_replay():
@@ -228,7 +227,7 @@ def test_started_timeout_keeps_its_real_trace_in_the_denominator_but_never_enter
             index = next(
                 index
                 for index, sample in enumerate(samples)
-                if sample.planned_fragment_hash == timed_out.digest
+                if sample.planned_fragment_id == timed_out.instance_fragment_id
             )
             samples[index] = _sample(
                 timed_out,
@@ -243,8 +242,8 @@ def test_started_timeout_keeps_its_real_trace_in_the_denominator_but_never_enter
     ledger = execute_hm3d_manifest(manifest, token, TimeoutBackend())
     outcome, decision = next(
         (outcome, decision)
-        for outcome, decision in zip(ledger.outcomes, ledger.provenance_decisions, strict=True)
-        if outcome.planned_fragment_hash == timed_out.digest
+        for outcome, decision in zip(ledger.outcomes, ledger.replay_decisions, strict=True)
+        if outcome.planned_fragment_id == timed_out.instance_fragment_id
     )
     assert outcome.executed is True
     assert outcome.actual_end == pytest.approx(token.duration)
@@ -272,7 +271,7 @@ def test_timeout_reason_has_priority_over_a_preflight_guard_rewrite() -> None:
             index = next(
                 index
                 for index, sample in enumerate(samples)
-                if sample.planned_fragment_hash == timed_out.digest
+                if sample.planned_fragment_id == timed_out.instance_fragment_id
             )
             samples[index] = _sample(
                 timed_out,
@@ -286,8 +285,8 @@ def test_timeout_reason_has_priority_over_a_preflight_guard_rewrite() -> None:
     ledger = execute_hm3d_manifest(manifest, token, GuardedTimeoutBackend())
     decision = next(
         decision
-        for outcome, decision in zip(ledger.outcomes, ledger.provenance_decisions, strict=True)
-        if outcome.planned_fragment_hash == timed_out.digest
+        for outcome, decision in zip(ledger.outcomes, ledger.replay_decisions, strict=True)
+        if outcome.planned_fragment_id == timed_out.instance_fragment_id
     )
     assert decision.reason_code == "TRANSIT_TIMEOUT"
 
@@ -310,38 +309,37 @@ def test_physical_failures_remain_in_the_denominator_and_never_enter_replay(fail
     assert ledger.reusable_fragment_count == 0
     if failure == "collision":
         assert ledger.collision_count == len(manifest.fragments)
-        assert {row.reason_code for row in ledger.provenance_decisions} == {"PHYSICAL_COLLISION"}
+        assert {row.reason_code for row in ledger.replay_decisions} == {"PHYSICAL_COLLISION"}
     elif failure == "out_of_bounds":
         assert ledger.out_of_bounds_count == len(manifest.fragments)
-        assert {row.reason_code for row in ledger.provenance_decisions} == {
+        assert {row.reason_code for row in ledger.replay_decisions} == {
             "FLIGHT_BOUNDS_VIOLATION"
         }
     elif failure == "inter_agent_separation_violation":
         assert ledger.inter_agent_separation_violation_count == len(manifest.fragments)
-        assert {row.reason_code for row in ledger.provenance_decisions} == {
+        assert {row.reason_code for row in ledger.replay_decisions} == {
             "INTER_AGENT_SEPARATION_VIOLATION"
         }
     else:
         if failure == "guard_intervened":
             assert ledger.guard_intervention_count == len(manifest.fragments)
-            assert {row.reason_code for row in ledger.provenance_decisions} == {"GUARD_REWRITTEN"}
+            assert {row.reason_code for row in ledger.replay_decisions} == {"GUARD_REWRITTEN"}
         else:
             assert ledger.static_clearance_contract_violation_count == len(manifest.fragments)
-            assert {row.reason_code for row in ledger.provenance_decisions} == {
+            assert {row.reason_code for row in ledger.replay_decisions} == {
                 "STATIC_CLEARANCE_CONTRACT_VIOLATION"
             }
 
 
-def test_token_manifest_mismatch_is_rejected_before_backend_execution():
+def test_token_for_another_manifest_is_rejected_before_backend_execution():
     manifest, token = _manifest_and_token()
     forged = ActionToken(
         token_id=token.token_id,
         episode_id=token.episode_id,
         decision_id=token.decision_id,
-        context_hash=token.context_hash,
-        manifest_hash=canonical_sha256({"forged": True}),
-        legal_mask_hash=token.legal_mask_hash,
-        planned_fragment_hashes=token.planned_fragment_hashes,
+        context_id=token.context_id,
+        manifest_id="forged-manifest",
+        planned_fragment_ids=token.planned_fragment_ids,
         issued_at=token.issued_at,
         duration=token.duration,
     )

@@ -11,7 +11,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.condition_realization import (  # noqa: E402
+from rivermark_benchmark.condition_realization import (
     SUPPORTED_CONDITION_VALUES,
     condition_request_from_protocol,
     evaluate_condition_realization,
@@ -37,7 +37,7 @@ class ConditionRealizationTests(unittest.TestCase):
         request = condition_request_from_protocol(
             _protocol(),
             protocol_id="citylite-coverage-v1",
-            protocol_sha256="a" * 64,
+            protocol_identity="a" * 16,
             cell_id="train-baseline-0",
         )
         self.assertEqual(validate_condition_request(request), ())
@@ -52,7 +52,7 @@ class ConditionRealizationTests(unittest.TestCase):
         )
         binding = {
             "protocol_id": "citylite-coverage-v1",
-            "protocol_sha256": "a" * 64,
+            "protocol_identity": "a" * 16,
             "cell_id": "train-baseline-0",
         }
         self.assertEqual(validate_condition_request(request, binding=binding), ())
@@ -63,7 +63,7 @@ class ConditionRealizationTests(unittest.TestCase):
         request = condition_request_from_protocol(
             _protocol(),
             protocol_id="citylite-coverage-v1",
-            protocol_sha256="a" * 64,
+            protocol_identity="a" * 16,
             cell_id="train-baseline-0",
         )
         state = {
@@ -113,7 +113,7 @@ class ConditionRealizationTests(unittest.TestCase):
         request = condition_request_from_protocol(
             protocol,
             protocol_id="citylite-coverage-v1",
-            protocol_sha256="a" * 64,
+            protocol_identity="a" * 16,
             cell_id="train-baseline-0",
         )
         self.assertEqual(validate_condition_request(request), ())
@@ -134,7 +134,7 @@ class ConditionRealizationTests(unittest.TestCase):
         request = condition_request_from_protocol(
             _protocol(),
             protocol_id="citylite-coverage-v1",
-            protocol_sha256="a" * 64,
+            protocol_identity="a" * 16,
             cell_id="train-baseline-0",
         )
         state = {

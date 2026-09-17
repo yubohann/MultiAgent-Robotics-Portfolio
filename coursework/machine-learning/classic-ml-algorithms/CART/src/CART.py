@@ -2,7 +2,7 @@
 
 import os
 import csv
-import math
+
 import random
 import argparse
 from collections import defaultdict, Counter
@@ -365,13 +365,13 @@ if __name__ == "__main__":
     train_results = evaluate_classification(y_train, y_train_pred)
     test_results = evaluate_classification(y_test, y_test_pred)
     
-    print(f"\n=== 训练集评估 ===")
+    print("\n=== 训练集评估 ===")
     print(f"准确率: {train_results['accuracy']:.4f}")
     
-    print(f"\n=== 测试集评估 ===")
+    print("\n=== 测试集评估 ===")
     print(f"准确率: {test_results['accuracy']:.4f}")
     
-    print(f"\n=== 按类别评估（测试集）===")
+    print("\n=== 按类别评估（测试集）===")
     for cls in sorted(set(y_test)):
         precision = test_results['precision'].get(cls, 0)
         recall = test_results['recall'].get(cls, 0)
@@ -380,5 +380,5 @@ if __name__ == "__main__":
     
 
     if args.print_tree:
-        print(f"\n=== 决策树结构 ===")
+        print("\n=== 决策树结构 ===")
         tree.print_tree()

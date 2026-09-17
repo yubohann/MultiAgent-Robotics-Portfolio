@@ -1,13 +1,21 @@
-import hashlib
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 import json
 import math
 from pathlib import Path
 
 import numpy as np
 
+from rivermark_benchmark._identity import IdentityAccumulator
 from rivermark_benchmark.citylite_scene import (
-    SCENE_CONTRACT_PAYLOAD_SHA256,
-    SCENE_CONTRACT_SHA256,
+    SCENE_CONTRACT_PAYLOAD_IDENTITY,
+    SCENE_CONTRACT_IDENTITY,
 )
 from rivermark_benchmark.frame_archive import write_chunked_frame_archive
 from rivermark_benchmark.private_evaluator_manifest import (
@@ -15,7 +23,7 @@ from rivermark_benchmark.private_evaluator_manifest import (
     NATIVE_GEOMETRY_SCAN_GENERATOR,
     NATIVE_GEOMETRY_SCAN_SCHEMA,
     NATIVE_GEOMETRY_SCAN_TOOL_PATH,
-    native_geometry_scan_sha256,
+    native_geometry_scan_identity,
 )
 from rivermark_benchmark.target_visibility_diagnosis import (
     TargetVisibilityDiagnosisError,
@@ -34,18 +42,18 @@ def _scan(path: Path) -> None:
         "generator": NATIVE_GEOMETRY_SCAN_GENERATOR,
         "geometry_evidence_kind": NATIVE_GEOMETRY_SCAN_EVIDENCE_KIND,
         "tool_path": NATIVE_GEOMETRY_SCAN_TOOL_PATH,
-        "tool_sha256": "b" * 64,
+        "tool_identity": "b" * 16,
         "source_revision": "c" * 40,
-        "source_tree_sha256": "d" * 64,
+        "source_tree_identity": "d" * 16,
         "source_worktree_dirty": False,
         "runtime_lock": {
-            "sha256": "e" * 64,
+            "identity": "e" * 16,
             "profile_id": "isaac-windows-5.1",
             "audit_status": "passed",
         },
         "scene_id": "RIVERMARK_CITY_LITE_v1",
-        "scene_contract_sha256": SCENE_CONTRACT_SHA256,
-        "scene_content_sha256": SCENE_CONTRACT_PAYLOAD_SHA256,
+        "scene_contract_identity": SCENE_CONTRACT_IDENTITY,
+        "scene_content_identity": SCENE_CONTRACT_PAYLOAD_IDENTITY,
         "domains": [
             {
                 "aabb": {
@@ -57,7 +65,7 @@ def _scan(path: Path) -> None:
             }
         ],
     }
-    payload["scan_sha256"] = native_geometry_scan_sha256(payload)
+    payload["scan_identity"] = native_geometry_scan_identity(payload)
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
@@ -191,7 +199,7 @@ def test_recorded_pose_diagnosis_uses_orientation_and_never_leaks_private_truth(
     encoded = json.dumps(report, sort_keys=True)
     assert "must-not-leak" not in encoded
     assert "position_w_m" not in encoded
-    assert hashlib.sha256(manifest.read_bytes()).hexdigest() == report["private_inputs"]["manifest_sha256"]
+    assert IdentityAccumulator(manifest.read_bytes()).hexdigest() == report["private_inputs"]["manifest_identity"]
     assert report["camera_contract"]["observed_pose_source"] == "unknown_unverified_camera_observed_stream"
 
 
@@ -202,15 +210,15 @@ def test_diagnosis_marks_usd_render_pose_only_when_receipt_declares_it(tmp_path:
     _capture(capture)
     _private_manifest(manifest)
     _scan(scan)
-    spool_hashes = {}
+    spool_identities = {}
     for relative in (
         ".sensor_spool_v1/camera_observed_pos_w_m.npy",
         ".sensor_spool_v1/camera_observed_quat_wxyz.npy",
     ):
         path = capture / relative
-        spool_hashes[relative] = {
+        spool_identities[relative] = {
             "bytes": path.stat().st_size,
-            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "identity": IdentityAccumulator(path.read_bytes()).hexdigest(),
         }
     (capture / "capture_receipt.json").write_text(
         json.dumps(
@@ -224,7 +232,7 @@ def test_diagnosis_marks_usd_render_pose_only_when_receipt_declares_it(tmp_path:
                         "usd_pose_closure": {"max_position_error_m": 0.0},
                     }
                 },
-                "artifact_hashes": spool_hashes,
+                "artifact_identities": spool_identities,
             }
         ),
         encoding="utf-8",
@@ -236,16 +244,16 @@ def test_diagnosis_marks_usd_render_pose_only_when_receipt_declares_it(tmp_path:
         "verified_render_facing_usd_hierarchy_pose_in_isaaclab_world_convention"
     )
     assert report["camera_contract"]["observed_pose_evidence"] == (
-        "capture_receipt.usd_pose_closure_and_spool_hash_binding"
+        "capture_receipt.usd_pose_closure_and_spool_identity_binding"
     )
 
     receipt = json.loads((capture / "capture_receipt.json").read_text(encoding="utf-8"))
-    receipt["artifact_hashes"][".sensor_spool_v1/camera_observed_pos_w_m.npy"]["sha256"] = "0" * 64
+    receipt["artifact_identities"][".sensor_spool_v1/camera_observed_pos_w_m.npy"]["identity"] = "0" * 16
     (capture / "capture_receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
     rejected = diagnose_failed_target_visibility(capture, private_manifest=manifest, geometry_scan=scan)
     assert rejected["camera_contract"]["observed_pose_source"] == "unknown_unverified_camera_observed_stream"
     assert rejected["camera_contract"]["observed_pose_evidence"] == (
-        "matching_capture_receipt_spool_hash_binding_failed"
+        "matching_capture_receipt_spool_identity_binding_failed"
     )
 
 

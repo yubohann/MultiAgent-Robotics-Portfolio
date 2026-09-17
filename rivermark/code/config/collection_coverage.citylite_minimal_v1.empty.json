@@ -1,7 +1,7 @@
 {
   "admitted_count": 0,
   "attempt_count": 0,
-  "attempts_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+  "attempts_identity": "7068d24400000003",
   "cells": [
     {
       "admitted_count": 0,
@@ -61,13 +61,13 @@
     }
   ],
   "complete": false,
+  "excluded_ledger_record_count": 0,
+  "excluded_protocol_id_count": 0,
+  "excluded_protocol_identity_count": 0,
   "exclusion_reasons": {},
   "failed_count": 0,
   "failure_ledger_schema": "org.rivermark.benchmark.failure-ledger.v1",
   "ledger_record_count": 0,
-  "excluded_ledger_record_count": 0,
-  "excluded_protocol_id_count": 0,
-  "excluded_protocol_hash_count": 0,
   "power_analysis": {
     "admitted_evaluation_episodes": 0,
     "evaluation_split": "validation",
@@ -77,7 +77,7 @@
     "required_evaluation_episodes": 86
   },
   "protocol_id": "citylite-minimal-pilot-v1",
-  "protocol_sha256": "a2d1a37b20210631d1e2a2b0df092f50c597faefbf4659033366236843863c16",
+  "protocol_identity": "2883ac2e00000db4",
   "quarantined_count": 0,
   "schema": "org.rivermark.benchmark.coverage-report.v1"
 }

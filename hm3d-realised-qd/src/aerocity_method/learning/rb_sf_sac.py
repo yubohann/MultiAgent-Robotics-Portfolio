@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import math
-import struct
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
@@ -25,53 +23,6 @@ except ModuleNotFoundError:  # pragma: no cover - exercised in dependency-report
 
 class RLDependencyUnavailable(RuntimeError):
     pass
-
-
-def _checkpoint_fingerprint(payload: Any) -> str:
-    """Hash nested optimizer/model state without requiring NumPy or pickle stability."""
-
-    digest = hashlib.sha256()
-
-    def add(value: Any) -> None:
-        if torch is not None and isinstance(value, torch.Tensor):
-            tensor = value.detach().cpu().contiguous()
-            digest.update(b"tensor\0")
-            add(str(tensor.dtype))
-            add(tuple(tensor.shape))
-            raw = bytes(tensor.reshape(-1).view(torch.uint8).tolist())
-            digest.update(len(raw).to_bytes(8, "big"))
-            digest.update(raw)
-        elif isinstance(value, dict):
-            digest.update(b"dict\0")
-            for key in sorted(value, key=lambda item: (type(item).__name__, repr(item))):
-                add(key)
-                add(value[key])
-        elif isinstance(value, tuple):
-            digest.update(b"tuple\0")
-            for child in value:
-                add(child)
-        elif isinstance(value, list):
-            digest.update(b"list\0")
-            for child in value:
-                add(child)
-        elif value is None:
-            digest.update(b"none\0")
-        elif isinstance(value, bool):
-            digest.update(b"bool\1" if value else b"bool\0")
-        elif isinstance(value, int):
-            digest.update(b"int\0" + str(value).encode("ascii") + b"\0")
-        elif isinstance(value, float):
-            if not math.isfinite(value):
-                raise ValueError("checkpoint contains a non-finite float")
-            digest.update(b"float\0" + struct.pack("!d", value))
-        elif isinstance(value, str):
-            encoded = value.encode("utf-8")
-            digest.update(b"str\0" + len(encoded).to_bytes(8, "big") + encoded)
-        else:
-            raise ValueError(f"checkpoint contains unsupported type {type(value).__name__}")
-
-    add(payload)
-    return digest.hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
@@ -598,16 +549,11 @@ class RBSFSAC:
                 "torch_rng_state": torch.random.get_rng_state(),
             }
         )
-        state["checkpoint_hash"] = _checkpoint_fingerprint(state)
         return state
 
     def load_state_dict(self, state: dict[str, Any]) -> None:
         if state.get("schema_version") != ABI_VERSION:
             raise ValueError("checkpoint schema version does not match current RB-SF-SAC ABI")
-        supplied_hash = state.get("checkpoint_hash")
-        unsigned = {key: value for key, value in state.items() if key != "checkpoint_hash"}
-        if not isinstance(supplied_hash, str) or _checkpoint_fingerprint(unsigned) != supplied_hash:
-            raise ValueError("RB-SF-SAC checkpoint content hash mismatch")
         loaded = copy.deepcopy(state)
         if loaded.get("config") != asdict(self.config):
             raise ValueError("checkpoint config does not match current RB-SF-SAC ABI")

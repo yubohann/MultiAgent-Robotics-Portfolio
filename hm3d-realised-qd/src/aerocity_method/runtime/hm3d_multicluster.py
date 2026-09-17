@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
 import math
+import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -86,10 +86,9 @@ def cluster_seed(
         raise ValueError("scene_id and episode_id must be non-empty")
     if cluster_id < 0 or base_seed < 0:
         raise ValueError("cluster_id and base_seed must be non-negative")
-    digest = hashlib.sha256(
-        f"{scene_id}\0{cluster_id}\0{episode_id}\0{base_seed}".encode()
-    ).digest()
-    return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+    # A named per-cluster random stream keeps the layout reproducible across processes.
+    key = f"{scene_id}:{cluster_id}:{episode_id}:{base_seed}"
+    return random.Random(key).getrandbits(63)
 
 
 def validate_cluster_start_sets(
@@ -172,7 +171,7 @@ def audit_reference_cluster_invariance(
     if not math.isfinite(tolerance_m) or tolerance_m < 0.0:
         raise ValueError("tolerance_m must be finite and non-negative")
     reasons: list[str] = []
-    for field in ("selected_candidate_ids", "action_hashes", "outcome_hashes"):
+    for field in ("selected_candidate_ids", "action_ids", "outcome_ids"):
         if reference.get(field) != perturbed_peer.get(field):
             reasons.append(f"REFERENCE_CLUSTER_{field.upper()}_CHANGED")
     ref_trace = reference.get("local_root_trace_m")

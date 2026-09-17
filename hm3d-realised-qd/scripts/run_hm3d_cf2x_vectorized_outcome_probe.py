@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import sys
@@ -20,7 +19,7 @@ PROBE_PROCESS_WALL_STARTED = time.perf_counter()
 
 from aerocity_method.adapters.hm3d_execution import execute_hm3d_manifest
 from aerocity_method.contracts import FORMAL_FLEET_SIZE
-from aerocity_method.contracts.io import canonical_sha256, write_json_atomic
+from aerocity_method.contracts.io import write_json_atomic
 from aerocity_method.contracts.models import (
     CandidateFragmentManifest,
     FragmentInstance,
@@ -50,12 +49,9 @@ def _point(values: list[float]) -> tuple[float, float, float]:
     return tuple(float(value) for value in values)  # type: ignore[return-value]
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _physics_scene_path(stage: Any) -> str:
@@ -124,7 +120,7 @@ def _manifest(
         )
     return context, CandidateFragmentManifest(
         candidate_id=f"vectorized-probe-cluster{cluster_id}",
-        context_hash=context.digest,
+        context_id=context.context_id,
         fragments=tuple(fragments),
         planned_descriptor=(
             sum(
@@ -489,8 +485,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         cluster_rows.append(
             {
                 "cluster_id": cluster_id,
-                "manifest_hash": manifest.manifest_hash,
-                "token_hash": token.digest,
+                "manifest_id": manifest.manifest_id,
+                "token_id": token.token_id,
                 "execution": ledger.to_public_dict(),
                 "communication_audit": audit,
                 "public_range_frame_count": len(result.public_range_frames),
@@ -517,12 +513,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                         "agents",
                     )
                 },
-                "result_sha256": canonical_sha256(
-                    {
-                        "samples": [sample.actual_path_hash for sample in result.samples],
-                        "frames": [row.to_dict() for row in result.public_range_frames],
-                        "rays": [row.to_dict() for row in result.public_range_outcomes],
-                    }
+                "result_file_id": (
+                    f"vectorized-result:{len(result.samples)}-samples:"
+                    f"{len(result.public_range_frames)}-frames"
                 ),
             }
         )
@@ -573,12 +566,14 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         ),
         "cross_cluster_message_count": 0,
         "cross_cluster_map_delta_count": 0,
-        "collision_usd_sha256": _sha256(collision_usd),
-        "cf2x_usd_sha256": _sha256(cf2x_usd),
-        "communication_contract_sha256": contract.digest,
+        "collision_usd_file_id": _file_id(collision_usd),
+        "cf2x_usd_id": _file_id(cf2x_usd),
+        "communication_contract_id": contract.contract_id,
         "clusters": cluster_rows,
     }
-    payload["runtime_record_sha256"] = canonical_sha256(payload)
+    payload["runtime_record_id"] = (
+        f"vectorized-probe:{args.scene_id}:{layout.cluster_count}x{layout.fleet_size}"
+    )
     write_json_atomic(output, payload)
     print(json.dumps({"status": payload["status"], "output": str(output)}))
     return 0

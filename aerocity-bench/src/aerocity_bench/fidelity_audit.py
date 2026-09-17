@@ -7,8 +7,6 @@ import statistics
 from collections import defaultdict
 from typing import Any
 
-from .canonical import content_hash
-
 FIDELITY_REPORT_SCHEMA = "org.aerocity.bench.l0-l1-ranking-audit.v1"
 
 
@@ -20,7 +18,6 @@ def _aggregate(records: list[dict[str, Any]], expected_level: str) -> dict[tuple
             "layout_ancestor",
             "score",
             "execution_level",
-            "evidence_hash",
         }:
             raise ValueError("fidelity score record fields differ")
         if record["execution_level"] != expected_level:
@@ -28,9 +25,8 @@ def _aggregate(records: list[dict[str, Any]], expected_level: str) -> dict[tuple
         method_id = str(record["method_id"])
         ancestor = str(record["layout_ancestor"])
         score = float(record["score"])
-        evidence_hash = str(record["evidence_hash"])
-        if not method_id or not ancestor or len(evidence_hash) != 64:
-            raise ValueError("fidelity record identifiers or evidence hash are invalid")
+        if not method_id or not ancestor:
+            raise ValueError("fidelity record identifiers are invalid")
         if not math.isfinite(score):
             raise ValueError("fidelity score must be finite")
         grouped[(method_id, ancestor)].append(score)
@@ -141,5 +137,4 @@ def compare_l0_l1_rankings(
         },
         "contract_freeze_allowed": False,
     }
-    report["report_hash"] = content_hash(report)
     return report

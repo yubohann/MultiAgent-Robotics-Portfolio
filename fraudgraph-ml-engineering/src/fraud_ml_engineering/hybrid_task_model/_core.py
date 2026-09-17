@@ -1,11 +1,27 @@
 from __future__ import annotations
 
-import math
+from typing import Any
 
-import numpy as np
-import torch
-import torch.nn as nn
+from torch import nn
 
+from ..fraud_dataset import _has_lazy_relation_sequence_payload
+from ..splitgnn_innovative_modules import (
+    CoAssociationEncoder,
+    EventTransformerEncoder,
+    GraphDominantResidualFusion,
+    ParameterizedDiffusionResidual,
+    PrototypeMemoryBank,
+    PrototypeReliabilityScorer,
+    RawFeatureAnchorEncoder,
+    RelationCapsuleSequenceEncoder,
+    SharedPrivateFusion,
+    TemporalContextAggregator,
+    TriStreamGateFusion,
+    TypedTabularEncoder,
+    UTGLiteTemporalFusion,
+    WaveletLiteHead,
+)
+from ..vendor.splitgnn.model import SplitGNNEncoder
 from ._helpers import TRANSFORMER_BATCH_CHUNK_SIZE
 
 
@@ -66,14 +82,14 @@ class HybridFraudModelCore(nn.Module):
         private_dim = int(getattr(args, "shared_private_dim", multimodal_hidden_dim))
         feature_hidden_dim = int(getattr(args, "feature_hidden_dim", max(fusion_hidden_dim, transformer_hidden_dim)))
         raw_anchor_dim = int(getattr(args, "raw_anchor_dim", transformer_hidden_dim))
-        typed_numeric = graph.ndata["typed_numeric"] if "typed_numeric" in graph.ndata else None
-        typed_numeric_missing = graph.ndata["typed_numeric_missing"] if "typed_numeric_missing" in graph.ndata else None
-        typed_categorical = graph.ndata["typed_categorical"] if "typed_categorical" in graph.ndata else None
+        typed_numeric = graph.ndata.get("typed_numeric", None)
+        typed_numeric_missing = graph.ndata.get("typed_numeric_missing", None)
+        typed_categorical = graph.ndata.get("typed_categorical", None)
         typed_categorical_missing = (
-            graph.ndata["typed_categorical_missing"] if "typed_categorical_missing" in graph.ndata else None
+            graph.ndata.get("typed_categorical_missing", None)
         )
         typed_categorical_frequency = (
-            graph.ndata["typed_categorical_frequency"] if "typed_categorical_frequency" in graph.ndata else None
+            graph.ndata.get("typed_categorical_frequency", None)
         )
         typed_categorical_cardinalities = []
         if typed_categorical is not None and typed_categorical.ndim == 2 and typed_categorical.shape[1] > 0:
@@ -99,7 +115,7 @@ class HybridFraudModelCore(nn.Module):
             else None
         )
         self.runtime_relation_token_order = ("local", "motif", "reliability")
-        sequence_tokens = graph.ndata["sequence"] if "sequence" in graph.ndata else None
+        sequence_tokens = graph.ndata.get("sequence", None)
         sequence_base_features = None
         if "sequence_base_feature" in graph.ndata:
             sequence_base_features = graph.ndata["sequence_base_feature"]
@@ -170,8 +186,8 @@ class HybridFraudModelCore(nn.Module):
         self.graph_diffusion_residual = None
         temporal_context_dim = int(graph.ndata["temporal_context"].shape[1]) if "temporal_context" in graph.ndata else 0
         wavelet_context_dim = int(graph.ndata["wavelet_context"].shape[1]) if "wavelet_context" in graph.ndata else 0
-        event_sequence = graph.ndata["event_sequence"] if "event_sequence" in graph.ndata else None
-        event_history_indices = graph.ndata["event_history_indices"] if "event_history_indices" in graph.ndata else None
+        event_sequence = graph.ndata.get("event_sequence", None)
+        event_history_indices = graph.ndata.get("event_history_indices", None)
         event_base_features = None
         if "event_base_feature" in graph.ndata:
             event_base_features = graph.ndata["event_base_feature"]

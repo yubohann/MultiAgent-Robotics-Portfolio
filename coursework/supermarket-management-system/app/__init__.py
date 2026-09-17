@@ -90,7 +90,7 @@ def create_app(test_config=None):
     db.init_app(app)
 
     with app.app_context():
-        from app.models import (
+        from app.models import (  # noqa: F401 - imported so db.create_all() sees every model
             User,
             AdminSignupRequest,
             Announcement,

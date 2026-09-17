@@ -2,13 +2,14 @@
 
 """AMLSim account-level dataset loader."""
 
-import hashlib
 import json
 import os
-from pathlib import Path
 import time
+import zlib
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any, Iterator
+from pathlib import Path
+from typing import Any
 
 try:
     import dgl
@@ -22,11 +23,10 @@ import pandas as pd
 import torch
 
 from .checkpointing import atomic_write_json
-from .paths import CACHE_ROOT, DATA_ROOT
 from .fraud_dataset import (
+    SEQUENCE_BUILDER_VERSION,
     ClientShard,
     DatasetBundle,
-    SEQUENCE_BUILDER_VERSION,
     _apply_active_learning_feedback,
     _apply_label_scarcity,
     _attach_dataset_context_defaults,
@@ -36,6 +36,7 @@ from .fraud_dataset import (
     _random_partition,
     _stratified_partition,
 )
+from .paths import CACHE_ROOT, DATA_ROOT
 
 AMLSIM_ROOT = DATA_ROOT / "amlsim"
 AMLSIM_OUTPUTS_ROOT = AMLSIM_ROOT / "outputs"
@@ -404,12 +405,12 @@ def _chronological_class_aware_split(
     valid_ratio: float,
     force_class_aware: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    num_nodes = int(len(labels))
+    num_nodes = len(labels)
     if num_nodes < 8:
         raise ValueError("AMLSim sample is too small to build train/valid/test masks.")
     order = np.argsort(sort_time, kind="mergesort")
-    train_end = min(max(int(round(num_nodes * float(train_ratio))), 1), num_nodes - 2)
-    valid_end = min(max(int(round(num_nodes * float(train_ratio + valid_ratio))), train_end + 1), num_nodes - 1)
+    train_end = min(max(round(num_nodes * float(train_ratio)), 1), num_nodes - 2)
+    valid_end = min(max(round(num_nodes * float(train_ratio + valid_ratio)), train_end + 1), num_nodes - 1)
 
     def _masks_from_order(target_order: np.ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         train_mask = torch.zeros(num_nodes, dtype=torch.bool)
@@ -434,9 +435,9 @@ def _chronological_class_aware_split(
         label_nodes = order[labels[order] == label]
         if label_nodes.size == 0:
             continue
-        label_train_end = min(max(int(round(label_nodes.size * float(train_ratio))), 1), max(label_nodes.size - 2, 1))
+        label_train_end = min(max(round(label_nodes.size * float(train_ratio)), 1), max(label_nodes.size - 2, 1))
         label_valid_end = min(
-            max(int(round(label_nodes.size * float(train_ratio + valid_ratio))), label_train_end + 1),
+            max(round(label_nodes.size * float(train_ratio + valid_ratio)), label_train_end + 1),
             max(label_nodes.size - 1, label_train_end + 1),
         )
         partitions["train"].append(label_nodes[:label_train_end])
@@ -563,8 +564,8 @@ def _cache_signature(
 
 
 def _resolve_cache_paths(signature: dict[str, Any]) -> tuple[Path, Path]:
-    digest = hashlib.sha1(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
-    return AMLSIM_CACHE_DIR / f"amlsim_{digest}.dgl", AMLSIM_CACHE_DIR / f"amlsim_{digest}.json"
+    tag = zlib.crc32(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")) & 0xFFFFFFFF
+    return AMLSIM_CACHE_DIR / f"amlsim_{tag:08x}.dgl", AMLSIM_CACHE_DIR / f"amlsim_{tag:08x}.json"
 
 
 def _cache_lock_path(metadata_path: Path) -> Path:
@@ -628,7 +629,7 @@ def _load_cached_graph(
             return None
         graph = dgl.load_graphs(str(graph_path))[0][0]
         return graph, metadata
-    except Exception:
+    except (OSError, TypeError, ValueError, dgl.DGLError):
         _safe_unlink(metadata_path)
         _safe_unlink(graph_path)
         return None
@@ -675,7 +676,7 @@ def _build_graph_payload(
     if "cash_transactions" in source_info["files"]:
         cash_frame = _canonicalize_cash_transactions(_read_csv(source_info["files"]["cash_transactions"]))
         if not cash_frame.empty:
-            cash_transaction_rows = int(len(cash_frame))
+            cash_transaction_rows = len(cash_frame)
             cash_aggregates = (
                 cash_frame.groupby("account_id")
                 .agg(cash_tx_count=("amount", "size"), cash_tx_amount_sum=("amount", "sum"), cash_tx_amount_mean=("amount", "mean"))
@@ -835,7 +836,7 @@ def _build_graph_payload(
             torch.from_numpy(src.astype(np.int64)),
             torch.from_numpy(dst.astype(np.int64)),
         )
-        relation_edge_counts[relation_name] = int(len(src))
+        relation_edge_counts[relation_name] = len(src)
 
     homo_src_parts = [item[0].cpu().numpy() for key, item in edge_dict.items() if key[1] != "homo"]
     homo_dst_parts = [item[1].cpu().numpy() for key, item in edge_dict.items() if key[1] != "homo"]
@@ -850,7 +851,7 @@ def _build_graph_payload(
         torch.from_numpy(homo_src.astype(np.int64)),
         torch.from_numpy(homo_dst.astype(np.int64)),
     )
-    relation_edge_counts["homo"] = int(len(homo_src))
+    relation_edge_counts["homo"] = len(homo_src)
 
     graph = dgl.heterograph(edge_dict, num_nodes_dict={NODE_TYPE: len(account_frame)})
     graph.nodes[NODE_TYPE].data["feature"] = torch.from_numpy(feature_matrix.astype(np.float32))
@@ -906,7 +907,7 @@ def _build_graph_payload(
             continue
         node_index = int(account_to_index[account_id])
         group = group.sort_values(["timestamp"], kind="mergesort").tail(event_history_len).reset_index(drop=True)
-        valid_length = int(len(group))
+        valid_length = len(group)
         if valid_length <= 0:
             continue
         insert_start = event_history_len - valid_length
@@ -986,7 +987,7 @@ def _build_graph_payload(
             "activity_bins": int(activity_bins),
             "relation_window_neighbors": int(relation_window_neighbors),
             "graph_builder_version": AMLSIM_GRAPH_BUILDER_VERSION,
-            "transaction_rows": int(len(transactions)),
+            "transaction_rows": len(transactions),
             "cash_transaction_rows": int(cash_transaction_rows),
             "transaction_time_min": float(transactions["timestamp"].min()) if len(transactions) > 0 else 0.0,
             "transaction_time_max": float(transactions["timestamp"].max()) if len(transactions) > 0 else 0.0,
@@ -1101,7 +1102,6 @@ def load_amlsim_dataset(
         clients.append(
             ClientShard(
                 client_id=client_id,
-                owned_global_nodes=owned_nodes,
                 subgraph=subgraph,
                 train_nodes=int(subgraph.nodes[NODE_TYPE].data["train_mask"].sum().item()),
             )
@@ -1127,6 +1127,6 @@ def load_amlsim_dataset(
     data_summary = dict(metadata.get("data_summary", {}) or {})
     data_summary["dataset"] = str(dataset_name)
     data_summary["dataset_registry_name"] = str(dataset_name)
-    data_summary["num_clients"] = int(len(clients))
+    data_summary["num_clients"] = len(clients)
     bundle.data_summary = data_summary
     return bundle

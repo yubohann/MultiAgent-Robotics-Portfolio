@@ -3,8 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from isaaclab.app import AppLauncher
+
+if TYPE_CHECKING:
+    from pxr import Usd
 
 
 PUSHABLE_NAMES = ("RandomObstacleNorthEast", "RandomObstacleSouthWest")

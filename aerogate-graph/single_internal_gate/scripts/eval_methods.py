@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
 import json
+from dataclasses import asdict
 
+from shared.task_suites.exp12_gate_scene import task_suite_names
 from single_internal_gate.ablation import get_variant, method_variants, variant_names
 from single_internal_gate.method_evaluation import evaluate_method_variant
-from shared.task_suites.exp12_gate_scene import task_suite_names
 
 
 def main() -> None:

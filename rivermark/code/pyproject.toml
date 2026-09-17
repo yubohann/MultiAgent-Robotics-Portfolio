@@ -58,7 +58,6 @@ rivermark-isaac-pack-readiness = "rivermark_benchmark.isaac_pack_readiness:main"
 rivermark-isaac-pack-descriptor = "rivermark_benchmark.isaac_pack_descriptor:main"
 rivermark-isaac-pack-spec = "rivermark_benchmark.isaac_pack_spec:main"
 rivermark-isaac-evidence = "rivermark_benchmark.isaac_evidence:main"
-rivermark-release-gate = "rivermark_benchmark.release_gate:main"
 rivermark-release-data = "rivermark_benchmark.release_manifest:main"
 rivermark-metrics = "rivermark_benchmark.metrics:main"
 rivermark-evaluate = "rivermark_benchmark.evaluator:main"
@@ -95,3 +94,16 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+# Evidence and audit tooling keeps deliberate broad `except Exception` guards:
+# these modules turn third-party, simulator, and filesystem failures into a
+# recorded diagnostic or a strict report instead of aborting the run or
+# masking the original failure.  They are not part of the core runtime.
+[tool.ruff.lint.per-file-ignores]
+"src/rivermark_benchmark/baseline_harness.py" = ["BLE001"]
+"src/rivermark_benchmark/formal_dataset.py" = ["BLE001"]
+"src/rivermark_benchmark/isaac_capture.py" = ["BLE001"]
+"src/rivermark_benchmark/isaac_smoke.py" = ["BLE001"]
+"src/rivermark_benchmark/release_readiness.py" = ["BLE001"]
+"src/rivermark_benchmark/validate.py" = ["BLE001"]

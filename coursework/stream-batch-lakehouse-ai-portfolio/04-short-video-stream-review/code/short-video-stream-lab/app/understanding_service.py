@@ -1,12 +1,12 @@
-"""Orchestrate baseline analysis, preprocessing, local VLM, and fallback behavior."""
+"""Orchestrate baseline analysis, preprocessing, and local VLM understanding."""
 
-from pathlib import Path
 import re
-from typing import Callable
+from collections.abc import Callable
+from pathlib import Path
 
 from .config import ALLOW_LOCAL_MODEL_FALLBACK
-from .ollama_vlm import OllamaModelError, OllamaVLMClient
 from .model_registry import ModelCandidate, get_active_model
+from .ollama_vlm import OllamaModelError, OllamaVLMClient
 from .preprocessing import VideoPreprocessor
 from .video_understanding import VideoUnderstandingModel
 
@@ -177,7 +177,6 @@ class MultimodalUnderstandingService:
         except OllamaModelError as exc:
             if not ALLOW_LOCAL_MODEL_FALLBACK:
                 raise
-            # Fallback keeps the classroom demo runnable.
             if emit_event:
                 emit_event(
                     video_id,

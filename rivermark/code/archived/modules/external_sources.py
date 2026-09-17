@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from _identity import IdentityAccumulator
+
 import argparse
-import hashlib
 import json
 import os
 import tempfile
@@ -164,8 +165,8 @@ def _canonical_bytes(value: object) -> bytes:
     ).encode("utf-8")
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
@@ -220,7 +221,7 @@ def _snapshot_one(root: Path, spec: ExternalSourceSpec) -> dict[str, object]:
         if not _is_within(path, source_root) or not path.is_file():
             missing.append(relative)
             continue
-        key_files.append({"path": relative.replace("\\", "/"), "bytes": path.stat().st_size, "sha256": _sha256_file(path)})
+        key_files.append({"path": relative.replace("\\", "/"), "bytes": path.stat().st_size, "identity": _identity_file(path)})
     return {
         **base,
         "status": "complete" if not missing else "incomplete",
@@ -231,10 +232,10 @@ def _snapshot_one(root: Path, spec: ExternalSourceSpec) -> dict[str, object]:
     }
 
 
-def _manifest_sha256(manifest: Mapping[str, object]) -> str:
+def _manifest_identity(manifest: Mapping[str, object]) -> str:
     unsigned = dict(manifest)
-    unsigned.pop("manifest_sha256", None)
-    return hashlib.sha256(_canonical_bytes(unsigned)).hexdigest()
+    unsigned.pop("manifest_identity", None)
+    return IdentityAccumulator(_canonical_bytes(unsigned)).hexdigest()
 
 
 def scan_external_source_snapshots(
@@ -272,17 +273,17 @@ def scan_external_source_snapshots(
         "complete_source_count": sum(record["status"] == "complete" for record in records),
         "records": records,
     }
-    manifest["manifest_sha256"] = _manifest_sha256(manifest)
+    manifest["manifest_identity"] = _manifest_identity(manifest)
     return manifest
 
 
 def write_external_source_manifest(path: Path, manifest: Mapping[str, object], *, overwrite: bool = False) -> Path:
-    """Atomically write a manifest already bound by ``manifest_sha256``."""
+    """Atomically write a manifest already bound by ``manifest_identity``."""
 
     if manifest.get("schema") != EXTERNAL_SOURCE_SNAPSHOT_SCHEMA:
         raise ExternalSourceError("manifest does not use the external source snapshot schema")
-    if manifest.get("manifest_sha256") != _manifest_sha256(manifest):
-        raise ExternalSourceError("manifest hash is missing or does not bind its content")
+    if manifest.get("manifest_identity") != _manifest_identity(manifest):
+        raise ExternalSourceError("manifest identity is missing or does not bind its content")
     output = Path(path).expanduser().resolve()
     if output.exists() and not overwrite:
         raise ExternalSourceError(f"refusing to overwrite existing manifest: {output}")
@@ -327,7 +328,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ExternalSourceError as exc:
         print(json.dumps({"status": "blocked", "reason": str(exc)}, ensure_ascii=True, sort_keys=True))
         return 2
-    print(json.dumps({"status": manifest["status"], "output": str(output), "manifest_sha256": manifest["manifest_sha256"]}, ensure_ascii=True, sort_keys=True))
+    print(json.dumps({"status": manifest["status"], "output": str(output), "manifest_identity": manifest["manifest_identity"]}, ensure_ascii=True, sort_keys=True))
     return 0 if manifest["status"] == "complete" else 1
 
 

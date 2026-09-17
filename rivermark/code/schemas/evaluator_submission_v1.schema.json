@@ -7,7 +7,7 @@
   "required": [
     "schema",
     "dataset_version",
-    "dataset_index_sha256",
+    "dataset_index_identity",
     "split",
     "evaluator",
     "policy",
@@ -16,27 +16,27 @@
   "properties": {
     "schema": {"const": "org.rivermark.benchmark.evaluator-submission.v1"},
     "dataset_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
-    "dataset_index_sha256": {"$ref": "#/$defs/sha256"},
+    "dataset_index_identity": {"$ref": "#/$defs/identity"},
     "split": {"enum": ["train", "inner_dev", "validation", "blind_test", "ood_test"]},
     "evaluator": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["evaluator_id", "evaluator_version", "evaluator_sha256", "metric_schema"],
+      "required": ["evaluator_id", "evaluator_version", "evaluator_identity", "metric_schema"],
       "properties": {
         "evaluator_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
         "evaluator_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"},
-        "evaluator_sha256": {"$ref": "#/$defs/sha256"},
+        "evaluator_identity": {"$ref": "#/$defs/identity"},
         "metric_schema": {"const": "org.rivermark.benchmark.metrics.v1"}
       }
     },
     "policy": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["method_id", "code_revision", "checkpoint_sha256", "seed"],
+      "required": ["method_id", "code_revision", "checkpoint_identity", "seed"],
       "properties": {
         "method_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
         "code_revision": {"type": "string", "pattern": "^[0-9a-f]{7,64}$"},
-        "checkpoint_sha256": {"$ref": "#/$defs/sha256"},
+        "checkpoint_identity": {"$ref": "#/$defs/identity"},
         "seed": {"type": "integer", "minimum": 0}
       }
     },
@@ -69,6 +69,6 @@
     }
   },
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"}
   }
 }

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import copy
 import contextlib
+import copy
 import io
 import json
 import sys
@@ -13,11 +13,11 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.labels import (  # noqa: E402
+from rivermark_benchmark.labels import (
     LABEL_ONTOLOGY_SCHEMA,
     LABEL_RECORD_SCHEMA,
     main,
-    ontology_sha256,
+    ontology_identity,
     validate_label_record,
     validate_label_sequence,
     validate_ontology,
@@ -36,7 +36,7 @@ def _record(*, frame_index: int = 0, timestamp_ns: int = 10) -> dict[str, object
         "episode_id": "episode-0001",
         "frame_index": frame_index,
         "timestamp_ns": timestamp_ns,
-        "source_capture_receipt_sha256": "b" * 64,
+        "source_capture_receipt_identity": "b" * 16,
         "source_revision": "a" * 40,
         "labels": [
             {
@@ -79,11 +79,11 @@ class LabelOntologyTests(unittest.TestCase):
         self.assertEqual(list(Draft202012Validator(ontology_schema).iter_errors(ontology)), [])
         self.assertEqual(list(Draft202012Validator(record_schema).iter_errors(record)), [])
 
-    def test_checked_in_ontology_is_valid_and_hash_stable(self) -> None:
+    def test_checked_in_ontology_is_valid_and_identity_stable(self) -> None:
         ontology = _ontology()
         self.assertEqual(validate_ontology(ontology), ())
         self.assertEqual(ontology["schema"], LABEL_ONTOLOGY_SCHEMA)
-        self.assertEqual(len(ontology_sha256(ontology)), 64)
+        self.assertEqual(len(ontology_identity(ontology)), 16)
         self.assertEqual(ontology["distribution"], "development_only")
 
     def test_valid_record_and_sequence_preserve_identity(self) -> None:
@@ -93,7 +93,7 @@ class LabelOntologyTests(unittest.TestCase):
         self.assertEqual(validate_label_record(first, ontology), ())
         self.assertEqual(validate_label_sequence([first, second], ontology), ())
 
-    def test_geometry_and_identity_errors_fail_closed(self) -> None:
+    def test_geometry_and_identity_errors_strict(self) -> None:
         ontology = _ontology()
         malformed = _record()
         malformed["labels"][0]["geometry"]["orientation_wxyz"] = [2.0, 0.0, 0.0, 0.0]

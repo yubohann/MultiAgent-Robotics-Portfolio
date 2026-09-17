@@ -14,7 +14,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.formal_dataset import sha256_file
+from rivermark_benchmark.formal_dataset import identity_file
 from rivermark_benchmark.parquet_projection import (
     ParquetProjectionError,
     project_development_capture_to_parquet,
@@ -69,8 +69,8 @@ def _capture_fixture(root: Path, *, formal_admission: bool = False) -> Path:
     ):
         np.savez_compressed(streams / name, **values)
 
-    artifact_hashes = {
-        f"streams/{name}": {"bytes": (streams / name).stat().st_size, "sha256": sha256_file(streams / name)}
+    artifact_identities = {
+        f"streams/{name}": {"bytes": (streams / name).stat().st_size, "identity": identity_file(streams / name)}
         for name in ("state_action.npz", "public_task.npz", "public_messages.npz")
     }
     receipt = {
@@ -83,7 +83,7 @@ def _capture_fixture(root: Path, *, formal_admission: bool = False) -> Path:
         "claim_boundary": {"formal_benchmark_admission": formal_admission},
         "collection_binding": {
             "protocol_id": "citylite-test-v1",
-            "protocol_sha256": "b" * 64,
+            "protocol_identity": "b" * 16,
             "cell_id": "train-test",
             "split": "train",
             "episode_index": 1,
@@ -91,7 +91,7 @@ def _capture_fixture(root: Path, *, formal_admission: bool = False) -> Path:
             "private_evaluator_path": "C:/private/hidden-targets.json",
         },
         "physics": {"same_world_agent_count": 2, "physics_steps": 3, "sensor_samples": 2},
-        "artifact_hashes": artifact_hashes,
+        "artifact_identities": artifact_identities,
     }
     receipt_path = root / "capture_receipt.json"
     _write_json(receipt_path, receipt)
@@ -101,7 +101,7 @@ def _capture_fixture(root: Path, *, formal_admission: bool = False) -> Path:
             "schema": "org.rivermark.isaac-independent-validation.v1",
             "status": "passed",
             "issues": [],
-            "capture_receipt_sha256": sha256_file(receipt_path),
+            "capture_receipt_identity": identity_file(receipt_path),
         },
     )
     return root
@@ -121,7 +121,7 @@ class ParquetProjectionTests(unittest.TestCase):
             self.assertFalse(manifest["formal_benchmark_admission"])
             self.assertEqual(manifest["collection_binding"], {
                 "protocol_id": "citylite-test-v1",
-                "protocol_sha256": "b" * 64,
+                "protocol_identity": "b" * 16,
                 "cell_id": "train-test",
                 "split": "train",
                 "episode_index": 1,
@@ -135,18 +135,18 @@ class ParquetProjectionTests(unittest.TestCase):
             self.assertEqual(read_development_parquet_table(output, "public_messages.parquet").num_rows, 4)
             self.assertEqual(read_development_parquet_table(output, "metadata.parquet").num_rows, 1)
 
-    def test_formal_admission_and_source_tampering_fail_closed(self) -> None:
+    def test_formal_admission_and_source_alteration_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             formal_capture = _capture_fixture(root / "formal", formal_admission=True)
             with self.assertRaisesRegex(ParquetProjectionError, "formal_benchmark_admission=false"):
                 project_development_capture_to_parquet(formal_capture, root / "formal-output")
-            tampered_capture = _capture_fixture(root / "tampered")
-            with (tampered_capture / "streams" / "public_task.npz").open("ab") as handle:
-                handle.write(b"tampered")
+            altered_capture = _capture_fixture(root / "altered")
+            with (altered_capture / "streams" / "public_task.npz").open("ab") as handle:
+                handle.write(b"altered")
             with self.assertRaisesRegex(ParquetProjectionError, "does not match its capture receipt binding"):
-                project_development_capture_to_parquet(tampered_capture, root / "tampered-output")
-            self.assertFalse((root / "tampered-output").exists())
+                project_development_capture_to_parquet(altered_capture, root / "altered-output")
+            self.assertFalse((root / "altered-output").exists())
 
     def test_unsafe_reader_path_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary, self.assertRaises(ParquetProjectionError):

@@ -6,14 +6,12 @@ import sys
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from rivermark_benchmark.validate import validate_episode_manifest
-
 
 FIXTURE = ROOT / "tests" / "fixtures" / "episode_manifest_fixture.json"
 
@@ -71,7 +69,7 @@ class EpisodeManifestValidationTests(unittest.TestCase):
                     "sample_count": 0,
                     "timestamp_field": "sensor_time_ns",
                     "path": "payloads/lidar.npz",
-                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "identity": "e3b0c44298fc1c14",
                 },
                 {
                     "stream_id": "pilot-radar",
@@ -81,7 +79,7 @@ class EpisodeManifestValidationTests(unittest.TestCase):
                     "sample_count": 0,
                     "timestamp_field": "sensor_time_ns",
                     "path": "payloads/radar.npz",
-                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "identity": "e3b0c44298fc1c14",
                 },
                 {
                     "stream_id": "pilot-imu",
@@ -91,7 +89,7 @@ class EpisodeManifestValidationTests(unittest.TestCase):
                     "sample_count": 0,
                     "timestamp_field": "sensor_time_ns",
                     "path": "payloads/imu.npz",
-                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "identity": "e3b0c44298fc1c14",
                 },
             ]
         )
@@ -122,7 +120,7 @@ class EpisodeManifestValidationTests(unittest.TestCase):
                     "sample_count": 0,
                     "timestamp_field": "sensor_time_ns",
                     "path": f"payloads/{modality}.npz",
-                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "identity": "e3b0c44298fc1c14",
                 }
                 for modality in ("lidar", "imu")
             ]

@@ -157,7 +157,7 @@ class IsaacPackDescriptorTests(unittest.TestCase):
         with self.assertRaisesRegex(IsaacPackDescriptorError, "attachment_frame body_flu"):
             build_isaac_observation_abi(_streams(), calibration)
 
-    def test_unknown_or_missing_stream_semantics_fail_closed(self) -> None:
+    def test_unknown_or_missing_stream_semantics_strict(self) -> None:
         streams = _streams()
         streams.pop("imu")
         with self.assertRaisesRegex(IsaacPackDescriptorError, "exact eight"):

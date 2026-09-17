@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,19 +14,15 @@ ROOT = Path(__file__).resolve().parents[1]
 DRONE_USD = ROOT.parents[1] / "assets" / "new" / "cf2x.usd"
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
-def _canonical_sha256(value: object) -> str:
-    encoded = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    )
-    return hashlib.sha256(encoded).hexdigest()
+def _canonical_file_id(value: object) -> str:
+    # Explicit record label: canonical JSON text length.
+    encoded = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    return f"json:{len(encoded)}b"
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -69,10 +64,10 @@ def _load_collision_manifest(path: Path, scene_id: str, collision_usd: Path) -> 
     payload = json.loads(path.read_text(encoding="utf-8"))
     required = {
         "scene_id",
-        "source_glb_sha256",
+        "source_glb_file_id",
         "output_usd",
-        "output_usd_sha256",
-        "coordinate_transform_sha256",
+        "output_usd_file_id",
+        "coordinate_transform_file_id",
         "collision",
         "status",
     }
@@ -82,7 +77,7 @@ def _load_collision_manifest(path: Path, scene_id: str, collision_usd: Path) -> 
         raise ValueError("collision manifest scene_id does not match reset probe")
     if Path(payload["output_usd"]).resolve() != collision_usd:
         raise ValueError("collision manifest USD path does not match reset probe")
-    if payload["output_usd_sha256"] != _sha256(collision_usd):
+    if payload["output_usd_file_id"] != _file_id(collision_usd):
         raise ValueError("collision USD changed after conversion manifest was written")
     collision = payload["collision"]
     if (
@@ -228,15 +223,15 @@ def main() -> int:
         "speed_within_tolerance": speed <= 1.0e-5,
     }
     components = {
-        "scene": collision_manifest["source_glb_sha256"],
-        "collider": collision_manifest["output_usd_sha256"],
-        "contact": _canonical_sha256(sensor),
-        "sensor": _canonical_sha256(sensor),
-        "rng": _canonical_sha256({"torch_seed": ARGS.seed}),
-        "controller": _canonical_sha256(controller),
-        "reset_state": _canonical_sha256(reset_state),
+        "scene": collision_manifest["source_glb_file_id"],
+        "collider": collision_manifest["output_usd_file_id"],
+        "contact": _canonical_file_id(sensor),
+        "sensor": _canonical_file_id(sensor),
+        "rng": _canonical_file_id({"torch_seed": ARGS.seed}),
+        "controller": _canonical_file_id(controller),
+        "reset_state": _canonical_file_id(reset_state),
     }
-    reset_fingerprint = _canonical_sha256(components)
+    reset_fingerprint = _canonical_file_id(components)
     passed = bool(
         int(robot.num_instances) == 1
         and position_error <= 1.0e-4
@@ -258,12 +253,12 @@ def main() -> int:
         },
         "run_tag": ARGS.run_tag,
         "scene_id": ARGS.scene_id,
-        "scene_source_glb_sha256": collision_manifest["source_glb_sha256"],
+        "scene_source_glb_file_id": collision_manifest["source_glb_file_id"],
         "collision_usd": str(scene_usd),
-        "collision_usd_sha256": collision_manifest["output_usd_sha256"],
-        "coordinate_transform_sha256": collision_manifest["coordinate_transform_sha256"],
+        "collision_usd_file_id": collision_manifest["output_usd_file_id"],
+        "coordinate_transform_file_id": collision_manifest["coordinate_transform_file_id"],
         "cf2x_usd": str(drone_usd),
-        "cf2x_usd_sha256": _sha256(drone_usd),
+        "cf2x_usd_id": _file_id(drone_usd),
         "robot": {
             "num_instances": int(robot.num_instances),
             "num_bodies": int(robot.num_bodies),

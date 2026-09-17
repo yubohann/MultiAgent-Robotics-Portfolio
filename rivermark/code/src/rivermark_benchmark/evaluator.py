@@ -3,22 +3,22 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
+from ._identity import IdentityAccumulator
 from .metrics import METRIC_VERSION, MetricError, score_search_episode
-
 
 SUBMISSION_SCHEMA = "org.rivermark.benchmark.evaluator-submission.v1"
 RESULT_SCHEMA = "org.rivermark.benchmark.evaluator-result.v1"
 EVALUATOR_VERSION = "1.0.0"
 SPLITS = frozenset({"train", "inner_dev", "validation", "blind_test", "ood_test"})
 _ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _REVISION = re.compile(r"^[0-9a-f]{7,64}$")
 _SEMVER = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")
 _PRIVATE_KEY_TOKENS = ("target", "truth", "private", "evaluator", "reward", "ground")
@@ -53,20 +53,20 @@ class SubmissionReport:
     schema: str
     status: str
     dataset_version: str | None
-    dataset_index_sha256: str | None
+    dataset_index_identity: str | None
     split: str | None
     evaluator_id: str | None
     evaluator_version: str | None
-    evaluator_sha256: str | None
+    evaluator_identity: str | None
     metric_version: str | None
     method_id: str | None
     code_revision: str | None
-    checkpoint_sha256: str | None
+    checkpoint_identity: str | None
     seed: int | None
     episode_count: int
     scores: tuple[EpisodeScore, ...]
     issues: tuple[SubmissionIssue, ...]
-    submission_sha256: str | None = None
+    submission_identity: str | None = None
 
     @property
     def valid(self) -> bool:
@@ -116,8 +116,8 @@ def _text(value: Any, *, path: str, pattern: re.Pattern[str], issues: list[Submi
 
 
 def _sha(value: Any, *, path: str, issues: list[SubmissionIssue]) -> None:
-    if not isinstance(value, str) or not _SHA256.fullmatch(value):
-        _issue(issues, "sha256", path, "must be 64 lowercase hexadecimal characters")
+    if not isinstance(value, str) or not _IDENTITY.fullmatch(value):
+        _issue(issues, "identity", path, "must be 16 lowercase hexadecimal characters")
 
 
 def _validate_trace(value: Any, *, path: str, issues: list[SubmissionIssue]) -> dict[str, Any] | None:
@@ -161,7 +161,7 @@ def validate_submission(
     *,
     expected_dataset_version: str | None = None,
     expected_split: str | None = None,
-    expected_dataset_index_sha256: str | None = None,
+    expected_dataset_index_identity: str | None = None,
 ) -> tuple[SubmissionIssue, ...]:
     """Validate a submission without evaluating or accepting private truth."""
 
@@ -169,7 +169,7 @@ def validate_submission(
     root = _mapping(payload, path="$", issues=issues)
     if root is None:
         return tuple(issues)
-    allowed = frozenset({"schema", "dataset_version", "dataset_index_sha256", "split", "evaluator", "policy", "episodes"})
+    allowed = frozenset({"schema", "dataset_version", "dataset_index_identity", "split", "evaluator", "policy", "episodes"})
     _unknown(root, allowed, path="$", issues=issues)
     if root.get("schema") != SUBMISSION_SCHEMA:
         _issue(issues, "schema", "$.schema", f"expected {SUBMISSION_SCHEMA!r}")
@@ -178,9 +178,9 @@ def validate_submission(
         _issue(issues, "dataset_version", "$.dataset_version", "must be a semantic version")
     elif expected_dataset_version is not None and dataset_version != expected_dataset_version:
         _issue(issues, "dataset_version", "$.dataset_version", "does not match expected dataset version")
-    _sha(root.get("dataset_index_sha256"), path="$.dataset_index_sha256", issues=issues)
-    if expected_dataset_index_sha256 is not None and root.get("dataset_index_sha256") != expected_dataset_index_sha256:
-        _issue(issues, "dataset_index_sha256", "$.dataset_index_sha256", "does not match expected dataset index hash")
+    _sha(root.get("dataset_index_identity"), path="$.dataset_index_identity", issues=issues)
+    if expected_dataset_index_identity is not None and root.get("dataset_index_identity") != expected_dataset_index_identity:
+        _issue(issues, "dataset_index_identity", "$.dataset_index_identity", "does not match expected dataset index identity")
     split = root.get("split")
     if split not in SPLITS:
         _issue(issues, "split", "$.split", "unknown evaluation split")
@@ -188,18 +188,18 @@ def validate_submission(
         _issue(issues, "split", "$.split", "does not match expected split")
     evaluator = _mapping(root.get("evaluator"), path="$.evaluator", issues=issues)
     if evaluator is not None:
-        _unknown(evaluator, frozenset({"evaluator_id", "evaluator_version", "evaluator_sha256", "metric_schema"}), path="$.evaluator", issues=issues)
+        _unknown(evaluator, frozenset({"evaluator_id", "evaluator_version", "evaluator_identity", "metric_schema"}), path="$.evaluator", issues=issues)
         _text(evaluator.get("evaluator_id"), path="$.evaluator.evaluator_id", pattern=_ID, issues=issues)
         _text(evaluator.get("evaluator_version"), path="$.evaluator.evaluator_version", pattern=_SEMVER, issues=issues)
-        _sha(evaluator.get("evaluator_sha256"), path="$.evaluator.evaluator_sha256", issues=issues)
+        _sha(evaluator.get("evaluator_identity"), path="$.evaluator.evaluator_identity", issues=issues)
         if evaluator.get("metric_schema") != METRIC_VERSION:
             _issue(issues, "metric_schema", "$.evaluator.metric_schema", f"expected {METRIC_VERSION!r}")
     policy = _mapping(root.get("policy"), path="$.policy", issues=issues)
     if policy is not None:
-        _unknown(policy, frozenset({"method_id", "code_revision", "checkpoint_sha256", "seed"}), path="$.policy", issues=issues)
+        _unknown(policy, frozenset({"method_id", "code_revision", "checkpoint_identity", "seed"}), path="$.policy", issues=issues)
         _text(policy.get("method_id"), path="$.policy.method_id", pattern=_ID, issues=issues)
         _text(policy.get("code_revision"), path="$.policy.code_revision", pattern=_REVISION, issues=issues)
-        _sha(policy.get("checkpoint_sha256"), path="$.policy.checkpoint_sha256", issues=issues)
+        _sha(policy.get("checkpoint_identity"), path="$.policy.checkpoint_identity", issues=issues)
         seed = policy.get("seed")
         if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
             _issue(issues, "seed", "$.policy.seed", "must be a non-negative integer")
@@ -235,8 +235,8 @@ def evaluate_submission(
     *,
     expected_dataset_version: str | None = None,
     expected_split: str | None = None,
-    expected_dataset_index_sha256: str | None = None,
-    submission_sha256: str | None = None,
+    expected_dataset_index_identity: str | None = None,
+    submission_identity: str | None = None,
 ) -> SubmissionReport:
     """Validate and score a public confirmation-trace submission."""
 
@@ -245,7 +245,7 @@ def evaluate_submission(
             payload,
             expected_dataset_version=expected_dataset_version,
             expected_split=expected_split,
-            expected_dataset_index_sha256=expected_dataset_index_sha256,
+            expected_dataset_index_identity=expected_dataset_index_identity,
         )
     )
     root = payload if isinstance(payload, Mapping) else {}
@@ -271,20 +271,20 @@ def evaluate_submission(
         schema=RESULT_SCHEMA,
         status="valid" if not issues else "invalid",
         dataset_version=root.get("dataset_version") if isinstance(root.get("dataset_version"), str) else None,
-        dataset_index_sha256=root.get("dataset_index_sha256") if isinstance(root.get("dataset_index_sha256"), str) else None,
+        dataset_index_identity=root.get("dataset_index_identity") if isinstance(root.get("dataset_index_identity"), str) else None,
         split=root.get("split") if isinstance(root.get("split"), str) else None,
         evaluator_id=(root.get("evaluator", {}).get("evaluator_id") if isinstance(root.get("evaluator"), Mapping) else None),
         evaluator_version=(root.get("evaluator", {}).get("evaluator_version") if isinstance(root.get("evaluator"), Mapping) else None),
-        evaluator_sha256=(root.get("evaluator", {}).get("evaluator_sha256") if isinstance(root.get("evaluator"), Mapping) else None),
+        evaluator_identity=(root.get("evaluator", {}).get("evaluator_identity") if isinstance(root.get("evaluator"), Mapping) else None),
         metric_version=(root.get("evaluator", {}).get("metric_schema") if isinstance(root.get("evaluator"), Mapping) else None),
         method_id=(root.get("policy", {}).get("method_id") if isinstance(root.get("policy"), Mapping) else None),
         code_revision=(root.get("policy", {}).get("code_revision") if isinstance(root.get("policy"), Mapping) else None),
-        checkpoint_sha256=(root.get("policy", {}).get("checkpoint_sha256") if isinstance(root.get("policy"), Mapping) else None),
+        checkpoint_identity=(root.get("policy", {}).get("checkpoint_identity") if isinstance(root.get("policy"), Mapping) else None),
         seed=(root.get("policy", {}).get("seed") if isinstance(root.get("policy"), Mapping) and isinstance(root.get("policy", {}).get("seed"), int) else None),
         episode_count=len(episodes) if isinstance(episodes, list) else 0,
         scores=tuple(scores),
         issues=tuple(issues),
-        submission_sha256=submission_sha256,
+        submission_identity=submission_identity,
     )
 
 
@@ -294,7 +294,7 @@ def evaluate_submission_file(
     output: Path | None = None,
     expected_dataset_version: str | None = None,
     expected_split: str | None = None,
-    expected_dataset_index_sha256: str | None = None,
+    expected_dataset_index_identity: str | None = None,
 ) -> SubmissionReport:
     """Evaluate a UTF-8 JSON submission and optionally write a JSON report."""
 
@@ -308,28 +308,28 @@ def evaluate_submission_file(
             schema=RESULT_SCHEMA,
             status="invalid",
             dataset_version=None,
-            dataset_index_sha256=None,
+            dataset_index_identity=None,
             split=None,
             evaluator_id=None,
             evaluator_version=None,
-            evaluator_sha256=None,
+            evaluator_identity=None,
             metric_version=None,
             method_id=None,
             code_revision=None,
-            checkpoint_sha256=None,
+            checkpoint_identity=None,
             seed=None,
             episode_count=0,
             scores=(),
             issues=(SubmissionIssue("input", "$", str(exc)),),
-            submission_sha256=None,
+            submission_identity=None,
         )
     else:
         report = evaluate_submission(
             payload,
             expected_dataset_version=expected_dataset_version,
             expected_split=expected_split,
-            expected_dataset_index_sha256=expected_dataset_index_sha256,
-            submission_sha256=hashlib.sha256(raw).hexdigest(),
+            expected_dataset_index_identity=expected_dataset_index_identity,
+            submission_identity=IdentityAccumulator(raw).hexdigest(),
         )
     if output is not None:
         if output.resolve() == path.resolve():
@@ -345,7 +345,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--dataset-version")
     parser.add_argument("--split")
-    parser.add_argument("--dataset-index-sha256")
+    parser.add_argument("--dataset-index-identity")
     return parser.parse_args(argv)
 
 
@@ -357,7 +357,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             output=args.output,
             expected_dataset_version=args.dataset_version,
             expected_split=args.split,
-            expected_dataset_index_sha256=args.dataset_index_sha256,
+            expected_dataset_index_identity=args.dataset_index_identity,
         )
     except (OSError, EvaluatorSubmissionError) as exc:
         print(json.dumps({"schema": RESULT_SCHEMA, "status": "invalid", "error": str(exc)}, indent=2, sort_keys=True))

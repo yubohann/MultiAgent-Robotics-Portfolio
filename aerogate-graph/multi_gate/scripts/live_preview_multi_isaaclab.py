@@ -68,9 +68,10 @@ def main() -> None:
 
     exit_code = 0
     try:
+        import isaaclab.sim as sim_utils
+
         from multi_gate.configs import get_multi_experiment_config, override_multi_scene_config
         from multi_gate.live_preview import run_live_snapshot_preview
-        import isaaclab.sim as sim_utils
 
         experiment_config = get_multi_experiment_config(args_cli.config_name)
         if (

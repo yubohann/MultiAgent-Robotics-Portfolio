@@ -58,7 +58,7 @@ def _read_table(parquet_path: Path, csv_path: Path, *, force_preview: bool = Fal
     if not force_preview and parquet_path.exists():
         try:
             return pd.read_parquet(parquet_path), {"path": str(parquet_path), "format": "parquet"}
-        except Exception:
+        except (ImportError, OSError, ValueError):
             pass
     if not csv_path.exists():
         raise FileNotFoundError(f"Missing required dataset file: {csv_path}")
@@ -167,7 +167,7 @@ def _append_relation_edges(
         torch.from_numpy(src.astype(np.int64)),
         torch.from_numpy(dst.astype(np.int64)),
     )
-    relation_edge_counts[relation_name] = int(len(src))
+    relation_edge_counts[relation_name] = len(src)
 
 
 def _build_synthetic_edges(users: pd.DataFrame) -> tuple[dict[tuple[str, str, str], tuple[torch.Tensor, torch.Tensor]], dict[str, int]]:
@@ -183,7 +183,7 @@ def _build_synthetic_edges(users: pd.DataFrame) -> tuple[dict[tuple[str, str, st
         (NODE_TYPE, "homo", NODE_TYPE): (torch.from_numpy(src), torch.from_numpy(dst)),
         (NODE_TYPE, "code_peer", NODE_TYPE): (torch.from_numpy(src.copy()), torch.from_numpy(dst.copy())),
     }
-    relation_edge_counts = {"homo": int(len(src)), "code_peer": int(len(src))}
+    relation_edge_counts = {"homo": len(src), "code_peer": len(src)}
 
     source_group_src, source_group_dst = _group_window_edges(users.get("source_group", pd.Series([], dtype=str)), code_score)
     _append_relation_edges(edge_dict, relation_edge_counts, "source_group_peer", source_group_src, source_group_dst)
@@ -205,7 +205,7 @@ def _build_code_event_tensors(
     users: pd.DataFrame,
     history_len: int = 5,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    num_nodes = int(len(users))
+    num_nodes = len(users)
     sequence_length = max(int(history_len), 1)
     event_dim = 8
     event_sequence = np.zeros((num_nodes, sequence_length, event_dim), dtype=np.float32)
@@ -451,7 +451,6 @@ def load_ethereum_ponzi_dataset(
         clients.append(
             ClientShard(
                 client_id=client_id,
-                owned_global_nodes=owned_nodes,
                 subgraph=subgraph,
                 train_nodes=int(subgraph.nodes[NODE_TYPE].data["train_mask"].sum().item()),
             )
@@ -476,7 +475,7 @@ def load_ethereum_ponzi_dataset(
         "feature_columns": feature_columns,
         "feature_dim": int(feature_matrix.shape[1]),
         "num_nodes": int(graph.num_nodes(NODE_TYPE)),
-        "num_clients": int(len(clients)),
+        "num_clients": len(clients),
         "relation_edge_counts": relation_edge_counts,
         "graph_source": "synthetic_code_semantic_graph",
         "train_nodes": int(train_mask.sum().item()),

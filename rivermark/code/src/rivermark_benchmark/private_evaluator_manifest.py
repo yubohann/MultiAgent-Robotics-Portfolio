@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -14,15 +13,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ._identity import IdentityAccumulator
 from .citylite_scene import (
     AABB,
     CITY_LITE_TARGET_REGION_A_ID,
     CITY_LITE_TARGET_REGION_B_ID,
     ENVIRONMENT_ID,
     ROUTE_CLEARANCE_M,
-    SCENE_CONTRACT_PAYLOAD_SHA256,
-    SCENE_CONTRACT_SHA256,
-    aabb_geometry_sha256,
+    SCENE_CONTRACT_PAYLOAD_IDENTITY,
+    SCENE_CONTRACT_IDENTITY,
+    aabb_geometry_identity,
     resolve_public_route_family,
 )
 from .citylite_task import (
@@ -81,8 +81,8 @@ class NativeGeometryCatalog:
     """Trusted structural AABBs reconstructed from a native geometry scan."""
 
     structural_aabbs: tuple[AABB, ...]
-    aabb_geometry_sha256: str
-    scan_sha256: str
+    aabb_geometry_identity: str
+    scan_identity: str
 
 
 @dataclass(frozen=True)
@@ -90,7 +90,7 @@ class RetainedPrivateManifest:
     """A private manifest snapshot retained outside public capture evidence."""
 
     path: Path
-    sha256: str
+    identity: str
     byte_count: int
 
 
@@ -117,8 +117,8 @@ def _strict_json(path: Path) -> Mapping[str, Any]:
     return payload
 
 
-def _sha256(value: Path) -> str:
-    digest = hashlib.sha256()
+def _identity(value: Path) -> str:
+    digest = IdentityAccumulator()
     with value.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
@@ -131,14 +131,7 @@ def retain_private_evaluator_manifest(
     *,
     forbidden_roots: Sequence[Path],
 ) -> RetainedPrivateManifest:
-    """Persist and re-open an exact evaluator-owned manifest snapshot.
-
-    The manifest is content-addressed under an operator-provided private root.
-    The function never writes to a capture or source repository, never
-    overwrites an existing object, and returns the exact retained path that a
-    subsequent capture must use. A crash can at worst leave a temporary file;
-    a colliding or incomplete destination always fails closed.
-    """
+    """Persist and re-open an exact evaluator-owned manifest snapshot."""
 
     source = Path(source_path).expanduser().resolve()
     root = Path(retention_root).expanduser().resolve()
@@ -170,7 +163,7 @@ def retain_private_evaluator_manifest(
         raise PrivateManifestGenerationError(
             "private evaluator manifest exceeds the retention size limit"
         )
-    digest = hashlib.sha256(payload).hexdigest()
+    digest = IdentityAccumulator(payload).hexdigest()
     destination = root / f"{digest}.json"
 
     def _verify_destination() -> None:
@@ -215,16 +208,16 @@ def retain_private_evaluator_manifest(
 
     return RetainedPrivateManifest(
         path=destination,
-        sha256=digest,
+        identity=digest,
         byte_count=len(payload),
     )
 
 
-def native_geometry_scan_sha256(payload: Mapping[str, Any]) -> str:
+def native_geometry_scan_identity(payload: Mapping[str, Any]) -> str:
     """Return the canonical digest of a scan excluding its self-reference."""
 
     canonical = dict(payload)
-    canonical.pop("scan_sha256", None)
+    canonical.pop("scan_identity", None)
     try:
         encoded = (
             json.dumps(
@@ -240,22 +233,17 @@ def native_geometry_scan_sha256(payload: Mapping[str, Any]) -> str:
         raise PrivateManifestGenerationError(
             "native geometry scan cannot be canonicalized"
         ) from exc
-    return hashlib.sha256(encoded).hexdigest()
+    return IdentityAccumulator(encoded).hexdigest()
 
 
-def _require_sha256(value: Any, *, field: str) -> str:
-    if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
-        raise PrivateManifestGenerationError(f"geometry scan {field} must be a lowercase SHA-256")
+def _require_identity(value: Any, *, field: str) -> str:
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{16}", value):
+        raise PrivateManifestGenerationError(f"geometry scan {field} must be a lowercase IDENTITY")
     return value
 
 
 def load_native_geometry_catalog(path: Path) -> NativeGeometryCatalog:
-    """Load the minimal trustworthy geometry needed for private sampling.
-
-    A scan is accepted only when it identifies the exact approved City-Lite
-    payload.  The returned AABB digest is recomputed instead of trusting a
-    scanner-supplied summary hash.
-    """
+    """Load the minimal trustworthy geometry needed for private sampling."""
 
     scan_path = Path(path).expanduser().resolve()
     payload = _strict_json(scan_path)
@@ -269,37 +257,37 @@ def load_native_geometry_catalog(path: Path) -> NativeGeometryCatalog:
         raise PrivateManifestGenerationError("geometry scan has an unsupported evidence kind")
     if payload.get("tool_path") != NATIVE_GEOMETRY_SCAN_TOOL_PATH:
         raise PrivateManifestGenerationError("geometry scan tool path is invalid")
-    _require_sha256(payload.get("tool_sha256"), field="tool_sha256")
+    _require_identity(payload.get("tool_identity"), field="tool_identity")
     if not isinstance(payload.get("source_revision"), str) or not re.fullmatch(
         r"[0-9a-f]{40}", payload["source_revision"]
     ):
         raise PrivateManifestGenerationError("geometry scan source_revision must be a full Git revision")
-    _require_sha256(payload.get("source_tree_sha256"), field="source_tree_sha256")
+    _require_identity(payload.get("source_tree_identity"), field="source_tree_identity")
     if payload.get("source_worktree_dirty") is not False:
         raise PrivateManifestGenerationError("geometry scan must be generated from a clean worktree")
     runtime_lock = payload.get("runtime_lock")
     if not isinstance(runtime_lock, Mapping):
         raise PrivateManifestGenerationError("geometry scan runtime lock binding is missing")
-    if set(runtime_lock) != {"sha256", "profile_id", "audit_status"}:
+    if set(runtime_lock) != {"identity", "profile_id", "audit_status"}:
         raise PrivateManifestGenerationError("geometry scan runtime lock binding is invalid")
-    _require_sha256(runtime_lock.get("sha256"), field="runtime_lock.sha256")
+    _require_identity(runtime_lock.get("identity"), field="runtime_lock.identity")
     if not isinstance(runtime_lock.get("profile_id"), str) or not runtime_lock["profile_id"]:
         raise PrivateManifestGenerationError("geometry scan runtime lock profile is invalid")
     if runtime_lock.get("audit_status") != "passed":
         raise PrivateManifestGenerationError("geometry scan runtime lock audit did not pass")
     if payload.get("scene_id") != ENVIRONMENT_ID:
         raise PrivateManifestGenerationError("geometry scan is not for approved City-Lite")
-    if payload.get("scene_content_sha256") != SCENE_CONTRACT_PAYLOAD_SHA256:
+    if payload.get("scene_content_identity") != SCENE_CONTRACT_PAYLOAD_IDENTITY:
         raise PrivateManifestGenerationError(
             "geometry scan scene payload does not match the approved City-Lite contract"
         )
-    if payload.get("scene_contract_sha256") != SCENE_CONTRACT_SHA256:
+    if payload.get("scene_contract_identity") != SCENE_CONTRACT_IDENTITY:
         raise PrivateManifestGenerationError(
             "geometry scan scene contract does not match the approved City-Lite contract"
         )
-    raw_scan_sha256 = _require_sha256(payload.get("scan_sha256"), field="scan_sha256")
-    if raw_scan_sha256 != native_geometry_scan_sha256(payload):
-        raise PrivateManifestGenerationError("geometry scan SHA-256 does not match its canonical payload")
+    raw_scan_identity = _require_identity(payload.get("scan_identity"), field="scan_identity")
+    if raw_scan_identity != native_geometry_scan_identity(payload):
+        raise PrivateManifestGenerationError("geometry scan IDENTITY does not match its canonical payload")
     domains = payload.get("domains")
     if not isinstance(domains, list) or not domains:
         raise PrivateManifestGenerationError("geometry scan must contain structural domains")
@@ -339,8 +327,8 @@ def load_native_geometry_catalog(path: Path) -> NativeGeometryCatalog:
         boxes.append(box)
     return NativeGeometryCatalog(
         structural_aabbs=tuple(boxes),
-        aabb_geometry_sha256=aabb_geometry_sha256(boxes),
-        scan_sha256=raw_scan_sha256,
+        aabb_geometry_identity=aabb_geometry_identity(boxes),
+        scan_identity=raw_scan_identity,
     )
 
 
@@ -368,11 +356,7 @@ def build_private_evaluator_manifest(
     target_seed: int,
     task_variant_id: str = TASK_VARIANT_ID,
 ) -> dict[str, Any]:
-    """Generate one private manifest bound to a frozen public protocol cell.
-
-    ``target_seed`` is evaluator-private entropy.  It must not be derived from
-    the public episode seed and is never persisted in the returned manifest.
-    """
+    """Generate one private manifest bound to a frozen public protocol cell."""
 
     if isinstance(target_seed, bool) or not isinstance(target_seed, int):
         raise PrivateManifestGenerationError("target_seed must be an integer")
@@ -485,8 +469,8 @@ def build_private_evaluator_manifest(
     return {
         "schema": PRIVATE_EVALUATOR_SCHEMA,
         "environment_id": ENVIRONMENT_ID,
-        "city_lite_scene_contract_sha256": SCENE_CONTRACT_SHA256,
-        "city_lite_scene_payload_sha256": SCENE_CONTRACT_PAYLOAD_SHA256,
+        "city_lite_scene_contract_identity": SCENE_CONTRACT_IDENTITY,
+        "city_lite_scene_payload_identity": SCENE_CONTRACT_PAYLOAD_IDENTITY,
         "task_variant_id": task_variant_id,
         "sampled_before_policy_start": True,
         "route_conditioning": "public_only",
@@ -506,7 +490,7 @@ def build_private_evaluator_manifest(
         "target_visibility_contract": target_visibility_geometry_contract(
             route_family_id=route_family_id,
             routes_w_m=routes_w_m,
-            aabb_geometry_sha256=catalog.aabb_geometry_sha256,
+            aabb_geometry_identity=catalog.aabb_geometry_identity,
             target_region_id=target_region_id,
             visibility_bucket=visibility_bucket,
             execution_window=execution_window,
@@ -514,8 +498,8 @@ def build_private_evaluator_manifest(
         ),
         "geometry_evidence": {
             "schema": PRIVATE_MANIFEST_GENERATOR_SCHEMA,
-            "native_scan_sha256": catalog.scan_sha256,
-            "aabb_geometry_sha256": catalog.aabb_geometry_sha256,
+            "native_scan_identity": catalog.scan_identity,
+            "aabb_geometry_identity": catalog.aabb_geometry_identity,
         },
         "targets": targets,
     }
@@ -556,7 +540,7 @@ def write_private_evaluator_manifest(
     finally:
         if temporary.exists():
             temporary.unlink()
-    return _sha256(output_path)
+    return _identity(output_path)
 
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -610,13 +594,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         json.dumps(
             {
                 "status": "written",
-                "manifest_sha256": digest,
+                "manifest_identity": digest,
                 "target_count": len(manifest["targets"]),
                 "collection_binding": {
                     key: binding[key]
-                    for key in ("protocol_id", "protocol_sha256", "cell_id", "split", "episode_index")
+                    for key in ("protocol_id", "protocol_identity", "cell_id", "split", "episode_index")
                 },
-                "aabb_geometry_sha256": manifest["geometry_evidence"]["aabb_geometry_sha256"],
+                "aabb_geometry_identity": manifest["geometry_evidence"]["aabb_geometry_identity"],
             },
             ensure_ascii=True,
             sort_keys=True,

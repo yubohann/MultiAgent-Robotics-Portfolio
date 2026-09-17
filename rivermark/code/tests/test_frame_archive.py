@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
@@ -151,15 +150,14 @@ class ChunkedFrameArchiveTests(unittest.TestCase):
             with patch(
                 "rivermark_benchmark.frame_archive.np.lib.format.open_memmap",
                 side_effect=fail_only_depth_growth,
-            ):
-                with self.assertRaises(OSError):
-                    spool.append(
-                        8,
-                        {
-                            "rgb": np.full((2, 3), 8, dtype=np.uint8),
-                            "depth": np.full((2, 3), 8, dtype=np.float32),
-                        },
-                    )
+            ), self.assertRaises(OSError):
+                spool.append(
+                    8,
+                    {
+                        "rgb": np.full((2, 3), 8, dtype=np.uint8),
+                        "depth": np.full((2, 3), 8, dtype=np.float32),
+                    },
+                )
 
             self.assertEqual(spool.frame_count, 8)
             self.assertEqual(spool._capacity, 8)
@@ -203,15 +201,17 @@ class ChunkedFrameArchiveTests(unittest.TestCase):
                     raise OSError(28, "No space left on device")
                 return original_replace(self, target)
 
-            with patch("pathlib.Path.replace", new=fail_depth_promotion):
-                with self.assertRaises(OSError):
-                    spool.append(
-                        8,
-                        {
-                            "rgb": np.full((2, 3), 8, dtype=np.uint8),
-                            "depth": np.full((2, 3), 8, dtype=np.float32),
-                        },
-                    )
+            with (
+                patch("pathlib.Path.replace", new=fail_depth_promotion),
+                self.assertRaises(OSError),
+            ):
+                spool.append(
+                    8,
+                    {
+                        "rgb": np.full((2, 3), 8, dtype=np.uint8),
+                        "depth": np.full((2, 3), 8, dtype=np.float32),
+                    },
+                )
 
             self.assertEqual(spool.frame_count, 8)
             self.assertEqual(spool._capacity, 8)

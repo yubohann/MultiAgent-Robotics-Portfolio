@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import time
+from pathlib import Path
 
 import numpy as np
 
-from single_gate.configs.experiment_config import SINGLE_EXPERIMENT_CONFIG
+from shared.configs.global_config import GLOBAL_CONFIG
 from shared.core.collision_2d import GateObstacleMap2D
 from shared.runtime.artifacts import write_json
-from shared.configs.global_config import GLOBAL_CONFIG
 from shared.visualization.scene_isaaclab import (
     REPLAY_DRONE_BEACON_Z_OFFSET_M,
     REPLAY_DRONE_HALO_Z_OFFSET_M,
@@ -23,6 +22,7 @@ from shared.visualization.scene_isaaclab import (
     update_overview_replay_camera,
     update_replay_camera,
 )
+from single_gate.configs.experiment_config import SINGLE_EXPERIMENT_CONFIG
 
 
 def render_single_trajectory_isaaclab(

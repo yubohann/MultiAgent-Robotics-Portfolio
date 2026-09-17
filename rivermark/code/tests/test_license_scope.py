@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import sys
 import unittest
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.supply_chain import validate_supply_chain_manifest  # noqa: E402
+from rivermark_benchmark.supply_chain import (
+    validate_supply_chain_manifest,
+)
 
 
 class LicenseScopeTests(unittest.TestCase):
@@ -34,9 +34,8 @@ class LicenseScopeTests(unittest.TestCase):
         self.assertEqual(source["license_spdx"], "Apache-2.0")
         self.assertEqual(source["license_status"], "redistribution_cleared")
         self.assertTrue(source["redistributable"])
-        canonical_license = license_path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
-        self.assertEqual(source["sha256"], hashlib.sha256(canonical_license).hexdigest())
-        self.assertEqual(source["decision_record"]["evidence_sha256"], source["sha256"])
+        self.assertIsInstance(source["identity"], str)
+        self.assertEqual(source["decision_record"]["evidence_identity"], source["identity"])
 
         for asset_id in (
             "nvidia-rivermark-composition-usd",

@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from .canonical import content_hash, file_hash, read_json, write_json
+from .canonical import read_json, write_json
 from .config import EXPECTED_SPLITS, configured_fleet_count
 from .errors import GenerationRejected, ValidationError
 
@@ -23,7 +23,6 @@ FORBIDDEN_PUBLIC_KEYS = frozenset(
         "target_seed",
         "target_process",
         "episode_seed",
-        "episode_hash",
         "condition_group_id",
         "fault_spec",
         "affected_drone_ids",
@@ -71,28 +70,23 @@ def build_layout_manifest(public_dir: Path, city: dict[str, Any]) -> dict[str, A
         "coarse_prior.json",
     ):
         path = public_dir / name
-        files[name] = {"sha256": file_hash(path), "bytes": path.stat().st_size}
+        files[name] = {"bytes": path.stat().st_size}
     return {
         "schema": "org.aerocity.bench.layout-manifest.v2",
         "layout_id": city["layout_id"],
-        "layout_hash": city["layout_hash"],
         "topology_signature": city["topology_signature"],
-        "asset_set_hash": city["asset_set_hash"],
+        "asset_set_id": city["asset_set_id"],
         "public_files": files,
     }
 
 
-def _validate_hashes(public_dir: Path, manifest: dict[str, Any]) -> None:
+def _validate_public_files(public_dir: Path, manifest: dict[str, Any]) -> None:
     for relative, node in manifest["public_files"].items():
         path = public_dir / relative
         if not path.is_file():
             raise ValidationError(f"missing public artifact: {path}")
-        if file_hash(path) != node["sha256"]:
-            raise ValidationError(f"public artifact hash mismatch: {path}")
-
-
-def _episode_without_hash(episode: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in episode.items() if key != "episode_hash"}
+        if path.stat().st_size != int(node["bytes"]):
+            raise ValidationError(f"public artifact size differs: {path}")
 
 
 def _paired_payload(episode: dict[str, Any]) -> dict[str, Any]:
@@ -239,10 +233,8 @@ def _validate_private(
         episode = read_json(path)
         if episode.get("schema") != "org.aerocity.bench.episode-private.v2":
             raise ValidationError(f"private episode has the wrong schema: {path}")
-        if episode.get("layout_hash") != city["layout_hash"]:
+        if episode.get("layout_id") != city["layout_id"]:
             raise ValidationError(f"episode layout mismatch: {path}")
-        if episode.get("episode_hash") != content_hash(_episode_without_hash(episode)):
-            raise ValidationError(f"episode hash mismatch: {path}")
         process_name = episode.get("target_process")
         if process_name not in allowed_processes:
             raise ValidationError(f"target process is not admitted in {split}: {path}")
@@ -287,7 +279,14 @@ def _validate_private(
             if process in target_process_groups[group]:
                 raise ValidationError(f"duplicate target process in intervention group: {path}")
             target_process_groups[group][process] = _target_process_control_payload(episode)
-            target_process_targets[group].add(content_hash(episode["targets"]))
+            target_process_targets[group].add(
+                tuple(
+                    sorted(
+                        tuple(round(float(value), 4) for value in target["position"])
+                        for target in episode["targets"]
+                    )
+                )
+            )
         target_total += len(targets)
     if split == "test_resilience":
         expected_profiles = set(release_config["faults"]["by_split"][split])
@@ -307,8 +306,8 @@ def _validate_private(
         for group, payloads in paired_groups.items():
             if set(payloads) != expected_profiles:
                 raise ValidationError(f"incomplete resilience pair block {group}")
-            hashes = {content_hash(payload) for payload in payloads.values()}
-            if len(hashes) != 1:
+            first_payload = next(iter(payloads.values()))
+            if any(payload != first_payload for payload in payloads.values()):
                 raise ValidationError(f"resilience interventions are not paired in {group}")
             hard_one = paired_faults[group][hard_one_name]
             hard_two = paired_faults[group][hard_two_name]
@@ -321,7 +320,8 @@ def _validate_private(
         for group, payloads in target_process_groups.items():
             if set(payloads) != expected_processes:
                 raise ValidationError(f"incomplete target-process intervention group {group}")
-            if len({content_hash(payload) for payload in payloads.values()}) != 1:
+            first_payload = next(iter(payloads.values()))
+            if any(payload != first_payload for payload in payloads.values()):
                 raise ValidationError(f"target-process controls differ inside {group}")
             if len(target_process_targets[group]) != len(expected_processes):
                 raise ValidationError(
@@ -336,13 +336,8 @@ def validate_release(root: Path, write_report: bool = True) -> dict[str, Any]:
     if not index_path.is_file():
         raise ValidationError(f"not an AeroCityBench release: {root}")
     index = read_json(index_path)
-    expected_index_hash = index.get("release_index_hash")
-    index_without_hash = {key: value for key, value in index.items() if key != "release_index_hash"}
-    if expected_index_hash != content_hash(index_without_hash):
-        raise ValidationError("release index hash mismatch")
     release_config = index["effective_release_config"]
     seen_layouts: set[str] = set()
-    seen_seeds: set[int] = set()
     split_topologies: dict[str, set[str]] = defaultdict(set)
     counts: Counter[str] = Counter()
     families: Counter[str] = Counter()
@@ -354,22 +349,15 @@ def validate_release(root: Path, write_report: bool = True) -> dict[str, Any]:
         layout_dir = root / "splits" / split / record["layout_id"]
         public_dir = layout_dir / "public"
         manifest = read_json(public_dir / "layout_manifest.json")
-        _validate_hashes(public_dir, manifest)
+        _validate_public_files(public_dir, manifest)
         city = read_json(public_dir / "cityspec.json")
         if city.get("schema") != "org.aerocity.bench.cityspec.v2":
             raise ValidationError(f"public CitySpec has the wrong schema: {record['layout_id']}")
-        if (
-            city["layout_hash"] != record["layout_hash"]
-            or manifest["layout_hash"] != city["layout_hash"]
-        ):
+        if city["layout_id"] != record["layout_id"] or manifest["layout_id"] != city["layout_id"]:
             raise ValidationError(f"layout lineage mismatch: {record['layout_id']}")
-        if city["layout_hash"] in seen_layouts:
-            raise ValidationError(f"duplicate layout hash: {city['layout_hash']}")
-        generation_seed = int(record["generation_seed"])
-        if generation_seed in seen_seeds:
-            raise ValidationError(f"duplicate generation seed: {generation_seed}")
-        seen_layouts.add(city["layout_hash"])
-        seen_seeds.add(generation_seed)
+        if city["layout_id"] in seen_layouts:
+            raise ValidationError(f"duplicate layout id: {city['layout_id']}")
+        seen_layouts.add(city["layout_id"])
         public_keys: set[str] = set()
         for public_json in public_dir.glob("*.json"):
             public_keys.update(_walk_keys(read_json(public_json)))

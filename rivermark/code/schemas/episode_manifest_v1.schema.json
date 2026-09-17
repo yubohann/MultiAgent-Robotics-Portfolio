@@ -43,17 +43,17 @@
       "additionalProperties": false,
       "required": [
         "layout_id",
-        "layout_hash",
-        "layout_lineage_hash",
+        "layout_identity",
+        "layout_lineage_identity",
         "scene_manifest_ref",
-        "scene_manifest_sha256"
+        "scene_manifest_identity"
       ],
       "properties": {
         "layout_id": {"type": "string", "minLength": 1, "maxLength": 128},
-        "layout_hash": {"$ref": "#/$defs/sha256"},
-        "layout_lineage_hash": {"$ref": "#/$defs/sha256"},
+        "layout_identity": {"$ref": "#/$defs/identity"},
+        "layout_lineage_identity": {"$ref": "#/$defs/identity"},
         "scene_manifest_ref": {"$ref": "#/$defs/relativePath"},
-        "scene_manifest_sha256": {"$ref": "#/$defs/sha256"}
+        "scene_manifest_identity": {"$ref": "#/$defs/identity"}
       }
     },
     "task": {
@@ -63,7 +63,7 @@
         "task_id",
         "task_variant_id",
         "task_spec_ref",
-        "task_spec_sha256",
+        "task_spec_identity",
         "information_profile",
         "observation_scope",
         "agent_count"
@@ -72,7 +72,7 @@
         "task_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$"},
         "task_variant_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
         "task_spec_ref": {"$ref": "#/$defs/relativePath"},
-        "task_spec_sha256": {"$ref": "#/$defs/sha256"},
+        "task_spec_identity": {"$ref": "#/$defs/identity"},
         "information_profile": {
           "enum": [
             "geometry_state",
@@ -177,11 +177,11 @@
     "evaluator_private": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["distributed", "server_only", "manifest_sha256"],
+      "required": ["distributed", "server_only", "manifest_identity"],
       "properties": {
         "distributed": {"type": "boolean"},
         "server_only": {"type": "boolean"},
-        "manifest_sha256": {"$ref": "#/$defs/sha256"}
+        "manifest_identity": {"$ref": "#/$defs/identity"}
       }
     },
     "provenance": {
@@ -237,19 +237,19 @@
     "collectionBinding": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["protocol_id", "protocol_sha256", "cell_id", "split", "episode_index", "episode_seed"],
+      "required": ["protocol_id", "protocol_identity", "cell_id", "split", "episode_index", "episode_seed"],
       "properties": {
         "protocol_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
-        "protocol_sha256": {"$ref": "#/$defs/sha256"},
+        "protocol_identity": {"$ref": "#/$defs/identity"},
         "cell_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
         "split": {"enum": ["train", "inner_dev", "validation", "blind_test", "ood_test"]},
         "episode_index": {"type": "integer", "minimum": 0},
         "episode_seed": {"type": "integer", "minimum": 0, "maximum": 4294967295}
       }
     },
-    "sha256": {
+    "identity": {
       "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
+      "pattern": "^[0-9a-f]{16}$"
     },
     "relativePath": {
       "type": "string",
@@ -259,10 +259,10 @@
     "observationAbiRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "sha256"],
+      "required": ["path", "identity"],
       "properties": {
         "path": {"$ref": "#/$defs/relativePath"},
-        "sha256": {"$ref": "#/$defs/sha256"}
+        "identity": {"$ref": "#/$defs/identity"}
       }
     },
     "streamRef": {
@@ -285,31 +285,31 @@
         "timestamp_field": {"type": "string", "minLength": 1, "maxLength": 128},
         "agent_id": {"type": "integer", "minimum": 0, "maximum": 31},
         "path": {"$ref": "#/$defs/relativePath"},
-        "sha256": {"$ref": "#/$defs/sha256"},
+        "identity": {"$ref": "#/$defs/identity"},
         "path_template": {"$ref": "#/$defs/relativePath"},
-        "content_hash_index_path": {"$ref": "#/$defs/relativePath"},
-        "content_hash_index_sha256": {"$ref": "#/$defs/sha256"}
+        "content_identity_index_path": {"$ref": "#/$defs/relativePath"},
+        "content_identity_index_identity": {"$ref": "#/$defs/identity"}
       },
       "oneOf": [
         {
-          "required": ["path", "sha256"],
+          "required": ["path", "identity"],
           "not": {
             "anyOf": [
               {"required": ["path_template"]},
-              {"required": ["content_hash_index_path"]},
-              {"required": ["content_hash_index_sha256"]}
+              {"required": ["content_identity_index_path"]},
+              {"required": ["content_identity_index_identity"]}
             ]
           }
         },
         {
-          "required": ["path_template", "content_hash_index_path", "content_hash_index_sha256"],
+          "required": ["path_template", "content_identity_index_path", "content_identity_index_identity"],
           "properties": {
             "path_template": {"pattern": "\\{agent_id\\}"}
           },
           "not": {
             "anyOf": [
               {"required": ["path"]},
-              {"required": ["sha256"]}
+              {"required": ["identity"]}
             ]
           }
         }

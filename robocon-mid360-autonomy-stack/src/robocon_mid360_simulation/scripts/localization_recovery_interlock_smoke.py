@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise fixed-map tracking loss and competition interlocks over ROS 2.
-
-A short contract test whose odometry, pose validity and map correction
-messages are explicitly synthetic simulation inputs.
-"""
+"""Exercise fixed-map tracking loss and competition interlocks over ROS 2."""
 
 from __future__ import annotations
 

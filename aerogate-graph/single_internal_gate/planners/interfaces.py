@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 from shared.core.collision_2d import GateObstacleMap2D
 
@@ -31,5 +31,5 @@ class PlannerResult:
 
 
 def path_length(path_xy: tuple[tuple[float, float], ...]) -> float:
-    return float(sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(path_xy[:-1], path_xy[1:])))
+    return float(sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(path_xy[:-1], path_xy[1:], strict=False)))
 

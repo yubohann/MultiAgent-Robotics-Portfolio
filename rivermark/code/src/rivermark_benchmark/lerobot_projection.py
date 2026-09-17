@@ -16,7 +16,7 @@ from typing import Any
 
 import numpy as np
 
-from .formal_dataset import sha256_file
+from .formal_dataset import identity_file
 from .parquet_projection import DEVELOPMENT_PARQUET_SCHEMA
 from .schema import is_safe_relative_path
 
@@ -68,8 +68,8 @@ class LeRobotProjectionResult:
     agent_episode_count: int
     frame_count: int
     fps: int
-    source_projection_manifest_sha256: str
-    group_manifest_sha256: str
+    source_projection_manifest_identity: str
+    group_manifest_identity: str
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -133,7 +133,7 @@ def _verify_file_record(root: Path, record: Mapping[str, Any], relative: str) ->
     path = _contained_file(root, relative)
     if record.get("path") != relative:
         raise LeRobotProjectionError(f"file record path mismatch for {relative}")
-    if record.get("bytes") != path.stat().st_size or record.get("sha256") != sha256_file(path):
+    if record.get("bytes") != path.stat().st_size or record.get("identity") != identity_file(path):
         raise LeRobotProjectionError(f"file does not match its manifest binding: {relative}")
     return path
 
@@ -176,7 +176,7 @@ def _source_boundary(root: Path) -> tuple[Mapping[str, Any], str, Mapping[str, A
         raise LeRobotProjectionError("source state/action row count differs from its manifest")
     if metadata.schema.metadata and b"pandas" in metadata.schema.metadata:
         _ = pa  # Keep the optional import visibly tied to this schema read.
-    return manifest, sha256_file(manifest_path), metadata_row, state_path, agent_count, steps
+    return manifest, identity_file(manifest_path), metadata_row, state_path, agent_count, steps
 
 
 def _column_numpy(table: Any, name: str, dtype: np.dtype[Any]) -> np.ndarray:
@@ -388,7 +388,7 @@ def _write_episodes(path: Path, agent_count: int, steps: int, task_description: 
 
 def _file_record(root: Path, relative: str) -> dict[str, Any]:
     path = _contained_file(root, relative)
-    return {"path": relative, "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+    return {"path": relative, "bytes": path.stat().st_size, "identity": identity_file(path)}
 
 
 def project_development_parquet_to_lerobot(
@@ -409,7 +409,7 @@ def project_development_parquet_to_lerobot(
         raise LeRobotProjectionError("LeRobot output must not be inside the source projection")
     if destination.exists():
         raise LeRobotProjectionError(f"LeRobot output already exists: {destination}")
-    source_manifest, source_manifest_hash, _metadata, state_path, agent_count, steps = _source_boundary(source)
+    source_manifest, source_manifest_identity, _metadata, state_path, agent_count, steps = _source_boundary(source)
     first = _agent_source_table(state_path, 0, steps)
     resolved_fps = _resolve_fps(first["effective_time_ns"], fps, timestamp_tolerance_s)
     reference_command_time = first["command_time_ns"]
@@ -472,9 +472,9 @@ def project_development_parquet_to_lerobot(
             "agent_episode_count": agent_count,
             "frames_per_agent": steps,
             "frame_count": agent_count * steps,
-            "source_projection_manifest_sha256": source_manifest_hash,
-            "source_capture_receipt_sha256": source_manifest.get("source_capture_receipt_sha256"),
-            "independent_validation_sha256": source_manifest.get("independent_validation_sha256"),
+            "source_projection_manifest_identity": source_manifest_identity,
+            "source_capture_receipt_identity": source_manifest.get("source_capture_receipt_identity"),
+            "independent_validation_identity": source_manifest.get("independent_validation_identity"),
             "source_revision": source_manifest.get("source_revision"),
             "collection_binding": collection,
             "lerobot": {
@@ -512,13 +512,13 @@ def project_development_parquet_to_lerobot(
         agent_episode_count=int(report["agent_episode_count"]),
         frame_count=int(report["frame_count"]),
         fps=int(report["fps"]),
-        source_projection_manifest_sha256=source_manifest_hash,
-        group_manifest_sha256=sha256_file(group_manifest_path),
+        source_projection_manifest_identity=source_manifest_identity,
+        group_manifest_identity=identity_file(group_manifest_path),
     )
 
 
 def verify_lerobot_projection(root: Path, *, source_root: Path | None = None) -> dict[str, Any]:
-    """Verify the LeRobot disk layout, fleet grouping, native time, and hashes."""
+    """Verify the LeRobot disk layout, fleet grouping, native time, and identities."""
 
     destination = Path(root).expanduser().resolve()
     manifest_path = _contained_file(destination, "meta/rivermark_group_manifest.json")
@@ -542,7 +542,7 @@ def verify_lerobot_projection(root: Path, *, source_root: Path | None = None) ->
         _verify_file_record(destination, record, relative)
     if source_root is not None:
         source_manifest = _contained_file(Path(source_root).expanduser().resolve(), "projection_manifest.json")
-        if manifest.get("source_projection_manifest_sha256") != sha256_file(source_manifest):
+        if manifest.get("source_projection_manifest_identity") != identity_file(source_manifest):
             raise LeRobotProjectionError("LeRobot projection is not bound to the supplied source projection")
 
     info = _load_json(destination / "meta" / "info.json", "LeRobot meta/info.json")
@@ -644,8 +644,8 @@ def verify_lerobot_projection(root: Path, *, source_root: Path | None = None) ->
         "agent_episode_count": agent_count,
         "frame_count": frame_count,
         "fps": fps,
-        "source_projection_manifest_sha256": manifest.get("source_projection_manifest_sha256"),
-        "group_manifest_sha256": sha256_file(manifest_path),
+        "source_projection_manifest_identity": manifest.get("source_projection_manifest_identity"),
+        "group_manifest_identity": identity_file(manifest_path),
         "claim_boundary": _CLAIM_BOUNDARY,
     }
 
@@ -659,12 +659,7 @@ def _integer_value(value: Any, label: str) -> int:
 
 
 def verify_with_upstream_lerobot(root: Path, upstream_source: Path) -> dict[str, Any]:
-    """Read the projection with the reviewed local LeRobot source tree.
-
-    This check is intentionally opt-in.  Rivermark does not vendor LeRobot or
-    its heavyweight dataset dependencies, and a structural projection check is
-    not a substitute for loading through the upstream reader.
-    """
+    """Read the projection with the reviewed local LeRobot source tree."""
 
     report = verify_lerobot_projection(root)
     source = Path(upstream_source).expanduser().resolve()
@@ -762,8 +757,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "agent_episode_count": result.agent_episode_count,
                 "frame_count": result.frame_count,
                 "fps": result.fps,
-                "source_projection_manifest_sha256": result.source_projection_manifest_sha256,
-                "group_manifest_sha256": result.group_manifest_sha256,
+                "source_projection_manifest_identity": result.source_projection_manifest_identity,
+                "group_manifest_identity": result.group_manifest_identity,
                 "claim_boundary": _CLAIM_BOUNDARY,
             }
         elif args.command == "verify":

@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from rivermark_benchmark.external_sources import (
     EXTERNAL_SOURCE_SNAPSHOT_SCHEMA,
     ExternalSourceError,
@@ -30,7 +29,7 @@ def _materialize_lerobot(root: Path) -> None:
         _write(base, relative, relative)
 
 
-def test_external_source_snapshot_is_path_free_and_hash_bound(tmp_path: Path) -> None:
+def test_external_source_snapshot_is_path_free_and_identity_bound(tmp_path: Path) -> None:
     source_root = tmp_path / "external"
     _materialize_lerobot(source_root)
 
@@ -67,7 +66,7 @@ def test_external_source_snapshot_rejects_unknown_or_repository_local_sources(tm
         scan_external_source_snapshots(tmp_path, source_ids=["rlds"], repository_root=tmp_path)
 
 
-def test_write_external_source_manifest_is_atomic_and_hash_checked(tmp_path: Path) -> None:
+def test_write_external_source_manifest_is_atomic_and_identity_checked(tmp_path: Path) -> None:
     source_root = tmp_path / "external"
     _materialize_lerobot(source_root)
     manifest = scan_external_source_snapshots(source_root, source_ids=["lerobot"])
@@ -75,7 +74,7 @@ def test_write_external_source_manifest_is_atomic_and_hash_checked(tmp_path: Pat
 
     written = json.loads(output.read_text(encoding="utf-8"))
     assert written == manifest
-    tampered = dict(manifest)
-    tampered["status"] = "incomplete"
-    with pytest.raises(ExternalSourceError, match="hash"):
-        write_external_source_manifest(tmp_path / "tampered.json", tampered)
+    altered = dict(manifest)
+    altered["status"] = "incomplete"
+    with pytest.raises(ExternalSourceError, match="identity"):
+        write_external_source_manifest(tmp_path / "altered.json", altered)

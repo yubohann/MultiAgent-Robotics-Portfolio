@@ -21,16 +21,16 @@ class SelectionOption:
 def build_selection_set(
     candidates: Sequence[CandidateFragmentManifest], archive: QDArchive
 ) -> tuple[SelectionOption, ...]:
-    catalog = {manifest.manifest_hash: manifest for manifest in candidates}
+    catalog = {manifest.manifest_id: manifest for manifest in candidates}
     options: dict[str, SelectionOption] = {
         digest: SelectionOption(manifest, False, None) for digest, manifest in catalog.items()
     }
     for _, elite in archive.items():
-        manifest = catalog.get(elite.manifest_hash)
+        manifest = catalog.get(elite.manifest_id)
         if manifest is None:
             raise ValueError("archive elite is missing from the executable candidate catalog")
-        options[elite.manifest_hash] = SelectionOption(manifest, True, elite.corrected_quality)
-    resolved = tuple(sorted(options.values(), key=lambda option: option.manifest.manifest_hash))
+        options[elite.manifest_id] = SelectionOption(manifest, True, elite.corrected_quality)
+    resolved = tuple(sorted(options.values(), key=lambda option: option.manifest.manifest_id))
     if not resolved or not any(option.manifest.feasible for option in resolved):
         raise ValueError("selection set requires a feasible candidate")
     return resolved

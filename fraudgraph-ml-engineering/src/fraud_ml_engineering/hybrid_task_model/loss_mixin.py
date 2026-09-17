@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import math
-import random
-
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 from ._helpers import (
@@ -16,12 +12,9 @@ from ._helpers import (
     _mask_to_index,
     _pseudo_label_loss,
     _ranking_friendly_classification_loss,
-    _uniform_target_kl_loss
+    _uniform_target_kl_loss,
 )
-from ._legacy import (
-    _balance_modality_embedding,
-    _detached_uncertainty_target_from_supervision
-)
+from ._legacy import _balance_modality_embedding, _detached_uncertainty_target_from_supervision
 
 
 class LossMixin:
@@ -51,7 +44,6 @@ class LossMixin:
         graph_only_stage = stage_name == "graph_warmup"
         bootstrap_stage = stage_name == "fusion_bootstrap"
         enable_heavy_fusion_regularizers = not graph_only_stage and not bootstrap_stage
-        zero = torch.tensor(0.0, device=logits.device)
         full_supervised_index = _mask_to_index(supervised_mask)
         balanced_supervised_index = full_supervised_index
         regularizer_index = full_supervised_index

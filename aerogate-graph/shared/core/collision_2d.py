@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -46,20 +46,20 @@ class GateObstacleMap2D:
         self.obstacles = obstacles
 
     @classmethod
-    def empty(cls) -> "GateObstacleMap2D":
+    def empty(cls) -> GateObstacleMap2D:
         """Construct an obstacle-free map for empty-scene curricula."""
 
         return cls(())
 
     @classmethod
-    def from_gate(cls, *, gate_post_radius_scale: float = 1.0) -> "GateObstacleMap2D":
+    def from_gate(cls, *, gate_post_radius_scale: float = 1.0) -> GateObstacleMap2D:
         """Return the default gate-only map."""
 
         _ = gate_post_radius_scale
         return cls.empty()
 
     @classmethod
-    def from_legacy_gate(cls, *, gate_post_radius_scale: float = 1.0) -> "GateObstacleMap2D":
+    def from_legacy_gate(cls, *, gate_post_radius_scale: float = 1.0) -> GateObstacleMap2D:
         """Compatibility alias for older call sites."""
 
         return cls.from_gate(gate_post_radius_scale=gate_post_radius_scale)

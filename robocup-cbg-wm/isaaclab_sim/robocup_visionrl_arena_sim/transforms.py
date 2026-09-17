@@ -2,12 +2,8 @@ from __future__ import annotations
 
 import math
 
+from ._bootstrap import Gf, UsdGeom, get_current_stage
 
-from ._bootstrap import (
-    Gf,
-    UsdGeom,
-    get_current_stage
-)
 
 def quat_from_euler(roll: float, pitch: float, yaw: float) -> tuple[float, float, float, float]:
     """Return USD quaternion order (w, x, y, z)."""

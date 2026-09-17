@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
 import statistics
+from dataclasses import dataclass
 
 from single_internal_gate.ablation import MethodVariant
 from single_internal_gate.configs.experiment_config import EXP2_SINGLE_INTERNAL_CONFIG, Exp2SingleInternalConfig
@@ -205,7 +205,7 @@ def _episode_result(
         collision=collision,
         path_xy=tuple(path),
         travel_time_s=steps * dt_s,
-        path_length_m=sum(_distance(a, b) for a, b in zip(path[:-1], path[1:])),
+        path_length_m=sum(_distance(a, b) for a, b in zip(path[:-1], path[1:], strict=False)),
         min_clearance_m=min_clearance,
         mean_latency_ms=statistics.fmean(latencies) if latencies else 0.0,
         p95_latency_ms=_percentile(latencies, 0.95),

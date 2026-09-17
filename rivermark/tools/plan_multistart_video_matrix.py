@@ -34,7 +34,7 @@ def _command_template(
     episode_index: int,
     output_dir: str,
 ) -> list[str]:
-    """Return a fail-closed command with external values as placeholders."""
+    """Return a strict command with external values as placeholders."""
 
     return [
         "<ISAAC_PYTHON>",

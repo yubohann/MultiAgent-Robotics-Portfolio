@@ -5,8 +5,7 @@
   "upstream": {
     "url": "https://github.com/google/or-tools.git",
     "commit": "98c165af62df62b3056c2ee0fca66b24e79097cb",
-    "license": "Apache-2.0",
-    "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    "license": "Apache-2.0"
   },
   "python_distribution": {
     "name": "ortools",
@@ -14,7 +13,6 @@
     "requires_python": ">=3.9",
     "windows_cp311_amd64_wheel": {
       "filename": "ortools-9.15.6755-cp311-cp311-win_amd64.whl",
-      "sha256": "781fb09d6c9f46015291f706bd7c7e0815db1bec6e92c74716342fb7ea2d0532",
       "url": "https://files.pythonhosted.org/packages/a3/30/2574d469613b8fe14664ffc7b01887a0afa385f6052bb8a1194e3df15e4a/ortools-9.15.6755-cp311-cp311-win_amd64.whl"
     }
   },

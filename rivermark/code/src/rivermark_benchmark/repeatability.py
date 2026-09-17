@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .frame_archive import ChunkedFrameArchive, FrameArchiveError
 
 REPEATABILITY_PROFILE_SCHEMA = "org.rivermark.isaac-repeatability-profile.v2"
@@ -46,7 +47,7 @@ _IMU_FIELDS = frozenset(
 _LIDAR_FIELDS = frozenset({"timestamps_ns", "pos_w_m", "quat_wxyz", "ranges_m"})
 _BINDING_FIELDS = (
     "protocol_id",
-    "protocol_sha256",
+    "protocol_identity",
     "cell_id",
     "split",
     "episode_index",
@@ -105,14 +106,14 @@ class RepeatabilityError(RuntimeError):
 class _Capture:
     root: Path
     receipt: Mapping[str, Any]
-    receipt_sha256: str
-    validation_sha256: str
+    receipt_identity: str
+    validation_identity: str
     task_outcome: Mapping[str, Any]
     semantic_metadata_by_timestamp: Mapping[int, Mapping[str, Any]]
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
@@ -129,7 +130,7 @@ def _load_json(path: Path, label: str) -> Mapping[str, Any]:
     return payload
 
 
-def _canonical_sha256(payload: Mapping[str, Any]) -> str:
+def _canonical_identity(payload: Mapping[str, Any]) -> str:
     encoded = json.dumps(
         payload,
         allow_nan=False,
@@ -137,7 +138,7 @@ def _canonical_sha256(payload: Mapping[str, Any]) -> str:
         separators=(",", ":"),
         sort_keys=True,
     ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return IdentityAccumulator(encoded).hexdigest()
 
 
 def _load_profile(path: Path) -> tuple[Mapping[str, Any], str]:
@@ -163,7 +164,7 @@ def _load_profile(path: Path) -> tuple[Mapping[str, Any], str]:
         "source": "frame_aligned_public_id_to_labels",
         "key_fields": ["class", "agent_id"],
         "camera_local": True,
-        "unmapped_id_policy": "fail_closed",
+        "unmapped_id_policy": "strict",
     }:
         raise RepeatabilityError("repeatability semantic identity contract is invalid")
     thresholds = profile.get("thresholds")
@@ -177,11 +178,11 @@ def _load_profile(path: Path) -> tuple[Mapping[str, Any], str]:
             raise RepeatabilityError(f"repeatability threshold {name} is invalid")
         if name.endswith("_agreement_min") and value > 1.0:
             raise RepeatabilityError(f"repeatability threshold {name} exceeds one")
-    return profile, _sha256(path)
+    return profile, _identity(path)
 
 
 def _verify_artifact(root: Path, receipt: Mapping[str, Any], relative: str) -> None:
-    inventory = receipt.get("artifact_hashes")
+    inventory = receipt.get("artifact_identities")
     if not isinstance(inventory, Mapping) or not isinstance(
         inventory.get(relative), Mapping
     ):
@@ -190,7 +191,7 @@ def _verify_artifact(root: Path, receipt: Mapping[str, Any], relative: str) -> N
     entry = inventory[relative]
     if not path.is_file():
         raise RepeatabilityError(f"capture artifact is missing: {relative}")
-    if entry.get("bytes") != path.stat().st_size or entry.get("sha256") != _sha256(
+    if entry.get("bytes") != path.stat().st_size or entry.get("identity") != _identity(
         path
     ):
         raise RepeatabilityError(f"capture artifact is stale or modified: {relative}")
@@ -317,7 +318,7 @@ def _load_capture(path: Path) -> _Capture:
     validation_path = root / "independent_validation.json"
     receipt = _load_json(receipt_path, "capture receipt")
     validation = _load_json(validation_path, "independent validation")
-    receipt_sha256 = _sha256(receipt_path)
+    receipt_identity = _identity(receipt_path)
     if (
         receipt.get("schema") != "org.rivermark.isaac-swarm-capture.v1"
         or receipt.get("status") != "captured"
@@ -333,7 +334,7 @@ def _load_capture(path: Path) -> _Capture:
     if (
         not validation_passed
         or validation.get("issues") != []
-        or validation.get("capture_receipt_sha256") != receipt_sha256
+        or validation.get("capture_receipt_identity") != receipt_identity
     ):
         raise RepeatabilityError("independent validation is absent, failed, or stale")
     for relative in _USED_ARTIFACTS:
@@ -341,8 +342,8 @@ def _load_capture(path: Path) -> _Capture:
     return _Capture(
         root=root,
         receipt=receipt,
-        receipt_sha256=receipt_sha256,
-        validation_sha256=_sha256(validation_path),
+        receipt_identity=receipt_identity,
+        validation_identity=_identity(validation_path),
         task_outcome=_load_json(root / "task_outcome.json", "task outcome"),
         semantic_metadata_by_timestamp=_load_semantic_metadata(
             root / "learning_labels/semantic_frame_metadata.jsonl"
@@ -370,13 +371,13 @@ def _same_capture_contract(reference: _Capture, candidate: _Capture) -> dict[str
         )
     required_pairs = {
         "source_revision": (left.get("source_revision"), right.get("source_revision")),
-        "source_tree_sha256": (
-            left.get("source_tree_sha256"),
-            right.get("source_tree_sha256"),
+        "source_tree_identity": (
+            left.get("source_tree_identity"),
+            right.get("source_tree_identity"),
         ),
-        "evaluator_manifest_sha256": (
-            left.get("evaluator_manifest_sha256"),
-            right.get("evaluator_manifest_sha256"),
+        "evaluator_manifest_identity": (
+            left.get("evaluator_manifest_identity"),
+            right.get("evaluator_manifest_identity"),
         ),
         "runtime_lock": (left.get("runtime_lock"), right.get("runtime_lock")),
         "city_lite_authority": (
@@ -392,16 +393,16 @@ def _same_capture_contract(reference: _Capture, candidate: _Capture) -> dict[str
     for label, (first, second) in required_pairs.items():
         if first is None or first != second:
             raise RepeatabilityError(f"captures disagree on {label}")
-    if not isinstance(left.get("evaluator_manifest_sha256"), str):
+    if not isinstance(left.get("evaluator_manifest_identity"), str):
         raise RepeatabilityError("capture evaluator manifest commitment is missing")
     configuration = {name: left[name] for name in _CONFIGURATION_FIELDS}
     return {
         "collection_binding": binding,
         "source_revision": left["source_revision"],
-        "source_tree_sha256": left["source_tree_sha256"],
-        "evaluator_manifest_sha256": left["evaluator_manifest_sha256"],
+        "source_tree_identity": left["source_tree_identity"],
+        "evaluator_manifest_identity": left["evaluator_manifest_identity"],
         "runtime_lock": left["runtime_lock"],
-        "capture_configuration_sha256": _canonical_sha256(configuration),
+        "capture_configuration_identity": _canonical_identity(configuration),
     }
 
 
@@ -989,7 +990,7 @@ def build_repeatability_report(
     *,
     profile_path: Path,
 ) -> dict[str, Any]:
-    profile, profile_sha256 = _load_profile(Path(profile_path).expanduser().resolve())
+    profile, profile_identity = _load_profile(Path(profile_path).expanduser().resolve())
     reference = _load_capture(reference_root)
     candidate = _load_capture(candidate_root)
     if reference.root == candidate.root:
@@ -1017,33 +1018,33 @@ def build_repeatability_report(
         "claim": profile["claim"],
         "analyzer": {
             "implementation": "rivermark_benchmark.repeatability",
-            "implementation_sha256": _sha256(Path(__file__).resolve()),
+            "implementation_identity": _identity(Path(__file__).resolve()),
             "semantic_comparison": "camera_local_frame_aligned_class_and_public_agent_id",
         },
         "profile": {
             "profile_id": profile["profile_id"],
-            "sha256": profile_sha256,
+            "identity": profile_identity,
             "semantic_identity": dict(profile["semantic_identity"]),
             "thresholds": dict(thresholds),
         },
         "binding": binding,
         "reference": {
             "capture_attempt_id": reference.receipt.get("capture_attempt_id"),
-            "capture_receipt_sha256": reference.receipt_sha256,
-            "independent_validation_sha256": reference.validation_sha256,
+            "capture_receipt_identity": reference.receipt_identity,
+            "independent_validation_identity": reference.validation_identity,
             "resources": _resource_summary(reference),
         },
         "candidate": {
             "capture_attempt_id": candidate.receipt.get("capture_attempt_id"),
-            "capture_receipt_sha256": candidate.receipt_sha256,
-            "independent_validation_sha256": candidate.validation_sha256,
+            "capture_receipt_identity": candidate.receipt_identity,
+            "independent_validation_identity": candidate.validation_identity,
             "resources": _resource_summary(candidate),
         },
         "metrics": metrics,
         "failed_metric_count": len(failures),
-        "report_payload_sha256": "",
+        "report_payload_identity": "",
     }
-    report["report_payload_sha256"] = _canonical_sha256(report)
+    report["report_payload_identity"] = _canonical_identity(report)
     return report
 
 
@@ -1054,8 +1055,8 @@ def _write_new_report(path: Path, report: Mapping[str, Any]) -> None:
             f"refusing to overwrite repeatability report: {destination}"
         )
     payload = dict(report)
-    expected_digest = _canonical_sha256({**payload, "report_payload_sha256": ""})
-    if payload.get("report_payload_sha256") != expected_digest:
+    expected_digest = _canonical_identity({**payload, "report_payload_identity": ""})
+    if payload.get("report_payload_identity") != expected_digest:
         raise RepeatabilityError("repeatability report payload digest is stale")
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(

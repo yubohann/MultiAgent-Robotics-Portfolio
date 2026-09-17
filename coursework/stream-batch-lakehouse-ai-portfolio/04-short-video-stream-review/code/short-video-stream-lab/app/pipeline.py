@@ -1,6 +1,5 @@
 """End-to-end pipeline for ingestion, understanding, moderation, and publishing."""
 
-import hashlib
 import re
 import shutil
 import time
@@ -19,10 +18,9 @@ def _slug(value: str) -> str:
     return slug or "video"
 
 
-def _video_id(path: Path, title: str) -> str:
-    """Create a short unique id from source path, title, and current nanosecond time."""
-    source = f"{path.resolve()}:{title}:{time.time_ns()}".encode("utf-8")
-    return hashlib.sha1(source).hexdigest()[:12]
+def _video_id(title: str) -> str:
+    """Create a unique, sortable id from the ingest clock and title."""
+    return f"{time.time_ns()}-{_slug(title)[:24]}"
 
 
 class ShortVideoPipeline:
@@ -59,7 +57,7 @@ class ShortVideoPipeline:
             raise FileNotFoundError(video_path)
 
         title = title or video_path.stem
-        video_id = _video_id(video_path, title)
+        video_id = _video_id(title)
         media_name = f"{video_id}-{_slug(video_path.stem)}{video_path.suffix.lower() or '.mp4'}"
         media_path = MEDIA_DIR / media_name
 
@@ -95,7 +93,6 @@ class ShortVideoPipeline:
                 "brightness": {"avg": 0},
                 "motion": {"avg": 0},
                 "model": {
-                    # backend=pending tells the frontend to show loading placeholders.
                     "selected_id": "",
                     "selected_name": "等待后台理解",
                     "backend": "pending",
@@ -121,102 +118,61 @@ class ShortVideoPipeline:
         thumbnail_name = f"{video_id}-thumb.jpg"
         thumbnail_path = MEDIA_DIR / thumbnail_name
 
-        try:
-            # The understanding layer returns one shape whether it ran the VLM or the baseline.
-            analysis = self.model.analyze(
-                media_path,
-                title=title,
-                video_id=video_id,
-                emit_event=add_event,
-                simulate_delay_sec=0.03 if simulate_stream else 0.0,
-            )
-            add_event(
-                video_id,
-                "understanding",
-                "完成视频理解，生成摘要、指标和候选标签",
-                {
-                    "caption": analysis["caption"],
-                    "tags": analysis["tags"],
-                    "sampled_frames": analysis["metrics"]["sampled_frames"],
-                    "model": analysis.get("model", {}),
-                },
-            )
-            moderation = moderate_analysis(analysis, title)
-            add_event(
-                video_id,
-                "moderation",
-                "完成自动审核策略判定",
-                {
-                    "status": moderation["status"],
-                    "risk_score": moderation["risk_score"],
-                    "reasons": moderation["reasons"],
-                },
-            )
-            try:
-                # The thumbnail is presentation-only and never blocks publication.
-                create_thumbnail(media_path, thumbnail_path)
-            except FFmpegError as exc:
-                add_event(
-                    video_id,
-                    "thumbnail",
-                    "封面抽取失败，但不影响主流程",
-                    {"error": str(exc)},
-                )
-                thumbnail_name = ""
-
-            record = {
-                # Overwrite the processing record with the final result for the polling frontend.
-                "id": video_id,
-                "title": title,
-                "source": record["source"],
-                "original_path": record["original_path"],
-                "media_file": media_name,
-                "thumbnail_file": thumbnail_name,
-                "status": moderation["status"],
-                "risk_score": moderation["risk_score"],
+        analysis = self.model.analyze(
+            media_path,
+            title=title,
+            video_id=video_id,
+            emit_event=add_event,
+            simulate_delay_sec=0.03 if simulate_stream else 0.0,
+        )
+        add_event(
+            video_id,
+            "understanding",
+            "完成视频理解，生成摘要、指标和候选标签",
+            {
                 "caption": analysis["caption"],
                 "tags": analysis["tags"],
+                "sampled_frames": analysis["metrics"]["sampled_frames"],
+                "model": analysis.get("model", {}),
+            },
+        )
+        moderation = moderate_analysis(analysis, title)
+        add_event(
+            video_id,
+            "moderation",
+            "完成自动审核策略判定",
+            {
+                "status": moderation["status"],
+                "risk_score": moderation["risk_score"],
                 "reasons": moderation["reasons"],
-                "metrics": analysis["metrics"],
-            }
-            upsert_video(record)
-            publish_message = {
-                "published": "审核通过，视频已发布到 Demo 信息流",
-                "review": "视频进入人工复核队列，暂不公开发布",
-                "rejected": "视频被策略拒绝，禁止发布",
-            }[moderation["status"]]
-            add_event(video_id, "publish", publish_message, {"status": moderation["status"]})
-            return record
-        except Exception as exc:
-            # Moderation follows fail-closed so an analysis failure blocks publication.
-            add_event(
-                video_id,
-                "failed",
-                "处理失败，已按失败关闭策略阻断发布",
-                {"error": str(exc)},
-            )
-            failed_record = {
-                **record,
-                "status": "rejected",
-                "risk_score": 100,
-                "caption": "后台理解或审核失败，已按失败关闭策略阻断发布。",
-                "tags": [],
-                "reasons": [
-                    {
-                        "code": "pipeline_failed",
-                        "level": "reject",
-                        "message": "后台处理失败，禁止发布。",
-                        "evidence": str(exc),
-                    }
-                ],
-                "metrics": {
-                    **(record.get("metrics") or {}),
-                    "model": {
-                        **((record.get("metrics") or {}).get("model") or {}),
-                        "backend": "failed",
-                        "fallback_reason": str(exc),
-                    },
-                },
-            }
-            upsert_video(failed_record)
-            raise
+            },
+        )
+        try:
+            # The thumbnail is presentation-only and never blocks publication.
+            create_thumbnail(media_path, thumbnail_path)
+        except FFmpegError as exc:
+            add_event(video_id, "thumbnail", "封面抽取失败，不影响发布", {"error": str(exc)})
+            thumbnail_name = ""
+
+        record = {
+            "id": video_id,
+            "title": title,
+            "source": record["source"],
+            "original_path": record["original_path"],
+            "media_file": media_name,
+            "thumbnail_file": thumbnail_name,
+            "status": moderation["status"],
+            "risk_score": moderation["risk_score"],
+            "caption": analysis["caption"],
+            "tags": analysis["tags"],
+            "reasons": moderation["reasons"],
+            "metrics": analysis["metrics"],
+        }
+        upsert_video(record)
+        publish_message = {
+            "published": "审核通过，视频已发布到 Demo 信息流",
+            "review": "视频进入人工复核队列，暂不公开发布",
+            "rejected": "视频被策略拒绝，禁止发布",
+        }[moderation["status"]]
+        add_event(video_id, "publish", publish_message, {"status": moderation["status"]})
+        return record

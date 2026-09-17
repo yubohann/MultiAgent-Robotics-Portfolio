@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from ._identity import IdentityAccumulator
+
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -94,8 +95,8 @@ def _canonical_bytes(value: object) -> bytes:
     ).encode("utf-8")
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -336,7 +337,7 @@ def _validate_annotations(
     return len(value)
 
 
-def _artifact_records(segment_root: Path, *, include_hashes: bool, issues: list[OpenAoeIssue]) -> tuple[dict[str, object], ...]:
+def _artifact_records(segment_root: Path, *, include_identities: bool, issues: list[OpenAoeIssue]) -> tuple[dict[str, object], ...]:
     records: list[dict[str, object]] = []
     for role, relative in _ARTIFACTS:
         path = segment_root / relative
@@ -348,26 +349,20 @@ def _artifact_records(segment_root: Path, *, include_hashes: bool, issues: list[
             _append(issues, "empty_artifact", role, f"required artifact is empty: {relative}")
             continue
         record: dict[str, object] = {"role": role, "size_bytes": size}
-        if include_hashes:
-            record["sha256"] = _sha256_file(path)
+        if include_identities:
+            record["identity"] = _identity_file(path)
         records.append(record)
     return tuple(records)
 
 
-def inspect_open_aoe_segment(segment_root: Path, *, include_hashes: bool = True) -> OpenAoeSegmentReport:
-    """Validate one documented Open-AoE segment without decoding its video.
-
-    The absence of a decoder keeps the adapter CPU-only and portable, but means
-    that media frame-count agreement is deliberately *not* claimed here.  The
-    synchronized NPZ arrays, metadata intrinsics, transforms, and annotation
-    boundaries are all checked directly.
-    """
+def inspect_open_aoe_segment(segment_root: Path, *, include_identities: bool = True) -> OpenAoeSegmentReport:
+    """Validate one documented Open-AoE segment without decoding its video."""
 
     root = Path(segment_root).expanduser().resolve()
     if not root.is_dir():
         raise OpenAoeError(f"Open-AoE segment directory does not exist: {root}")
     issues: list[OpenAoeIssue] = []
-    records = _artifact_records(root, include_hashes=include_hashes, issues=issues)
+    records = _artifact_records(root, include_identities=include_identities, issues=issues)
     paths = {role: root / relative for role, relative in _ARTIFACTS}
     raw_info = _json_mapping(paths["raw_camera_info"], "raw_camera_info", issues) if paths["raw_camera_info"].is_file() else None
     _camera_parameters(raw_info, artifact="raw_camera_info", issues=issues, require_fps=False)
@@ -432,10 +427,10 @@ def _segment_roots(dataset_root: Path, *, max_segments: int | None) -> tuple[Pat
     return tuple(roots)
 
 
-def _manifest_sha256(manifest: Mapping[str, object]) -> str:
+def _manifest_identity(manifest: Mapping[str, object]) -> str:
     unsigned = dict(manifest)
-    unsigned.pop("manifest_sha256", None)
-    return hashlib.sha256(_canonical_bytes(unsigned)).hexdigest()
+    unsigned.pop("manifest_identity", None)
+    return IdentityAccumulator(_canonical_bytes(unsigned)).hexdigest()
 
 
 def scan_open_aoe_root(
@@ -443,15 +438,10 @@ def scan_open_aoe_root(
     *,
     repository_root: Path | None = None,
     max_segments: int | None = None,
-    include_hashes: bool = True,
+    include_identities: bool = True,
     access_basis: str = "user_authorized_local_use",
 ) -> dict[str, object]:
-    """Create a path-free external-pretraining manifest for valid source segments.
-
-    Invalid segments are retained in the manifest's denominator.  A scan with
-    no valid segments fails closed, because a provenance file with only failed
-    sources must not look like usable training evidence.
-    """
+    """Create a path-free external-pretraining manifest for valid source segments."""
 
     root = Path(dataset_root).expanduser().resolve()
     if not root.is_dir():
@@ -460,7 +450,7 @@ def scan_open_aoe_root(
         raise OpenAoeError("external Open-AoE payload must remain outside the Rivermark repository")
     if access_basis not in {"user_authorized_local_use", "upstream_terms_verified"}:
         raise OpenAoeError("access_basis must be user_authorized_local_use or upstream_terms_verified")
-    reports = tuple(inspect_open_aoe_segment(path, include_hashes=include_hashes) for path in _segment_roots(root, max_segments=max_segments))
+    reports = tuple(inspect_open_aoe_segment(path, include_identities=include_identities) for path in _segment_roots(root, max_segments=max_segments))
     valid_count = sum(report.valid for report in reports)
     if valid_count == 0:
         raise OpenAoeError("no Open-AoE segment passed metadata, geometry, and annotation validation")
@@ -496,7 +486,7 @@ def scan_open_aoe_root(
         "total_artifact_bytes": total_bytes,
         "segments": records,
     }
-    manifest["manifest_sha256"] = _manifest_sha256(manifest)
+    manifest["manifest_identity"] = _manifest_identity(manifest)
     return manifest
 
 
@@ -505,8 +495,8 @@ def write_open_aoe_manifest(path: Path, manifest: Mapping[str, object], *, overw
 
     if manifest.get("schema") != OPEN_AOE_EXTERNAL_PROVENANCE_SCHEMA:
         raise OpenAoeError("manifest does not use the Open-AoE external provenance schema")
-    if manifest.get("manifest_sha256") != _manifest_sha256(manifest):
-        raise OpenAoeError("manifest hash is missing or does not bind its content")
+    if manifest.get("manifest_identity") != _manifest_identity(manifest):
+        raise OpenAoeError("manifest identity is missing or does not bind its content")
     output = Path(path).expanduser().resolve()
     if output.exists() and not overwrite:
         raise OpenAoeError(f"refusing to overwrite existing manifest: {output}")
@@ -535,7 +525,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, required=True, help="path-free manifest output path")
     parser.add_argument("--repository-root", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--max-segments", type=int, default=None, help="bounded number of source segments to inspect")
-    parser.add_argument("--skip-file-hashes", action="store_true", help="omit expensive content hashes; not suitable for release evidence")
+    parser.add_argument("--skip-file-identities", action="store_true", help="omit expensive content identities; not suitable for release evidence")
     parser.add_argument(
         "--access-basis",
         choices=("user_authorized_local_use", "upstream_terms_verified"),
@@ -552,14 +542,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.open_aoe_root,
             repository_root=args.repository_root,
             max_segments=args.max_segments,
-            include_hashes=not args.skip_file_hashes,
+            include_identities=not args.skip_file_identities,
             access_basis=args.access_basis,
         )
         output = write_open_aoe_manifest(args.output, manifest, overwrite=args.overwrite)
     except OpenAoeError as exc:
         print(json.dumps({"status": "blocked", "reason": str(exc)}, ensure_ascii=True, sort_keys=True))
         return 2
-    print(json.dumps({"status": "passed", "output": str(output), "manifest_sha256": manifest["manifest_sha256"]}, ensure_ascii=True, sort_keys=True))
+    print(json.dumps({"status": "passed", "output": str(output), "manifest_identity": manifest["manifest_identity"]}, ensure_ascii=True, sort_keys=True))
     return 0
 
 

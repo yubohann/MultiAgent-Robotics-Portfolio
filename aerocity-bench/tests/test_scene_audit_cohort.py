@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-from aerocity_bench.canonical import content_hash
 from aerocity_bench.ordinary_config import load_ordinary_config
 from aerocity_bench.scene_audit import (
     SCENE_AUDIT_SCHEMA,
@@ -14,25 +13,22 @@ from aerocity_bench.scene_audit import (
 )
 
 
-def _receipt(split: str, index: int, layout_hash: str) -> dict[str, object]:
-    report: dict[str, object] = {
+def _receipt(split: str, index: int, layout_id: str) -> dict[str, object]:
+    return {
         "schema": SCENE_AUDIT_SCHEMA,
         "status": "PASS",
         "split": split,
-        "layout_id": f"city-{index}",
-        "layout_hash": layout_hash,
-        "task_geometry_hash": f"geometry-{index}",
+        "layout_id": layout_id,
+        "task_geometry_id": f"geometry-{index}",
         "generator_version": "aerocity-generator-ordinary-v3.1",
         "scene_counts": {"buildings": 1, "episodes": 3},
         "generation_rejections_before_acceptance": 0,
         "error_categories": [],
     }
-    report["report_hash"] = content_hash(report)
-    return report
 
 
 def _failed_receipt(split: str) -> dict[str, object]:
-    report: dict[str, object] = {
+    return {
         "schema": SCENE_AUDIT_SCHEMA,
         "status": "FAIL",
         "split": split,
@@ -41,8 +37,6 @@ def _failed_receipt(split: str) -> dict[str, object]:
         "error_categories": ["no_complete_city_episode_candidate"],
         "generation_rejection_count": 8,
     }
-    report["report_hash"] = content_hash(report)
-    return report
 
 
 def test_development_scene_audit_plan_is_balanced_and_deterministic() -> None:
@@ -76,17 +70,14 @@ def test_cohort_summary_is_private_safe_and_detects_duplicate_layouts() -> None:
     assert "witness" not in rendered
 
     duplicate = copy.deepcopy(receipts)
-    duplicate[("validation", 0)]["layout_hash"] = duplicate[("train", 0)]["layout_hash"]
-    duplicate[("validation", 0)]["report_hash"] = content_hash(
-        {key: value for key, value in duplicate[("validation", 0)].items() if key != "report_hash"}
-    )
+    duplicate[("validation", 0)]["layout_id"] = duplicate[("train", 0)]["layout_id"]
     duplicate_report = summarize_development_scene_audit_cohort(
         ordinary_config,
         duplicate,
         per_split=1,
     )
     assert duplicate_report["status"] == "FAIL"
-    assert duplicate_report["all_layout_hashes_unique"] is False
+    assert duplicate_report["all_layout_ids_unique"] is False
 
 
 def test_cohort_summary_retains_a_generation_failure_instead_of_crashing() -> None:

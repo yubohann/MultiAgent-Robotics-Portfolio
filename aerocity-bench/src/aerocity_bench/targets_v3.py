@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import copy
+import json
 import math
 import random
 import threading
 from collections import Counter, OrderedDict
 from typing import Any
 
-from .canonical import content_hash, derived_seed
+from .canonical import derived_seed
 from .errors import GenerationRejected
 from .geometry import (
     AABB,
@@ -47,14 +48,8 @@ _G2_I_PRIVATE_SUPPORT_POLICY = {
 }
 
 
-def _task_geometry_hash(city: dict[str, Any]) -> str:
-    """Use visual-independent task geometry when available.
-
-    Older pilot artifacts lack this field, so they keep their historical
-    layout-hash behavior rather than becoming unreadable.
-    """
-
-    return str(city.get("task_geometry_hash", city["layout_hash"]))
+def _task_geometry_id(city: dict[str, Any]) -> str:
+    return str(city.get("task_geometry_id", city["layout_id"]))
 
 
 def altitude_band(z_value: float) -> str:
@@ -92,7 +87,9 @@ def _site(
         "surface_lineage": lineage,
     }
     payload["altitude_band"] = altitude_band(position[2])
-    payload["site_id"] = f"site-{content_hash(payload)[:18]}"
+    rounded = payload["position"]
+    owner = str(owner_id).replace("/", "_")
+    payload["site_id"] = f"site-{support_class}-{owner}-{rounded[0]}-{rounded[1]}-{rounded[2]}"
     return payload
 
 
@@ -113,7 +110,7 @@ def _stratified_values(
 
 
 def _raw_surface_sites(city: dict[str, Any]) -> list[dict[str, Any]]:
-    rng = random.Random(derived_seed(_task_geometry_hash(city), "surface-sites-v3"))
+    rng = random.Random(derived_seed(_task_geometry_id(city), "surface-sites-v3"))
     sites: list[dict[str, Any]] = []
     for building in city["buildings"]:
         building_id = str(building["id"])
@@ -432,7 +429,7 @@ def _compile_witnesses(
             pose = pose_looking_at(witness_position, position)
             witnesses.append(
                 {
-                    "witness_id": f"witness-{content_hash([site['site_id'], pose.to_dict()])[:16]}",
+                    "witness_id": f"witness-{site['site_id']}-{len(witnesses):02d}",
                     "pose": pose.to_dict(),
                     "target_distance_m": round(distance(witness_position, position), 5),
                     "clearance_m": round(clearance, 5),
@@ -949,9 +946,6 @@ def _episode_reachable_sites(
                     **site,
                     "legal_witnesses": witnesses,
                     "legal_witness_count": len(witnesses),
-                    "reachability_hash": content_hash(
-                        [witness["reachability_proof"] for witness in witnesses]
-                    ),
                 }
             )
     return reachable
@@ -962,17 +956,13 @@ def _reachability_cache_key(
     support_sites: list[dict[str, Any]],
     starts: list[dict[str, Any]],
     config: OrdinaryReleaseConfig,
-) -> str:
-    """Bind cached proofs to every input that can change their safety meaning."""
-
-    return content_hash(
-        {
-            "schema": "org.aerocity.bench.reachability-cache-key.v1",
-            "task_geometry_hash": _task_geometry_hash(city),
-            "support_sites_hash": content_hash(support_sites),
-            "starts": starts,
-            "execution_contract": config.raw["execution_contract"],
-        }
+) -> tuple[Any, ...]:
+    # Key on the explicit inputs that change the compiled proofs.
+    return (
+        _task_geometry_id(city),
+        tuple(str(site["site_id"]) for site in support_sites),
+        tuple(json.dumps(start, sort_keys=True) for start in starts),
+        json.dumps(config.raw["execution_contract"], sort_keys=True),
     )
 
 
@@ -1019,7 +1009,7 @@ def _episode_condition(
     group_index = episode_index // len(processes)
     process_name = processes[episode_index % len(processes)]
     group_seed = derived_seed(
-        config.master_seed, _task_geometry_hash(city), "paired-process", group_index
+        config.master_seed, _task_geometry_id(city), "paired-process", group_index
     )
     return process_name, group_seed, f"process-pair-{group_index:04d}"
 
@@ -1213,7 +1203,7 @@ def sample_episode_v3(
     for index, site in enumerate(selected):
         target_id = f"target-{index:03d}"
         distractor = pair_by_target[site["site_id"]]
-        pair_id = f"counterfactual-{content_hash([site['site_id'], distractor['site_id']])[:14]}"
+        pair_id = f"counterfactual-{index:03d}"
         target = {
             "target_id": target_id,
             "site_id": site["site_id"],
@@ -1226,7 +1216,6 @@ def sample_episode_v3(
             "represented_area_m2": site["represented_area_m2"],
             "legal_witnesses": site["legal_witnesses"],
             "legal_witness_count": site["legal_witness_count"],
-            "reachability_hash": site["reachability_hash"],
             "valid_before_run": True,
         }
         targets.append(target)
@@ -1242,7 +1231,6 @@ def sample_episode_v3(
                 "context_collider_ids": distractor["context_collider_ids"],
                 "legal_witnesses": distractor["legal_witnesses"],
                 "legal_witness_count": distractor["legal_witness_count"],
-                "reachability_hash": distractor["reachability_hash"],
             }
         )
         counterfactual_pairs.append(
@@ -1254,21 +1242,16 @@ def sample_episode_v3(
         )
     target_validity = {
         "schema": "org.aerocity.bench.target-validity-private.v1",
-        "layout_hash": city["layout_hash"],
         "condition_group_id": group_id,
         "target_ids": [target["target_id"] for target in targets],
         "site_ids": [target["site_id"] for target in targets],
-        "witness_hashes": [content_hash(target["legal_witnesses"]) for target in targets],
-        "reachability_hashes": [target["reachability_hash"] for target in targets],
         "frozen_before_execution": True,
     }
-    target_validity["validity_hash"] = content_hash(target_validity)
-    episode_identifier = content_hash([city["layout_hash"], episode_index, process_name])[:18]
+    episode_identifier = f"{city['layout_id']}-{process_name}-e{episode_index:03d}"
     episode = {
         "schema": "org.aerocity.bench.episode-private.ordinary.v3",
         "episode_id": f"episode-{episode_identifier}",
         "layout_id": city["layout_id"],
-        "layout_hash": city["layout_hash"],
         "episode_index": episode_index,
         "episode_seed": derived_seed(group_seed, process_name),
         "condition_group_id": group_id,
@@ -1283,12 +1266,10 @@ def sample_episode_v3(
             "count": config.fleet_count,
         },
         "starts": starts,
-        "execution_contract_hash": content_hash(config.raw["execution_contract"]),
         "formal_execution_level": config.raw["execution_contract"]["formal_execution_level"],
     }
     if mission_sector is not None:
         episode["mission_sector"] = mission_sector
-        episode["mission_sector_hash"] = mission_sector["sector_hash"]
     episode["target_summary_private"] = {
         "support_histogram": dict(
             sorted(Counter(target["support_class"] for target in targets).items())
@@ -1302,7 +1283,6 @@ def sample_episode_v3(
             4,
         ),
     }
-    episode["episode_hash"] = content_hash(episode)
     return episode
 
 
@@ -1315,7 +1295,7 @@ def sample_visual_review_episode_v3(
     target_count: int,
     process_name: str = "height_stratified",
 ) -> dict[str, Any]:
-    """Generate a hashed, non-scoring target overlay for human scene review."""
+    """Generate a non-scoring target overlay for human scene review."""
 
     if target_count < 1:
         raise ValueError("visual-review target_count must be positive")
@@ -1332,7 +1312,7 @@ def sample_visual_review_episode_v3(
         raise GenerationRejected(
             f"{len(reachable_sites)} reachable sites cannot support {target_count} review targets"
         )
-    seed = derived_seed(_task_geometry_hash(city), "visual-review", process_name, target_count)
+    seed = derived_seed(_task_geometry_id(city), "visual-review", process_name, target_count)
     nearby_limit = float(config.raw["execution_contract"]["observe"]["max_range_m"]) * 2.0
     maximum_fraction = float(config.raw["admission"]["maximum_single_observation_target_fraction"])
     selected: list[dict[str, Any]] | None = None
@@ -1409,7 +1389,6 @@ def sample_visual_review_episode_v3(
                 "context_collider_ids": site["context_collider_ids"],
                 "surrounding_collider_count": site["surrounding_collider_count"],
                 "legal_witness_count": site["legal_witness_count"],
-                "legal_witness_hash": content_hash(site["legal_witnesses"]),
                 "local_review_pose": review_witness["pose"],
                 "local_review_witness_id": review_witness["witness_id"],
                 "local_context_review_pose": context_pose["pose"],
@@ -1422,7 +1401,6 @@ def sample_visual_review_episode_v3(
                 "local_context_visible_collider_ids": context_pose[
                     "visible_context_collider_ids"
                 ],
-                "reachability_hash": site["reachability_hash"],
             }
         )
     positions = [target["position"] for target in targets]
@@ -1441,7 +1419,6 @@ def sample_visual_review_episode_v3(
         "purpose": "human_visual_distribution_review_only",
         "formal_score_eligible": False,
         "layout_id": city["layout_id"],
-        "layout_hash": city["layout_hash"],
         "review_seed": seed,
         "target_process": process_name,
         "target_count": target_count,
@@ -1497,7 +1474,6 @@ def sample_visual_review_episode_v3(
             "sampling_rejection_histogram": dict(sorted(sampling_errors.items())),
         },
     }
-    episode["episode_hash"] = content_hash(episode)
     return episode
 
 
@@ -1516,7 +1492,6 @@ def public_episode_projection(episode: dict[str, Any]) -> dict[str, Any]:
     }
     if "mission_sector" in episode:
         projection["mission_sector"] = copy.deepcopy(episode["mission_sector"])
-        projection["mission_sector_hash"] = str(episode["mission_sector_hash"])
     return projection
 
 
@@ -1526,7 +1501,7 @@ def validate_frozen_g2_i_episode(
     task_spec: dict[str, Any],
     execution_contract: dict[str, Any],
 ) -> None:
-    """Fail closed when a frozen private episode is replayed on another task."""
+    """Check that a frozen private episode matches its task and city."""
 
     if episode.get("schema") != "org.aerocity.bench.episode-private.ordinary.v3":
         raise ValueError("frozen G2-I episode schema differs")
@@ -1537,22 +1512,9 @@ def validate_frozen_g2_i_episode(
         raise ValueError("frozen G2-I episode requires the authority full-cell atlas")
     if episode.get("layout_id") != city.get("layout_id"):
         raise ValueError("frozen G2-I episode is not bound to its city")
-    if episode.get("layout_hash") != city.get("layout_hash"):
-        raise ValueError("frozen G2-I episode layout hash differs from its city")
-    if episode.get("execution_contract_hash") != content_hash(execution_contract):
-        raise ValueError("frozen G2-I episode execution contract differs")
-    stored_hash = episode.get("episode_hash")
-    if not isinstance(stored_hash, str):
-        raise ValueError("frozen G2-I episode lacks episode_hash")
-    unhashed = dict(episode)
-    unhashed.pop("episode_hash", None)
-    if content_hash(unhashed) != stored_hash:
-        raise ValueError("frozen G2-I episode hash does not match its contents")
     sector = episode.get("mission_sector")
     if not isinstance(sector, dict):
         raise ValueError("frozen G2-I episode lacks its public mission sector")
-    if episode.get("mission_sector_hash") != sector.get("sector_hash"):
-        raise ValueError("frozen G2-I episode mission-sector hash differs")
     validate_public_mission_sector(
         sector,
         atlas,

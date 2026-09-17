@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from .adapters import project_g1
-from .canonical import content_hash
 from .contracts import ActionPacket, ObservationPacket
 from .geometry import distance
 from .planning_cadence import PlanningCadenceController
@@ -115,7 +114,7 @@ def build_g2_i_rl_public_context(runtime: L0FleetRuntime) -> tuple[dict[str, Any
             if cell_id not in selected_ids:
                 continue
             semantics = _cell_semantics(cell)
-            handle = content_hash(semantics)
+            handle = cell_id
             encoded.append((handle, cell_id, semantics))
     if {cell_id for _, cell_id, _ in encoded} != selected_ids:
         raise ValueError("G2-I RL context does not resolve the complete mission sector")
@@ -126,19 +125,13 @@ def build_g2_i_rl_public_context(runtime: L0FleetRuntime) -> tuple[dict[str, Any
         "schema": G2_I_RL_CONTEXT_SCHEMA,
         "layout_id": str(task["layout_id"]),
         "episode_id": str(episode["episode_id"]),
-        "public_task_spec_hash": content_hash(task),
-        "public_episode_hash": content_hash(episode),
         "execution_contract": deepcopy(task["execution_contract"]),
         "starts": deepcopy(episode["starts"]),
-        "cell_ordering": "semantic-content-sha256-v1",
+        "cell_ordering": "atlas-cell-id-order-v1",
         "cell_handles": [handle for handle, _, _ in encoded],
         "cell_features": [semantics for _, _, semantics in encoded],
-        "private_truth_available": False,
     }
-    # Avoid even false sentinel keys containing private/target terms on the RL wire.
-    context.pop("private_truth_available")
     assert_public_fields(context, path="g2_i_rl_context")
-    context["context_hash"] = content_hash(context)
     id_by_handle = {handle: cell_id for handle, cell_id, _ in encoded}
     return context, id_by_handle
 
@@ -196,7 +189,9 @@ class G2IGymnasiumFleetWrapper:
         return {
             drone_id: {
                 "schema": G2_I_RL_OBSERVATION_SCHEMA,
-                "public_context_ref": self.public_context["context_hash"],
+                "public_context_ref": (
+                    f"{self.public_context['layout_id']}:{self.public_context['episode_id']}"
+                ),
                 "agent": project_g1(observation),
                 "inspection_history": deepcopy(history),
                 "task_time_fraction": min(1.0, observation.timestamp_s / duration),
@@ -335,31 +330,3 @@ class G2IGymnasiumFleetWrapper:
         }
         rewards = {drone_id: team_reward for drone_id in agents}
         return observations, rewards, terminated, truncated, info
-
-
-class G2IPettingZooParallelWrapper:
-    """PettingZoo-compatible view over the same high-level G2-I transition."""
-
-    metadata = {"name": "aerocity_g2_i_v1", "is_parallelizable": True}
-
-    def __init__(
-        self,
-        runtime: L0FleetRuntime,
-        *,
-        reward_contract: G2IRewardContract = G2_I_INSPECTION_SHAPED_REWARD_V1,
-    ) -> None:
-        self._wrapper = G2IGymnasiumFleetWrapper(runtime, reward_contract=reward_contract)
-        self.possible_agents = sorted(runtime.reset())
-        self.agents = list(self.possible_agents)
-
-    def reset(self, seed: int | None = None, options: dict[str, Any] | None = None):
-        observations, common = self._wrapper.reset(seed=seed, options=options)
-        self.agents = sorted(observations)
-        return observations, {agent: deepcopy(common) for agent in self.agents}
-
-    def step(self, actions: dict[str, ActionPacket]):
-        acting_agents = list(self.agents)
-        observations, rewards, terminations, truncations, common = self._wrapper.step(actions)
-        infos = {agent: deepcopy(common) for agent in acting_agents}
-        self.agents = [] if all(terminations.values()) else sorted(observations)
-        return observations, rewards, terminations, truncations, infos

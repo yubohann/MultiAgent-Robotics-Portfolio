@@ -5,19 +5,18 @@ planner-vs-mainline tables.
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor, as_completed
 import csv
-from dataclasses import replace
-from datetime import datetime
 import json
 import math
 import os
-from pathlib import Path
 import re
 import statistics
 import sys
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from dataclasses import replace
+from datetime import datetime
+from pathlib import Path
 from typing import Any
-
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -27,20 +26,18 @@ from shared.runtime.paths import RESULTS_ROOT, ensure_project_on_path
 
 ROOT = ensure_project_on_path()
 
-from single_internal_gate.configs.experiment_config import EXP2_SINGLE_INTERNAL_CONFIG
-from single_internal_gate.planners import create_planner
-from single_internal_gate.planners.interfaces import PlannerTask2D
 from shared.core.collision_2d import GateObstacleMap2D, GatePostObstacle2D
 from shared.core.dynamic_gate_density_2d import (
     DynamicGate2D,
     DynamicGateDensity2DConfig,
     default_dynamic_gate_density_config,
-    gate_posts,
     generate_gate_layout,
     live_gate_centers,
     resolved_corridor_half_width_m,
 )
-
+from single_internal_gate.configs.experiment_config import EXP2_SINGLE_INTERNAL_CONFIG
+from single_internal_gate.planners import create_planner
+from single_internal_gate.planners.interfaces import PlannerTask2D
 
 CLASSIC_PLANNERS = ("astar", "theta_star", "rrt_star", "informed_rrt_star", "heuristic")
 STRONG_PLANNERS = ("ego_planner", "fast_planner")
@@ -95,7 +92,6 @@ class GateObstacleProvider:
         self.moving_gate_amplitude_m = float(moving_gate_amplitude_m)
         self.moving_gate_speed_mps = float(moving_gate_speed_mps)
         self.generated_config = generated_config
-        self.generated_static_layout = bool(generated_static_layout)
         self._timeseries = _load_gate_timeseries(timeseries_path) if timeseries_path else ()
         self._generated_gates = (
             list(generated_gates)
@@ -1033,7 +1029,7 @@ def _multi_planning_failure_row(
     leader_row: dict[str, Any],
 ) -> dict[str, Any]:
     start_positions = [(leader_start[0] + slot[0], leader_start[1] + slot[1]) for slot in slots]
-    route_distances = [_distance(start, (leader_goal[0] + slot[0], leader_goal[1] + slot[1])) for start, slot in zip(start_positions, slots)]
+    route_distances = [_distance(start, (leader_goal[0] + slot[0], leader_goal[1] + slot[1])) for start, slot in zip(start_positions, slots, strict=False)]
     obstacle_map = provider.obstacle_map_at(0.0)
     clearances = [obstacle_map.min_signed_distance(point, drone_radius_m=provider.drone_radius_m) for point in start_positions]
     initial_collision = any(value <= 0.0 for value in clearances)
@@ -1139,7 +1135,7 @@ def _audit_shifted_agent_trajectory(
             mid_map = provider.obstacle_map_at(t_sec - 0.5 * dt_s)
             collision = collision or obstacle_map.segment_collides(prev, point, drone_radius_m=provider.drone_radius_m)
             collision = collision or mid_map.segment_collides(prev, point, drone_radius_m=provider.drone_radius_m)
-    path_len = sum(_distance(a, b) for a, b in zip(trajectory[:-1], trajectory[1:]))
+    path_len = sum(_distance(a, b) for a, b in zip(trajectory[:-1], trajectory[1:], strict=False))
     final_dist = _distance(trajectory[-1], goal_xy) if trajectory else _distance(start_xy, goal_xy)
     initial_dist = _distance(start_xy, goal_xy)
     timeout = bool(leader_row.get("timeout_rate", 0.0))
@@ -1342,8 +1338,8 @@ def _rollout_result(
     replan_count: int,
     min_clearance: float,
 ) -> dict[str, Any]:
-    path_len = sum(_distance(a, b) for a, b in zip(trajectory[:-1], trajectory[1:]))
-    speeds = [_distance(a, b) / max(dt_s, 1.0e-9) for a, b in zip(trajectory[:-1], trajectory[1:])]
+    path_len = sum(_distance(a, b) for a, b in zip(trajectory[:-1], trajectory[1:], strict=False))
+    speeds = [_distance(a, b) / max(dt_s, 1.0e-9) for a, b in zip(trajectory[:-1], trajectory[1:], strict=False)]
     final_dist = _distance(trajectory[-1], goal_xy)
     initial_dist = _distance(start_xy, goal_xy)
     planning_failure = str(done_reason).startswith("planning_failure") or str(done_reason) == "no_path"
@@ -1537,7 +1533,6 @@ def _mainline_metrics_from_single(summary: dict[str, Any]) -> dict[str, Any]:
     mainline_path_length = _float_or_nan(summary.get("path_length_m_mean"))
     progress = _mainline_single_progress_distance(summary, initial, success_rate, mainline_path_length)
     collision_rate = _float_or_nan(summary.get("collision_rate"))
-    timeout_rate = _float_or_nan(summary.get("timeout_rate"))
     hard_failure_rate = 1.0 - success_rate if math.isfinite(success_rate) else None
     out_of_bounds_rate = _float_or_nan(summary.get("out_of_bounds_rate"))
     side_bypass_rate = _float_or_nan(summary.get("side_bypass_failure_rate"))

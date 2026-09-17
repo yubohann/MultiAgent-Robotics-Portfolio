@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
-from typing import Sequence
 
 from shared.configs.global_config import GLOBAL_CONFIG
 from shared.core.dynamic_gate_density_2d import (
     DynamicGateDensity2DConfig,
     default_dynamic_gate_density_config,
 )
-
 
 EXP3_EMPTY_SCENE_MODES: tuple[str, ...] = (
     "empty_fixed_height",

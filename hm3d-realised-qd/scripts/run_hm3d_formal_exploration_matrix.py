@@ -10,7 +10,11 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from aerocity_method.contracts.io import canonical_sha256, read_json_object, write_json_atomic
+from aerocity_method.contracts.io import (  # noqa: E402 -- sys.path bootstrap
+    payload_label,
+    read_json_object,
+    write_json_atomic,
+)
 
 
 def audit_formal_matrix_admission(
@@ -39,10 +43,10 @@ def audit_formal_matrix_admission(
         "schema_version": "hm3d-formal-exploration-matrix-admission-v1",
         "status": "READY_TO_RUN_FORMAL_MATRIX" if not reasons else "FORMAL_MATRIX_NOT_READY",
         "reasons": reasons,
-        "p09_freeze_hash": canonical_sha256(p09_freeze),
-        "baseline_matrix_hash": canonical_sha256(baseline_matrix),
-        "metric_registry_hash": canonical_sha256(metric_registry),
-        "runtime_evidence_hash": canonical_sha256(runtime_evidence),
+        "p09_freeze_id": payload_label(p09_freeze, prefix="p09-freeze"),
+        "baseline_matrix_id": payload_label(baseline_matrix, prefix="baseline-matrix"),
+        "metric_registry_id": payload_label(metric_registry, prefix="metric-registry"),
+        "runtime_evidence_id": payload_label(runtime_evidence, prefix="runtime-evidence"),
         "formal_result": False,
     }
 

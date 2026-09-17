@@ -10,17 +10,12 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
 
-from .actions import ActionDeduplicator, ACTION_NAMES, ActionFeedback, ActionRequest
+from .actions import ACTION_NAMES, ActionDeduplicator, ActionFeedback, ActionRequest
 
 
 @dataclass
 class SyntheticMechanismPlant:
-    """Deterministic plant model for the synthetic profile.
-
-    Each transition validates the previous simulated sensor state and returns
-    the evidence that made the move legal, and the model stays a synthetic
-    stand-in for a physical mechanism.
-    """
+    """Deterministic plant model for the synthetic profile."""
 
     healthy: bool = True
     ball_present: bool = True

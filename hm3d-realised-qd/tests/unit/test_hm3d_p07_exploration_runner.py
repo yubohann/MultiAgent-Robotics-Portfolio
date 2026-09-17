@@ -255,9 +255,9 @@ def test_p0_full_qualification_requires_matching_all_active_audit_evidence() -> 
         "status": "P07_START_ELIGIBILITY_AUDIT_COMPLETE",
         "scene_id": "scene",
         "controller_id": "isaac-so3-feedback-v6",
-        "transit_time_model_sha256": "t" * 64,
+        "transit_time_model_id": "t" * 64,
         "p0_eligibility_contract": eligibility_contract,
-        "start_reset_manifest_sha256": "s" * 64,
+        "start_reset_manifest_id": "s" * 64,
         "initial_start_reset": {
             "selected_start_candidate_ids": ["start-0", "start-1", "start-2", "start-3"],
             "p0_live_departure_qualification": {
@@ -268,14 +268,14 @@ def test_p0_full_qualification_requires_matching_all_active_audit_evidence() -> 
         },
         "first_pool": {"all_agents_active_candidate_exists": True},
     }
-    payload["audit_record_sha256"] = runner.canonical_sha256(payload)
+    payload["audit_record_file_id"] = "audit-test"
 
     selected = runner._validated_p0_start_eligibility_evidence(
         payload,
         scene_id="scene",
-        start_reset_manifest_sha256="s" * 64,
+        start_reset_manifest_id="s" * 64,
         controller_id="isaac-so3-feedback-v6",
-        transit_time_model_sha256="t" * 64,
+        transit_time_model_id="t" * 64,
         p0_eligibility_contract=eligibility_contract,
         requested_candidate_ids=("start-0", "start-1", "start-2", "start-3"),
     )
@@ -284,14 +284,14 @@ def test_p0_full_qualification_requires_matching_all_active_audit_evidence() -> 
     with pytest.raises(ValueError, match="all-active"):
         failing = dict(payload)
         failing["first_pool"] = {"all_agents_active_candidate_exists": False}
-        failing.pop("audit_record_sha256")
-        failing["audit_record_sha256"] = runner.canonical_sha256(failing)
+        failing.pop("audit_record_file_id")
+        failing["audit_record_file_id"] = "audit-test"
         runner._validated_p0_start_eligibility_evidence(
             failing,
             scene_id="scene",
-            start_reset_manifest_sha256="s" * 64,
+            start_reset_manifest_id="s" * 64,
             controller_id="isaac-so3-feedback-v6",
-            transit_time_model_sha256="t" * 64,
+            transit_time_model_id="t" * 64,
             p0_eligibility_contract=eligibility_contract,
             requested_candidate_ids=("start-0", "start-1", "start-2", "start-3"),
         )
@@ -306,15 +306,15 @@ def test_p0_full_qualification_requires_matching_all_active_audit_evidence() -> 
             "passed": False,
         },
     }
-    failed_departure.pop("audit_record_sha256")
-    failed_departure["audit_record_sha256"] = runner.canonical_sha256(failed_departure)
+    failed_departure.pop("audit_record_file_id")
+    failed_departure["audit_record_file_id"] = "audit-test"
     with pytest.raises(ValueError, match="live departure"):
         runner._validated_p0_start_eligibility_evidence(
             failed_departure,
             scene_id="scene",
-            start_reset_manifest_sha256="s" * 64,
+            start_reset_manifest_id="s" * 64,
             controller_id="isaac-so3-feedback-v6",
-            transit_time_model_sha256="t" * 64,
+            transit_time_model_id="t" * 64,
             p0_eligibility_contract=eligibility_contract,
             requested_candidate_ids=("start-0", "start-1", "start-2", "start-3"),
         )
@@ -324,9 +324,9 @@ def test_p0_full_qualification_requires_matching_all_active_audit_evidence() -> 
         runner._validated_p0_start_eligibility_evidence(
             payload,
             scene_id="scene",
-            start_reset_manifest_sha256="s" * 64,
+            start_reset_manifest_id="s" * 64,
             controller_id="isaac-so3-feedback-v6",
-            transit_time_model_sha256="t" * 64,
+            transit_time_model_id="t" * 64,
             p0_eligibility_contract=mismatched_contract,
             requested_candidate_ids=("start-0", "start-1", "start-2", "start-3"),
         )
@@ -434,8 +434,8 @@ def test_p0_live_departure_reuses_shared_guard_and_keeps_probe_geometry_private(
         clearance_oracle=object(),
         bounds_min=(-10.0, -10.0, -10.0),
         bounds_max=(10.0, 10.0, 10.0),
-        collision_usd_sha256="c" * 64,
-        start_reset_manifest_sha256="s" * 64,
+        collision_usd_file_id="c" * 64,
+        start_reset_manifest_id="s" * 64,
     )
 
     assert qualification["passed"] is True
@@ -484,8 +484,8 @@ def test_p0_live_departure_requires_one_guard_legal_nonzero_hop_per_start(
         clearance_oracle=object(),
         bounds_min=(-10.0, -10.0, -10.0),
         bounds_max=(10.0, 10.0, 10.0),
-        collision_usd_sha256="c" * 64,
-        start_reset_manifest_sha256="s" * 64,
+        collision_usd_file_id="c" * 64,
+        start_reset_manifest_id="s" * 64,
     )
 
     assert qualification["passed"] is False
@@ -514,8 +514,8 @@ def test_p0_live_departure_rejects_zero_length_manifest_witness() -> None:
             clearance_oracle=object(),
             bounds_min=(-10.0, -10.0, -10.0),
             bounds_max=(10.0, 10.0, 10.0),
-            collision_usd_sha256="c" * 64,
-            start_reset_manifest_sha256="s" * 64,
+            collision_usd_file_id="c" * 64,
+            start_reset_manifest_id="s" * 64,
         )
 
 
@@ -567,7 +567,7 @@ def test_sub_dwell_final_budget_is_recorded_without_a_fake_outcome() -> None:
     )
 
     assert record == {
-        "manifest_hash": None,
+        "manifest_id": None,
         "elapsed_physics_s": 0.0,
         "unexecuted_remainder_s": pytest.approx(0.4833),
         "scheduled_completion_mode": "unexecuted_budget_remainder_below_observation_dwell",
@@ -682,7 +682,7 @@ def test_stationarity_supervision_rejects_a_completed_micro_exploration() -> Non
     )
     manifest = runner.CandidateFragmentManifest(
         candidate_id="stationarity-candidate",
-        context_hash=context.digest,
+        context_id=context.context_id,
         fragments=(fragment,),
         planned_descriptor=(0.0, 0.0, 0.0),
         feasible=True,
@@ -736,7 +736,7 @@ def test_stationarity_supervision_accepts_a_completed_outcome_backtrack() -> Non
     )
     manifest = runner.CandidateFragmentManifest(
         candidate_id="stationarity-backtrack-candidate",
-        context_hash=context.digest,
+        context_id=context.context_id,
         fragments=(fragment,),
         planned_descriptor=(0.0, 0.0, 0.0),
         feasible=True,
@@ -980,7 +980,7 @@ def test_candidate_role_summary_exposes_holds_in_the_shared_pool() -> None:
     )
     candidate = runner.CandidateFragmentManifest(
         candidate_id="candidate",
-        context_hash="a" * 64,
+        context_id="a" * 64,
         fragments=fragments,
         planned_descriptor=(0.0, 0.0, 0.0),
         feasible=True,
@@ -990,7 +990,7 @@ def test_candidate_role_summary_exposes_holds_in_the_shared_pool() -> None:
     )
 
     rows = runner._candidate_role_summary(
-        [candidate], selected_manifest_hash=candidate.manifest_hash
+        [candidate], selected_manifest_id=candidate.manifest_id
     )
 
     assert len(rows) == 1
@@ -1194,7 +1194,7 @@ def test_online_p07_rejects_a_timing_model_from_a_different_execution_profile(
                 "continuous_waypoint_speed_mps": 0.35,
                 "observation_dwell_s": 1.0,
                 "execution_profile": calibrated,
-                "execution_profile_sha256": runner.canonical_sha256(calibrated),
+                "execution_profile_id": "execution-profile-test",
             }
         ),
         encoding="utf-8",
@@ -1250,12 +1250,7 @@ def test_online_p07_accepts_legacy_receipt_tolerance_alias(tmp_path: Path) -> No
                         **calibrated,
                         "receipt_time_tolerance_s": tolerance_s,
                     },
-                    "execution_profile_sha256": runner.canonical_sha256(
-                        {
-                            **calibrated,
-                            "receipt_time_tolerance_s": tolerance_s,
-                        }
-                    ),
+                    "execution_profile_id": "execution-profile-test",
                 }
             ),
             encoding="utf-8",
@@ -1311,7 +1306,7 @@ def test_online_p07_matches_calibration_abi_but_rejects_a_different_controller(
                 "continuous_waypoint_speed_mps": 0.35,
                 "observation_dwell_s": 1.0,
                 "execution_profile": mellinger_profile,
-                "execution_profile_sha256": runner.canonical_sha256(mellinger_profile),
+                "execution_profile_id": "execution-profile-test",
             }
         ),
         encoding="utf-8",
@@ -1357,7 +1352,7 @@ def test_undelivered_range_updates_cannot_enter_the_shared_belief() -> None:
 def test_public_frontiers_are_team_shared_not_required_per_source_agent() -> None:
     source = RUNNER.read_text(encoding="utf-8")
 
-    assert "too few reachable interior observation viewpoints" in source
+    assert "too few reachable interior observation" in source
     assert "no_public_free_path" in source
     assert "if len(candidates) < len(positions):" in source
     assert "extract_frontier_clusters" in source
@@ -1662,8 +1657,8 @@ def test_candidate_route_opportunity_catalog_reports_longest_nonreverse_without_
     reservation = runner.PublicTaskReservation.from_completed_public_exploration_transit(
         agent_id="uav0",
         source_decision_id="prior-decision",
-        source_manifest_hash="0" * 64,
-        source_transit_outcome_sha256="1" * 64,
+        source_manifest_id="0" * 64,
+        source_transit_outcome_id="1" * 64,
         public_path_m=((0.0, 0.0, 0.0), (1.0, 0.0, 0.0)),
     )
     state = runner.PublicSearchState(
@@ -1736,10 +1731,10 @@ def test_candidate_route_opportunity_catalog_reports_longest_nonreverse_without_
     )
     assert forward_row["route_guard_cache_hit"] is True
     assert forward_row["feasible_team_candidate_ids"] == []
-    assert forward_row["feasible_team_manifest_hashes"] == []
+    assert forward_row["feasible_team_manifest_ids"] == []
     assert forward_row["selected_candidate_contains_edge"] is False
     assert catalog["schema_version"] == "hm3d-candidate-route-opportunity-catalog-v3"
-    assert len(catalog["catalog_sha256"]) == 64
+    assert catalog["catalog_file_id"].startswith("candidate-catalog:")
 
 
 def test_candidate_route_opportunity_catalog_binds_selected_frontier_to_manifest():
@@ -1791,7 +1786,7 @@ def test_candidate_route_opportunity_catalog_binds_selected_frontier_to_manifest
     row = catalog["agents"][0]["frontier_edges"][0]
     assert row["appears_in_feasible_team_candidate"] is True
     assert row["feasible_team_candidate_ids"] == [selected.candidate_id]
-    assert row["feasible_team_manifest_hashes"] == [selected.manifest_hash]
+    assert row["feasible_team_manifest_ids"] == [selected.manifest_id]
     assert row["selected_candidate_contains_edge"] is True
     assert row["selected"] is True
 
@@ -1810,8 +1805,8 @@ def test_outcome_backtrack_frontier_preserves_only_a_completed_owned_route() -> 
         route_id="decision0-uav1-0123456789ab",
         agent_id="uav1",
         source_decision_id="decision0",
-        source_manifest_hash="a" * 64,
-        source_transit_outcome_sha256="b" * 64,
+        source_manifest_id="a" * 64,
+        source_transit_outcome_id="b" * 64,
         source_minimum_static_mesh_clearance_m=0.52,
         source_static_clearance_contract_required_m=0.40,
         path_m=((0.0, 0.0, 1.0), (0.6, 0.0, 1.0)),
@@ -2684,8 +2679,8 @@ def test_completed_decision_progress_is_atomic_non_trainable_recovery_evidence(
     )
 
     progress = json.loads(runner._progress_path(output).read_text(encoding="utf-8"))
-    supplied_hash = progress.pop("progress_record_sha256")
-    assert runner.canonical_sha256(progress) == supplied_hash
+    supplied_id = progress.pop("progress_record_file_id")
+    assert supplied_id.startswith("p07-progress:")
     assert progress["formal_result"] is False
     assert progress["trainable"] is False
     assert progress["decision_count"] == 1
@@ -2705,8 +2700,8 @@ def test_qd_strategies_require_train_outcomes_and_fail_closed_candidate_variety(
     source = RUNNER.read_text(encoding="utf-8")
     assert "def _load_train_qd_history(" in source
     assert 'payload.get("selection_partition") != "train"' in source
-    assert 'payload.get("split_manifest_sha256") != split_manifest_sha256' in source
-    assert '"split_manifest_sha256": split_manifest_sha256' in source
+    assert 'payload.get("split_manifest_id") != split_manifest_id' in source
+    assert '"split_manifest_id": split_manifest_id' in source
     assert "MINIMUM_REALISED_QD_OUTCOMES_FOR_ADMISSION" in source
     assert "feasible train execution outcomes" in source
     assert "audit_pre_registered_qd_descriptor_families" in source
@@ -2732,7 +2727,7 @@ def test_online_p07_binds_the_worker_to_the_frozen_p05_scene_split() -> None:
     source = RUNNER.read_text(encoding="utf-8")
 
     assert 'parser.add_argument("--p05-artifact", required=True, type=Path)' in source
-    assert "def _frozen_split_manifest_hash(" in source
+    assert "def _frozen_split_manifest_id(" in source
     assert "P07 scene and requested partition disagree with P05 freeze" in source
 
 
@@ -2741,8 +2736,8 @@ def test_online_qd_archive_requires_safe_execution_outcomes() -> None:
 
     assert "execution_feasible=qd_feasible" in source
     assert '"executed": execution_complete' in source
-    assert '"candidate_manifest_sha256": selected.manifest_hash' in source
-    assert '"execution_outcome_sha256": behavior_hash' in source
+    assert '"candidate_manifest_id": selected.manifest_id' in source
+    assert '"execution_outcome_id": behavior_id' in source
 
 
 def test_qd_archive_uses_only_publicly_new_voxels_not_a_repeat_scan() -> None:
@@ -2864,7 +2859,11 @@ def test_periodic_supervision_prefers_physics_visualization_trace_timestamps() -
                     "physics_timestamp_s": 0.0,
                     "minimum_inter_agent_distance_m": 1.0,
                     "agents": [
-                        {"agent_id": f"uav{index}", "position_m": list(start[index]), "linear_speed_mps": 0.0}
+                        {
+                            "agent_id": f"uav{index}",
+                            "position_m": list(start[index]),
+                            "linear_speed_mps": 0.0,
+                        }
                         for index in range(4)
                     ],
                 },

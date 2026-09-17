@@ -37,7 +37,7 @@ def load_magic_data(file_path: str) -> Tuple[List[List[float]], List[int]]:
                     lv = float(label_raw)
                     label = 1 if lv > 0 else -1
                 except Exception:
-                    # Fallback mapping, positive labels to 1 and everything else to -1.
+                    # Map positive labels to 1 and everything else to -1.
                     label = 1 if label_raw == '1' else -1
             X.append(feats)
             y.append(label)

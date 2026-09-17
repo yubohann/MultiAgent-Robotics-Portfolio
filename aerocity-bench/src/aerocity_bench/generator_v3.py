@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import math
 import random
 from collections import Counter
 from typing import Any
 
-from .canonical import content_hash, derived_seed
+from .canonical import derived_seed
 from .errors import GenerationRejected
 from .geometry import AABB
 from .ordinary_config import OrdinaryReleaseConfig
@@ -673,7 +674,7 @@ def _generate_buildings(
             else:
                 width *= 0.72
         height = _sample_height(rng, size_m)
-        building_id = f"building-{content_hash([x, y, width, depth, height])[:10]}"
+        building_id = f"building-{len(buildings):03d}"
         components = _components(template, x, y, width, depth, height)
         side = rng.choice(("south", "east", "north", "west"))
         # Architectural detail uses its own RNG stream: visual richness must not
@@ -760,7 +761,7 @@ def _generate_obstacles(
             candidate = AABB.from_center_size("candidate", center, (sx, sy, sz), "rubble")
             if _overlaps(candidate, colliders, margin=0.15):
                 continue
-            obstacle_id = f"obstacle-{content_hash([building['id'], center])[:10]}"
+            obstacle_id = f"obstacle-{len(obstacles):03d}"
             obstacles.append(
                 {
                     "id": obstacle_id,
@@ -812,7 +813,7 @@ def _generate_decorations(
                     continue
                 decorations.append(
                     {
-                        "id": f"decor-{content_hash([asset_id, copy_index, x, y])[:10]}",
+                        "id": f"decor-{asset_id}-{copy_index:02d}",
                         "asset_id": asset_id,
                         "position": [round(x, 4), round(y, 4), 0.0],
                         "rotation_z_deg": round(rng.uniform(-180.0, 180.0), 3),
@@ -919,9 +920,8 @@ def _task_geometry_payload(
 ) -> dict[str, Any]:
     """Return visual-independent geometry that determines task semantics.
 
-    The full layout hash remains the identity for scene bytes and replay. This
-    payload is used for target, spawn, and coarse-prior randomness, so changing
-    colors, road styles, or visual-only assets cannot alter task difficulty.
+    This payload feeds target, spawn, and coarse-prior randomness, so colors,
+    road styles, or visual-only assets cannot alter task difficulty.
     """
 
     task_roads = [
@@ -980,7 +980,7 @@ def generate_city_v3(
     road_width = rng.uniform(width_low, width_high)
     nodes, roads = _road_graph(family, size_m, road_width, rng)
     style_rng = random.Random(derived_seed(seed, "road-surface-style-v1"))
-    # Public, layout-hashed metadata; keep it off the core city RNG stream.
+    # Public visual metadata; kept off the core city RNG stream.
     for road in roads:
         road["surface_style"] = style_rng.choice(ROAD_SURFACE_STYLES)
     templates = OOD_TEMPLATES if split == "test_topology" else DEVELOPMENT_TEMPLATES
@@ -1000,7 +1000,7 @@ def generate_city_v3(
         "nodes": [[round(value, 2) for value in node["position"][:2]] for node in nodes],
         "edges": sorted((road["start_node"], road["end_node"], road["blocked"]) for road in roads),
     }
-    asset_set_hash = content_hash(sorted(asset_ids))
+    asset_set_id = ",".join(sorted(asset_ids))
     height_values = [float(item["height_m"]) for item in buildings]
     flight_bounds = {
         "minimum": [-size_m / 2.0, -size_m / 2.0, 1.0],
@@ -1010,38 +1010,15 @@ def generate_city_v3(
             max(70.0, max(height_values) + 12.0),
         ],
     }
-    task_geometry_hash = content_hash(
-        _task_geometry_payload(
-            generator_version=config.generator_version,
-            size_m=size_m,
-            graph_payload=graph_payload,
-            roads=roads,
-            buildings=buildings,
-            obstacles=obstacles,
-            flight_bounds=flight_bounds,
-        )
-    )
-    geometry = {
-        "generator_version": config.generator_version,
-        "size_m": size_m,
-        "road_graph": graph_payload,
-        "roads": roads,
-        "buildings": buildings,
-        "obstacles": obstacles,
-        "decorations": decorations,
-        "visual_detail_profile": VISUAL_DETAIL_PROFILE,
-        "visual_facade_accents": visual_facade_accents,
-        "asset_set_hash": asset_set_hash,
-    }
-    layout_hash = content_hash(geometry)
+    task_geometry_id = f"{split}-{index:03d}-a{attempt}-task"
+    layout_id = f"city-{split}-{index:03d}-a{attempt}"
     template_counts = Counter(str(item["template"]) for item in buildings)
     spawn_rng = random.Random(derived_seed(seed, "spawn-grammar-v1"))
     return {
         "schema": "org.aerocity.bench.cityspec-internal.ordinary.v3",
         "generator_version": config.generator_version,
-        "layout_id": f"city-{layout_hash[:16]}",
-        "layout_hash": layout_hash,
-        "task_geometry_hash": task_geometry_hash,
+        "layout_id": layout_id,
+        "task_geometry_id": task_geometry_id,
         "generation_seed": seed,
         "split": split,
         "family_private": family,
@@ -1055,8 +1032,8 @@ def generate_city_v3(
         "visual_detail_profile": VISUAL_DETAIL_PROFILE,
         "visual_facade_accents": visual_facade_accents,
         "flight_bounds": flight_bounds,
-        "topology_signature": content_hash(graph_payload),
-        "asset_set_hash": asset_set_hash,
+        "topology_signature": json.dumps(graph_payload, sort_keys=True),
+        "asset_set_id": asset_set_id,
         "spawn_grammar": str(spawn_rng.choice(config.raw["city_grammar"]["spawn_grammars"])),
         "metrics": {
             "built_ratio": round(built_ratio, 6),

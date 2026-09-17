@@ -1,17 +1,20 @@
-"""Publish safety-gated pose commands for the legacy serial control boundary."""
+"""Publish safety-gated pose commands to the serial control boundary."""
 
 from __future__ import annotations
 
-import json
 import time
-from typing import Optional
 
 import rclpy
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
 
-from .core import format_command, make_pose_command, pose_command_gate, quaternion_to_yaw
+from .core import (
+    format_command,
+    make_pose_command,
+    pose_command_gate,
+    quaternion_to_yaw,
+)
 
 
 class PoseCommandBridge(Node):
@@ -32,8 +35,8 @@ class PoseCommandBridge(Node):
         if self.max_pose_age_sec <= 0.0 or self.publish_hz <= 0.0:
             raise ValueError("max_pose_age_sec and publish_hz must be positive")
 
-        self.pose: Optional[Odometry] = None
-        self.pose_received_at: Optional[float] = None
+        self.pose: Odometry | None = None
+        self.pose_received_at: float | None = None
         self.pose_valid = False
         self.map_locked = False
         self.serial = None

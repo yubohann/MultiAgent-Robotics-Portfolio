@@ -3,19 +3,17 @@ from __future__ import annotations
 from importlib import import_module
 
 from .config import (
-    BattleConfig,
     DATA_DIR,
     DEFAULT_THETA,
     FIG_DIR,
     MEDIA_DIR,
     ROOT,
+    BattleConfig,
     config_from_args,
     policy_params,
-    sigmoid
+    sigmoid,
 )
-from .sim import (
-    LargeScaleBattle50v50
-)
+from .sim import LargeScaleBattle50v50
 
 _LAZY_EXPORTS = {
     "evaluate": ("train", "evaluate"),
@@ -43,13 +41,13 @@ def __getattr__(name: str):
     return getattr(import_module(f".{module_name}", __name__), attribute)
 
 __all__ = [
-    'BattleConfig',
     'DATA_DIR',
     'DEFAULT_THETA',
     'FIG_DIR',
-    'LargeScaleBattle50v50',
     'MEDIA_DIR',
     'ROOT',
+    'BattleConfig',
+    'LargeScaleBattle50v50',
     '_font',
     'build_parser',
     'config_from_args',

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from datetime import datetime, timezone
@@ -11,26 +10,22 @@ import numpy as np
 import torch
 import yaml
 
-
 RL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(RL_ROOT) not in sys.path:
     sys.path.insert(0, str(RL_ROOT))
 
 from evaluate_policy import load_policy
-from expert_policy import compose_policy_action
 from experiments.paired_interventions import generate_paired_intervention
-from experiments.scenario_protocol import SCENARIOS, aggressive_action, apply_scenario, tracker_overrides
+from experiments.scenario_protocol import (
+    SCENARIOS,
+    aggressive_action,
+    apply_scenario,
+    tracker_overrides,
+)
+from expert_policy import compose_policy_action
 from robocup_visionrl_selfplay_env import AGENTS, RoboCupVisionRLSelfPlayEnv
 from world_model import BeliefTracker, extract_rule_risks
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def checkpoint_actor(path: Path | None, device: torch.device):
@@ -158,7 +153,7 @@ def namespace_sets(config: dict[str, object]) -> dict[str, set[int]]:
     calibration = config["calibration"]
     scenarios = config["scenarios"]
     result: dict[str, set[int]] = {
-        "train_roots": set(int(value) for value in config["train_reset"]["seeds"]),
+        "train_roots": {int(value) for value in config["train_reset"]["seeds"]},
         "calibration": set(
             range(
                 int(calibration["nominal_seed_start"]),
@@ -238,7 +233,7 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     prediction_cfg = config["prediction_test"]
     pair_cfg = config["paired_intervention"]
-    file_hashes: dict[str, str] = {}
+    artifact_sizes: dict[str, int] = {}
     for scenario in SCENARIOS:
         scenario_id = int(config["scenarios"][scenario]["id"])
         prediction_start = int(prediction_cfg["base_seed"]) + 1000 * scenario_id
@@ -302,18 +297,16 @@ def main() -> int:
             intervention_rewards=branch_stack(pairs, "rewards", "intervention"),
             intervention_risks=branch_stack(pairs, "rule_risks", "intervention"),
         )
-        file_hashes[str(prediction_path.relative_to(output)).replace("\\", "/")] = sha256(prediction_path)
-        file_hashes[str(intervention_path.relative_to(output)).replace("\\", "/")] = sha256(intervention_path)
+        artifact_sizes[str(prediction_path.relative_to(output)).replace("\\", "/")] = prediction_path.stat().st_size
+        artifact_sizes[str(intervention_path.relative_to(output)).replace("\\", "/")] = intervention_path.stat().st_size
     audit = split_audit(config)
     (output / "split_audit.json").write_text(json.dumps(audit, indent=2), encoding="utf-8")
-    canonical = json.dumps({"config": config, "files": file_hashes}, sort_keys=True).encode("utf-8")
     manifest = {
         "status": "completed" if audit["completed"] else "failed",
         "completed": bool(audit["completed"]),
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "scenario_config": str(args.config.resolve()),
-        "split_sha256": hashlib.sha256(canonical).hexdigest(),
-        "files": file_hashes,
+        "artifacts": artifact_sizes,
         "horizon": args.horizon,
         "behavior_mixture": {"legacy": 0.4, "scripted_intervention": 0.3, "static_rule_graph": 0.2, "random_legal": 0.1},
         "behavior_checkpoints": {

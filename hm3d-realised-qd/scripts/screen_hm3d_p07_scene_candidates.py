@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
+import random
 import json
 import math
 import os
@@ -215,7 +215,7 @@ def _allocate_floor_quotas(
 def _stable_scene_order(rows: list[dict[str, Any]], seed: str) -> list[dict[str, Any]]:
     return sorted(
         rows,
-        key=lambda row: hashlib.sha256(f"{seed}\0{row['scene_id']}".encode()).hexdigest(),
+        key=lambda row: random.Random(f"{seed}:{row['scene_id']}").random(),
     )
 
 
@@ -238,7 +238,7 @@ def _round_robin_stratified_queue(
     complexity_counts = {label: 0 for label in (*_QUANTILE_LABELS, "unknown")}
     cell_counts = {cell: 0 for cell in ordered_cells}
     cell_ties = {
-        cell: hashlib.sha256(f"{seed}\0{cell[0]}\0{cell[1]}".encode()).hexdigest()
+        cell: random.Random(f"{seed}:{cell[0]}:{cell[1]}").random()
         for cell in ordered_cells
     }
     while len(selected) < quota:
@@ -265,9 +265,9 @@ def _round_robin_stratified_queue(
                         _metadata_distance(ordered_cells[cell][index], existing)
                         for existing in selected
                     ),
-                    hashlib.sha256(
-                        f"{seed}\0{ordered_cells[cell][index]['scene_id']}".encode()
-                    ).hexdigest(),
+                    random.Random(
+                        f"{seed}:{ordered_cells[cell][index]['scene_id']}"
+                    ).random(),
                 ),
             )
         selected.append(ordered_cells[cell].pop(chosen_index))

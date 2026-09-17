@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import pickle
 import os
@@ -64,7 +63,7 @@ class SimpleDeepFM:
         with open(self.metadata_path, 'wb') as f:
             pickle.dump(self.metadata, f)
         
-        print(f"\n✅ 模型训练完成！")
+        print("\n✅ 模型训练完成！")
         print(f"📊 用户数: {len(user_ids)}")
         print(f"📊 商品数: {len(item_ids)}")
         print(f"💾 模型保存到: {self.metadata_path}")

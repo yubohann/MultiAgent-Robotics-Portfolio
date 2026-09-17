@@ -58,12 +58,12 @@ class LeRobotProjectionTests(unittest.TestCase):
             self.assertNotIn("private_evaluator", serialized)
             self.assertIn("development-only", serialized)
 
-    def test_source_and_output_tampering_fail_closed(self) -> None:
+    def test_source_and_output_alteration_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = self._source(root)
             with (source / "state_action.parquet").open("ab") as stream:
-                stream.write(b"tampered")
+                stream.write(b"altered")
             with self.assertRaisesRegex(LeRobotProjectionError, "manifest binding"):
                 project_development_parquet_to_lerobot(source, root / "rejected")
             self.assertFalse((root / "rejected").exists())
@@ -80,7 +80,7 @@ class LeRobotProjectionTests(unittest.TestCase):
             with self.assertRaisesRegex(LeRobotProjectionError, "manifest binding"):
                 verify_lerobot_projection(output)
 
-    def test_wrong_fps_and_nested_output_fail_closed(self) -> None:
+    def test_wrong_fps_and_nested_output_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = self._source(root)

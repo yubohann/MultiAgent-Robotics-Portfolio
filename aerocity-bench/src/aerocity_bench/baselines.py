@@ -1,8 +1,4 @@
-"""Reference closed-loop policies for interface and difficulty calibration.
-
-These implementations are benchmark-owned references, not reimplementations of
-FUEL, RACER, FALCON, MARVEL, or any other upstream project.
-"""
+"""Benchmark-owned reference policies for interface and difficulty calibration."""
 
 from __future__ import annotations
 
@@ -1164,72 +1160,6 @@ class _RoutePolicy:
         }
 
 
-class _FrontierPolicy(_RoutePolicy):
-    def __init__(
-        self,
-        descriptor: BaselineDescriptor,
-        config: OrdinaryReleaseConfig,
-        task_spec: dict[str, Any],
-        drone_ids: list[str],
-        start_positions: dict[str, tuple[float, float, float]],
-        *,
-        information_gain: bool,
-    ) -> None:
-        maximum_height = float(task_spec["flight_bounds"]["maximum"][2])
-        altitude = min(18.0, maximum_height * 0.45)
-        candidates = _grid_points(
-            task_spec,
-            (6.0, altitude, min(maximum_height - 4.0, 34.0)),
-            11.0,
-            1.3,
-        )
-        routes: dict[str, list[Pose3D]] = {drone_id: [] for drone_id in drone_ids}
-        for candidate in candidates:
-            owner = min(
-                drone_ids,
-                key=lambda drone_id: distance(start_positions[drone_id], candidate.position),
-            )
-            routes[owner].append(candidate)
-        super().__init__(descriptor, config, routes)
-        self.information_gain = information_gain
-        self.visited: list[tuple[float, float, float]] = []
-
-    def _next_pose(self, drone_id: str, observation: ObservationPacket) -> Pose3D | None:
-        candidates = self.routes[drone_id]
-        if not candidates:
-            return None
-        remaining = [
-            candidate
-            for candidate in candidates
-            if all(distance(candidate.position, visited) > 4.0 for visited in self.visited)
-        ]
-        if not remaining:
-            self.visited.clear()
-            remaining = candidates
-        if self.information_gain:
-
-            def score(candidate: Pose3D) -> tuple[float, float]:
-                novelty = min(
-                    (distance(candidate.position, visited) for visited in self.visited),
-                    default=100.0,
-                )
-                travel = distance(observation.pose.position, candidate.position)
-                vertical_bonus = abs(candidate.position[2] - observation.pose.position[2]) * 0.25
-                return novelty + vertical_bonus - 0.15 * travel, -travel
-
-            target = max(remaining, key=score)
-        else:
-            target = min(
-                remaining,
-                key=lambda candidate: distance(observation.pose.position, candidate.position),
-            )
-        if self._pose_ready(target, observation, require_sensor_pitch=True):
-            self.visited.append(target.position)
-            if self.observe_remaining[drone_id] == 0:
-                self.observe_remaining[drone_id] = self.observe_steps
-        return target
-
-
 class _OraclePolicy(_RoutePolicy):
     """Finite private-truth route with non-observing safe-transit waypoints."""
 
@@ -1260,32 +1190,6 @@ class _OraclePolicy(_RoutePolicy):
                 return target
             self.indices[drone_id] += 1
         return None
-
-
-def _partition_route(route: list[Pose3D], drone_ids: list[str]) -> dict[str, list[Pose3D]]:
-    partitions = {drone_id: [] for drone_id in drone_ids}
-    if not drone_ids:
-        return partitions
-    ordered = sorted(drone_ids)
-    for pose in route:
-        angle = math.atan2(pose.position[1], pose.position[0])
-        normalized = (angle + math.pi) / (2.0 * math.pi)
-        owner = ordered[min(len(ordered) - 1, int(normalized * len(ordered)))]
-        partitions[owner].append(pose)
-    return partitions
-
-
-def _partition_route_by_nearest_start(
-    route: list[Pose3D], start_positions: dict[str, tuple[float, float, float]]
-) -> dict[str, list[Pose3D]]:
-    partitions: dict[str, list[Pose3D]] = {drone_id: [] for drone_id in start_positions}
-    for pose in route:
-        owner = min(
-            start_positions,
-            key=lambda drone_id: distance(start_positions[drone_id], pose.position),
-        )
-        partitions[owner].append(pose)
-    return partitions
 
 
 def _surface_scan_policy(
@@ -1927,8 +1831,6 @@ def create_baseline(
             public_episode["starts"],
             config.raw["execution_contract"],
         )
-        if public_episode.get("mission_sector_hash") != mission_sector.get("sector_hash"):
-            raise ValueError("public episode mission-sector hash differs")
     if method_id == "sweep-2d":
         return _surface_scan_policy(
             descriptor,

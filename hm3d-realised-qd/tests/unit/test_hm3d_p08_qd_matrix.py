@@ -4,7 +4,6 @@ from copy import deepcopy
 
 import pytest
 
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.contracts.hm3d_public_schema import public_schema_fields
 from aerocity_method.evaluation.hm3d_p08_qd_matrix import (
     P08QDUnit,
@@ -46,8 +45,7 @@ _RICH_DESCRIPTOR_PATTERNS = (
 
 
 def _digest(payload: dict[str, object]) -> dict[str, object]:
-    payload.pop("runtime_record_sha256", None)
-    payload["runtime_record_sha256"] = canonical_sha256(payload)
+    payload["runtime_record_id"] = "record-test"
     return payload
 
 
@@ -84,11 +82,11 @@ def _train_descriptor_admission() -> dict[str, object]:
     admission: dict[str, object] = {
         "status": "QD_TRAIN_DESCRIPTOR_ADMITTED",
         "descriptor_schema_version": HM3D_REALISED_QD_SCHEMA_VERSION,
-        "archive_spec_sha256": HM3D_REALISED_QD_ARCHIVE_SPEC.digest,
+        "archive_spec_id": HM3D_REALISED_QD_ARCHIVE_SPEC.spec_id,
         "outcome_count": richness.sample_count,
         "scene_ids": ["train_scene0", "train_scene1"],
-        "split_manifest_sha256": "3" * 64,
-        "source_runtime_record_sha256s": ["1" * 64, "2" * 64],
+        "split_manifest_id": "3" * 64,
+        "source_runtime_record_ids": ["1" * 64, "2" * 64],
         "richness_audit": richness.to_dict(),
         "intent_outcome_alignment": {
             "status": "QD_INTENT_OUTCOME_ALIGNMENT_ADMITTED",
@@ -114,7 +112,7 @@ def _train_descriptor_admission() -> dict[str, object]:
         "reproducibility_audit": replay.to_dict(),
         "calibration_mode_contrast_audit": mode_contrast.to_dict(),
     }
-    admission["train_descriptor_admission_sha256"] = canonical_sha256(admission)
+    admission["train_descriptor_admission_id"] = "train-descriptor-test"
     return admission
 
 
@@ -144,7 +142,7 @@ def _record(
                 "feasible": True,
                 "executed": True,
                 "candidate_id": f"candidate-{unit_index}-{offset}",
-                "execution_outcome_sha256": "f" * 64,
+                "execution_outcome_id": "f" * 64,
                 "public_candidate_intent": list(descriptor),
                 "descriptor": {
                     "schema_version": HM3D_REALISED_QD_SCHEMA_VERSION,
@@ -172,18 +170,18 @@ def _record(
         "fleet_size": fleet_size,
         "random_key": random_key,
         "public_episode_id": f"episode-{unit_index}",
-        "public_context_hash": canonical_sha256(public_context),
-        "public_candidate_pool_hash": f"{unit_index:064x}",
+        "public_context_id": public_context["context_id"],
+        "public_candidate_pool_id": f"{unit_index:064x}",
         **public_schema_fields(),
-        "sensor_profile_sha256": "a" * 64,
-        "public_contract_sha256": "b" * 64,
-        "evaluation_denominator_sha256": "c" * 64,
-        "communication_contract_sha256": "d" * 64,
+        "sensor_profile_id": "a" * 64,
+        "public_contract_id": "b" * 64,
+        "evaluation_denominator_id": "c" * 64,
+        "communication_contract_id": "d" * 64,
         "action_budget_s": 40.0,
         "candidate_limit": 8,
         "physics_dt_s": 1.0 / 120.0,
         "outcome_time_tolerance_s": 0.25,
-        "selector_backbone_sha256": "e" * 64,
+        "selector_backbone_id": "e" * 64,
         "metric_report": {"explored_free_flight_volume_auc_time": metric},
         "decisions": [
             {
@@ -198,8 +196,8 @@ def _record(
                         "strength": 0.9,
                         "active": True,
                         "minimum_active_strength": 0.15,
-                        "source_public_belief_sha256": "9" * 64,
-                        "source_agent_footprints_sha256": "8" * 64,
+                        "source_public_belief_id": "9" * 64,
+                        "source_agent_footprints_id": "8" * 64,
                         "source_public_outcome_count": 12,
                     },
                     "selected_need_alignment": 0.9 if selection_changed else 0.5,
@@ -346,8 +344,8 @@ def test_p08_qd_matrix_requires_a_train_only_descriptor_admission() -> None:
     for unit in units:
         admission = unit.realised_qd["realised_qd"]["history"]["train_descriptor_admission"]
         admission["richness_audit"] = {"status": "QD_DESCRIPTOR_NOT_ADMITTED"}
-        admission.pop("train_descriptor_admission_sha256")
-        admission["train_descriptor_admission_sha256"] = canonical_sha256(admission)
+        admission.pop("train_descriptor_admission_id")
+        admission["train_descriptor_admission_id"] = "train-descriptor-test"
         _digest(unit.realised_qd)
 
     with pytest.raises(ValueError, match="richness evidence"):
@@ -360,8 +358,8 @@ def test_p08_qd_matrix_keeps_train_replay_stability_as_a_diagnostic() -> None:
         admission = unit.realised_qd["realised_qd"]["history"]["train_descriptor_admission"]
         replay = admission["reproducibility_audit"]
         replay["cell_stability_rate"] = 0.5
-        admission.pop("train_descriptor_admission_sha256")
-        admission["train_descriptor_admission_sha256"] = canonical_sha256(admission)
+        admission.pop("train_descriptor_admission_id")
+        admission["train_descriptor_admission_id"] = "train-descriptor-test"
         _digest(unit.realised_qd)
 
     evidence = assemble_p08_qd_paired_evidence(tuple(units))
@@ -376,8 +374,8 @@ def test_p08_qd_matrix_keeps_train_mode_calibration_as_a_diagnostic() -> None:
         admission["calibration_mode_contrast_audit"] = {
             "status": "QD_CALIBRATION_MODE_CONTRAST_NOT_ADMITTED"
         }
-        admission.pop("train_descriptor_admission_sha256")
-        admission["train_descriptor_admission_sha256"] = canonical_sha256(admission)
+        admission.pop("train_descriptor_admission_id")
+        admission["train_descriptor_admission_id"] = "train-descriptor-test"
         _digest(unit.realised_qd)
 
     evidence = assemble_p08_qd_paired_evidence(tuple(units))
@@ -391,8 +389,8 @@ def test_p08_qd_matrix_allows_a_diagnostic_calibration_to_vary() -> None:
         admission = unit.realised_qd["realised_qd"]["history"]["train_descriptor_admission"]
         contrast = admission["calibration_mode_contrast_audit"]
         contrast["minimum_target_alignment"] = 0.10
-        admission.pop("train_descriptor_admission_sha256")
-        admission["train_descriptor_admission_sha256"] = canonical_sha256(admission)
+        admission.pop("train_descriptor_admission_id")
+        admission["train_descriptor_admission_id"] = "train-descriptor-test"
         _digest(unit.realised_qd)
 
     evidence = assemble_p08_qd_paired_evidence(tuple(units))
@@ -404,12 +402,12 @@ def test_p08_qd_matrix_rejects_a_train_admission_without_frozen_split_provenance
     units = list(_units())
     for unit in units:
         admission = unit.realised_qd["realised_qd"]["history"]["train_descriptor_admission"]
-        admission.pop("split_manifest_sha256")
-        admission.pop("train_descriptor_admission_sha256")
-        admission["train_descriptor_admission_sha256"] = canonical_sha256(admission)
+        admission.pop("split_manifest_id")
+        admission.pop("train_descriptor_admission_id")
+        admission["train_descriptor_admission_id"] = "train-descriptor-test"
         _digest(unit.realised_qd)
 
-    with pytest.raises(ValueError, match="split manifest hash"):
+    with pytest.raises(ValueError, match="split manifest id"):
         assemble_p08_qd_paired_evidence(tuple(units))
 
 
@@ -439,14 +437,14 @@ def test_p08_qd_matrix_rejects_pairing_or_backbone_drift() -> None:
     no_qd = _record(strategy="no_qd", unit_index=0, metric=0.20)
     planned_qd = _record(strategy="planned_qd", unit_index=0, metric=0.25)
     realised_qd = deepcopy(_record(strategy="realised_qd", unit_index=0, metric=0.35))
-    realised_qd["selector_backbone_sha256"] = "f" * 64
+    realised_qd["selector_backbone_id"] = "f" * 64
     _digest(realised_qd)
 
     with pytest.raises(ValueError, match="candidate-value backbone"):
         P08QDUnit("unit0", no_qd, planned_qd, realised_qd)
 
     realised_qd = deepcopy(_record(strategy="realised_qd", unit_index=0, metric=0.35))
-    realised_qd["public_candidate_pool_hash"] = "f" * 64
+    realised_qd["public_candidate_pool_id"] = "f" * 64
     _digest(realised_qd)
     with pytest.raises(ValueError, match="pair drift"):
         P08QDUnit("unit0", no_qd, planned_qd, realised_qd)

@@ -41,7 +41,7 @@ class DeterministicEmitter:
     ) -> tuple[Emission, ...]:
         if not isinstance(count, int) or count < 1:
             raise ValueError("count must be a positive integer")
-        legal = tuple(sorted(_legal_pool(pool), key=lambda item: item.manifest_hash))
+        legal = tuple(sorted(_legal_pool(pool), key=lambda item: item.manifest_id))
         emitted = tuple(
             Emission(legal[(self.cursor + index) % len(legal)], self.name) for index in range(count)
         )
@@ -94,7 +94,7 @@ class ArchiveAwareEmitter:
                     -novelty,
                     -manifest.quality_hint,
                     manifest.cost_hint,
-                    manifest.manifest_hash,
+                    manifest.manifest_id,
                     manifest,
                 )
             )

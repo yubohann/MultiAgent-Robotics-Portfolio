@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-from aerocity_bench.canonical import content_hash
 from aerocity_bench.public_boundary import assert_public_fields, validate_public_task_spec
 
 
@@ -84,14 +83,12 @@ def _public_task() -> dict:
     }
     task = {
         "schema": "org.aerocity.bench.task-spec-public.ordinary.v1",
-        "layout_id": "city-0123456789abcdef",
+        "layout_id": "city-train-000-a0",
         "execution_contract": contract,
-        "public_execution_contract_hash": content_hash(contract),
         "target_count_public": False,
         "target_process_public": False,
         "formal_split_label_public": False,
     }
-    task["task_spec_hash"] = content_hash(task)
     return task
 
 
@@ -105,9 +102,6 @@ def test_public_boundary_accepts_explicit_false_sentinels_only() -> None:
 def test_public_boundary_rejects_private_semantic_fields(key: str) -> None:
     task = copy.deepcopy(_public_task())
     task["execution_contract"]["episode"][key] = True
-    task["task_spec_hash"] = content_hash(
-        {field: value for field, value in task.items() if field != "task_spec_hash"}
-    )
     with pytest.raises(ValueError, match="forbidden|non-public"):
         validate_public_task_spec(task)
 
@@ -124,9 +118,6 @@ def test_boundary_cli_writes_a_structured_failure_receipt(tmp_path: Path) -> Non
     episode_root.mkdir(parents=True)
     invalid_task = _public_task()
     invalid_task["execution_contract"]["episode"]["fixed_target_count_private"] = True
-    invalid_task["task_spec_hash"] = content_hash(
-        {key: value for key, value in invalid_task.items() if key != "task_spec_hash"}
-    )
     (public_root / "task_spec.json").write_text(
         json.dumps(invalid_task), encoding="utf-8"
     )

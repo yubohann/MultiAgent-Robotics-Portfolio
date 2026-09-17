@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_TESTS = (
@@ -19,15 +17,14 @@ DEFAULT_TESTS = (
 )
 
 
-def worktree_diff_sha256() -> str:
-    digest = hashlib.sha256()
-    result = subprocess.run(
-        ["git", "diff", "--binary", "HEAD"],
+def worktree_diff_files() -> list[str]:
+    tracked = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD"],
         cwd=ROOT,
         check=False,
         capture_output=True,
+        text=True,
     )
-    digest.update(result.stdout)
     untracked = subprocess.run(
         ["git", "ls-files", "--others", "--exclude-standard"],
         cwd=ROOT,
@@ -35,15 +32,7 @@ def worktree_diff_sha256() -> str:
         capture_output=True,
         text=True,
     )
-    for relative in sorted(untracked.stdout.splitlines()):
-        path = ROOT / relative
-        if not path.is_file():
-            continue
-        digest.update(relative.replace("\\", "/").encode("utf-8"))
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-    return digest.hexdigest()
+    return sorted(set(tracked.stdout.splitlines()) | set(untracked.stdout.splitlines()))
 
 
 def main() -> int:
@@ -66,7 +55,7 @@ def main() -> int:
             "test_files": test_files,
             "missing_test_files": missing,
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-            "worktree_diff_sha256": worktree_diff_sha256(),
+            "worktree_diff_files": worktree_diff_files(),
         }
     else:
         command = [sys.executable, "-m", "pytest", "-q", *test_files]
@@ -80,7 +69,7 @@ def main() -> int:
             "stdout": result.stdout,
             "stderr": result.stderr,
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-            "worktree_diff_sha256": worktree_diff_sha256(),
+            "worktree_diff_files": worktree_diff_files(),
         }
 
     output = args.output if args.output.is_absolute() else ROOT / args.output

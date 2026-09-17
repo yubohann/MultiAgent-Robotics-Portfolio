@@ -6,24 +6,19 @@ import math
 from dataclasses import dataclass
 from statistics import mean
 
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
+from aerocity_method.contracts.io import finite_number, require_identifier
 
 EXPLORATION_METRIC_SCHEMA_VERSION = "hm3d-exploration-metrics-v2"
 
 
-def evaluation_denominator_sha256(scene_rows: tuple[dict[str, object], ...]) -> str:
-    """Return the stable evaluator-only denominator identity for a P03 cohort.
-
-    The raw ESDF and voxel membership remain evaluator-private.  This digest
-    binds every later P04--P10 report to the scene-level volume, clearance,
-    resolution, and flight-space provenance that define its denominator.
-    """
+def evaluation_denominator_id(scene_rows: tuple[dict[str, object], ...]) -> str:
+    """Return a readable denominator identity for a P03 scene cohort."""
 
     required = {
         "scene_id",
-        "source_geometry_sha256",
-        "flight_space_manifest_hash",
-        "collision_geometry_sha256",
+        "source_geometry_id",
+        "flight_space_manifest_id",
+        "collision_geometry_id",
         "resolution_m",
         "vehicle_clearance_m",
         "free_flight_volume_m3",
@@ -40,19 +35,16 @@ def evaluation_denominator_sha256(scene_rows: tuple[dict[str, object], ...]) -> 
             raise ValueError("evaluation denominator contains duplicate scene IDs")
         seen.add(scene_id)
         for key in (
-            "source_geometry_sha256",
-            "flight_space_manifest_hash",
-            "collision_geometry_sha256",
+            "source_geometry_id",
+            "flight_space_manifest_id",
+            "collision_geometry_id",
         ):
-            value = raw[key]
-            if not isinstance(value, str) or len(value) != 64:
-                raise ValueError(f"{key} must be a SHA-256 digest")
-            int(value, 16)
+            require_identifier(raw[key], key)
         row = {
             "scene_id": scene_id,
-            "source_geometry_sha256": raw["source_geometry_sha256"],
-            "flight_space_manifest_hash": raw["flight_space_manifest_hash"],
-            "collision_geometry_sha256": raw["collision_geometry_sha256"],
+            "source_geometry_id": raw["source_geometry_id"],
+            "flight_space_manifest_id": raw["flight_space_manifest_id"],
+            "collision_geometry_id": raw["collision_geometry_id"],
             "resolution_m": finite_number(raw["resolution_m"], "resolution_m"),
             "vehicle_clearance_m": finite_number(raw["vehicle_clearance_m"], "vehicle_clearance_m"),
             "free_flight_volume_m3": finite_number(
@@ -66,7 +58,12 @@ def evaluation_denominator_sha256(scene_rows: tuple[dict[str, object], ...]) -> 
         ):
             raise ValueError("evaluation denominator geometry values must be positive")
         manifest.append(row)
-    return canonical_sha256(sorted(manifest, key=lambda row: str(row["scene_id"])))
+    # Readable identity of the frozen cohort, one row per scene in scene-ID order.
+    return "|".join(
+        f"{row['scene_id']}@{row['resolution_m']}m:"
+        f"{row['vehicle_clearance_m']}m:{row['free_flight_volume_m3']}m3"
+        for row in sorted(manifest, key=lambda row: str(row["scene_id"]))
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,12 +194,14 @@ class ExplorationMetricReport:
             object.__setattr__(self, name, resolved)
 
     @property
-    def report_hash(self) -> str:
-        return canonical_sha256(self.to_dict(include_hash=False))
+    def report_id(self) -> str:
+        # One report per episode and horizon; the label is explicit, not derived.
+        return f"{self.episode_id}:{self.horizon_s:.3f}"
 
-    def to_dict(self, *, include_hash: bool = True) -> dict[str, object]:
-        payload: dict[str, object] = {
+    def to_dict(self) -> dict[str, object]:
+        return {
             "schema_version": self.schema_version,
+            "report_id": self.report_id,
             "episode_id": self.episode_id,
             "horizon_s": self.horizon_s,
             "explored_free_flight_volume_auc_time": self.explored_free_flight_volume_auc_time,
@@ -219,9 +218,6 @@ class ExplorationMetricReport:
             "energy_j": self.energy_j,
             "communication_delivery_ratio": self.communication_delivery_ratio,
         }
-        if include_hash:
-            payload["report_hash"] = self.report_hash
-        return payload
 
 
 def _normalized_auc(samples: tuple[ExplorationMetricSample, ...], horizon_s: float) -> float:
@@ -349,6 +345,6 @@ __all__ = [
     "ExplorationMetricReport",
     "ExplorationMetricSample",
     "SceneMacroAggregate",
-    "evaluation_denominator_sha256",
+    "evaluation_denominator_id",
     "score_exploration_episode",
 ]

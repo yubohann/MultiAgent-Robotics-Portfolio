@@ -1,77 +1,53 @@
-from __future__ import annotations
-
 """Training helpers for the multi-agent 2D gate experiment."""
 
+from __future__ import annotations
 
-from dataclasses import asdict
 import json
-import math
-from pathlib import Path
 import subprocess
-import sys
+from dataclasses import asdict
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
-import torch
 
-from multi_gate.configs.experiment_config import (
-    MULTI_EXPERIMENT_CONFIG,
-    MultiExperimentConfig
-)
+from multi_gate.configs.experiment_config import MULTI_EXPERIMENT_CONFIG, MultiExperimentConfig
 from multi_gate.env.multi_gate_env import MultiGate2DEnv
 from multi_gate.env.multi_gate_kinematic_3d_env import MultiGateKinematic3DEnv
 from multi_gate.env.vector_multi_gate_env import VectorMultiGate2DEnv
 from multi_gate.graph_rl.graph_flashsac import GraphFlashSACAgent as GraphMASACAgent
-from shared.runtime.tensorboard import (
-    close_summary_writer,
-    create_summary_writer,
-    event_file_paths,
-    log_scalar
-)
+from shared.runtime.tensorboard import close_summary_writer, create_summary_writer, event_file_paths, log_scalar
 from shared.runtime.training_controls import refresh_best_checkpoint_alias
 from shared.runtime.vector_training_utils import (
     resolve_updates_per_collect,
     should_checkpoint_now,
 )
 
-
-MultiResumeMode = Literal["reset_train_state", "keep_optimizer_state"]
-MultiEnvType = MultiGate2DEnv | MultiGateKinematic3DEnv
-
 from .checkpoint import (
     _build_training_signature,
     _candidate_checkpoint_path,
     _maybe_resume_training,
-    _save_candidate_checkpoint
+    _save_candidate_checkpoint,
 )
 from .early_stop import (
     _analyze_early_stop_stable_window,
     _analyze_failure_stop_window,
     _assess_eval_thresholds,
-    _assess_failure_stop_thresholds
+    _assess_failure_stop_thresholds,
 )
-from .evaluation import (
-    _select_multi_env_class
-)
-from .live_preview import (
-    _start_live_isaaclab_preview,
-    _write_live_preview_snapshot
-)
+from .evaluation import _select_multi_env_class
+from .live_preview import _start_live_isaaclab_preview, _write_live_preview_snapshot
 from .logging import (
     _log_multi_training_scalars,
     _log_periodic_eval_scalars,
     _run_periodic_multi_eval,
-    _run_periodic_multi_replay
+    _run_periodic_multi_replay,
 )
-from .metrics import (
-    _derive_failure_replay_metadata,
-    _select_team_sizes
-)
-from .paths import (
-    _resolve_output_dirs,
-    _resolve_review_interval,
-    _run_label
-)
+from .metrics import _derive_failure_replay_metadata, _select_team_sizes
+from .paths import _resolve_output_dirs, _resolve_review_interval, _run_label
+
+MultiResumeMode = Literal["reset_train_state", "keep_optimizer_state"]
+MultiEnvType = MultiGate2DEnv | MultiGateKinematic3DEnv
+
 
 def _select_training_action(
     *,
@@ -412,7 +388,7 @@ def run_training(
                 completed_episodes += int(done_indices.size)
                 team_sizes_seen.update(int(size) for size in reset_team_sizes)
                 obs = env.replace_done_observations(obs, reset_result)
-                for env_idx, team_size in zip(done_indices.tolist(), reset_team_sizes):
+                for env_idx, team_size in zip(done_indices.tolist(), reset_team_sizes, strict=False):
                     active_num_agents[int(env_idx)] = int(team_size)
 
             checkpoint_due = (

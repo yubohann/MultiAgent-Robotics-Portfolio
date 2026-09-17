@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-import hashlib
 import heapq
 import math
 import random
 import time
-from typing import Iterable
+import zlib
+from collections.abc import Iterable
+from dataclasses import dataclass
 
 from single_internal_gate.configs.experiment_config import Exp2PlannerConfig
 from single_internal_gate.planners.interfaces import PlannerResult, PlannerTask2D, path_length
-
 
 _Point = tuple[float, float]
 _Cell = tuple[int, int]
@@ -53,7 +52,7 @@ def _dedupe_path(path: Iterable[_Point]) -> tuple[_Point, ...]:
 def _validate_path(task: PlannerTask2D, path: tuple[_Point, ...]) -> bool:
     if len(path) < 2:
         return False
-    return not any(task.obstacles_2d.segment_collides(a, b, drone_radius_m=task.drone_radius_m) for a, b in zip(path[:-1], path[1:]))
+    return not any(task.obstacles_2d.segment_collides(a, b, drone_radius_m=task.drone_radius_m) for a, b in zip(path[:-1], path[1:], strict=False))
 
 
 def _finish(name: str, task: PlannerTask2D, path: tuple[_Point, ...], start_time: float, replans: int = 0) -> PlannerResult:
@@ -82,7 +81,7 @@ class _GridSpec:
     ny: int
 
     @classmethod
-    def from_task(cls, task: PlannerTask2D, resolution_m: float) -> "_GridSpec":
+    def from_task(cls, task: PlannerTask2D, resolution_m: float) -> _GridSpec:
         xmin, xmax = (float(task.world_x_bounds_m[0]), float(task.world_x_bounds_m[1]))
         ymin, ymax = (float(task.world_y_bounds_m[0]), float(task.world_y_bounds_m[1]))
         res = float(max(resolution_m, 0.05))
@@ -318,8 +317,8 @@ class RRTStarPlanner:
         start_time = time.perf_counter()
         if not _collides(task, task.start_xy, task.goal_xy, self.safety_margin_m):
             return _finish(self.name, task, (task.start_xy, task.goal_xy), start_time)
-        seed_material = f"{task.task_id}|{self.name}|{self.seed_offset}".encode("utf-8")
-        seed = int.from_bytes(hashlib.sha256(seed_material).digest()[:8], "little") & 0xFFFFFFFF
+        seed_material = f"{task.task_id}|{self.name}|{self.seed_offset}".encode()
+        seed = int(zlib.adler32(seed_material)) & 0xFFFFFFFF
         rng = random.Random(seed)
         path = self._rrt_star(task, rng, start_time)
         return _finish(self.name, task, path, start_time)

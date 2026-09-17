@@ -1,4 +1,4 @@
-"""Fail-closed contracts for the Rivermark City-Lite Isaac scene."""
+"""Strict contracts for the Rivermark City-Lite Isaac scene."""
 
 from .aabb import (
     AABB,
@@ -18,20 +18,20 @@ from .authority import (
 )
 from .constants import (
     AGENT_COUNT,
-    AUTHORITY_SHA256,
+    AUTHORITY_IDENTITY,
     CITY_TASK_OBSTACLE_MATERIAL_CLOSURE_SCHEMA,
     ENVIRONMENT_ID,
     EXPECTED_NATIVE_COLLISION_COUNTS,
     EXPECTED_UPSTREAM_PERMISSIONS,
     ROUTE_CLEARANCE_M,
     SCENE_CONTRACT_GATE_STATUS,
-    SCENE_CONTRACT_PAYLOAD_SHA256,
+    SCENE_CONTRACT_PAYLOAD_IDENTITY,
     SCENE_CONTRACT_SCHEMA,
-    SCENE_CONTRACT_SHA256,
+    SCENE_CONTRACT_IDENTITY,
     SELECTIVE_REFERENCES,
 )
 from .materials import (
-    CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_SHA256,
+    CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_IDENTITY,
     city_task_obstacle_material_closure_receipt_template,
     city_task_obstacle_material_contract_payload,
     validate_city_task_obstacle_material_closure_receipt,
@@ -60,17 +60,17 @@ from .routes import (
 from .scene import (
     CityLiteAuthorityError,
     CityLiteRouteError,
-    aabb_geometry_sha256,
-    canonical_payload_sha256,
+    aabb_geometry_identity,
+    canonical_payload_identity,
     flight_contract_payload,
     forbidden_scene_paths,
-    sha256_file,
+    identity_file,
 )
 
 __all__ = [
     'AABB',
     'AGENT_COUNT',
-    'AUTHORITY_SHA256',
+    'AUTHORITY_IDENTITY',
     'CITY_LITE_COMMAND_VOLUME_W_M',
     'CITY_LITE_FLIGHT_VOLUME_W_M',
     'CITY_LITE_ROUTE_FAMILY_A_ID',
@@ -80,7 +80,7 @@ __all__ = [
     'CITY_LITE_TARGET_REGION_A_ID',
     'CITY_LITE_TARGET_REGION_B_ID',
     'CITY_TASK_OBSTACLE_MATERIAL_CLOSURE_SCHEMA',
-    'CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_SHA256',
+    'CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_IDENTITY',
     'ENVIRONMENT_ID',
     'EXPECTED_NATIVE_COLLISION_COUNTS',
     'EXPECTED_UPSTREAM_PERMISSIONS',
@@ -90,9 +90,9 @@ __all__ = [
     'PUBLIC_ROUTE_FAMILIES_W_M',
     'ROUTE_CLEARANCE_M',
     'SCENE_CONTRACT_GATE_STATUS',
-    'SCENE_CONTRACT_PAYLOAD_SHA256',
+    'SCENE_CONTRACT_PAYLOAD_IDENTITY',
     'SCENE_CONTRACT_SCHEMA',
-    'SCENE_CONTRACT_SHA256',
+    'SCENE_CONTRACT_IDENTITY',
     'SELECTIVE_REFERENCES',
     'START_ANCHOR_IDS_BY_ROUTE_FAMILY',
     'TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M',
@@ -102,8 +102,8 @@ __all__ = [
     'CityLiteAuthorityError',
     'CityLiteRouteError',
     'RouteValidationReport',
-    'aabb_geometry_sha256',
-    'canonical_payload_sha256',
+    'aabb_geometry_identity',
+    'canonical_payload_identity',
     'city_task_obstacle_material_closure_receipt_template',
     'city_task_obstacle_material_contract_payload',
     'coerce_aabb',
@@ -115,7 +115,7 @@ __all__ = [
     'resolve_public_route_family',
     'segment_has_clearance',
     'segment_intersects_aabb',
-    'sha256_file',
+    'identity_file',
     'validate_city_task_obstacle_material_closure_receipt',
     'validate_public_route_contract',
     'validate_public_routes',

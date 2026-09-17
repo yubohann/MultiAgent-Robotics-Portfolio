@@ -3,17 +3,6 @@ from __future__ import annotations
 import math
 
 import numpy as np
-
-from .constants import (
-    BASE_RUSH_BALANCED_NORMAL_HITS,
-    BASE_RUSH_EARLY_NORMAL_HITS,
-    BASE_RUSH_PREFERRED_NORMAL_HITS,
-    POST_HIT_RETREAT_S
-)
-from .datatypes import ShotResult
-from .geometry import (
-    laser_origin_from_pose
-)
 from robocup_visionrl_gym_env import (
     BASE_HIT_RADIUS,
     BASE_SHOOT_RANGE,
@@ -25,8 +14,17 @@ from robocup_visionrl_gym_env import (
     active_base_armor_blockers,
     normalized_laser_dwell_factor,
     segment_intersects_aabb,
-    shooting_range_limits
+    shooting_range_limits,
 )
+
+from .constants import (
+    BASE_RUSH_BALANCED_NORMAL_HITS,
+    BASE_RUSH_EARLY_NORMAL_HITS,
+    BASE_RUSH_PREFERRED_NORMAL_HITS,
+    POST_HIT_RETREAT_S,
+)
+from .datatypes import ShotResult
+from .geometry import laser_origin_from_pose
 
 
 class LaserMixin:

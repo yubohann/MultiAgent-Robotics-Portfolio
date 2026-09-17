@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
-
 from replay_buffer import ReplayBatch
 
 

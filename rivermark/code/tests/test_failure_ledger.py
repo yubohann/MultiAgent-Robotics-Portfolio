@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import json
+import os
 import sys
 import tempfile
 import time
 import unittest
-import json
-import os
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -45,7 +44,7 @@ class FailureLedgerTests(unittest.TestCase):
             self.assertEqual(summary["failure_categories"], {"sensor_failure": 1})
             self.assertEqual(len(load_failure_ledger(ledger)), 2)
 
-    def test_private_text_and_duplicate_attempts_fail_closed(self) -> None:
+    def test_private_text_and_duplicate_attempts_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             ledger = Path(temporary) / "failure_ledger.jsonl"
             private = FailureRecord("attempt-001", "failed", "infrastructure_failure", "capture", "2026-07-24T00:00:00Z", reason_code="private manifest path")
@@ -67,8 +66,8 @@ class FailureLedgerTests(unittest.TestCase):
                 "isaac_capture",
                 "2026-07-25T00:00:00Z",
                 split="train",
-                receipt_sha256="a" * 64,
-                source_capture_sha256="a" * 64,
+                receipt_identity="a" * 16,
+                source_capture_identity="a" * 16,
                 reason_code="runtimeerror",
             )
             self.assertEqual(append_failure_record_once(ledger, original), "appended")
@@ -79,8 +78,8 @@ class FailureLedgerTests(unittest.TestCase):
                 "isaac_capture",
                 "2026-07-25T00:01:00Z",
                 split="train",
-                receipt_sha256="a" * 64,
-                source_capture_sha256="a" * 64,
+                receipt_identity="a" * 16,
+                source_capture_identity="a" * 16,
                 reason_code="runtimeerror",
             )
             self.assertEqual(append_failure_record_once(ledger, retried), "already_recorded")
@@ -92,8 +91,8 @@ class FailureLedgerTests(unittest.TestCase):
                 "isaac_capture",
                 "2026-07-25T00:02:00Z",
                 split="train",
-                receipt_sha256="a" * 64,
-                source_capture_sha256="a" * 64,
+                receipt_identity="a" * 16,
+                source_capture_identity="a" * 16,
                 reason_code="runtimeerror",
             )
             with self.assertRaisesRegex(FailureLedgerError, "conflicting terminal record"):
@@ -127,7 +126,7 @@ class FailureLedgerTests(unittest.TestCase):
             "capture",
             "2026-07-24T00:00:00Z",
             collection_protocol_id="citylite-coverage-v1",
-            collection_protocol_sha256="a" * 64,
+            collection_protocol_identity="a" * 16,
             collection_cell_id="validation-route-2",
             collection_episode_index=0,
             episode_seed=42,
@@ -149,14 +148,14 @@ class FailureLedgerTests(unittest.TestCase):
                 "attempt_id": "attempt-" + "a" * 32,
                 "started_wall_time_ns": started,
                 "source_revision": "a" * 40,
-                "source_tree_sha256": "b" * 64,
+                "source_tree_identity": "b" * 16,
                 "source_worktree_dirty": False,
                 "task_kind": "search3d",
                 "control_mode": "fixed_public_route",
                 "agent_count_requested": 8,
                 "collection_binding": {
                     "protocol_id": "citylite-coverage-v1",
-                    "protocol_sha256": "c" * 64,
+                    "protocol_identity": "c" * 16,
                     "cell_id": "train-route-0",
                     "split": "train",
                     "episode_index": 3,
@@ -199,7 +198,7 @@ class FailureLedgerTests(unittest.TestCase):
                 "schema": "org.rivermark.isaac-capture-start.v1",
                 "started_wall_time_ns": time.time_ns(),
                 "source_revision": "a" * 40,
-                "source_tree_sha256": "b" * 64,
+                "source_tree_identity": "b" * 16,
                 "source_worktree_dirty": False,
                 "task_kind": "search3d",
                 "control_mode": "fixed_public_route",

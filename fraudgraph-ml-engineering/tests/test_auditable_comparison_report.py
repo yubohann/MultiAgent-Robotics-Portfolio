@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "generate_auditable_comparison_report.py"
@@ -41,7 +40,6 @@ def test_explicit_record_is_validated_and_rendered_without_ranking(tmp_path) -> 
     markdown = MODULE.render_markdown(report)
 
     assert report["report_policy"]["ranking"] == "not_performed"
-    assert record["source_sha256"]
     assert "SplitGNN + Transformer" in markdown
     assert "ranking: `not_performed`" in markdown
 

@@ -7,11 +7,9 @@ import textwrap
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
 from xml.sax.saxutils import escape
 
 from PIL import Image, ImageDraw, ImageFont
-
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "figures" / "paper"
@@ -74,7 +72,7 @@ def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
 
 
 def sx(v: float) -> int:
-    return int(round(v * SCALE))
+    return round(v * SCALE)
 
 
 def hex_to_rgb(value: str) -> tuple[int, int, int]:
@@ -86,7 +84,6 @@ def hex_to_rgb(value: str) -> tuple[int, int, int]:
 class Obj:
     kind: str
     args: tuple
-    kwargs: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -97,7 +94,7 @@ class Figure:
     objects: list[Obj] = field(default_factory=list)
 
     def add(self, kind: str, *args, **kwargs):
-        self.objects.append(Obj(kind, args, kwargs))
+        self.objects.append(Obj(kind, args))
 
     def panel(self, x, y, w, h, label, title, fill=COL["white"], outline=COL["ink"]):
         self.add("round_rect", x, y, w, h, 10, fill, outline, 1.3)
@@ -152,7 +149,7 @@ def render(fig: Figure) -> Path:
     d.text((sx(44), sx(66)), fig.subtitle, font=font(18), fill=hex_to_rgb(COL["muted"]))
 
     for obj in fig.objects:
-        a, k = obj.args, obj.kwargs
+        a = obj.args
         if obj.kind == "round_rect":
             x, y, w, h, r, fill, outline, width = a
             d.rounded_rectangle([sx(x), sx(y), sx(x + w), sx(y + h)], radius=sx(r), fill=hex_to_rgb(fill), outline=hex_to_rgb(outline), width=max(1, sx(width)))
@@ -530,7 +527,7 @@ def fig04_ablation(eval_summary) -> Figure:
         fig.rect(x0 + i * cw, y0 - 62, cw - 8, 46, h, COL["light"], COL["line"], fs=12, bold=True)
     for r, (name, vals) in enumerate(rows):
         y = y0 + r * ch
-        fig.text(78, y + 13, name, 15, True if r == 0 else False, COL["ink"])
+        fig.text(78, y + 13, name, 15, r == 0, COL["ink"])
         for c, val in enumerate(vals):
             fill = COL["pale_green"] if val else COL["pale_red"]
             out = COL["green"] if val else COL["red"]
@@ -681,15 +678,15 @@ def ppt_slide(fig: Figure, slide_index: int) -> str:
             items.append(ppt_shape(sid, x, y, w, h, "", fill, outline, True))
             sid += 1
         elif obj.kind == "text":
-            x, y, text, size, bold, color, anchor = a
+            x, y, text, size, bold, color, _anchor = a
             items.append(ppt_shape(sid, x, y, min(620, max(80, len(str(text)) * size * 0.55)), size * 1.5, text, COL["white"], COL["white"], False, max(8, size), bold))
             sid += 1
         elif obj.kind == "wrapped_text":
-            x, y, width, text, size, bold, color, align = a
+            x, y, width, text, size, bold, color, _align = a
             items.append(ppt_shape(sid, x, y, width, max(42, size * 4.2), text, COL["white"], COL["white"], False, max(8, size), bold))
             sid += 1
         elif obj.kind == "line":
-            x1, y1, x2, y2, color, width, arrow, dash = a
+            x1, y1, x2, y2, color, width, _arrow, _dash = a
             items.append(ppt_line(sid, x1, y1, x2, y2, color))
             sid += 1
         elif obj.kind == "circle":

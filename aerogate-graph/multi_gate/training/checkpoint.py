@@ -1,24 +1,18 @@
-from __future__ import annotations
-
 """Training helpers for the multi-agent 2D gate experiment."""
 
+from __future__ import annotations
 
 from dataclasses import asdict
-import json
-import math
 from pathlib import Path
-import subprocess
-import sys
 from typing import Literal
 
-import numpy as np
 import torch
 
 from multi_gate.configs.experiment_config import (
     MultiExperimentConfig,
+    is_dynamic_gate_density_scene_mode,
     is_exp3_empty_scene_mode,
     is_exp3_gate_scene_mode,
-    is_dynamic_gate_density_scene_mode
 )
 from multi_gate.env.multi_gate_env import MultiGate2DEnv
 from multi_gate.env.multi_gate_kinematic_3d_env import MultiGateKinematic3DEnv
@@ -28,14 +22,11 @@ from shared.runtime.training_controls import (
     refresh_best_checkpoint_alias,
 )
 
+from .evaluation import evaluate_checkpoint, evaluate_size_buckets
 
 MultiResumeMode = Literal["reset_train_state", "keep_optimizer_state"]
 MultiEnvType = MultiGate2DEnv | MultiGateKinematic3DEnv
 
-from .evaluation import (
-    evaluate_checkpoint,
-    evaluate_size_buckets
-)
 
 def _load_checkpoint_metadata(checkpoint_path: str | Path) -> dict[str, object]:
     payload = torch.load(Path(checkpoint_path), map_location="cpu")

@@ -109,7 +109,7 @@
       "additionalProperties": false,
       "required": ["seed_derivation", "episode_seed_start", "paired_initial_conditions"],
       "properties": {
-        "seed_derivation": {"const": "sha256_utf8_lines_uint32_v1"},
+        "seed_derivation": {"const": "identity_utf8_lines_uint32_v1"},
         "episode_seed_start": {"type": "integer", "minimum": 0},
         "paired_initial_conditions": {"const": true}
       }

@@ -1,0 +1,7 @@
+# Ruff configuration for the RoboCon MID-360 autonomy stack.
+# Vendored FAST-LIO and Livox driver sources stay byte-identical to upstream and are not linted.
+
+extend-exclude = [
+    "src/vendor_fast_lio",
+    "src/vendor_livox_ros_driver2",
+]

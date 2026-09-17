@@ -33,7 +33,7 @@ def main() -> int:
     write_json_atomic(args.output, report)
     print(
         f"{report['status']} split={report['split']} "
-        f"layout={report.get('layout_id', 'none')} hash={report['report_hash']}"
+        f"layout={report.get('layout_id', 'none')}"
     )
     return 0 if report["status"] == "PASS" else 1
 

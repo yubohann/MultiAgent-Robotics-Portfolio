@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 import numpy as np
 
 from multi_gate.configs.experiment_config import (
     MULTI_EXPERIMENT_CONFIG,
     MultiExperimentConfig,
-    MultiGateEnvConfig,
     MultiFormationConfig,
+    MultiGateEnvConfig,
     MultiGraphObservationConfig,
     MultiPlannerConfig,
     is_dynamic_gate_density_scene_mode,
@@ -110,7 +110,7 @@ class VectorMultiGate2DEnv:
         agent_counts = normalize_optional_int_sequence(num_agents, self.num_envs)
         observations = []
         infos = []
-        for env, env_seed, env_agents in zip(self.envs, seeds, agent_counts):
+        for env, env_seed, env_agents in zip(self.envs, seeds, agent_counts, strict=False):
             observation, info = env.reset(seed=env_seed, num_agents=env_agents)
             observations.append(observation)
             infos.append(info)
@@ -134,7 +134,7 @@ class VectorMultiGate2DEnv:
         agent_counts = normalize_optional_int_sequence(num_agents, int(indices.size))
         observations = []
         infos = []
-        for env_idx, env_seed, env_agents in zip(indices.tolist(), seeds, agent_counts):
+        for env_idx, env_seed, env_agents in zip(indices.tolist(), seeds, agent_counts, strict=False):
             observation, info = self.envs[int(env_idx)].reset(seed=env_seed, num_agents=env_agents)
             observations.append(observation)
             infos.append(info)

@@ -71,29 +71,3 @@ def validation_only_rank(
         rounds_ran = _coerce_float(payload.get(rounds_ran_key), 10**9)
         rank.append(-rounds_ran if prefer_lower_rounds_ran else rounds_ran)
     return tuple(rank)
-
-
-def select_best_by_validation(
-    candidates: Sequence[Mapping[str, Any]],
-    *,
-    metric_order: Sequence[str] = DEFAULT_VALIDATION_METRIC_ORDER,
-    completed_first: bool = False,
-    best_round_key: str | None = None,
-    prefer_lower_best_round: bool = False,
-    rounds_ran_key: str | None = None,
-    prefer_lower_rounds_ran: bool = False,
-) -> Mapping[str, Any]:
-    if not candidates:
-        raise ValueError("No candidates were provided for validation-only selection.")
-    return max(
-        candidates,
-        key=lambda item: validation_only_rank(
-            item,
-            metric_order=metric_order,
-            completed_first=completed_first,
-            best_round_key=best_round_key,
-            prefer_lower_best_round=prefer_lower_best_round,
-            rounds_ran_key=rounds_ran_key,
-            prefer_lower_rounds_ran=prefer_lower_rounds_ran,
-        ),
-    )

@@ -2,8 +2,8 @@
 
 """Elliptic Bitcoin transaction loader with causal sequence/event views."""
 
-import hashlib
 import json
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -20,9 +20,9 @@ import torch
 import torch.nn.functional as F
 
 from .fraud_dataset import (
+    SEQUENCE_BUILDER_VERSION,
     ClientShard,
     DatasetBundle,
-    SEQUENCE_BUILDER_VERSION,
     _apply_active_learning_feedback,
     _attach_dataset_context_defaults,
     _build_client_subgraph,
@@ -111,10 +111,10 @@ def _elliptic_cache_signature(
 
 
 def _resolve_cache_paths(signature: dict[str, Any]) -> tuple[Path, Path]:
-    digest = hashlib.sha1(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
+    tag = zlib.crc32(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")) & 0xFFFFFFFF
     return (
-        ELLIPTIC_CACHE_DIR / f"elliptic_{digest}.dgl",
-        ELLIPTIC_CACHE_DIR / f"elliptic_{digest}.json",
+        ELLIPTIC_CACHE_DIR / f"elliptic_{tag:08x}.dgl",
+        ELLIPTIC_CACHE_DIR / f"elliptic_{tag:08x}.json",
     )
 
 
@@ -969,7 +969,7 @@ def _build_runtime_train_masks(
             class_positions = np.flatnonzero(train_labels == class_id)
             if class_positions.size == 0:
                 continue
-            target_count = max(1, int(round(class_positions.size * fraction))) if fraction > 0.0 else 0
+            target_count = max(1, round(class_positions.size * fraction)) if fraction > 0.0 else 0
             target_count = min(target_count, int(class_positions.size))
             if target_count <= 0:
                 continue
@@ -1173,8 +1173,8 @@ def _build_graph_payload(
         "dataset_display_name": "Elliptic Bitcoin Transaction Graph",
         "data_root": str(data_root),
         "num_nodes": int(num_nodes),
-        "num_forward_edges": int(len(forward_src)),
-        "num_homo_edges": int(len(homo_src)),
+        "num_forward_edges": len(forward_src),
+        "num_homo_edges": len(homo_src),
         "num_time_steps": int(np.unique(time_steps).size),
         "time_step_min": int(time_steps.min()),
         "time_step_max": int(time_steps.max()),
@@ -1336,7 +1336,6 @@ def load_elliptic_dataset(
         clients.append(
             ClientShard(
                 client_id=0,
-                owned_global_nodes=owned_nodes.long(),
                 subgraph=graph,
                 train_nodes=int(graph.nodes[NODE_TYPE].data["train_mask"].sum().item()),
             )
@@ -1350,7 +1349,6 @@ def load_elliptic_dataset(
             clients.append(
                 ClientShard(
                     client_id=client_id,
-                    owned_global_nodes=owned_nodes,
                     subgraph=subgraph,
                     train_nodes=local_train_nodes,
                 )
@@ -1377,7 +1375,7 @@ def load_elliptic_dataset(
     data_summary = dict(metadata.get("data_summary", {}) or {})
     data_summary["dataset"] = str(dataset_name)
     data_summary["dataset_registry_name"] = str(dataset_name)
-    data_summary["num_clients"] = int(len(clients))
+    data_summary["num_clients"] = len(clients)
     data_summary["label_fraction"] = float(label_fraction)
     data_summary["use_unknown_ssl"] = bool(use_unknown_ssl)
     data_summary["coassociation_topk"] = int(coassociation_topk)

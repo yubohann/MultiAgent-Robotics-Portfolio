@@ -4,14 +4,13 @@ from copy import deepcopy
 
 import pytest
 
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.contracts.hm3d_public_schema import public_schema_fields
 from aerocity_method.evaluation.hm3d_communication_contract import HM3DCommunicationContract
 from aerocity_method.evaluation.hm3d_p07_matrix import (
     P07ProbeRecord,
     assemble_p07_task_validity_pilot,
 )
-from aerocity_method.evaluation.hm3d_preflight import TASK_VALIDITY_METHODS
+from aerocity_method.evaluation.hm3d_p07_matrix import TASK_VALIDITY_METHODS
 
 
 def _communication_contract() -> dict[str, object]:
@@ -69,22 +68,22 @@ def _raw(method: str, *, metric: float = 0.25, timeout: bool = False) -> dict[st
         "scene_id": "00244-E64sjs3Dyfd",
         "public_episode_id": "p07-paired-episode",
         "public_context": public_context,
-        "public_context_hash": canonical_sha256(public_context),
-        "public_candidate_pool_hash": "b" * 64,
+        "public_context_id": public_context["context_id"],
+        "public_candidate_pool_id": "b" * 64,
         **public_schema_fields(),
-        "public_contract_sha256": "c" * 64,
-        "evaluation_denominator_sha256": "d" * 64,
-        "evaluation_geometry_denominator_sha256": "1" * 64,
+        "public_contract_id": "c" * 64,
+        "evaluation_denominator_id": "d" * 64,
+        "evaluation_geometry_denominator_id": "1" * 64,
         "evaluation_denominator": {
             "schema_version": "hm3d-reachable-evaluation-denominator-v1",
-            "denominator_sha256": "d" * 64,
-            "metadata_sha256": "e" * 64,
-            "mask_sha256": "f" * 64,
-            "geometry_evaluation_denominator_sha256": "1" * 64,
-            "flight_space_manifest_hash": "2" * 64,
-            "source_geometry_sha256": "3" * 64,
-            "collision_geometry_sha256": "4" * 64,
-            "start_reset_manifest_sha256": "5" * 64,
+            "denominator_file_id": "d" * 64,
+            "metadata_id": "e" * 64,
+            "mask_id": "f" * 64,
+            "geometry_evaluation_denominator_id": "1" * 64,
+            "flight_space_manifest_id": "2" * 64,
+            "source_geometry_id": "3" * 64,
+            "collision_geometry_id": "4" * 64,
+            "start_reset_manifest_id": "5" * 64,
             "component_ids": [7],
             "start_component_ids": [7, 7, 7, 7],
             "component_voxel_counts": {"7": 64},
@@ -101,7 +100,7 @@ def _raw(method: str, *, metric: float = 0.25, timeout: bool = False) -> dict[st
         "physics_dt_s": 1.0 / 120.0,
         "outcome_time_tolerance_s": 0.25,
         "communication_contract": contract_payload,
-        "communication_contract_sha256": contract.digest,
+        "communication_contract_id": contract.contract_id,
         "engineering_debug": {
             "execution": {
                 "communication": {
@@ -135,7 +134,7 @@ def _raw(method: str, *, metric: float = 0.25, timeout: bool = False) -> dict[st
             "total_energy_used_j": 2.5,
         },
     }
-    payload["runtime_record_sha256"] = canonical_sha256(payload)
+    payload["runtime_record_id"] = "record-test"
     return payload
 
 
@@ -150,8 +149,8 @@ def test_p07_pilot_uses_complete_public_paired_order_and_cannot_close() -> None:
     payload = assemble_p07_task_validity_pilot(
         _probes(),
         matrix_run_id="p07-pilot-001",
-        sensor_profile_sha256="e" * 64,
-        communication_contract_sha256=canonical_sha256(_communication_contract()),
+        sensor_profile_id="e" * 64,
+        communication_contract_id="p07-test-intermittent",
     )
     candidate = payload["preflight_payload_candidate"]
     assert payload["status"] == "P07_TASK_VALIDITY_PILOT_COMPLETE"
@@ -167,57 +166,47 @@ def test_p07_pilot_uses_complete_public_paired_order_and_cannot_close() -> None:
 def test_p07_pilot_rejects_task_identity_drift() -> None:
     probes = list(_probes())
     changed = deepcopy(_raw("frontier_3d"))
-    changed["public_candidate_pool_hash"] = "1" * 64
-    changed["runtime_record_sha256"] = canonical_sha256(
-        {key: value for key, value in changed.items() if key != "runtime_record_sha256"}
-    )
+    changed["public_candidate_pool_id"] = "1" * 64
+    changed["runtime_record_id"] = "record-test"
     probes[1] = P07ProbeRecord.from_raw("frontier_3d", changed)
     with pytest.raises(ValueError, match="not a paired task matrix"):
         assemble_p07_task_validity_pilot(
             probes,
             matrix_run_id="p07-pilot-drift",
-            sensor_profile_sha256="e" * 64,
-            communication_contract_sha256=canonical_sha256(_communication_contract()),
+            sensor_profile_id="e" * 64,
+            communication_contract_id="p07-test-intermittent",
         )
 
 
 def test_p07_rejects_private_target_geometry() -> None:
     raw = _raw("random")
     raw["target_positions"] = [[1.0, 2.0, 3.0]]
-    raw["runtime_record_sha256"] = canonical_sha256(
-        {key: value for key, value in raw.items() if key != "runtime_record_sha256"}
-    )
+    raw["runtime_record_id"] = "record-test"
     with pytest.raises(ValueError, match="forbidden private field"):
         P07ProbeRecord.from_raw("random", raw)
 
 
-def test_p07_rejects_unhashed_public_context() -> None:
+def test_p07_rejects_without_id_public_context() -> None:
     raw = _raw("random")
     context = raw["public_context"]
     assert isinstance(context, dict)
     context["context_id"] = "drifted-context"
-    raw["runtime_record_sha256"] = canonical_sha256(
-        {key: value for key, value in raw.items() if key != "runtime_record_sha256"}
-    )
-    with pytest.raises(ValueError, match="does not match public_context_hash"):
+    raw["runtime_record_id"] = "record-test"
+    with pytest.raises(ValueError, match="does not match public_context_id"):
         P07ProbeRecord.from_raw("random", raw)
 
 
 def test_failed_timeout_remains_an_episode_denominator() -> None:
     raw = _raw("random", timeout=True)
     raw["status"] = "P07_EXECUTION_SMOKE_FAILED"
-    raw["runtime_record_sha256"] = canonical_sha256(
-        {key: value for key, value in raw.items() if key != "runtime_record_sha256"}
-    )
+    raw["runtime_record_id"] = "record-test"
     record = P07ProbeRecord.from_raw("random", raw)
     assert (record.planned, record.executed, record.failed, record.timeout) == (1, 0, 0, 1)
 
 
 def test_complete_status_cannot_mask_a_failed_fragment() -> None:
     raw = _raw("random", timeout=True)
-    raw["runtime_record_sha256"] = canonical_sha256(
-        {key: value for key, value in raw.items() if key != "runtime_record_sha256"}
-    )
+    raw["runtime_record_id"] = "record-test"
     with pytest.raises(ValueError, match="COMPLETE status conflicts"):
         P07ProbeRecord.from_raw("random", raw)
 
@@ -225,9 +214,7 @@ def test_complete_status_cannot_mask_a_failed_fragment() -> None:
 def test_p07_rejects_single_decision_engineering_smoke() -> None:
     raw = _raw("random")
     raw["decision_count"] = 1
-    raw["runtime_record_sha256"] = canonical_sha256(
-        {key: value for key, value in raw.items() if key != "runtime_record_sha256"}
-    )
+    raw["runtime_record_id"] = "record-test"
     with pytest.raises(ValueError, match="at least two online decisions"):
         P07ProbeRecord.from_raw("random", raw)
 
@@ -236,9 +223,7 @@ def test_p07_rejects_a_worker_that_did_not_use_its_physical_time_budget() -> Non
     raw = _raw("random")
     raw["elapsed_physics_s"] = 10.21
     raw["action_budget_utilization"] = 10.21 / 40.0
-    raw["runtime_record_sha256"] = canonical_sha256(
-        {key: value for key, value in raw.items() if key != "runtime_record_sha256"}
-    )
+    raw["runtime_record_id"] = "record-test"
     with pytest.raises(ValueError, match="did not execute the required fraction"):
         P07ProbeRecord.from_raw("random", raw)
 
@@ -254,9 +239,7 @@ def test_p07_keeps_a_outcome_backed_early_terminal_failure_in_the_denominator() 
     assert isinstance(execution, dict)
     execution["collision_count"] = 1
     execution["failed_fragment_count"] = 1
-    raw["runtime_record_sha256"] = canonical_sha256(
-        {key: value for key, value in raw.items() if key != "runtime_record_sha256"}
-    )
+    raw["runtime_record_id"] = "record-test"
 
     record = P07ProbeRecord.from_raw("random", raw)
 

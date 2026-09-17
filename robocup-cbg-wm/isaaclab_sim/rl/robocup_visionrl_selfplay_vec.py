@@ -3,7 +3,6 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
-
 from expert_policy import compose_policy_action
 from robocup_visionrl_selfplay_env import AGENTS, RoboCupVisionRLSelfPlayEnv
 
@@ -28,11 +27,7 @@ def _step_one(args):
 
 
 class RoboCupVisionRLSelfPlayVector:
-    """In-process vectorized self-play runner for SAC Flow rollout collection.
-
-    Environments run in one process so debugging is easy and the object-centric
-    replay buffer sees deterministic self-play transitions.
-    """
+    """In-process vectorized self-play runner for SAC Flow rollout collection."""
 
     def __init__(
         self,

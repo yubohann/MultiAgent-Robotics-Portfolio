@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-import math
-import random
+from typing import Any
 
-import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
-from ._legacy import (
-    _balance_modality_embedding
-)
+from ..fraud_dataset import _has_lazy_relation_sequence_payload
+from ._legacy import _balance_modality_embedding
 
 
 class ForwardMixin:

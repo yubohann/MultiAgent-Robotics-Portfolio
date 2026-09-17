@@ -5,7 +5,7 @@ import math
 import random
 import argparse
 import os
-from typing import List, Tuple, Dict, Optional, Union
+from typing import List, Tuple, Dict, Optional
 from collections import Counter
 
 
@@ -314,7 +314,7 @@ if __name__ == '__main__':
     train_acc = accuracy_score(y_train, y_train_pred)
     test_acc = accuracy_score(y_test, y_test_pred)
     
-    print(f'\n=== 性能评估 ===')
+    print('\n=== 性能评估 ===')
     print(f'训练准确率: {train_acc:.4f}')
     print(f'测试准确率: {test_acc:.4f}')
 
@@ -324,7 +324,7 @@ if __name__ == '__main__':
 
 
     classes = sorted(set(y_test))
-    print(f'\n=== 分类指标 ===')
+    print('\n=== 分类指标 ===')
     for cls in classes:
         tp = cm[cls][cls]
         fp = sum(cm[c][cls] for c in classes if c != cls)

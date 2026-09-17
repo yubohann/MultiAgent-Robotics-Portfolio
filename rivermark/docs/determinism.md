@@ -4,7 +4,7 @@ Determinism is the design goal that shapes everything else, from scene contracts
 
 ## Contracts, Tightly Bound
 
-Every capture binds these items by SHA-256.
+Every capture binds these items by content identity.
 
 - the City-Lite scene contract and its composed layers
 - the CF2X asset
@@ -13,7 +13,7 @@ Every capture binds these items by SHA-256.
 - the source revision and tracked-tree digest
 - the private scorer manifest commitment
 
-The runtime lock additionally binds `requirements-isaac-capture.lock` by its hash, so a requirements edit that skips the runtime profile regeneration produces a deliberate mismatch.
+The runtime lock additionally binds `requirements-isaac-capture.lock` by its identity, so a requirements edit that skips the runtime profile regeneration produces a deliberate mismatch.
 
 ## Same-Seed Evidence
 
@@ -23,7 +23,7 @@ The first same-seed attempt compared numeric semantic IDs and failed two metrics
 
 ## Clean-Room Replay
 
-The P0-D milestone covers a second-machine replay of the CPU fixture and the public target-free Isaac smoke from a fresh clone. `code/archived/modules/clean_room_smoke.py` holds the bounded preparation check behind that replay. It requires a clean checkout, clones the requested revision with `--no-local --no-hardlinks`, runs the researcher smoke inside that clone, and writes only `clean_room_report.json`. The report carries the clone revision, fixture manifest hash, and bounded child status. The module sits outside the installed package until the milestone closes and its entry point returns.
+The P0-D milestone covers a second-machine replay of the CPU fixture and the public target-free Isaac smoke from a fresh clone. `code/archived/modules/clean_room_smoke.py` holds the bounded preparation check behind that replay. It requires a clean checkout, clones the requested revision with `--no-local --no-hardlinks`, runs the researcher smoke inside that clone, and writes only `clean_room_report.json`. The report carries the clone revision, fixture manifest identity, and bounded child status. The module sits outside the installed package until the milestone closes and its entry point returns.
 
 ## CPU-Only Entry Path
 

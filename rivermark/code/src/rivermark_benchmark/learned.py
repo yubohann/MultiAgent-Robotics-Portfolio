@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .runtime import HighLevelAction, PublicMission, PublicObservation
 
 try:
     import torch
     from torch import nn
-except ImportError:  # pragma: no cover - tested through fail-closed commands.
+except ImportError:  # pragma: no cover - tested through strict commands.
     torch = None
     nn = None
 
@@ -26,8 +27,8 @@ def _require_torch() -> Any:
     return torch
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -38,16 +39,11 @@ def language_token(instruction: str | None, *, vocabulary_size: int = 64) -> int
     """Stable public-language token; it never encodes hidden task truth."""
 
     text = (instruction or "").encode("utf-8")
-    return int.from_bytes(hashlib.sha256(text).digest()[:4], "little") % vocabulary_size
+    return int.from_bytes(IdentityAccumulator(text).digest()[:4], "little") % vocabulary_size
 
 
 class _VisionLanguageBackbone(nn.Module if nn is not None else object):
-    """Small sensor-fusion backbone for the closed multisensor pilot profile.
-
-    This deliberately consumes the full public sensor set rather than merely
-    declaring it in metadata.  Radar is represented by a fixed public summary
-    because the pilot produces a variable number of detections per tick.
-    """
+    """Small sensor-fusion backbone for the closed multisensor pilot profile."""
 
     def __init__(self, *, language_vocab: int = 64, language_dim: int = 12) -> None:
         _require_torch()
@@ -198,9 +194,9 @@ def _load_checkpoint(
             f"{expected_kind} checkpoint declares {metadata.get('information_profile')!r}, "
             f"not required profile {expected_profile!r}"
         )
-    expected_hash = metadata.get("checkpoint_sha256")
-    if not isinstance(expected_hash, str) or expected_hash != sha256_file(checkpoint):
-        raise ValueError("checkpoint SHA-256 does not match its immutable metadata")
+    expected_identity = metadata.get("checkpoint_identity")
+    if not isinstance(expected_identity, str) or expected_identity != identity_file(checkpoint):
+        raise ValueError("checkpoint IDENTITY does not match its immutable metadata")
     try:
         payload = library.load(checkpoint, map_location="cpu", weights_only=True)
     except TypeError:  # Older torch releases do not implement weights_only.
@@ -224,7 +220,6 @@ class _TorchPolicyBase:
             self.checkpoint, expected_kind, expected_profile, metadata_path
         )
         self.expected_kind = expected_kind
-        self.expected_profile = expected_profile
         self.mission: PublicMission | None = None
         self.agent_count = 0
 
@@ -245,9 +240,9 @@ class _TorchPolicyBase:
             "implementation_kind": "trained_torch_pilot_checkpoint",
             "external_dependency": "torch",
             "checkpoint": str(self.checkpoint),
-            "checkpoint_sha256": sha256_file(self.checkpoint),
+            "checkpoint_identity": identity_file(self.checkpoint),
             "adapter_metadata": str(self.metadata_path),
-            "adapter_metadata_sha256": sha256_file(self.metadata_path),
+            "adapter_metadata_identity": identity_file(self.metadata_path),
             "model_kind": self.expected_kind,
             "training_backend": self.metadata.get("training_backend"),
             "training_sample_count": self.metadata.get("training_sample_count"),
@@ -316,12 +311,7 @@ def world_sensor_context(
     radar: np.ndarray,
     imu: np.ndarray,
 ) -> np.ndarray:
-    """Public multimodal features used by the compact dynamics model.
-
-    This is intentionally a small state predictor, not a video world model.
-    RGB is represented by its public channel means; depth, LiDAR, radar, and
-    IMU all enter the learned dynamics prediction through documented features.
-    """
+    """Public multimodal features used by the compact dynamics model."""
 
     if rgb.ndim != 3 or rgb.shape[2] != 3:
         raise ValueError("world model needs HxWx3 RGB")
@@ -444,7 +434,7 @@ class TinyVlmGroundingCheckpointPolicy(_TorchPolicyBase):
 
     def _fallback_velocity(self, observation: PublicObservation) -> np.ndarray:
         assert self.mission is not None
-        width, height = self.mission.bounds_xy_m
+        _width, height = self.mission.bounds_xy_m
         position = observation.proprioception[:3].astype(np.float64)
         lane_y = 1.8 + (observation.agent_id + 0.5) * (height - 3.6) / max(1, self.agent_count)
         direction = 1.0 if ((observation.sim_time_ns // 2_000_000_000 + observation.agent_id) % 2 == 0) else -1.0
@@ -569,7 +559,12 @@ class LearnedWorldModelMpcCheckpointPolicy(_TorchPolicyBase):
                 nominal + np.array((0.0, 0.0, 0.45, 0.0), dtype=np.float32),
             )
             clearance = float(np.min(observation.lidar_ranges_m)) if observation.lidar_ranges_m is not None else 3.0
-            def score(action: np.ndarray) -> float:
+            def score(
+                action: np.ndarray,
+                state: np.ndarray = state,
+                goal: np.ndarray = goal,
+                clearance: float = clearance,
+            ) -> float:
                 predicted = state + self._predict_delta(state, action)
                 return -float(np.linalg.norm(goal - predicted[:3])) - max(0.0, 1.2 - clearance) * 7.0
             chosen = max(candidates, key=score)

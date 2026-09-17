@@ -37,7 +37,6 @@ class GuardedProcessResult:
     returncode: int
     elapsed_s: float
     maximum_commit_fraction: float | None
-    fatal_1344: bool
     snapshot_before: HostSnapshot
     snapshot_after: HostSnapshot
 
@@ -489,7 +488,6 @@ def run_guarded_process(
         returncode,
         elapsed,
         maximum_commit,
-        fatal_1344,
         before,
         after,
     )

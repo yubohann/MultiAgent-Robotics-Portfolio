@@ -6,15 +6,9 @@ import json
 
 import matplotlib.pyplot as plt
 
-from .config import (
-    DATA_DIR,
-    FIG_DIR,
-    ROOT,
-    config_from_args
-)
-from .sim import (
-    LargeScaleBattle50v50
-)
+from .config import DATA_DIR, FIG_DIR, ROOT, config_from_args
+from .sim import LargeScaleBattle50v50
+
 
 def make_figures(args: argparse.Namespace) -> None:
     FIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -84,7 +78,7 @@ def make_figures(args: argparse.Namespace) -> None:
         (28, 22, 18, 10, "Rule simulation\nzones, LOS fire,\nshielded bases", "#dbeafe", "#2563eb"),
         (52, 22, 18, 10, "Scoring closure\nzone control -> shield\nbase damage -> win", "#dcfce7", "#16a34a"),
         (76, 22, 18, 10, "Selection gate\nwin balance,\ncontacts, damage", "#fee2e2", "#dc2626"),
-        (16, 5, 24, 9, "256-game evaluation\nY win {0:.1f}% | B win {1:.1f}%\nbase damage {2:.1f}/{3:.1f}".format(
+        (16, 5, 24, 9, "256-game evaluation\nY win {:.1f}% | B win {:.1f}%\nbase damage {:.1f}/{:.1f}".format(
             summary["yellow_win_rate"] * 100,
             summary["blue_win_rate"] * 100,
             summary["mean_yellow_base_damage"],

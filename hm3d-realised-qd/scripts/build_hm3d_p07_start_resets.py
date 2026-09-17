@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -17,8 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from audit_hm3d_collision_flight_space import (  # noqa: E402
-    _canonical_sha256 as _flight_space_sha256,
+from hm3d_collision_io import (  # noqa: E402
+    flight_space_id as _flight_space_file_id,
 )
 from audit_hm3d_collision_flight_space import (
     _load_and_validate_manifest,
@@ -26,28 +25,24 @@ from audit_hm3d_collision_flight_space import (
 )
 
 from aerocity_method.adapters.hm3d_runtime import build_enclosed_esdf  # noqa: E402
-from aerocity_method.contracts.io import canonical_sha256  # noqa: E402
-from aerocity_method.runtime.hm3d_start_resets import (  # noqa: E402
-    P07_START_RESET_DEPARTURE_WITNESS_SCHEMA_VERSION,
-    P07_START_RESET_SCHEMA_VERSION,
-    P07_START_RESET_ROUTE_SAMPLE_SELECTION_RULE,
-    largest_component_departure_witnesses,
-    select_local_spread_positions,
-)
 from aerocity_method.runtime.hm3d_cf2x_execution import (  # noqa: E402
     FLIGHT_CLEARANCE_M,
     REQUIRED_ROUTE_SAMPLE_CLEARANCE_M,
     REQUIRED_TERMINAL_CLEARANCE_M,
     ROUTE_CLEARANCE_SAMPLE_STEP_M,
 )
+from aerocity_method.runtime.hm3d_start_resets import (  # noqa: E402
+    P07_START_RESET_DEPARTURE_WITNESS_SCHEMA_VERSION,
+    P07_START_RESET_ROUTE_SAMPLE_SELECTION_RULE,
+    P07_START_RESET_SCHEMA_VERSION,
+    largest_component_departure_witnesses,
+    select_local_spread_positions,
+)
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _read_object(path: Path) -> dict[str, Any]:
@@ -109,16 +104,9 @@ def _offline_departure_witness(
         raise ValueError(
             "route-sample-selected reset has no exact-mesh-admitted first departure"
         )
-    witness_id = canonical_sha256(
-        {
-            "start_m": start_m,
-            "end_m": end_m,
-            "route_sample_count": sample_count,
-            "route_sample_spacing_m": ROUTE_CLEARANCE_SAMPLE_STEP_M,
-            "required_start_clearance_m": FLIGHT_CLEARANCE_M,
-            "required_terminal_clearance_m": REQUIRED_TERMINAL_CLEARANCE_M,
-            "required_internal_sample_clearance_m": REQUIRED_ROUTE_SAMPLE_CLEARANCE_M,
-        }
+    witness_id = (
+        f"departure-witness:{tuple(start_m)}->{tuple(end_m)}:"
+        f"{sample_count}-samples:{ROUTE_CLEARANCE_SAMPLE_STEP_M}m"
     )
     return {
         "schema_version": P07_START_RESET_DEPARTURE_WITNESS_SCHEMA_VERSION,
@@ -194,15 +182,15 @@ def main() -> int:
     flight = _read_object(flight_path)
     if flight.get("scene_id") != args.scene_id:
         raise ValueError("flight-space audit scene mismatch")
-    if flight.get("source_glb_sha256") != _sha256(source):
+    if flight.get("source_glb_file_id") != _file_id(source):
         raise ValueError("flight-space source GLB differs from start-reset input")
-    if flight.get("collision_usd_sha256") != _sha256(collision):
+    if flight.get("collision_usd_file_id") != _file_id(collision):
         raise ValueError("flight-space collision USD differs from start-reset input")
     if not isinstance(flight.get("flight_space"), dict):
         raise ValueError("flight-space audit lacks ESDF payload")
-    expected_flight_hash = _flight_space_sha256(flight["flight_space"])
-    if flight.get("flight_space_manifest_hash") != expected_flight_hash:
-        raise ValueError("flight-space audit hash is invalid")
+    expected_flight_id = _flight_space_file_id(flight["flight_space"])
+    if flight.get("flight_space_manifest_id") != expected_flight_id:
+        raise ValueError("flight-space audit id is invalid")
 
     mesh = _load_triangle_mesh(collision)
     arrays, rebuilt_flight = build_enclosed_esdf(
@@ -210,7 +198,7 @@ def main() -> int:
         resolution_m=float(flight["resolution_m"]),
         vehicle_clearance_m=float(flight["vehicle_clearance_m"]),
     )
-    if _flight_space_sha256(rebuilt_flight) != expected_flight_hash:
+    if _flight_space_file_id(rebuilt_flight) != expected_flight_id:
         raise ValueError("rebuilt ESDF differs from frozen P03 flight-space audit")
     departure_points, departure_endpoints, grid_tube_clearance_m = (
         largest_component_departure_witnesses(
@@ -256,10 +244,10 @@ def main() -> int:
         "formal_result": False,
         "evidence_class": "environment_reset_pre_registration",
         "scene_id": args.scene_id,
-        "source_glb_sha256": _sha256(source),
-        "collision_usd_sha256": _sha256(collision),
-        "flight_space_manifest_hash": expected_flight_hash,
-        "collision_derivative_manifest_sha256": derivative["manifest_sha256"],
+        "source_glb_file_id": _file_id(source),
+        "collision_usd_file_id": _file_id(collision),
+        "flight_space_manifest_id": expected_flight_id,
+        "collision_derivative_manifest_id": derivative["manifest_id"],
         "selection_rule": P07_START_RESET_ROUTE_SAMPLE_SELECTION_RULE,
         "selection_seed": args.seed,
         "candidate_count": len(candidates),
@@ -276,7 +264,9 @@ def main() -> int:
             "required_internal_sample_clearance_m": REQUIRED_ROUTE_SAMPLE_CLEARANCE_M,
             "offline_grid_tube_clearance_m": grid_tube_clearance_m,
             "offline_static_mesh": "same_immutable_collision_usd_as_physx",
-            "runtime_authority": "P0 replays a selected witness through the active PhysX route guard",
+            "runtime_authority": (
+                "P0 replays a selected witness through the active PhysX route guard"
+            ),
         },
         "method_visible": False,
         "claim_limit": (
@@ -286,7 +276,7 @@ def main() -> int:
         ),
         "candidates": candidates,
     }
-    payload["start_reset_sha256"] = canonical_sha256(payload)
+    payload["start_reset_file_id"] = f"start-resets:{payload.get('scene_id')}:{len(payload.get('resets', []))}"
     _write_new(output, payload)
     print(
         json.dumps(

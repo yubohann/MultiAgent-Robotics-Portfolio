@@ -1,26 +1,16 @@
-from __future__ import annotations
-
 """Training helpers for the multi-agent 2D gate experiment."""
 
+from __future__ import annotations
 
-import json
-import math
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 from typing import Literal
 
-import numpy as np
-import torch
-
-from multi_gate.configs.experiment_config import (
-    MultiExperimentConfig,
-    is_exp3_kinematic_3d_scene_mode
-)
+from multi_gate.configs.experiment_config import MultiExperimentConfig, is_exp3_kinematic_3d_scene_mode
 from multi_gate.env.multi_gate_env import MultiGate2DEnv
 from multi_gate.env.multi_gate_kinematic_3d_env import MultiGateKinematic3DEnv
 from shared.runtime.artifacts import write_json
-
 
 MultiResumeMode = Literal["reset_train_state", "keep_optimizer_state"]
 MultiEnvType = MultiGate2DEnv | MultiGateKinematic3DEnv
@@ -35,7 +25,7 @@ def _start_live_isaaclab_preview(
     scene_mode = str(getattr(experiment_config.scene, "scene_mode", "")).strip().lower()
     if not is_exp3_kinematic_3d_scene_mode(scene_mode):
         return None
-    script_path = Path(__file__).resolve().parent / "scripts" / "live_preview_multi_isaaclab.py"
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "live_preview_multi_isaaclab.py"
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
     command = [
         sys.executable,

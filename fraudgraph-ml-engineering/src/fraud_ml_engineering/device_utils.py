@@ -8,7 +8,7 @@ DEFAULT_DEVICE_REQUEST = "cuda"
 
 try:
     import dgl
-except Exception:  # pragma: no cover - runtime env dependent
+except (ImportError, OSError):  # pragma: no cover - runtime env dependent
     dgl = None
 
 
@@ -35,7 +35,7 @@ def resolve_dgl_training_device(device_name: str, *, warn: bool = True) -> torch
         probe_graph = dgl.graph((torch.tensor([0]), torch.tensor([0])))
         probe_graph = probe_graph.to(str(resolved))
         del probe_graph
-    except Exception as error:
+    except (OSError, RuntimeError, ValueError, dgl.DGLError) as error:
         if warn:
             print(f"[WARN] CUDA requested but DGL CUDA backend is unavailable ({error}). Falling back to CPU.")
         return torch.device("cpu")

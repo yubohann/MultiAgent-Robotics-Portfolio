@@ -7,7 +7,6 @@ import math
 from pathlib import Path
 
 import numpy as np
-
 from robocup_visionrl_gym_env import (
     BASE_TARGET_CONTACT_RADIUS,
     HALF_ARENA,
@@ -21,7 +20,6 @@ from robocup_visionrl_gym_env import (
     segment_intersects_aabb,
 )
 from robocup_visionrl_selfplay_env import AGENTS, RoboCupVisionRLSelfPlayEnv
-
 
 ROOT = Path(__file__).resolve().parents[2]
 

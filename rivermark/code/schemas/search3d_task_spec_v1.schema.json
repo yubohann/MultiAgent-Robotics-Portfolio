@@ -34,10 +34,10 @@
     "reset": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["spawn_set_id", "spawn_set_sha256", "paired_initial_conditions", "reset_deterministic"],
+      "required": ["spawn_set_id", "spawn_set_identity", "paired_initial_conditions", "reset_deterministic"],
       "properties": {
         "spawn_set_id": {"type": "string", "minLength": 1},
-        "spawn_set_sha256": {"$ref": "#/$defs/sha256"},
+        "spawn_set_identity": {"$ref": "#/$defs/identity"},
         "paired_initial_conditions": {"const": true},
         "reset_deterministic": {"const": true}
       }
@@ -57,7 +57,7 @@
       "additionalProperties": false,
       "required": [
         "generator_id",
-        "generator_sha256",
+        "generator_identity",
         "target_count",
         "difficulty_axes",
         "sampled_before_policy_start",
@@ -65,7 +65,7 @@
       ],
       "properties": {
         "generator_id": {"type": "string", "minLength": 1},
-        "generator_sha256": {"$ref": "#/$defs/sha256"},
+        "generator_identity": {"$ref": "#/$defs/identity"},
         "target_count": {"type": "integer", "minimum": 1},
         "difficulty_axes": {
           "type": "array",
@@ -85,7 +85,7 @@
         "modes",
         "reference_frames",
         "controller_profile_id",
-        "controller_profile_sha256",
+        "controller_profile_identity",
         "preemption_rule"
       ],
       "properties": {
@@ -103,7 +103,7 @@
           "items": {"enum": ["world", "body"]}
         },
         "controller_profile_id": {"type": "string", "minLength": 1},
-        "controller_profile_sha256": {"$ref": "#/$defs/sha256"},
+        "controller_profile_identity": {"$ref": "#/$defs/identity"},
         "preemption_rule": {"enum": ["next_control_tick", "non_preemptive"]}
       }
     },
@@ -111,10 +111,10 @@
     "communication_profile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["profile_id", "profile_sha256", "observation_scope"],
+      "required": ["profile_id", "profile_identity", "observation_scope"],
       "properties": {
         "profile_id": {"type": "string", "minLength": 1},
-        "profile_sha256": {"$ref": "#/$defs/sha256"},
+        "profile_identity": {"$ref": "#/$defs/identity"},
         "observation_scope": {
           "enum": ["decentralized_explicit_comm", "centralized_team_state"]
         }
@@ -148,7 +148,7 @@
       "additionalProperties": false,
       "required": [
         "evaluator_id",
-        "evaluator_sha256",
+        "evaluator_identity",
         "truth_partition",
         "match_radius_m",
         "deduplication_radius_m",
@@ -156,7 +156,7 @@
       ],
       "properties": {
         "evaluator_id": {"type": "string", "minLength": 1},
-        "evaluator_sha256": {"$ref": "#/$defs/sha256"},
+        "evaluator_identity": {"$ref": "#/$defs/identity"},
         "truth_partition": {"const": "evaluator_private"},
         "match_radius_m": {"type": "number", "exclusiveMinimum": 0.0},
         "deduplication_radius_m": {"type": "number", "exclusiveMinimum": 0.0},
@@ -188,14 +188,14 @@
     }
   },
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
     "profileRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["profile_id", "profile_sha256"],
+      "required": ["profile_id", "profile_identity"],
       "properties": {
         "profile_id": {"type": "string", "minLength": 1},
-        "profile_sha256": {"$ref": "#/$defs/sha256"}
+        "profile_identity": {"$ref": "#/$defs/identity"}
       }
     }
   }

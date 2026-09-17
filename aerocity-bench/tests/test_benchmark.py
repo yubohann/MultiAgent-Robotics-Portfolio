@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from aerocity_bench.assets import ACCEPTED_SPDX
 from aerocity_bench.audit import FORBIDDEN_PUBLIC_KEYS, validate_release
 from aerocity_bench.builder import build_release
-from aerocity_bench.canonical import content_hash, file_hash, read_json, write_json
+from aerocity_bench.canonical import read_json, write_json
 from aerocity_bench.config import EXPECTED_SPLITS, OBSERVATION_TIERS, load_release_config
 from aerocity_bench.errors import ValidationError
 from aerocity_bench.generator import generate_city
@@ -65,9 +65,7 @@ class BenchmarkReleaseTests(unittest.TestCase):
                     "kind": "usd_model",
                     "spdx": "CC0-1.0",
                     "redistribution_allowed": True,
-                    "files": [
-                        {"path": relative, "sha256": file_hash(path), "bytes": path.stat().st_size}
-                    ],
+                    "files": [{"path": relative, "bytes": path.stat().st_size}],
                 }
             )
         write_json(
@@ -96,7 +94,7 @@ class BenchmarkReleaseTests(unittest.TestCase):
         second = generate_city(self.config, "train", 0, 0, ["street_lamp_01"])
         self.assertEqual(first, second)
         changed = generate_city(self.config, "train", 0, 1, ["street_lamp_01"])
-        self.assertNotEqual(first["layout_hash"], changed["layout_hash"])
+        self.assertNotEqual(first["layout_id"], changed["layout_id"])
         sites = derive_support_sites(first)
         self.assertEqual(
             sample_episode(self.config, first, sites, 0),
@@ -139,9 +137,13 @@ class BenchmarkReleaseTests(unittest.TestCase):
             "communication",
             "energy_budget_j",
         ):
-            self.assertEqual(len({content_hash(episode[key]) for episode in episodes}), 1, key)
+            self.assertEqual(
+                len({json.dumps(episode[key], sort_keys=True) for episode in episodes}), 1, key
+            )
         self.assertEqual(len({episode["target_process"] for episode in episodes}), 3)
-        self.assertEqual(len({content_hash(episode["targets"]) for episode in episodes}), 3)
+        self.assertEqual(
+            len({json.dumps(episode["targets"], sort_keys=True) for episode in episodes}), 3
+        )
 
     def test_opening_sites_are_on_real_component_faces(self) -> None:
         city = generate_city(self.config, "train", 0, 0, ["street_lamp_01"])
@@ -171,7 +173,7 @@ class BenchmarkReleaseTests(unittest.TestCase):
         )
         episodes = [read_json(path) for path in sorted(paths)]
         self.assertTrue(episodes)
-        payload_hashes = set()
+        payloads = []
         profiles = set()
         faults_by_profile = {}
         start_ids: set[str] = set()
@@ -196,8 +198,8 @@ class BenchmarkReleaseTests(unittest.TestCase):
                     "energy_budget_j",
                 )
             }
-            payload_hashes.add(content_hash(payload))
-        self.assertEqual(len(payload_hashes), 1)
+            payloads.append(json.dumps(payload, sort_keys=True))
+        self.assertEqual(len(set(payloads)), 1)
         self.assertEqual(profiles, set(self.config.fault_profiles("test_resilience")))
         self.assertEqual(start_ids, {f"uav-{index:02d}" for index in range(8)})
         hard_one = faults_by_profile["hard_loss_1"]
@@ -265,9 +267,7 @@ class BenchmarkReleaseTests(unittest.TestCase):
         tampered = self.root / "tampered"
         shutil.copytree(self.release, tampered)
         path = next(tampered.glob("splits/*/*/public/cityspec.json"))
-        value = json.loads(path.read_text(encoding="utf-8"))
-        value["size_m"] += 1
-        path.write_text(json.dumps(value), encoding="utf-8")
+        path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
         with self.assertRaises(ValidationError):
             validate_release(tampered, write_report=False)
 

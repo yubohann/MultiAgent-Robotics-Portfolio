@@ -42,7 +42,7 @@ def test_chunk_plan_is_sorted_and_complete(tmp_path: Path) -> None:
     ]
 
 
-def test_runner_records_all_chunk_exit_codes_and_hash_bound_logs(
+def test_runner_records_all_chunk_exit_codes_and_identity_bound_logs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     tests = _tests(tmp_path)
@@ -65,17 +65,17 @@ def test_runner_records_all_chunk_exit_codes_and_hash_bound_logs(
     assert verify_run_report(report_path) == ()
 
 
-def test_runner_report_detects_log_tampering(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_runner_report_detects_log_alteration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     tests = _tests(tmp_path, count=1)
 
     def fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[bytes]:
         return subprocess.CompletedProcess(command, 0, stdout=b"passed\n")
 
     monkeypatch.setattr("rivermark_benchmark.cpu_test_runner.subprocess.run", fake_run)
-    output = tmp_path.parent / "cpu-test-tamper"
+    output = tmp_path.parent / "cpu-test-alter"
     report_path = run_cpu_test_chunks(test_root=tests, output_dir=output, chunk_size=1)
     output.joinpath("logs", "chunk-001.txt").write_bytes(b"changed\n")
-    assert "log hash does not match" in verify_run_report(report_path)[0]
+    assert "log identity does not match" in verify_run_report(report_path)[0]
 
 
 def test_runner_rejects_existing_or_repository_output(tmp_path: Path) -> None:

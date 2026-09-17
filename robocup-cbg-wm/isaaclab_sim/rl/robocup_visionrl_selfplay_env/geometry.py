@@ -3,14 +3,10 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from robocup_visionrl_gym_env import PUSHABLE_OBSTACLE_HALF, SHOOTER_FORWARD_OFFSET
 
-from .constants import (
-    ROBOT_PUSHABLE_VISUAL_HALF_EXTENTS
-)
-from robocup_visionrl_gym_env import (
-    PUSHABLE_OBSTACLE_HALF,
-    SHOOTER_FORWARD_OFFSET
-)
+from .constants import ROBOT_PUSHABLE_VISUAL_HALF_EXTENTS
+
 
 def laser_origin_from_pose(pose: np.ndarray) -> tuple[float, float]:
     yaw = float(pose[2])

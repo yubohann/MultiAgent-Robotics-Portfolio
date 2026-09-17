@@ -242,7 +242,7 @@ def database_path() -> Path:
 
 
 def get_setting(key: str, default: Any = None) -> Any:
-    """Read a JSON setting with a fallback default."""
+    """Read a JSON setting with a default."""
     init_db()
     with connect() as connection:
         row = connection.execute(

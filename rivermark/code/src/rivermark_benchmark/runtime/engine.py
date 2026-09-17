@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from collections.abc import Iterable, Mapping
@@ -10,6 +9,7 @@ from typing import Any
 
 import numpy as np
 
+from .._identity import IdentityAccumulator
 from ..schema import INFORMATION_PROFILE_MODALITIES
 from .config import PilotRuntimeConfig
 from .controller import FixedVelocityYawController
@@ -29,17 +29,12 @@ from .datatypes import (
 )
 
 
-def _sha256_json(value: Any) -> str:
+def _identity_json(value: Any) -> str:
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return IdentityAccumulator(encoded).hexdigest()
 
 class PilotSwarmRuntime:
-    """A closed-loop, deterministic multi-UAV search runtime.
-
-    The evaluator-private target array stays in this object and is only
-    consulted by :meth:`evaluate` after a rollout.  Policies receive a
-    :class:`PublicObservation` filtered by an information profile.
-    """
+    """A closed-loop, deterministic multi-UAV search runtime."""
 
     backend_id = "rivermark-kinematic-pilot-v1"
 
@@ -152,8 +147,8 @@ class PilotSwarmRuntime:
         agent_ids = sorted(proposed)
         for left_index, left_id in enumerate(agent_ids):
             for right_id in agent_ids[left_index + 1 :]:
-                left_pos, left_vel, left_yaw, left_rate = proposed[left_id]
-                right_pos, right_vel, right_yaw, right_rate = proposed[right_id]
+                left_pos, _left_vel, left_yaw, _left_rate = proposed[left_id]
+                right_pos, _right_vel, right_yaw, _right_rate = proposed[right_id]
                 if float(np.linalg.norm(left_pos - right_pos)) < self.config.drone_radius_m * 2.2:
                     proposed[left_id] = (
                         self._states[left_id].position_m.copy(),
@@ -185,7 +180,7 @@ class PilotSwarmRuntime:
             )
             self._action_history[agent_id] = self._action_history[agent_id][-8:]
 
-        self._time_ns += int(round(self.config.dt_s * 1_000_000_000))
+        self._time_ns += round(self.config.dt_s * 1_000_000_000)
         self._step_index += 1
         packets = self._capture_sensors()
         sensor_candidates = [
@@ -222,7 +217,7 @@ class PilotSwarmRuntime:
         target_count = len(self._hidden_targets)
         confirmed_count = len(true_confirmations)
         precision = confirmed_count / len(self._confirmed_candidates) if self._confirmed_candidates else 1.0
-        budget_ns = max(1, self.config.max_steps * int(round(self.config.dt_s * 1_000_000_000)))
+        budget_ns = max(1, self.config.max_steps * round(self.config.dt_s * 1_000_000_000))
         area = 0.0
         recalled = 0
         previous_time = 0
@@ -236,7 +231,7 @@ class PilotSwarmRuntime:
         first_latency = (
             true_confirmations[0].sensor_time_ns / 1_000_000_000 if true_confirmations else None
         )
-        truth_digest = _sha256_json([target.position_m for target in self._hidden_targets])
+        truth_digest = _identity_json([target.position_m for target in self._hidden_targets])
         return EvaluationReport(
             confirmed_count=confirmed_count,
             target_count=target_count,
@@ -245,7 +240,7 @@ class PilotSwarmRuntime:
             normalized_confirmed_auc=normalized_auc,
             first_confirmation_latency_s=first_latency,
             collision_count=sum(1 for event in self._safety_events if event.kind == "inter_uav_separation_guard") // 2,
-            evaluator_truth_sha256=truth_digest,
+            evaluator_truth_identity=truth_digest,
         )
 
     def public_metadata(self) -> dict[str, Any]:
@@ -327,7 +322,7 @@ class PilotSwarmRuntime:
         width, height = self.config.world_size_xy_m
         position = proposed_position.copy()
         velocity = proposed_velocity.copy()
-        stamp = self._time_ns + int(round(self.config.dt_s * 1_000_000_000))
+        stamp = self._time_ns + round(self.config.dt_s * 1_000_000_000)
         bounded = np.array(
             (
                 np.clip(position[0], self.config.drone_radius_m, width - self.config.drone_radius_m),
@@ -423,7 +418,7 @@ class PilotSwarmRuntime:
             if projection is None:
                 continue
             u, v, forward_depth = projection
-            radius_px = max(2, int(round(radius_m * width * 0.95 / max(forward_depth, 0.25))))
+            radius_px = max(2, round(radius_m * width * 0.95 / max(forward_depth, 0.25)))
             x0, x1 = max(0, int(u) - radius_px), min(width, int(u) + radius_px + 1)
             y0, y1 = max(0, int(v) - radius_px), min(height, int(v) + radius_px + 1)
             if x0 >= x1 or y0 >= y1:
@@ -446,7 +441,7 @@ class PilotSwarmRuntime:
         distance = float(np.linalg.norm(delta[:2]))
         if distance <= _EPS:
             return True
-        steps = max(2, int(math.ceil(distance / 0.25)))
+        steps = max(2, math.ceil(distance / 0.25))
         for fraction in np.linspace(0.0, 1.0, steps, endpoint=False)[1:]:
             point = start + delta * fraction
             if any(obstacle.contains(point, 0.05) for obstacle in self._obstacles):
@@ -560,7 +555,7 @@ class PilotSwarmRuntime:
 
     def _confirm_candidates(self, candidates: Iterable[CandidateEvent]) -> list[CandidateEvent]:
         confirmed: list[CandidateEvent] = []
-        maximum_gap_ns = int(round(self.config.dt_s * 1_000_000_000 * 2.5))
+        maximum_gap_ns = round(self.config.dt_s * 1_000_000_000 * 2.5)
         for candidate in candidates:
             point = np.asarray(candidate.estimated_xyz_m)
             key = tuple(np.rint(point / 1.2).astype(int))

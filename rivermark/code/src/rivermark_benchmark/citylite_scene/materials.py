@@ -10,7 +10,7 @@ from .constants import (
     CITY_TASK_OBSTACLE_MATERIAL_ROOT,
     CITY_TASK_OBSTACLE_MATERIAL_SPECS,
 )
-from .scene import CityLiteAuthorityError, canonical_payload_sha256
+from .scene import CityLiteAuthorityError, canonical_payload_identity
 
 
 def city_task_obstacle_material_contract_payload() -> dict[str, Any]:
@@ -42,7 +42,7 @@ def city_task_obstacle_material_contract_payload() -> dict[str, Any]:
         "bindings": bindings,
     }
 
-CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_SHA256 = canonical_payload_sha256(
+CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_IDENTITY = canonical_payload_identity(
     city_task_obstacle_material_contract_payload()
 )
 
@@ -52,7 +52,7 @@ def city_task_obstacle_material_closure_receipt_template() -> dict[str, Any]:
     contract = city_task_obstacle_material_contract_payload()
     return {
         **contract,
-        "contract_sha256": CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_SHA256,
+        "contract_identity": CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_IDENTITY,
         "post_repair_binding_closure": True,
         "observed_bindings": [
             {
@@ -74,7 +74,7 @@ def city_task_obstacle_material_closure_receipt_template() -> dict[str, Any]:
 def validate_city_task_obstacle_material_closure_receipt(
     receipt: Mapping[str, Any],
 ) -> None:
-    """Fail closed unless every scoped obstacle has its verified local material."""
+    """Stop the run unless every scoped obstacle has its verified local material."""
 
     if not isinstance(receipt, Mapping):
         raise CityLiteAuthorityError(
@@ -86,7 +86,7 @@ def validate_city_task_obstacle_material_closure_receipt(
             raise CityLiteAuthorityError(
                 f"CityTaskObstacles material closure field is invalid: {key}"
             )
-    if receipt.get("contract_sha256") != CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_SHA256:
+    if receipt.get("contract_identity") != CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_IDENTITY:
         raise CityLiteAuthorityError(
             "CityTaskObstacles material closure contract digest is invalid"
         )

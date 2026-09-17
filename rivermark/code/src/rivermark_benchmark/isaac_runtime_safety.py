@@ -1,23 +1,23 @@
-"""Fail-closed runtime safety checks for City-Lite Isaac CF2X captures."""
+"""Strict runtime safety checks for City-Lite Isaac CF2X captures."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN
-import hashlib
 import math
 import struct
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
+from typing import Any
 
+from ._identity import IdentityAccumulator
 from .citylite_scene import (
-    AGENT_COUNT,
     AABB,
+    AGENT_COUNT,
     CITY_LITE_FLIGHT_VOLUME_W_M,
     ROUTE_CLEARANCE_M,
-    aabb_geometry_sha256,
+    aabb_geometry_identity,
     segment_intersects_aabb,
 )
-
 
 RUNTIME_SAFETY_SCHEMA = "org.rivermark.isaac-runtime-safety-guard.v2"
 RUNTIME_SAFETY_TRACE_SCHEMA = "org.rivermark.isaac-runtime-safety-trace.v2"
@@ -43,12 +43,7 @@ SENSOR_PHASE_SENSOR_NAMES = ("rgb", "depth", "semantic", "lidar", "imu", "contac
 
 
 def sensor_phase_array_digest(value: Any) -> bytes:
-    """Return the raw contiguous-byte SHA-256 used by phase evidence.
-
-    Isaac tensors and validator NumPy arrays must have the same byte-level
-    representation.  Conversion is intentionally local and does not import
-    Isaac or Torch at module import time.
-    """
+    """Return the raw contiguous-byte IDENTITY used by phase evidence."""
 
     if hasattr(value, "detach"):
         value = value.detach().cpu().contiguous().numpy()
@@ -58,7 +53,7 @@ def sensor_phase_array_digest(value: Any) -> bytes:
         value = np.ascontiguousarray(value)
     if getattr(value.dtype, "hasobject", False):
         raise TypeError("sensor phase digest does not accept object arrays")
-    return hashlib.sha256(memoryview(value).cast("B")).digest()
+    return IdentityAccumulator(memoryview(value).cast("B")).digest()
 RUNTIME_SAFETY_PHASE_CODES = {
     "post_reset": 0,
     "warmup": 1,
@@ -90,13 +85,7 @@ CONTACT_ABORT_FORCE_FLOAT32_CUTOFF_N = struct.unpack(
 
 
 def physics_time_ns(physics_step: int, dt_s: float) -> int:
-    """Return the canonical logical simulation time for one physics frame.
-
-    The trace records the post-reset state as frame zero at zero nanoseconds.
-    Every later frame is the state after its numbered ``dt_s`` simulation
-    interval.  Decimal half-even rounding avoids platform-dependent binary
-    floating-point drift while preserving the familiar ``round`` contract.
-    """
+    """Return the canonical logical simulation time for one physics frame."""
 
     if (
         isinstance(physics_step, bool)
@@ -105,7 +94,7 @@ def physics_time_ns(physics_step: int, dt_s: float) -> int:
     ):
         raise ValueError("physics_step must be a non-negative integer")
     if isinstance(dt_s, bool):
-        raise ValueError("dt_s must be a positive finite number")
+        raise TypeError("dt_s must be a positive finite number")
     try:
         decimal_dt_s = Decimal(str(dt_s))
     except (InvalidOperation, ValueError) as exc:
@@ -147,14 +136,7 @@ def _minimum_inter_agent_swept_separation(
     previous: tuple[tuple[float, float, float], ...] | None,
     current: tuple[tuple[float, float, float], ...],
 ) -> tuple[float, int, int, float]:
-    """Return the minimum simultaneous segment separation over all CF2X pairs.
-
-    Each pair is evaluated over the same normalized physics-step interval.  A
-    check of only the two endpoints misses two agents exchanging positions in
-    one step, so this uses the analytic closest point of their relative
-    segment.  At post-reset ``previous`` is ``None`` and the segments collapse
-    to the current points.
-    """
+    """Return the minimum simultaneous segment separation over all CF2X pairs."""
 
     minimum = math.inf
     minimum_left = -1
@@ -199,12 +181,7 @@ def _minimum_inter_agent_swept_separation(
 def record_runtime_safety_check(
     guard: dict[str, Any], check: RuntimeSafetyCheck, *, phase: str
 ) -> None:
-    """Account for one successful guard evaluation in its public receipt.
-
-    The capture loop owns the raw evidence trace.  This helper only updates
-    deterministic counters so the receipt cannot accidentally drift from the
-    code path that made the safety decision.
-    """
+    """Account for one successful guard evaluation in its public receipt."""
 
     if phase not in RUNTIME_SAFETY_PHASE_CODES:
         raise ValueError(f"unknown runtime safety phase: {phase}")
@@ -212,7 +189,7 @@ def record_runtime_safety_check(
         raise ValueError("cannot record a safety check after the guard stopped")
     checks = guard.get("checks")
     if not isinstance(checks, dict):
-        raise ValueError("runtime safety guard checks must be mutable")
+        raise TypeError("runtime safety guard checks must be mutable")
     if check.inter_agent_pair_checks != INTER_AGENT_PAIR_COUNT:
         raise ValueError("runtime safety check must cover every CF2X pair")
     if (
@@ -268,7 +245,7 @@ def record_runtime_safety_abort(
     violation = dict(error.violation)
     checks = guard.get("checks")
     if not isinstance(checks, dict):
-        raise ValueError("runtime safety guard checks must be mutable")
+        raise TypeError("runtime safety guard checks must be mutable")
     if violation.get("kind") == "contact_force_violation":
         checks["contact_abort_count"] = int(checks.get("contact_abort_count", 0)) + 1
     guard["status"] = "aborted"
@@ -276,16 +253,16 @@ def record_runtime_safety_abort(
 
 
 def bind_runtime_safety_trace_evidence(
-    guard: dict[str, Any], *, trace_sha256: str, physics_frame_count: int
+    guard: dict[str, Any], *, trace_identity: str, physics_frame_count: int
 ) -> None:
     """Bind either a passing or aborted guard to its recorded trace."""
 
     if (
-        not isinstance(trace_sha256, str)
-        or len(trace_sha256) != 64
-        or any(character not in "0123456789abcdef" for character in trace_sha256)
+        not isinstance(trace_identity, str)
+        or len(trace_identity) != 16
+        or any(character not in "0123456789abcdef" for character in trace_identity)
     ):
-        raise ValueError("runtime safety trace requires a SHA-256 digest")
+        raise ValueError("runtime safety trace requires an identity value")
     if (
         isinstance(physics_frame_count, bool)
         or not isinstance(physics_frame_count, int)
@@ -294,13 +271,13 @@ def bind_runtime_safety_trace_evidence(
         raise ValueError("runtime safety trace requires at least one frame")
     evidence = guard.get("evidence")
     if not isinstance(evidence, dict):
-        raise ValueError("runtime safety guard evidence must be mutable")
-    evidence["sha256"] = trace_sha256
+        raise TypeError("runtime safety guard evidence must be mutable")
+    evidence["identity"] = trace_identity
     evidence["physics_frame_count"] = physics_frame_count
 
 
 def finalize_runtime_safety_guard(
-    guard: dict[str, Any], *, trace_sha256: str, physics_frame_count: int
+    guard: dict[str, Any], *, trace_identity: str, physics_frame_count: int
 ) -> None:
     """Bind a passing guard to one immutable full-step trace artifact."""
 
@@ -308,7 +285,7 @@ def finalize_runtime_safety_guard(
         raise ValueError("only a running runtime safety guard can pass")
     bind_runtime_safety_trace_evidence(
         guard,
-        trace_sha256=trace_sha256,
+        trace_identity=trace_identity,
         physics_frame_count=physics_frame_count,
     )
     guard["status"] = "passed"
@@ -322,7 +299,7 @@ def _context(*, phase: str, physics_step: int) -> dict[str, Any]:
 
 def _finite_coordinate(value: Any, *, label: str) -> float:
     if isinstance(value, bool):
-        raise ValueError(f"{label} must be a finite coordinate")
+        raise TypeError(f"{label} must be a finite coordinate")
     try:
         number = float(value)
     except (TypeError, ValueError) as exc:
@@ -334,7 +311,7 @@ def _finite_coordinate(value: Any, *, label: str) -> float:
 
 def _positions(value: Any, *, label: str) -> tuple[tuple[float, float, float], ...]:
     if isinstance(value, (str, bytes)):
-        raise ValueError(f"{label} must contain {AGENT_COUNT} xyz rows")
+        raise TypeError(f"{label} must contain {AGENT_COUNT} xyz rows")
     try:
         rows = tuple(value)
     except TypeError as exc:
@@ -344,7 +321,7 @@ def _positions(value: Any, *, label: str) -> tuple[tuple[float, float, float], .
     result: list[tuple[float, float, float]] = []
     for agent_id, raw_row in enumerate(rows):
         if isinstance(raw_row, (str, bytes)):
-            raise ValueError(f"{label}[{agent_id}] must be xyz")
+            raise TypeError(f"{label}[{agent_id}] must be xyz")
         try:
             row = tuple(raw_row)
         except TypeError as exc:
@@ -364,7 +341,7 @@ def _contact_forces(value: Any) -> tuple[tuple[tuple[float, float, float], ...],
     """Normalize exactly [8, 1, 3] root-body net-contact forces."""
 
     if isinstance(value, (str, bytes)):
-        raise ValueError("contact forces must be [8,1,3]")
+        raise TypeError("contact forces must be [8,1,3]")
     try:
         agents = tuple(value)
     except TypeError as exc:
@@ -374,7 +351,7 @@ def _contact_forces(value: Any) -> tuple[tuple[tuple[float, float, float], ...],
     normalized: list[tuple[tuple[float, float, float], ...]] = []
     for agent_id, raw_bodies in enumerate(agents):
         if isinstance(raw_bodies, (str, bytes)):
-            raise ValueError(f"contact forces agent {agent_id} must contain one body")
+            raise TypeError(f"contact forces agent {agent_id} must contain one body")
         try:
             bodies = tuple(raw_bodies)
         except TypeError as exc:
@@ -386,7 +363,7 @@ def _contact_forces(value: Any) -> tuple[tuple[tuple[float, float, float], ...],
         body_rows: list[tuple[float, float, float]] = []
         for body_id, raw_force in enumerate(bodies):
             if isinstance(raw_force, (str, bytes)):
-                raise ValueError(
+                raise TypeError(
                     f"contact forces agent {agent_id} body {body_id} must be xyz"
                 )
             try:
@@ -425,16 +402,11 @@ def evaluate_runtime_safety(
     phase: str,
     physics_step: int,
 ) -> RuntimeSafetyCheck:
-    """Validate one physical frame and raise before a bad trace is retained.
-
-    At post-reset, pass ``None`` as ``previous_positions_w_m``.  This verifies
-    the root centers and their current AABB separation without pretending a
-    zero-length point check is a physical swept segment.
-    """
+    """Validate one physical frame and raise before a bad trace is retained."""
 
     try:
         current = _positions(current_positions_w_m, label="current root positions")
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         raise _abort(
             "invalid_root_positions",
             phase=phase,
@@ -461,7 +433,7 @@ def evaluate_runtime_safety(
     if previous_positions_w_m is not None:
         try:
             previous = _positions(previous_positions_w_m, label="previous root positions")
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             raise _abort(
                 "invalid_previous_root_positions",
                 phase=phase,
@@ -528,7 +500,7 @@ def evaluate_runtime_safety(
 
     try:
         contact = _contact_forces(net_contact_forces_w_n)
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         raise _abort(
             "invalid_contact_sensor_data",
             phase=phase,
@@ -579,7 +551,7 @@ def runtime_safety_receipt_template(
     return {
         "schema": RUNTIME_SAFETY_SCHEMA,
         "enabled": True,
-        "fail_closed": True,
+        "strict": True,
         "status": "running",
         "agent_center_radius_m": CF2X_RUNTIME_GUARD_RADIUS_M,
         "flight_volume_m": {
@@ -588,7 +560,7 @@ def runtime_safety_receipt_template(
             "z": list(CITY_LITE_FLIGHT_VOLUME_W_M.minimum[2:3] + CITY_LITE_FLIGHT_VOLUME_W_M.maximum[2:3]),
         },
         "structural_aabb_count": len(structural_aabbs),
-        "structural_aabb_geometry_sha256": aabb_geometry_sha256(structural_aabbs),
+        "structural_aabb_geometry_identity": aabb_geometry_identity(structural_aabbs),
         "swept_aabb_clearance_m": ROUTE_CLEARANCE_M,
         "inter_agent": {
             "pair_count": INTER_AGENT_PAIR_COUNT,
@@ -611,7 +583,7 @@ def runtime_safety_receipt_template(
         "evidence": {
             "schema": RUNTIME_SAFETY_TRACE_SCHEMA,
             "path": RUNTIME_SAFETY_TRACE_RELATIVE_PATH,
-            "sha256": None,
+            "identity": None,
             "physics_frame_count": 0,
         },
         "checks": {

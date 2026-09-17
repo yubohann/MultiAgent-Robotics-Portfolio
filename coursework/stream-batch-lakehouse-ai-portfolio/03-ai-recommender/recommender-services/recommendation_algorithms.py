@@ -1,9 +1,6 @@
 import numpy as np
-import pandas as pd
-from collections import defaultdict, Counter
+from collections import defaultdict
 from typing import List, Dict, Tuple, Set
-import json
-from datetime import datetime
 
 
 class Product:
@@ -327,7 +324,7 @@ def demo():
         print(f"\n👤 用户 {user_id}:")
         print(f"   历史交互: {[product_names[p] for p in user_profile.get_all_interacted_products()]}")
         print(f"   偏好类别: {user_profile.get_top_categories(2)}")
-        print(f"   📦 推荐商品:")
+        print("   📦 推荐商品:")
         for i, (prod_id, score) in enumerate(recommendations, 1):
             prod = products[prod_id]
             print(f"      {i}. {product_names[prod_id]} ({prod.category}) - 得分: {score:.4f}")

@@ -281,13 +281,6 @@ class RoboconGameSupervisorNode(Node):
             self.supervisor.emergency_stop()
             self._publish_decision(True, command, "emergency stop latched")
             return
-        legacy_evidence_commands = {
-            "receiver_ready": "PrepareReceive",
-            "pass_armed": "PreparePass",
-            "pass_executed": "ExecutePass",
-            "receipt_confirmed": "CollectBall",
-            "fire_shot": "FireShot",
-        }
         action_aliases = {
             "navigate_to_pose": "NavigateToPose",
             "prepare_receive": "PrepareReceive",
@@ -299,7 +292,7 @@ class RoboconGameSupervisorNode(Node):
             "abort_task": "AbortTask",
             "emergency_stop": "EmergencyStop",
         }
-        action = action_aliases.get(command, legacy_evidence_commands.get(command))
+        action = action_aliases.get(command)
         if action is not None:
             safety = (
                 self._safety_snapshot()

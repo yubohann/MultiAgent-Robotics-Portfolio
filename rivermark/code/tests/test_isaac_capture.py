@@ -22,11 +22,25 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from rivermark_benchmark.citylite_scene import (
+    AABB,
+    CITY_LITE_ROUTE_FAMILY_A_ID,
+    CITY_LITE_ROUTE_FAMILY_B_ID,
+    CITY_LITE_TARGET_REGION_A_ID,
+    PUBLIC_ROUTES_W_M,
+    aabb_geometry_identity,
+    resolve_public_route_family,
+)
+from rivermark_benchmark.citylite_task import (
+    sample_private_targets,
+    target_visibility_geometry_contract,
+)
+from rivermark_benchmark.failure_ledger import (
+    load_failure_ledger,
+    summarize_failure_ledger,
+)
 from rivermark_benchmark.isaac_capture import (
     AGENT_COUNT,
-    CaptureStorageBudget,
-    PRIVATE_TARGET_ORIGIN,
-    PRIVATE_TARGET_PLACEMENT_SCHEMA,
     HOVER_THRUST_PER_ROTOR_N,
     IDENTITY_MARKER_RADIUS_M,
     INITIAL_HOVER_RPS,
@@ -38,100 +52,90 @@ from rivermark_benchmark.isaac_capture import (
     OVERVIEW_WITNESS_FOCAL_LENGTH_MM,
     OVERVIEW_WITNESS_IMAGE_HEIGHT,
     OVERVIEW_WITNESS_IMAGE_WIDTH,
+    PRIVATE_TARGET_ORIGIN,
+    PRIVATE_TARGET_PLACEMENT_SCHEMA,
+    SWARM_AGENT_LITERAL_PRIM_PATHS,
+    CaptureStorageBudget,
     PrivateEvaluatorManifestError,
     RadarUnavailableError,
     SensorPhysicsSmokeReceiptError,
-    SWARM_AGENT_LITERAL_PRIM_PATHS,
-    _onboard_visual_intrusion_evidence,
-    _onboard_scene_content_evidence,
-    _onboard_semantic_frame_evidence,
-    _redact_private_target_metadata,
-    _target_semantic_visibility_evidence,
-    _target_semantic_slots,
-    _target_visibility_checkpoint_summary,
-    _target_visibility_rollout_summary,
-    _capture_target_visibility_execution_window,
-    _public_follow_view_from_body_pose,
-    _public_route_witness_schedule,
-    _public_route_witness_view_at_time_ns,
-    _require_onboard_visual_integrity,
-    _require_onboard_scene_content,
-    _require_overview_tracked_agent_visibility,
-    _set_public_follow_overview_view,
-    _set_public_route_witness_overview_view,
-    _LiteralUsdWorldPose,
-    _RuntimeTargetUsdObservation,
+    _acquire_capture_app_launcher_lease,
+    _artifact_identities,
     _audit_literal_city_lite_usd_spawn_poses,
     _audit_runtime_target_usd_authoring,
-    _runtime_target_sphere_prim,
-    _runtime_target_class_labels,
-    _city_lite_spawn_states,
+    _bind_sensor_physics_smoke_receipt,
+    _camera_mount_quat_wxyz,
+    _camera_pose_closure_from_usd,
+    _capture_quality_observations,
+    _capture_storage_budget,
+    _capture_target_visibility_execution_window,
+    _captured_frame_count,
     _city_lite_initial_root_states,
     _city_lite_initial_thruster_rps,
-    _verify_literal_city_lite_spawn,
-    _make_multirotor_cfgs,
-    _artifact_hashes,
-    _capture_quality_observations,
-    _camera_mount_quat_wxyz,
-    _captured_frame_count,
-    _capture_storage_budget,
-    _native_t2_motion_contract_for_capture,
-    _bind_sensor_physics_smoke_receipt,
-    _public_capture_failure,
-    _resolve_collection_binding,
-    _run_capture_preflight,
-    _overview_archive_frame_indices,
-    _acquire_capture_app_launcher_lease,
+    _city_lite_spawn_states,
     _close_capture_resources,
-    _evaluate_and_record_runtime_safety,
-    _enforce_system_commit_guard,
     _enforce_foreign_native_process_guard,
     _enforce_runtime_storage_guard,
-    _persist_receipt_snapshot,
-    _persist_terminal_capture_state,
+    _enforce_system_commit_guard,
+    _evaluate_and_record_runtime_safety,
     _failure_ledger_classification,
-    _record_raw_capture_attempt,
-    _sha256,
     _initial_route_heading_yaws_rad,
+    _LiteralUsdWorldPose,
     _look_at_quat_wxyz,
+    _make_multirotor_cfgs,
     _make_sensors,
-    _onboard_semantic_metadata,
-    _overview_city_content_evidence,
-    _persist_initial_overview_failure_diagnostics,
-    _overview_tracked_agent_visibility_evidence,
-    _require_overview_city_content,
-    _overview_view_spec,
-    _camera_pose_closure_from_usd,
+    _native_t2_motion_contract_for_capture,
     _onboard_camera_fabric_pose_diagnostic,
     _onboard_camera_frame_counter,
     _onboard_camera_mount_diagnostics,
+    _onboard_scene_content_evidence,
+    _onboard_semantic_frame_evidence,
+    _onboard_semantic_metadata,
+    _onboard_visual_intrusion_evidence,
+    _overview_archive_frame_indices,
+    _overview_city_content_evidence,
+    _overview_tracked_agent_visibility_evidence,
+    _overview_view_spec,
+    _persist_initial_overview_failure_diagnostics,
+    _persist_receipt_snapshot,
+    _persist_terminal_capture_state,
     _prepare_onboard_camera_local_mount,
-    _require_onboard_camera_render_read_fence,
-    _SensorUpdateTimeline,
-    _to_numpy,
+    _public_capture_failure,
+    _public_follow_view_from_body_pose,
+    _public_route_witness_schedule,
+    _public_route_witness_view_at_time_ns,
     _quat_rotate,
-    _world_camera_quat_from_usd_axes,
-    _velocity_yaw_controller_target,
+    _record_raw_capture_attempt,
+    _redact_private_target_metadata,
+    _require_onboard_camera_render_read_fence,
+    _require_onboard_scene_content,
+    _require_onboard_visual_integrity,
+    _require_overview_city_content,
+    _require_overview_tracked_agent_visibility,
+    _resolve_collection_binding,
+    _run_capture_preflight,
+    _runtime_target_class_labels,
+    _runtime_target_sphere_prim,
+    _RuntimeTargetUsdObservation,
+    _SensorUpdateTimeline,
+    _set_public_follow_overview_view,
+    _set_public_route_witness_overview_view,
+    _identity,
+    _target_semantic_slots,
+    _target_semantic_visibility_evidence,
+    _target_visibility_checkpoint_summary,
+    _target_visibility_rollout_summary,
+    _to_numpy,
     _validate_args,
     _validate_private_manifest_input,
+    _velocity_yaw_controller_target,
+    _verify_literal_city_lite_spawn,
+    _world_camera_quat_from_usd_axes,
     build_parser,
     main,
     validate_external_private_evaluator_manifest,
     validate_private_target_execution_window,
     validate_private_target_geometry,
-)
-from rivermark_benchmark.citylite_scene import (
-    AABB,
-    CITY_LITE_ROUTE_FAMILY_A_ID,
-    CITY_LITE_ROUTE_FAMILY_B_ID,
-    CITY_LITE_TARGET_REGION_A_ID,
-    PUBLIC_ROUTES_W_M,
-    aabb_geometry_sha256,
-    resolve_public_route_family,
-)
-from rivermark_benchmark.citylite_task import (
-    sample_private_targets,
-    target_visibility_geometry_contract,
 )
 from rivermark_benchmark.isaac_runtime_safety import (
     CONTACT_ABORT_FORCE_N,
@@ -140,7 +144,6 @@ from rivermark_benchmark.isaac_runtime_safety import (
     physics_time_ns,
     runtime_safety_receipt_template,
 )
-from rivermark_benchmark.failure_ledger import load_failure_ledger, summarize_failure_ledger
 from rivermark_benchmark.preflight import PreflightCheck, PreflightReport
 
 
@@ -256,15 +259,14 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             with patch(
                 "rivermark_benchmark.isaac_capture.shutil.disk_usage",
                 return_value=SimpleNamespace(free=0),
-            ):
-                with self.assertRaisesRegex(RuntimeError, "runtime storage reservation"):
-                    _enforce_runtime_storage_guard(
-                        args,
-                        receipt,
-                        phase="before_sensor_spool",
-                        output_dir=output,
-                        budget=budget,
-                    )
+            ), self.assertRaisesRegex(RuntimeError, "runtime storage reservation"):
+                _enforce_runtime_storage_guard(
+                    args,
+                    receipt,
+                    phase="before_sensor_spool",
+                    output_dir=output,
+                    budget=budget,
+                )
             guard = receipt["runtime_storage_guard"]
             self.assertIsInstance(guard, dict)
             self.assertFalse(guard["events"][0]["passed"])
@@ -324,8 +326,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
         return {
             "schema": "org.rivermark.evaluator-private-search-manifest.v1",
             "environment_id": "RIVERMARK_CITY_LITE_v1",
-            "city_lite_scene_contract_sha256": "a" * 64,
-            "city_lite_scene_payload_sha256": "b" * 64,
+            "city_lite_scene_contract_identity": "a" * 16,
+            "city_lite_scene_payload_identity": "b" * 16,
             "task_variant_id": "isaac-eight-agent-public-waypoint-search-v1",
             "sampled_before_policy_start": True,
             "route_conditioning": "public_only",
@@ -344,7 +346,7 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             "target_visibility_contract": target_visibility_geometry_contract(
                 route_family_id=CITY_LITE_ROUTE_FAMILY_A_ID,
                 routes_w_m=PUBLIC_ROUTES_W_M,
-                aabb_geometry_sha256=aabb_geometry_sha256(structural_aabbs),
+                aabb_geometry_identity=aabb_geometry_identity(structural_aabbs),
                 target_region_id=CITY_LITE_TARGET_REGION_A_ID,
                 visibility_bucket="direct-visible-v1",
             ),
@@ -390,9 +392,11 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             ("--overview-width", "15"),
         )
         for option, value in invalid:
-            with self.subTest(option=option, value=value):
-                with self.assertRaises(ValueError):
-                    _validate_args(self._args(option, value))
+            with (
+                self.subTest(option=option, value=value),
+                self.assertRaises(ValueError),
+            ):
+                _validate_args(self._args(option, value))
         with self.assertRaisesRegex(ValueError, "upstream CF2X hover trim"):
             _validate_args(self._args("--base-thrust", "0.085"))
 
@@ -448,8 +452,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             metadata = output / result["metadata_relative_path"]
             self.assertTrue(archive.is_file())
             self.assertTrue(metadata.is_file())
-            self.assertEqual(result["archive_sha256"], _sha256(archive))
-            self.assertEqual(result["metadata_sha256"], _sha256(metadata))
+            self.assertEqual(result["archive_identity"], _identity(archive))
+            self.assertEqual(result["metadata_identity"], _identity(metadata))
             with np.load(archive, allow_pickle=False) as stored:
                 np.testing.assert_array_equal(stored["rgb"], rgb)
                 np.testing.assert_array_equal(stored["distance_to_image_plane"], depth)
@@ -466,9 +470,11 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             ("--collection-episode-index", "0"),
         )
         for option, value in incomplete:
-            with self.subTest(option=option):
-                with self.assertRaisesRegex(ValueError, "must be provided together"):
-                    _validate_args(self._args(option, value))
+            with (
+                self.subTest(option=option),
+                self.assertRaisesRegex(ValueError, "must be provided together"),
+            ):
+                _validate_args(self._args(option, value))
         with self.assertRaisesRegex(ValueError, "non-negative"):
             _validate_args(
                 self._args(
@@ -618,13 +624,13 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 contract["route_timing_feasibility"]["vertical_speed_budget_mps"], 0.36
             )
 
-    def test_sensor_physics_smoke_binding_is_external_exact_and_fail_closed(self) -> None:
-        lock_sha256 = "a" * 64
+    def test_sensor_physics_smoke_binding_is_external_exact_and_strict(self) -> None:
+        lock_identity = "a" * 16
         source_revision = "b" * 40
-        source_tree_sha256 = "c" * 64
+        source_tree_identity = "c" * 16
         assets = {
-            "city_lite_contract_sha256": "d" * 64,
-            "cf2x_usd_sha256": "e" * 64,
+            "city_lite_contract_identity": "d" * 16,
+            "cf2x_usd_identity": "e" * 16,
         }
         runtime_lock = {
             "profile_id": "fixture-runtime",
@@ -633,19 +639,19 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
         payload = {
             "status": "passed",
             "resource_probe_profile": "full",
-            "runtime_lock_sha256": lock_sha256,
+            "runtime_lock_identity": lock_identity,
             "runtime_profile_id": "fixture-runtime",
             "source": {
                 "source_revision": source_revision,
-                "source_tree_sha256": source_tree_sha256,
+                "source_tree_identity": source_tree_identity,
                 "source_worktree_dirty": False,
             },
             "runtime_audit": {"observed": {"assets": dict(assets)}},
-            "scene": {"contract_sha256": assets["city_lite_contract_sha256"]},
+            "scene": {"contract_identity": assets["city_lite_contract_identity"]},
         }
         receipt = {
             "source_revision": source_revision,
-            "source_tree_sha256": source_tree_sha256,
+            "source_tree_identity": source_tree_identity,
             "source_worktree_dirty": False,
         }
         with tempfile.TemporaryDirectory() as temporary:
@@ -660,8 +666,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                     json.dumps(value, sort_keys=True) + "\n",
                     encoding="utf-8",
                 )
-                digest = "f" * 64 if stale_sidecar else _sha256(smoke)
-                smoke.with_suffix(".sha256").write_text(
+                digest = "f" * 16 if stale_sidecar else _identity(smoke)
+                smoke.with_suffix(".identity").write_text(
                     f"{digest}  isaac_smoke_receipt.json\n",
                     encoding="ascii",
                 )
@@ -679,8 +685,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 "rivermark_benchmark.isaac_smoke.validate_smoke_receipt",
                 return_value=(),
             ), patch(
-                "rivermark_benchmark.runtime_lock.runtime_lock_sha256",
-                return_value=lock_sha256,
+                "rivermark_benchmark.runtime_lock.runtime_lock_identity",
+                return_value=lock_identity,
             ):
                 _bind_sensor_physics_smoke_receipt(
                     args,
@@ -692,8 +698,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 receipt["capture_backend"],
                 {
                     "kind": "isaaclab",
-                    "build": f"isaaclab:fixture-runtime@sha256:{lock_sha256}",
-                    "sensor_physics_smoke_receipt_sha256": _sha256(smoke),
+                    "build": f"isaaclab:fixture-runtime@identity:{lock_identity}",
+                    "sensor_physics_smoke_receipt_identity": _identity(smoke),
                 },
             )
             self.assertFalse((output / "isaac_smoke_receipt.json").exists())
@@ -728,7 +734,7 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 ),
                 (
                     "runtime",
-                    {**payload, "runtime_lock_sha256": "0" * 64},
+                    {**payload, "runtime_lock_identity": "0" * 16},
                     (),
                     False,
                 ),
@@ -738,7 +744,7 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                         **payload,
                         "runtime_audit": {
                             "observed": {
-                                "assets": {**assets, "cf2x_usd_sha256": "0" * 64}
+                                "assets": {**assets, "cf2x_usd_identity": "0" * 16}
                             }
                         },
                     },
@@ -749,12 +755,12 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                     "scene_contract",
                     {
                         **payload,
-                        "scene": {"contract_sha256": "0" * 64},
+                        "scene": {"contract_identity": "0" * 16},
                     },
                     (),
                     False,
                 ),
-                ("tampered", payload, (), True),
+                ("altered", payload, (), True),
             )
             for name, candidate, validation_errors, stale_sidecar in rejected:
                 with self.subTest(name=name):
@@ -765,8 +771,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                         "rivermark_benchmark.isaac_smoke.validate_smoke_receipt",
                         return_value=validation_errors,
                     ), patch(
-                        "rivermark_benchmark.runtime_lock.runtime_lock_sha256",
-                        return_value=lock_sha256,
+                        "rivermark_benchmark.runtime_lock.runtime_lock_identity",
+                        return_value=lock_identity,
                     ), self.assertRaises(SensorPhysicsSmokeReceiptError):
                         _bind_sensor_physics_smoke_receipt(
                             args,
@@ -786,8 +792,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 "rivermark_benchmark.isaac_smoke.validate_smoke_receipt",
                 return_value=(),
             ), patch(
-                "rivermark_benchmark.runtime_lock.runtime_lock_sha256",
-                return_value=lock_sha256,
+                "rivermark_benchmark.runtime_lock.runtime_lock_identity",
+                return_value=lock_identity,
             ), self.assertRaisesRegex(
                 SensorPhysicsSmokeReceiptError,
                 "clean capture source tree",
@@ -815,11 +821,10 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             with patch(
                 "rivermark_benchmark.isaac_capture._windows_system_commit_snapshot",
                 return_value=snapshot,
-            ):
-                with self.assertRaisesRegex(RuntimeError, "95.65%"):
-                    _enforce_system_commit_guard(
-                        args, receipt, phase="before_app_launcher", output_dir=output
-                    )
+            ), self.assertRaisesRegex(RuntimeError, "95.65%"):
+                _enforce_system_commit_guard(
+                    args, receipt, phase="before_app_launcher", output_dir=output
+                )
             guard = receipt["system_commit_guard"]
             self.assertEqual(guard["status"], "active")
             self.assertEqual(guard["last_snapshot"], snapshot)
@@ -946,11 +951,10 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             with patch(
                 "rivermark_benchmark.isaac_capture._windows_system_commit_snapshot",
                 return_value=snapshot,
-            ):
-                with self.assertRaisesRegex(RuntimeError, "limit 82.00%"):
-                    _enforce_system_commit_guard(
-                        args, receipt, phase="after_reset", output_dir=output
-                    )
+            ), self.assertRaisesRegex(RuntimeError, "limit 82.00%"):
+                _enforce_system_commit_guard(
+                    args, receipt, phase="after_reset", output_dir=output
+                )
             guard = receipt["system_commit_guard"]
             self.assertEqual(guard["last_phase"], "after_reset")
             self.assertEqual(guard["maximum_observed_percent"], 82.0)
@@ -964,8 +968,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             _persist_receipt_snapshot(output, receipt)
             receipt_path = output / "capture_receipt.json"
             self.assertEqual(
-                (output / "capture_receipt.sha256").read_text(encoding="ascii"),
-                f"{_sha256(receipt_path)}  capture_receipt.json\n",
+                (output / "capture_receipt.identity").read_text(encoding="ascii"),
+                f"{_identity(receipt_path)}  capture_receipt.json\n",
             )
 
     def test_windows_commit_guard_uses_provided_snapshot_without_fabricating_peak(self) -> None:
@@ -1401,9 +1405,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             ),
         )
         for mutated in mutations:
-            with self.subTest(mutation=mutated[0]):
-                with self.assertRaises(RuntimeError):
-                    _audit_literal_city_lite_usd_spawn_poses(mutated)
+            with self.subTest(mutation=mutated[0]), self.assertRaises(RuntimeError):
+                _audit_literal_city_lite_usd_spawn_poses(mutated)
 
     def test_runtime_target_usd_audit_is_strict_and_receipt_safe(self) -> None:
         private_manifest = {
@@ -1579,13 +1582,15 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             ),
         )
         for name, mutated, message in mutations:
-            with self.subTest(mutation=name):
-                with self.assertRaisesRegex(RuntimeError, message):
-                    _audit_runtime_target_usd_authoring(mutated, private_manifest)
+            with (
+                self.subTest(mutation=name),
+                self.assertRaisesRegex(RuntimeError, message),
+            ):
+                _audit_runtime_target_usd_authoring(mutated, private_manifest)
 
     def test_runtime_target_sphere_prim_accepts_isaaclab_shape_root(self) -> None:
         class FakePrim:
-            def __init__(self, kind: str, children: tuple["FakePrim", ...] = ()) -> None:
+            def __init__(self, kind: str, children: tuple[FakePrim, ...] = ()) -> None:
                 self.kind = kind
                 self.children = children
 
@@ -1982,7 +1987,7 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 },
             )
             self.assertEqual(private_manifest.read_text(encoding="utf-8"), "{}\n")
-            checksum = (root / "capture_receipt.sha256").read_text(encoding="ascii")
+            checksum = (root / "capture_receipt.identity").read_text(encoding="ascii")
             self.assertTrue(checksum.endswith("  capture_receipt.json\n"))
 
     def test_existing_empty_output_directory_is_never_reused(self) -> None:
@@ -2084,7 +2089,7 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 "ok": True,
                 "collection_binding": {
                     "protocol_id": "citylite-coverage-v1",
-                    "protocol_sha256": "b" * 64,
+                    "protocol_identity": "b" * 16,
                     "cell_id": "train-route-0",
                     "split": "train",
                     "episode_index": 0,
@@ -2095,12 +2100,12 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
 
             stored = json.loads((root / "capture_receipt.json").read_text(encoding="utf-8"))
             self.assertEqual(stored["status"], "captured")
-            self.assertTrue((root / "capture_receipt.sha256").is_file())
+            self.assertTrue((root / "capture_receipt.identity").is_file())
             self.assertEqual(
-                stored["artifact_hashes"]["failure_diagnostics/initial_overview_native.npz"],
+                stored["artifact_identities"]["failure_diagnostics/initial_overview_native.npz"],
                 {
                     "bytes": len(b"native-overview-diagnostics"),
-                    "sha256": _sha256(diagnostic),
+                    "identity": _identity(diagnostic),
                 },
             )
             summary = summarize_failure_ledger(root.parent / "failure_ledger.jsonl")
@@ -2115,9 +2120,11 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             root = Path(temporary)
             receipt_path = root / "capture_receipt.json"
             receipt_path.write_text('{"previous": true}\n', encoding="utf-8")
-            with patch.object(Path, "replace", side_effect=OSError("injected replacement failure")):
-                with self.assertRaisesRegex(OSError, "injected replacement failure"):
-                    _persist_receipt_snapshot(root, {"status": "captured"})
+            with (
+                patch.object(Path, "replace", side_effect=OSError("injected replacement failure")),
+                self.assertRaisesRegex(OSError, "injected replacement failure"),
+            ):
+                _persist_receipt_snapshot(root, {"status": "captured"})
             self.assertEqual(receipt_path.read_text(encoding="utf-8"), '{"previous": true}\n')
             self.assertEqual(tuple(root.glob(".capture_receipt.json.*.tmp")), ())
 
@@ -2140,8 +2147,9 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 ),
                 source=None,
             )
-            with patch("rivermark_benchmark.preflight.run_preflight", return_value=report):
-                with patch(
+            with (
+                patch("rivermark_benchmark.preflight.run_preflight", return_value=report),
+                patch(
                     "rivermark_benchmark.isaac_capture.foreign_native_process_census",
                     return_value={
                         "schema": "org.rivermark.foreign-native-process-census.v1",
@@ -2151,20 +2159,21 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                         "candidate_private_commit_bytes": 0,
                         "maximum_candidate_private_commit_bytes": 0,
                     },
-                ):
-                    with patch("rivermark_benchmark.isaac_capture._capture") as capture:
-                        result = main(
-                            [
-                                "--output-dir",
-                                str(root),
-                                "--drone-usd",
-                                str(drone),
-                                "--evaluator-private-manifest",
-                                str(private_manifest),
-                                "--evaluator-private-manifest-retention-root",
-                                str(private_manifest.parent),
-                            ]
-                        )
+                ),
+                patch("rivermark_benchmark.isaac_capture._capture") as capture,
+            ):
+                result = main(
+                    [
+                        "--output-dir",
+                        str(root),
+                        "--drone-usd",
+                        str(drone),
+                        "--evaluator-private-manifest",
+                        str(private_manifest),
+                        "--evaluator-private-manifest-retention-root",
+                        str(private_manifest.parent),
+                    ]
+                )
             self.assertEqual(result, 1)
             capture.assert_not_called()
             receipt = json.loads((root / "capture_receipt.json").read_text(encoding="utf-8"))
@@ -2192,20 +2201,20 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must name a .json"):
                 _validate_private_manifest_input(output, (root / "private.bin").resolve())
 
-    def test_external_manifest_contract_and_placement_are_fail_closed(self) -> None:
+    def test_external_manifest_contract_and_placement_are_strict(self) -> None:
         manifest = self._external_manifest()
         targets = validate_external_private_evaluator_manifest(
             manifest,
-            city_lite_scene_contract_sha256="a" * 64,
-            city_lite_scene_payload_sha256="b" * 64,
+            city_lite_scene_contract_identity="a" * 16,
+            city_lite_scene_payload_identity="b" * 16,
         )
         self.assertEqual(len(targets), 4)
         report = validate_private_target_geometry(
             manifest,
             structural_aabbs=(AABB((-4.0, -4.0, 0.0), (4.0, 4.0, 19.0)),),
             public_routes_w_m=PUBLIC_ROUTES_W_M,
-            city_lite_scene_contract_sha256="a" * 64,
-            city_lite_scene_payload_sha256="b" * 64,
+            city_lite_scene_contract_identity="a" * 16,
+            city_lite_scene_payload_identity="b" * 16,
         )
         self.assertEqual(report["target_count"], 4)
 
@@ -2215,8 +2224,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
         with self.assertRaisesRegex(PrivateEvaluatorManifestError, "external private evaluator"):
             validate_external_private_evaluator_manifest(
                 manifest,
-                city_lite_scene_contract_sha256="a" * 64,
-                city_lite_scene_payload_sha256="b" * 64,
+                city_lite_scene_contract_identity="a" * 16,
+                city_lite_scene_payload_identity="b" * 16,
             )
 
         missing_visibility = self._external_manifest()
@@ -2224,8 +2233,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
         with self.assertRaisesRegex(PrivateEvaluatorManifestError, "target_visibility_contract"):
             validate_external_private_evaluator_manifest(
                 missing_visibility,
-                city_lite_scene_contract_sha256="a" * 64,
-                city_lite_scene_payload_sha256="b" * 64,
+                city_lite_scene_contract_identity="a" * 16,
+                city_lite_scene_payload_identity="b" * 16,
             )
 
     def test_private_target_visibility_uses_per_camera_slot_labels_and_redacts_ids(self) -> None:
@@ -2399,8 +2408,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 manifest,
                 structural_aabbs=(AABB((-4.0, -4.0, 0.0), (4.0, 4.0, 19.0)),),
                 public_routes_w_m=PUBLIC_ROUTES_W_M,
-                city_lite_scene_contract_sha256="a" * 64,
-                city_lite_scene_payload_sha256="b" * 64,
+                city_lite_scene_contract_identity="a" * 16,
+                city_lite_scene_payload_identity="b" * 16,
             )
         first["position_w_m"] = [0.0, 30.0, 12.0]
         with self.assertRaisesRegex(PrivateEvaluatorManifestError, "too close to a public route"):
@@ -2408,8 +2417,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
                 manifest,
                 structural_aabbs=(AABB((-4.0, -4.0, 0.0), (4.0, 4.0, 19.0)),),
                 public_routes_w_m=PUBLIC_ROUTES_W_M,
-                city_lite_scene_contract_sha256="a" * 64,
-                city_lite_scene_payload_sha256="b" * 64,
+                city_lite_scene_contract_identity="a" * 16,
+                city_lite_scene_payload_identity="b" * 16,
             )
 
     def test_artifact_inventory_excludes_self_referential_receipts(self) -> None:
@@ -2417,11 +2426,11 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
             root = Path(temporary)
             (root / "payload.bin").write_bytes(b"evidence")
             (root / "capture_receipt.json").write_text("{}", encoding="utf-8")
-            (root / "capture_receipt.sha256").write_text("stale", encoding="ascii")
-            hashes = _artifact_hashes(root)
-            self.assertEqual(set(hashes), {"payload.bin"})
-            self.assertEqual(hashes["payload.bin"]["bytes"], len(b"evidence"))
-            self.assertEqual(len(hashes["payload.bin"]["sha256"]), 64)
+            (root / "capture_receipt.identity").write_text("stale", encoding="ascii")
+            identities = _artifact_identities(root)
+            self.assertEqual(set(identities), {"payload.bin"})
+            self.assertEqual(identities["payload.bin"]["bytes"], len(b"evidence"))
+            self.assertEqual(len(identities["payload.bin"]["identity"]), 16)
 
     def test_sensor_value_conversion_copies_numpy_values_and_tensor_values(self) -> None:
         source = np.asarray([1.0, 2.0], dtype=np.float32)
@@ -2737,9 +2746,8 @@ class IsaacCaptureBoundaryTests(unittest.TestCase):
         )
         with patch(
             "rivermark_benchmark.isaac_capture.OVERVIEW_WITNESS_SHOTS", two_poses
-        ):
-            with self.assertRaisesRegex(RuntimeError, "exactly one frozen world pose"):
-                _public_route_witness_schedule()
+        ), self.assertRaisesRegex(RuntimeError, "exactly one frozen world pose"):
+            _public_route_witness_schedule()
 
     def test_receipt_quality_observations_capture_fixed_witness_camera_displacement(self) -> None:
         timestamps = np.asarray([1, 6_999_999_999, 7_000_000_000, 9_500_000_000], dtype=np.int64)

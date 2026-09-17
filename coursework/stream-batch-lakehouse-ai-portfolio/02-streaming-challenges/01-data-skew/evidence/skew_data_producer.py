@@ -26,7 +26,7 @@ items = [
 
 print(f"Name: {STUDENT_NAME}  Student ID: {STUDENT_ID}  Class: {CLASS_NO}")
 print(f"Kafka Topic: {TOPIC}")
-print(f"Data distribution: iPhone15 (90%), others (10%)")
+print("Data distribution: iPhone15 (90%), others (10%)")
 print("=" * 80)
 
 click_id = 1

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 
-
 from ._bootstrap import (
     BASE_ARMOR,
     BASE_HIT_SUCCESS_BY_NORMAL_HITS,
@@ -21,10 +20,11 @@ from ._bootstrap import (
     TARGET_REGISTRY,
     TARGET_WALL_ANGLE_RAD,
     YELLOW_BASE_XY,
-    args_cli
+    args_cli,
 )
 from .costmap import wrap_angle
 from .laser import line_blocked_by_wall
+
 
 def opponent_team(team: str) -> str:
     return "blue" if team == "yellow" else "yellow"

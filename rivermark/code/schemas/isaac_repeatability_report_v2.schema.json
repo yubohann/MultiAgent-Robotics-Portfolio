@@ -17,7 +17,7 @@
     "candidate",
     "metrics",
     "failed_metric_count",
-    "report_payload_sha256"
+    "report_payload_identity"
   ],
   "properties": {
     "schema": {"const": "org.rivermark.isaac-repeatability-report.v2"},
@@ -28,20 +28,20 @@
     "analyzer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["implementation", "implementation_sha256", "semantic_comparison"],
+      "required": ["implementation", "implementation_identity", "semantic_comparison"],
       "properties": {
         "implementation": {"const": "rivermark_benchmark.repeatability"},
-        "implementation_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "implementation_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "semantic_comparison": {"const": "camera_local_frame_aligned_class_and_public_agent_id"}
       }
     },
     "profile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["profile_id", "sha256", "semantic_identity", "thresholds"],
+      "required": ["profile_id", "identity", "semantic_identity", "thresholds"],
       "properties": {
         "profile_id": {"type": "string", "minLength": 1},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "semantic_identity": {
           "type": "object",
           "additionalProperties": false,
@@ -50,7 +50,7 @@
             "source": {"const": "frame_aligned_public_id_to_labels"},
             "key_fields": {"const": ["class", "agent_id"]},
             "camera_local": {"const": true},
-            "unmapped_id_policy": {"const": "fail_closed"}
+            "unmapped_id_policy": {"const": "strict"}
           }
         },
         "thresholds": {
@@ -66,18 +66,18 @@
       "required": [
         "collection_binding",
         "source_revision",
-        "source_tree_sha256",
-        "evaluator_manifest_sha256",
+        "source_tree_identity",
+        "evaluator_manifest_identity",
         "runtime_lock",
-        "capture_configuration_sha256"
+        "capture_configuration_identity"
       ],
       "properties": {
         "collection_binding": {"$ref": "#/$defs/collection_binding"},
         "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
-        "source_tree_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "evaluator_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_tree_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+        "evaluator_manifest_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "runtime_lock": {"type": "object", "minProperties": 1},
-        "capture_configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        "capture_configuration_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"}
       }
     },
     "reference": {"$ref": "#/$defs/capture"},
@@ -95,10 +95,10 @@
       }
     },
     "failed_metric_count": {"type": "integer", "minimum": 0},
-    "report_payload_sha256": {
-      "description": "SHA-256 of canonical JSON with this field present and set to the empty string.",
+    "report_payload_identity": {
+      "description": "IDENTITY of canonical JSON with this field present and set to the empty string.",
       "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
+      "pattern": "^[0-9a-f]{16}$"
     }
   },
   "$defs": {
@@ -107,7 +107,7 @@
       "additionalProperties": false,
       "required": [
         "protocol_id",
-        "protocol_sha256",
+        "protocol_identity",
         "cell_id",
         "split",
         "episode_index",
@@ -115,7 +115,7 @@
       ],
       "properties": {
         "protocol_id": {"type": "string", "minLength": 1},
-        "protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "protocol_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "cell_id": {"type": "string", "minLength": 1},
         "split": {"enum": ["train", "validation", "test"]},
         "episode_index": {"type": "integer", "minimum": 0},
@@ -127,14 +127,14 @@
       "additionalProperties": false,
       "required": [
         "capture_attempt_id",
-        "capture_receipt_sha256",
-        "independent_validation_sha256",
+        "capture_receipt_identity",
+        "independent_validation_identity",
         "resources"
       ],
       "properties": {
         "capture_attempt_id": {"type": "string", "minLength": 1},
-        "capture_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "independent_validation_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "capture_receipt_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+        "independent_validation_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "resources": {
           "type": "object",
           "additionalProperties": false,

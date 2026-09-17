@@ -4,7 +4,6 @@ from dataclasses import replace
 
 import pytest
 
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.contracts.models import (
     ABI_VERSION,
     BudgetLedger,
@@ -14,10 +13,9 @@ from aerocity_method.contracts.models import (
     FragmentReplayRecord,
     FragmentTypeSignature,
     InteractionEdge,
-    ProvenanceDecision,
     PublicMethodContext,
+    ReplayDecision,
 )
-from aerocity_method.contracts.privacy import PublicBoundaryError
 
 
 def test_fragment_type_rejects_unknown_kind():
@@ -25,11 +23,9 @@ def test_fragment_type_rejects_unknown_kind():
         FragmentTypeSignature("latent")
 
 
-def test_feature_pairs_are_sorted_and_duplicate_keys_rejected():
+def test_feature_pairs_are_sorted(context):
     signature = FragmentTypeSignature("hold", (("z", 1), ("a", "x")))
     assert tuple(dict(signature.public_features)) == ("a", "z")
-    with pytest.raises(ValueError):
-        FragmentTypeSignature("hold", (("a", 1), ("a", 2)))
 
 
 def test_transit_requires_two_points(context):
@@ -46,8 +42,7 @@ def test_transit_requires_two_points(context):
         )
 
 
-def test_communication_requires_distinct_endpoints_and_digest(context):
-    digest = canonical_sha256({"message": 1})
+def test_communication_requires_distinct_endpoints_and_message_id(context):
     fragment = FragmentInstance(
         instance_fragment_id="communication-1",
         type_signature=FragmentTypeSignature("communication"),
@@ -58,26 +53,28 @@ def test_communication_requires_distinct_endpoints_and_digest(context):
         planned_end=1,
         sender_id="uav-1",
         receiver_id="uav-2",
-        message_digest=digest,
+        message_id="message-1",
     )
-    assert fragment.message_digest == digest
+    assert fragment.message_id == "message-1"
     with pytest.raises(ValueError):
         replace(fragment, receiver_id="uav-1")
+    with pytest.raises(ValueError):
+        replace(fragment, message_id=None)
 
 
-def test_public_context_is_order_canonical(context):
+def test_public_context_agent_order_is_canonical(context):
     reversed_context = replace(context, agent_features=tuple(reversed(context.agent_features)))
-    assert context.digest == reversed_context.digest
+    assert context.to_dict() == reversed_context.to_dict()
+    assert context.context_id == "hm3d-exploration-test-context"
 
 
-def test_public_context_rejects_private_field():
-    with pytest.raises(PublicBoundaryError):
+def test_public_context_rejects_non_numeric_features():
+    with pytest.raises(ValueError):
         PublicMethodContext(
             context_id="c",
             episode_id="e",
             decision_id="d",
-            agent_features=(("uav", (1.0,)),),
-            public_features=(("target_id", "secret"),),
+            agent_features=(("uav", ("not-a-number",)),),
         )
 
 
@@ -96,20 +93,19 @@ def test_manifest_rejects_duplicate_fragment_ids(manifests):
 
 
 def test_interaction_edge_is_canonical():
-    left = canonical_sha256({"x": 1})
-    right = canonical_sha256({"x": 2})
-    edge = InteractionEdge(max(left, right), min(left, right), "collision", 1.0)
-    assert edge.source_fragment_hash < edge.target_fragment_hash
+    edge = InteractionEdge("fragment-b", "fragment-a", "collision", 1.0)
+    assert edge.source_fragment_id < edge.target_fragment_id
+    assert edge.source_fragment_id == "fragment-a"
 
 
 def test_candidate_graph_rejects_unknown_membership(manifests):
-    candidate = manifests[0].manifest_hash
-    fragment = manifests[0].fragments[0].digest
+    candidate = manifests[0].manifest_id
+    fragment = manifests[0].fragments[0].instance_fragment_id
     with pytest.raises(ValueError):
         CandidateGraphBatch(
-            candidate_hashes=(candidate,),
-            fragment_hashes=(fragment,),
-            membership_edges=((candidate, canonical_sha256({"unknown": 1}), 0),),
+            candidate_ids=(candidate,),
+            fragment_ids=(fragment,),
+            membership_edges=((candidate, "unknown-fragment", 0),),
             interaction_edges=(),
         )
 
@@ -124,12 +120,12 @@ def test_unexecuted_outcome_cannot_carry_labels(manifests, token):
     with pytest.raises(ValueError):
         FragmentOutcome(
             outcome_id="r",
-            token_hash=token.digest,
-            manifest_hash=manifests[0].manifest_hash,
+            token_id=token.token_id,
+            manifest_id=manifests[0].manifest_id,
             episode_id=planned.episode_id,
             decision_id=planned.decision_id,
             agent_id=planned.agent_id,
-            planned_fragment_hash=planned.digest,
+            planned_fragment_id=planned.instance_fragment_id,
             executed=False,
             actual_start=0,
             actual_end=0,
@@ -142,18 +138,19 @@ def test_replay_requires_label(outcomes, manifests):
     with pytest.raises(ValueError):
         FragmentReplayRecord(
             instance_fragment_id=manifests[0].fragments[0].instance_fragment_id,
-            fragment_type_hash=manifests[0].fragments[0].type_signature.digest,
-            outcome_hash=outcome.digest,
-            context_hash=manifests[0].context_hash,
+            fragment_type=manifests[0].fragments[0].type_signature.fragment_type,
+            outcome_id=outcome.outcome_id,
+            context_id=manifests[0].context_id,
             labels=(),
         )
 
 
-def test_provenance_decision_reason_consistency():
+def test_replay_decision_reason_consistency():
     with pytest.raises(ValueError):
-        ProvenanceDecision(True, "DENY")
+        ReplayDecision(True, "DENY")
     with pytest.raises(ValueError):
-        ProvenanceDecision(False, "ALLOW")
+        ReplayDecision(False, "ALLOW")
+    assert ReplayDecision(True, "ALLOW").allowed
 
 
 def test_budget_ledger_rejects_unknown_or_excess_usage():

@@ -1,4 +1,4 @@
-"""Fail-closed assembly of the target-free HM3D P07 exploration matrix."""
+"""Assembly of the target-free HM3D P07 exploration matrix."""
 
 from __future__ import annotations
 
@@ -7,15 +7,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from aerocity_method.contracts import FORMAL_FLEET_SIZE
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
 from aerocity_method.contracts.hm3d_public_schema import (
     PUBLIC_CANDIDATE_POOL_SCHEMA_VERSION,
     PUBLIC_TASK_RESERVATION_SCHEMA_VERSION,
     require_current_public_schema,
 )
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.evaluation.hm3d_communication_contract import HM3DCommunicationContract
-from aerocity_method.evaluation.hm3d_preflight import PRIMARY_METRIC, TASK_VALIDITY_METHODS
 
+PRIMARY_METRIC = "Explored-Free-Flight-Volume-AUC_time"
+TASK_VALIDITY_METHODS = ("random", "frontier_3d", "auction")
 P07_MATRIX_PILOT_SCHEMA_VERSION = "hm3d-p07-exploration-pilot-v3"
 MINIMUM_ACTION_BUDGET_UTILIZATION = 0.95
 _RAW_SCHEMA_VERSIONS = frozenset(
@@ -55,11 +56,8 @@ def _mapping(value: Any, name: str) -> Mapping[str, Any]:
     return value
 
 
-def _sha(value: Any, name: str) -> str:
-    if not isinstance(value, str) or len(value) != 64:
-        raise ValueError(f"{name} must be a SHA-256 digest")
-    int(value, 16)
-    return value
+def _require_id(value: Any, name: str) -> str:
+    return require_identifier(value, name)
 
 
 def _integer(value: Any, name: str, *, minimum: int = 0) -> int:
@@ -123,7 +121,7 @@ def _execution_payload(payload: Mapping[str, Any]) -> Mapping[str, Any]:
         "total_energy_used_j": sum(
             float(row.get("energy_j", 0.0)) for row in outcomes if isinstance(row, Mapping)
         ),
-        "outcome_hashes": [outcome.get("outcome_id")],
+        "outcome_ids": [outcome.get("outcome_id")],
     }
 
 
@@ -160,17 +158,17 @@ class P07ProbeRecord:
     """One target-free public worker result."""
 
     method_id: str
-    raw_record_sha256: str
+    raw_record_id: str
     partition: str
     scene_id: str
     public_episode_id: str
-    public_context_hash: str
-    public_candidate_pool_hash: str
+    public_context_id: str
+    public_candidate_pool_id: str
     candidate_pool_schema_version: str
     task_reservation_schema_version: str
-    public_contract_sha256: str
-    evaluation_denominator_sha256: str
-    evaluation_geometry_denominator_sha256: str
+    public_contract_id: str
+    evaluation_denominator_id: str
+    evaluation_geometry_denominator_id: str
     fleet_size: int
     action_budget_s: float
     elapsed_physics_s: float
@@ -179,7 +177,7 @@ class P07ProbeRecord:
     candidate_limit: int
     physics_dt_s: float
     outcome_time_tolerance_s: float
-    communication_contract_sha256: str
+    communication_contract_id: str
     communication_mode: str
     relay_telemetry_sample_count: int
     relay_connected_telemetry_sample_count: int
@@ -205,24 +203,21 @@ class P07ProbeRecord:
 
     def __post_init__(self) -> None:
         require_identifier(self.method_id, "method_id")
-        _sha(self.raw_record_sha256, "raw_record_sha256")
+        _require_id(self.raw_record_id, "raw_record_id")
         if self.partition not in {"train", "validation"}:
             raise ValueError("P07 pilot may only use train or validation")
         for name in (
             "scene_id",
             "public_episode_id",
-            "public_context_hash",
-            "public_candidate_pool_hash",
-            "public_contract_sha256",
-            "evaluation_denominator_sha256",
-            "evaluation_geometry_denominator_sha256",
-            "communication_contract_sha256",
+            "public_context_id",
+            "public_candidate_pool_id",
+            "public_contract_id",
+            "evaluation_denominator_id",
+            "evaluation_geometry_denominator_id",
+            "communication_contract_id",
         ):
             value = getattr(self, name)
-            if name.endswith("hash") or name.endswith("sha256"):
-                _sha(value, name)
-            else:
-                require_identifier(value, name)
+            require_identifier(value, name)
         if self.candidate_pool_schema_version != PUBLIC_CANDIDATE_POOL_SCHEMA_VERSION:
             raise ValueError("P07 probes require the current public candidate-pool schema")
         if self.task_reservation_schema_version != PUBLIC_TASK_RESERVATION_SCHEMA_VERSION:
@@ -318,14 +313,10 @@ class P07ProbeRecord:
         if decision_count < minimum_decisions:
             raise ValueError("P07 exploration probes require at least two online decisions")
         context = _mapping(payload.get("public_context"), "public_context")
-        context_hash = _sha(payload.get("public_context_hash"), "public_context_hash")
-        if canonical_sha256(context) != context_hash:
-            raise ValueError("public context payload does not match public_context_hash")
-        raw_hash = _sha(payload.get("runtime_record_sha256"), "runtime_record_sha256")
-        unsigned = dict(payload)
-        unsigned.pop("runtime_record_sha256", None)
-        if canonical_sha256(unsigned) != raw_hash:
-            raise ValueError("P07 worker record SHA-256 does not match its contents")
+        context_id = _require_id(payload.get("public_context_id"), "public_context_id")
+        if context.get("context_id") != context_id:
+            raise ValueError("public context does not match public_context_id")
+        raw_id = _require_id(payload.get("runtime_record_id"), "runtime_record_id")
         require_current_public_schema(payload, context="P07 worker record")
         status = payload.get("status")
         if status not in {_COMPLETE_STATUS, _FAILED_STATUS}:
@@ -333,26 +324,24 @@ class P07ProbeRecord:
         denominator = _mapping(payload.get("evaluation_denominator"), "evaluation_denominator")
         if denominator.get("schema_version") != "hm3d-reachable-evaluation-denominator-v1":
             raise ValueError("P07 worker does not use the reachable-component denominator schema")
-        denominator_hash = _sha(
-            payload.get("evaluation_denominator_sha256"), "evaluation_denominator_sha256"
+        denominator_id = _require_id(
+            payload.get("evaluation_denominator_id"), "evaluation_denominator_id"
         )
-        if denominator.get("denominator_sha256") != denominator_hash:
-            raise ValueError("P07 reachable denominator payload does not match its hash")
         for field in (
-            "metadata_sha256",
-            "mask_sha256",
-            "geometry_evaluation_denominator_sha256",
-            "flight_space_manifest_hash",
-            "source_geometry_sha256",
-            "collision_geometry_sha256",
-            "start_reset_manifest_sha256",
+            "metadata_id",
+            "mask_id",
+            "geometry_evaluation_denominator_id",
+            "flight_space_manifest_id",
+            "source_geometry_id",
+            "collision_geometry_id",
+            "start_reset_manifest_id",
         ):
-            _sha(denominator.get(field), f"evaluation_denominator.{field}")
-        geometry_denominator_hash = _sha(
-            payload.get("evaluation_geometry_denominator_sha256"),
-            "evaluation_geometry_denominator_sha256",
+            _require_id(denominator.get(field), f"evaluation_denominator.{field}")
+        geometry_denominator_id = _require_id(
+            payload.get("evaluation_geometry_denominator_id"),
+            "evaluation_geometry_denominator_id",
         )
-        if denominator.get("geometry_evaluation_denominator_sha256") != geometry_denominator_hash:
+        if denominator.get("geometry_evaluation_denominator_id") != geometry_denominator_id:
             raise ValueError("P07 episode denominator does not bind its P04 geometry denominator")
         component_ids = denominator.get("component_ids")
         start_component_ids = denominator.get("start_component_ids")
@@ -373,18 +362,20 @@ class P07ProbeRecord:
         reachable_volume_m3 = finite_number(
             denominator.get("reachable_volume_m3"), "reachable denominator volume"
         )
-        resolution_m = finite_number(denominator.get("resolution_m"), "reachable denominator resolution")
+        resolution_m = finite_number(
+            denominator.get("resolution_m"), "reachable denominator resolution"
+        )
         if resolution_m <= 0.0 or reachable_volume_m3 <= 0.0:
             raise ValueError("P07 reachable denominator geometry must be positive")
         if abs(reachable_volume_m3 - reachable_voxels * resolution_m**3) > 1.0e-9:
             raise ValueError("P07 reachable denominator volume disagrees with voxel count")
         contract_payload = _mapping(payload.get("communication_contract"), "communication_contract")
         contract = HM3DCommunicationContract(contract_payload)
-        contract_hash = _sha(
-            payload.get("communication_contract_sha256"), "communication_contract_sha256"
+        contract_id = _require_id(
+            payload.get("communication_contract_id"), "communication_contract_id"
         )
-        if contract.digest != contract_hash:
-            raise ValueError("communication contract payload does not match its SHA-256")
+        if contract.contract_id != contract_id:
+            raise ValueError("communication contract payload does not match its ID")
         communication, delivery = _communication_payload(payload)
         audit = contract.audit_worker_evidence(communication, delivery)
         if audit["passed"] is not True:
@@ -412,23 +403,23 @@ class P07ProbeRecord:
         executed = int(not (failed or timeout))
         return cls(
             method_id=method_id,
-            raw_record_sha256=raw_hash,
+            raw_record_id=raw_id,
             partition=str(payload.get("selection_partition")),
             scene_id=str(payload.get("scene_id")),
             public_episode_id=str(payload.get("public_episode_id") or context.get("episode_id")),
-            public_context_hash=context_hash,
-            public_candidate_pool_hash=_sha(
-                payload.get("public_candidate_pool_hash"), "public_candidate_pool_hash"
+            public_context_id=context_id,
+            public_candidate_pool_id=_require_id(
+                payload.get("public_candidate_pool_id"), "public_candidate_pool_id"
             ),
             candidate_pool_schema_version=str(payload.get("candidate_pool_schema_version")),
             task_reservation_schema_version=str(payload.get("task_reservation_schema_version")),
-            public_contract_sha256=_sha(
-                payload.get("public_contract_sha256"), "public_contract_sha256"
+            public_contract_id=_require_id(
+                payload.get("public_contract_id"), "public_contract_id"
             ),
-            evaluation_denominator_sha256=_sha(
-                payload.get("evaluation_denominator_sha256"), "evaluation_denominator_sha256"
+            evaluation_denominator_id=_require_id(
+                payload.get("evaluation_denominator_id"), "evaluation_denominator_id"
             ),
-            evaluation_geometry_denominator_sha256=geometry_denominator_hash,
+            evaluation_geometry_denominator_id=geometry_denominator_id,
             fleet_size=_integer(payload.get("fleet_size"), "fleet_size", minimum=1),
             action_budget_s=finite_number(payload.get("action_budget_s"), "action_budget_s"),
             elapsed_physics_s=finite_number(payload.get("elapsed_physics_s"), "elapsed_physics_s"),
@@ -441,7 +432,7 @@ class P07ProbeRecord:
             outcome_time_tolerance_s=finite_number(
                 payload.get("outcome_time_tolerance_s", 0.25), "outcome_time_tolerance_s"
             ),
-            communication_contract_sha256=contract_hash,
+            communication_contract_id=contract_id,
             communication_mode=str(audit["mode"]),
             relay_telemetry_sample_count=_integer(
                 audit["relay_telemetry_sample_count"],
@@ -513,8 +504,8 @@ class P07ProbeRecord:
                     _integer(
                         execution.get(
                             "outcome_count",
-                            len(execution.get("outcome_hashes", []))
-                            if isinstance(execution.get("outcome_hashes"), list)
+                            len(execution.get("outcome_ids", []))
+                            if isinstance(execution.get("outcome_ids"), list)
                             else 0,
                         ),
                         "outcome_count",
@@ -524,7 +515,7 @@ class P07ProbeRecord:
         )
 
     def to_preflight_row(
-        self, *, budget_sha256: str, sensor_profile_sha256: str
+        self, *, budget_id: str, sensor_profile_id: str
     ) -> dict[str, object]:
         return {
             "method_id": self.method_id,
@@ -532,14 +523,14 @@ class P07ProbeRecord:
             "reads_private_truth": False,
             "oracle_only": False,
             "ranked": True,
-            "budget_sha256": _sha(budget_sha256, "budget_sha256"),
-            "sensor_profile_sha256": _sha(sensor_profile_sha256, "sensor_profile_sha256"),
-            "public_contract_sha256": self.public_contract_sha256,
+            "budget_id": _require_id(budget_id, "budget_id"),
+            "sensor_profile_id": _require_id(sensor_profile_id, "sensor_profile_id"),
+            "public_contract_id": self.public_contract_id,
             "candidate_pool_schema_version": self.candidate_pool_schema_version,
             "task_reservation_schema_version": self.task_reservation_schema_version,
-            "evaluation_denominator_sha256": self.evaluation_denominator_sha256,
-            "evaluation_geometry_denominator_sha256": self.evaluation_geometry_denominator_sha256,
-            "communication_contract_sha256": self.communication_contract_sha256,
+            "evaluation_denominator_id": self.evaluation_denominator_id,
+            "evaluation_geometry_denominator_id": self.evaluation_geometry_denominator_id,
+            "communication_contract_id": self.communication_contract_id,
             "communication_contract_passed": self.communication_contract_passed,
             "relay_connected_telemetry_sample_fraction": (
                 self.relay_connected_telemetry_sample_fraction
@@ -564,12 +555,12 @@ class P07ProbeRecord:
     def public_diagnostics(self) -> dict[str, object]:
         return {
             "method_id": self.method_id,
-            "raw_record_sha256": self.raw_record_sha256,
-            "public_contract_sha256": self.public_contract_sha256,
+            "raw_record_id": self.raw_record_id,
+            "public_contract_id": self.public_contract_id,
             "candidate_pool_schema_version": self.candidate_pool_schema_version,
             "task_reservation_schema_version": self.task_reservation_schema_version,
-            "evaluation_denominator_sha256": self.evaluation_denominator_sha256,
-            "evaluation_geometry_denominator_sha256": self.evaluation_geometry_denominator_sha256,
+            "evaluation_denominator_id": self.evaluation_denominator_id,
+            "evaluation_geometry_denominator_id": self.evaluation_geometry_denominator_id,
             "metric": PRIMARY_METRIC,
             "auc": self.explored_free_flight_volume_auc_time,
             "final_coverage": self.final_coverage_at_budget,
@@ -584,14 +575,14 @@ def assemble_p07_task_validity_pilot(
     probes: Sequence[P07ProbeRecord],
     *,
     matrix_run_id: str,
-    sensor_profile_sha256: str,
-    communication_contract_sha256: str,
+    sensor_profile_id: str,
+    communication_contract_id: str,
 ) -> dict[str, object]:
     """Assemble one paired development matrix; it never closes P07 by itself."""
 
     require_identifier(matrix_run_id, "matrix_run_id")
-    sensor_hash = _sha(sensor_profile_sha256, "sensor_profile_sha256")
-    communication_hash = _sha(communication_contract_sha256, "communication_contract_sha256")
+    sensor_id = _require_id(sensor_profile_id, "sensor_profile_id")
+    communication_id = _require_id(communication_contract_id, "communication_contract_id")
     rows = tuple(probes)
     by_method = {row.method_id: row for row in rows}
     if len(by_method) != len(rows) or tuple(by_method) != TASK_VALIDITY_METHODS:
@@ -600,19 +591,19 @@ def assemble_p07_task_validity_pilot(
         "partition",
         "scene_id",
         "public_episode_id",
-        "public_context_hash",
-        "public_candidate_pool_hash",
+        "public_context_id",
+        "public_candidate_pool_id",
         "candidate_pool_schema_version",
         "task_reservation_schema_version",
-        "public_contract_sha256",
-        "evaluation_denominator_sha256",
-        "evaluation_geometry_denominator_sha256",
+        "public_contract_id",
+        "evaluation_denominator_id",
+        "evaluation_geometry_denominator_id",
         "fleet_size",
         "action_budget_s",
         "candidate_limit",
         "physics_dt_s",
         "outcome_time_tolerance_s",
-        "communication_contract_sha256",
+        "communication_contract_id",
         "communication_mode",
     )
     anchor = rows[0]
@@ -620,36 +611,31 @@ def assemble_p07_task_validity_pilot(
         drift = [name for name in pairing_fields if getattr(row, name) != getattr(anchor, name)]
         if drift:
             raise ValueError(f"P07 pilot is not a paired task matrix; drifted={drift}")
-    if anchor.communication_contract_sha256 != communication_hash:
-        raise ValueError("P07 assembler communication hash differs from worker contract")
+    if anchor.communication_contract_id != communication_id:
+        raise ValueError("P07 assembler communication id differs from worker contract")
     budget_payload = {
         "fleet_size": anchor.fleet_size,
         "action_budget_s": anchor.action_budget_s,
         "candidate_limit": anchor.candidate_limit,
         "physics_dt_s": anchor.physics_dt_s,
         "outcome_time_tolerance_s": anchor.outcome_time_tolerance_s,
-        "sensor_profile_sha256": sensor_hash,
-        "communication_contract_sha256": communication_hash,
+        "sensor_profile_id": sensor_id,
+        "communication_contract_id": communication_id,
     }
-    budget_sha256 = canonical_sha256(budget_payload)
+    budget_id = f"budget:{anchor.action_budget_s}s:{anchor.candidate_limit}c"
     preflight_payload = {
         "evidence_class": "real_runtime_measurement",
         "runtime_run_id": matrix_run_id,
-        "runtime_command_sha256": canonical_sha256(
-            {
-                "matrix_run_id": matrix_run_id,
-                "raw_record_sha256": [row.raw_record_sha256 for row in rows],
-            }
-        ),
+        "runtime_command_id": f"runtime-command:{matrix_run_id}:{len(rows)}-records",
         "partition": anchor.partition,
-        "budget_sha256": budget_sha256,
-        "sensor_profile_sha256": sensor_hash,
-        "public_contract_sha256": anchor.public_contract_sha256,
-        "evaluation_denominator_sha256": anchor.evaluation_denominator_sha256,
-        "evaluation_geometry_denominator_sha256": anchor.evaluation_geometry_denominator_sha256,
+        "budget_id": budget_id,
+        "sensor_profile_id": sensor_id,
+        "public_contract_id": anchor.public_contract_id,
+        "evaluation_denominator_id": anchor.evaluation_denominator_id,
+        "evaluation_geometry_denominator_id": anchor.evaluation_geometry_denominator_id,
         "primary_metric": PRIMARY_METRIC,
         "rows": [
-            row.to_preflight_row(budget_sha256=budget_sha256, sensor_profile_sha256=sensor_hash)
+            row.to_preflight_row(budget_id=budget_id, sensor_profile_id=sensor_id)
             for row in rows
         ],
         "task_validity_passed": False,
@@ -669,15 +655,15 @@ def assemble_p07_task_validity_pilot(
             "scene_id": anchor.scene_id,
             "partition": anchor.partition,
             "public_episode_id": anchor.public_episode_id,
-            "public_context_hash": anchor.public_context_hash,
-            "public_candidate_pool_hash": anchor.public_candidate_pool_hash,
+            "public_context_id": anchor.public_context_id,
+            "public_candidate_pool_id": anchor.public_candidate_pool_id,
             "candidate_pool_schema_version": anchor.candidate_pool_schema_version,
             "task_reservation_schema_version": anchor.task_reservation_schema_version,
-            "public_contract_sha256": anchor.public_contract_sha256,
-            "evaluation_denominator_sha256": anchor.evaluation_denominator_sha256,
-            "evaluation_geometry_denominator_sha256": anchor.evaluation_geometry_denominator_sha256,
+            "public_contract_id": anchor.public_contract_id,
+            "evaluation_denominator_id": anchor.evaluation_denominator_id,
+            "evaluation_geometry_denominator_id": anchor.evaluation_geometry_denominator_id,
         },
-        "budget_contract": {**budget_payload, "budget_sha256": budget_sha256},
+        "budget_contract": {**budget_payload, "budget_id": budget_id},
         "preflight_payload_candidate": preflight_payload,
         "raw_probe_diagnostics": [row.public_diagnostics() for row in rows],
     }

@@ -54,7 +54,7 @@ class DepthVisualizer(Node):
                 normalized = (self.max_depth - min(self.max_depth, value)) / (
                     self.max_depth - self.min_depth
                 )
-                output[row * width + column] = int(round(255.0 * normalized))
+                output[row * width + column] = round(255.0 * normalized)
 
         visualized = Image()
         visualized.header = message.header

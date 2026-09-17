@@ -6,7 +6,9 @@ from aerocity_method.contracts.models import FragmentInstance, FragmentTypeSigna
 from aerocity_method.runtime.hm3d_cf2x_execution import _finalize_fragment_pair_into
 
 
-def _fragment(fragment_id: str, fragment_type: str, path: tuple[tuple[float, float, float], ...]) -> FragmentInstance:
+def _fragment(
+    fragment_id: str, fragment_type: str, path: tuple[tuple[float, float, float], ...]
+) -> FragmentInstance:
     return FragmentInstance(
         instance_fragment_id=fragment_id,
         type_signature=FragmentTypeSignature(
@@ -55,7 +57,7 @@ def test_finalize_fragment_pair_records_transit_and_observation_provenance() -> 
     assert len(ledger) == 2
     transit_sample, observe_sample = ledger
     assert transit_sample.executed is True
-    assert transit_sample.planned_fragment_hash == transit.digest
+    assert transit_sample.planned_fragment_id == transit.instance_fragment_id
     assert transit_sample.actual_path_m == (
         (0.0, 0.0, 1.0),
         (1.0, 0.0, 1.0),
@@ -63,7 +65,7 @@ def test_finalize_fragment_pair_records_transit_and_observation_provenance() -> 
     )
     assert transit_sample.energy_used_j == 3.5
     assert observe_sample.executed is True
-    assert observe_sample.planned_fragment_hash == observe.digest
+    assert observe_sample.planned_fragment_id == observe.instance_fragment_id
     assert observe_sample.source_observation_id == "range-abc-uav0-0001"
     assert observe_sample.source_observation_agent_id == "uav0"
     assert observe_sample.range_ok is True

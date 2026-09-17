@@ -1,7 +1,6 @@
 import time
 
 import pytest
-
 from robocon_camera_yolo_adapter.camera_yolo_adapter import (
     normalize_legacy_candidate,
     observation_to_json,

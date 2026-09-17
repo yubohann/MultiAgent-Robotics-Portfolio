@@ -1,35 +1,21 @@
-from __future__ import annotations
-
 """Training helpers for the multi-agent 2D gate experiment."""
 
+from __future__ import annotations
 
-import json
-import math
 from pathlib import Path
-import subprocess
-import sys
 from typing import Literal
 
 import numpy as np
-import torch
 
 from multi_gate.configs.experiment_config import (
     MULTI_EXPERIMENT_CONFIG,
     MultiExperimentConfig,
-    is_exp3_kinematic_3d_scene_mode
+    is_exp3_kinematic_3d_scene_mode,
 )
 from multi_gate.env.multi_gate_env import MultiGate2DEnv
 from multi_gate.env.multi_gate_kinematic_3d_env import MultiGateKinematic3DEnv
 from multi_gate.graph_rl.graph_flashsac import GraphFlashSACAgent as GraphMASACAgent
 
-
-MultiResumeMode = Literal["reset_train_state", "keep_optimizer_state"]
-MultiEnvType = MultiGate2DEnv | MultiGateKinematic3DEnv
-
-from .checkpoint import (
-    _load_checkpoint_metadata,
-    _multi_resume_compatibility_findings
-)
 from .metrics import (
     _collect_finite_metric_values,
     _count_safety_violating_episodes,
@@ -37,8 +23,12 @@ from .metrics import (
     _finite_stat_or_none,
     _multi_episode_success_from_info,
     _multi_speed_samples_from_info,
-    _serialize_multi_episode_summary
+    _serialize_multi_episode_summary,
 )
+
+MultiResumeMode = Literal["reset_train_state", "keep_optimizer_state"]
+MultiEnvType = MultiGate2DEnv | MultiGateKinematic3DEnv
+
 
 def evaluate_checkpoint(
     *,
@@ -662,6 +652,8 @@ def validate_multi_checkpoint_compatibility(
     experiment_config: MultiExperimentConfig,
 ) -> dict[str, object]:
     """Validate one inference/resume checkpoint against the active multi-agent setup."""
+
+    from .checkpoint import _load_checkpoint_metadata, _multi_resume_compatibility_findings
 
     metadata = _load_checkpoint_metadata(checkpoint_path)
     findings = _multi_resume_compatibility_findings(

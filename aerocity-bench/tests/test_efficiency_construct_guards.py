@@ -13,10 +13,9 @@ from aerocity_bench.behavioral_distinctness import (
     summarize_public_action_trace,
 )
 from aerocity_bench.canonical import (
-    content_hash,
     read_json,
     write_json_atomic,
-    write_json_atomic_compact,
+    write_json_compact,
 )
 from aerocity_bench.contracts import ActionPacket, ObservationPacket, Pose3D
 from aerocity_bench.planning_cadence import (
@@ -50,13 +49,13 @@ def _report(method: str, summaries: list[dict[str, object]]) -> dict[str, object
     return {
         "formal_score_eligible": False,
         "method_id": method,
-        "layout_hash": "a" * 64,
-        "episode_hash": "b" * 64,
+        "layout_id": "layout-a",
+        "episode_id": "episode-a",
         "replicates": [{"public_action_behavior": summary} for summary in summaries],
     }
 
 
-def test_compact_atomic_json_preserves_value_and_content_hash(tmp_path: Path) -> None:
+def test_compact_atomic_json_preserves_value(tmp_path: Path) -> None:
     value = {
         "execution_receipts": [
             {"drone_id": f"uav-{index:02d}", "values": list(range(30))}
@@ -66,14 +65,13 @@ def test_compact_atomic_json_preserves_value_and_content_hash(tmp_path: Path) ->
     pretty = tmp_path / "pretty.json"
     compact = tmp_path / "compact.json"
     write_json_atomic(pretty, value)
-    write_json_atomic_compact(compact, value)
+    write_json_compact(compact, value)
 
     assert read_json(pretty) == read_json(compact) == value
-    assert content_hash(read_json(compact)) == content_hash(value)
     assert compact.stat().st_size < pretty.stat().st_size * 0.6
 
     replacement = {"status": "replacement", "failures": ["kept"]}
-    write_json_atomic_compact(compact, replacement)
+    write_json_compact(compact, replacement)
     assert read_json(compact) == replacement
     assert not list(tmp_path.glob("*.tmp"))
 
@@ -98,12 +96,8 @@ def test_public_action_signature_ignores_binding_identity_but_not_behavior() -> 
     changed_route = _summary((1.0, 3.0))
 
     assert first["schema"] == BEHAVIOR_SUMMARY_SCHEMA
-    assert first["mission_action_semantics_sha256"] == same_semantics[
-        "mission_action_semantics_sha256"
-    ]
-    assert first["mission_action_semantics_sha256"] != changed_route[
-        "mission_action_semantics_sha256"
-    ]
+    assert first["mission_action_signature"] == same_semantics["mission_action_signature"]
+    assert first["mission_action_signature"] != changed_route["mission_action_signature"]
 
 
 def test_behavior_panel_flags_equivalence_and_nondeterminism_without_censoring() -> None:
@@ -125,7 +119,7 @@ def test_behavior_panel_flags_equivalence_and_nondeterminism_without_censoring()
 
     with pytest.raises(ValueError, match="same layout and episode"):
         other_context = _report("method-b", [distinct])
-        other_context["episode_hash"] = "c" * 64
+        other_context["episode_id"] = "episode-c"
         audit_method_panel_behavior([_report("method-a", [shared]), other_context])
 
 
@@ -140,8 +134,8 @@ def test_behavior_cohort_deduplicates_only_equivalence_across_every_context() ->
             ("method-c", distinct),
         ):
             report = _report(method, [summary])
-            report["layout_hash"] = f"{context_index + 1:064x}"
-            report["episode_hash"] = f"{context_index + 11:064x}"
+            report["layout_id"] = f"layout-context-{context_index}"
+            report["episode_id"] = f"episode-context-{context_index}"
             reports.append(report)
     audit = audit_method_panel_behavior_cohort(reports)
     assert audit["status"] == "REVIEW_EXACT_EQUIVALENCE_ACROSS_COHORT"

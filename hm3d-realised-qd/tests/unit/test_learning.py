@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.contracts.models import FragmentReplayRecord
 from aerocity_method.learning.masked_ppo import MaskedPPO, MaskedPPOConfig
 from aerocity_method.learning.rb_sf_sac import RBSFSAC, RBSFSACConfig
@@ -36,7 +35,7 @@ def transition(**changes):
         next_preference=(),
         done=False,
         duration=2.0,
-        outcome_hash=canonical_sha256({"transition": 1}),
+        outcome_id="transition-1",
     )
     values.update(changes)
     return CandidateTransition(**values)
@@ -84,9 +83,9 @@ def test_replay_is_bounded_and_rng_restorable():
 def test_fragment_replay_deduplicates_outcome_binding():
     record = FragmentReplayRecord(
         instance_fragment_id="f",
-        fragment_type_hash=canonical_sha256({"type": 1}),
-        outcome_hash=canonical_sha256({"outcome": 1}),
-        context_hash=canonical_sha256({"context": 1}),
+        fragment_type="transit",
+        outcome_id="outcome-1",
+        context_id="context-1",
         labels=(("coverage", 1.0),),
     )
     replay = FragmentReplayBuffer(4)
@@ -132,7 +131,7 @@ def test_candidate_permutation_equivariance():
 
 def test_update_returns_finite_task_cost_diagnostics():
     method = RBSFSAC(RBSFSACConfig(context_dim=2, candidate_dim=2, hidden_dim=16), seed=3)
-    diagnostics = method.update((transition(), transition(outcome_hash=canonical_sha256({"t": 2}))))
+    diagnostics = method.update((transition(), transition(outcome_id="transition-2")))
     assert diagnostics["critic_loss"] >= 0.0
     assert diagnostics["cost_loss"] >= 0.0
     assert diagnostics["alpha"] > 0.0
@@ -155,7 +154,7 @@ def test_masked_ppo_updates_on_the_same_candidate_transition_contract():
     method = MaskedPPO(MaskedPPOConfig(context_dim=2, candidate_dim=2, hidden_dim=16), seed=15)
     probabilities = method.action_probabilities((0.0, 1.0), ((0.0, 0.0), (1.0, 1.0)), (True, False))
     assert probabilities == (1.0, 0.0)
-    diagnostics = method.update((transition(), transition(outcome_hash=canonical_sha256({"p": 2}))))
+    diagnostics = method.update((transition(), transition(outcome_id="transition-p2")))
     assert diagnostics["entropy"] >= 0.0
 
 
@@ -176,7 +175,7 @@ def test_adaptive_cost_multiplier_is_checkpointed_and_reported():
     diagnostics = method.update(
         (
             transition(cost=1.0),
-            transition(cost=1.0, outcome_hash=canonical_sha256({"t": 31})),
+            transition(cost=1.0, outcome_id="transition-31"),
         )
     )
     assert diagnostics["cost_multiplier"] > 0.2

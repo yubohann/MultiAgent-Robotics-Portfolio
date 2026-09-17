@@ -29,6 +29,6 @@ for message in consumer:
     
     print(f"\n⏰ [{time_str}] 用户: {data['user_id']}")
     print(f"   触发商品: {product_names.get(data['trigger_product'], data['trigger_product'])}")
-    print(f"   📦 推荐商品:")
+    print("   📦 推荐商品:")
     for i, prod_id in enumerate(data['recommendations'], 1):
         print(f"      {i}. {product_names.get(prod_id, prod_id)}")

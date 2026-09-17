@@ -3,6 +3,13 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from robocup_visionrl_gym_env import (
+    ARENA_SIZE,
+    BLUE_BASE_XY,
+    YELLOW_BASE_XY,
+    Target,
+    wrap_angle,
+)
 
 from .constants import (
     AGENTS,
@@ -11,14 +18,7 @@ from .constants import (
     BASE_RUSH_PREFERRED_NORMAL_HITS,
     CAMERA_MEMORY_FOV_RAD,
     CAMERA_MEMORY_RANGE_M,
-    IDEAL_SHOOT_DISTANCE
-)
-from robocup_visionrl_gym_env import (
-    ARENA_SIZE,
-    BLUE_BASE_XY,
-    Target,
-    YELLOW_BASE_XY,
-    wrap_angle
+    IDEAL_SHOOT_DISTANCE,
 )
 
 
@@ -92,18 +92,16 @@ class TacticsMixin:
             return ranked[0]
         selector = (float(action[0]) + 1.0) * 0.5
         near_window = min(3, len(ranked))
-        index = int(round(selector * (near_window - 1)))
+        index = round(selector * (near_window - 1))
         return ranked[max(0, min(near_window - 1, index))]
     def _target_on_cooldown(self, team: str, target_name: str) -> bool:
         if target_name.endswith("BaseTarget"):
             min_hits = int(self.base_retry_min_normal_hits.get(team, 0))
             if self._normal_hits_against(team) < min_hits:
-                if (
+                return not (
                     self._normal_hits_against(team) >= BASE_RUSH_BALANCED_NORMAL_HITS
                     and not self._has_available_normal_retry_target(team)
-                ):
-                    return False
-                return True
+                )
             self.lost_targets[team].discard(target_name)
             if self.target_cooldowns[team].get(target_name, -99.0) > self.max_time_s:
                 self.target_cooldowns[team].pop(target_name, None)

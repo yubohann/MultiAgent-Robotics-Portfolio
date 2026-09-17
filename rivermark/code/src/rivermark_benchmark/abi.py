@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
+from ._identity import IdentityAccumulator
+
 import json
 import math
 import re
@@ -51,13 +52,7 @@ class AbiError(ValueError):
 
 @dataclass(frozen=True)
 class AbiCompatibilityReport:
-    """Machine-readable compatibility result for a producer and reader ABI.
-
-    ``development_readable`` is deliberately weaker than
-    ``formal_admissible``: an ABI 1.0 producer can be read by a newer
-    development reader, but it cannot become a formal episode until the
-    producer has emitted the ABI 1.1 fidelity evidence.
-    """
+    """Machine-readable compatibility result for a producer and reader ABI."""
 
     producer_version: str | None
     reader_version: str | None
@@ -336,13 +331,7 @@ def _validate_field(field: Any, path: str, issues: list[AbiIssue]) -> None:
 
 
 def validate_observation_abi(payload: Any, *, require_fidelity: bool = False) -> tuple[AbiIssue, ...]:
-    """Return every structural error in an observation ABI document.
-
-    ABI 1.0 remains readable for development captures.  ABI 1.1 makes the
-    sensor-fidelity level and explicitly unmodelled error sources mandatory;
-    ``require_fidelity`` lets formal admission reject legacy documents even
-    when a caller is validating an older version.
-    """
+    """Return every structural error in an observation ABI document."""
 
     issues: list[AbiIssue] = []
     if not isinstance(payload, Mapping):
@@ -411,14 +400,7 @@ def validate_formal_observation_abi(payload: Any) -> tuple[AbiIssue, ...]:
 
 
 def _abi_semantic_projection(payload: Mapping[str, Any]) -> dict[str, Any]:
-    """Return the ABI meaning that must not change across a major version.
-
-    Calibration measurements are episode data and may legitimately vary
-    between cameras; their structure is validated by the ABI validator.
-    Action/coordinate conventions and field-level meanings are contract
-    semantics and are compared exactly. Fidelity metadata is handled
-    separately because ABI 1.1 adds it to the legacy 1.0 reader boundary.
-    """
+    """Return the ABI meaning that must not change across a major version."""
 
     streams: list[dict[str, Any]] = []
     for stream in payload.get("streams", []):
@@ -446,14 +428,7 @@ def assess_observation_abi_compatibility(
     producer: Any,
     reader: Any,
 ) -> AbiCompatibilityReport:
-    """Assess whether a reader can consume a producer ABI.
-
-    Compatibility is conservative: versions must share a major number, the
-    reader cannot be older than the producer, and all field-level semantics
-    must match exactly. ABI 1.0 is readable in development by ABI 1.1, but
-    remains formally ineligible because it lacks stream fidelity evidence.
-    Invalid documents and semantic changes always fail closed.
-    """
+    """Assess whether a reader can consume a producer ABI."""
 
     issues: list[str] = []
     producer_issues = validate_observation_abi(producer)
@@ -520,11 +495,11 @@ def load_observation_abi(path: Path) -> dict[str, Any]:
     return dict(payload)
 
 
-def observation_abi_sha256(payload: Mapping[str, Any]) -> str:
-    """Hash canonical ABI bytes for manifest/provenance binding."""
+def observation_abi_identity(payload: Mapping[str, Any]) -> str:
+    """Identity canonical ABI bytes for manifest/provenance binding."""
 
     issues = validate_observation_abi(payload)
     if issues:
-        raise AbiError("cannot hash invalid observation ABI")
+        raise AbiError("cannot identity invalid observation ABI")
     encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return IdentityAccumulator(encoded).hexdigest()

@@ -1,3 +1,5 @@
+"""Tune SplitGNN-Transformer candidates on IEEE-CIS with validation-only selection."""
+
 from __future__ import annotations
 
 import argparse
@@ -202,7 +204,7 @@ def main() -> None:
                     weight_decay_override=candidate.get("weight_decay_override"),
                     dropout_override=candidate.get("dropout_override"),
                 )
-            except Exception as error:  # pragma: no cover - runtime safeguard
+            except (KeyError, MemoryError, OSError, RuntimeError, TypeError, ValueError) as error:
                 error_text = "".join(traceback.format_exception_only(type(error), error)).strip()
                 print(f"[ieee-tune] {tag} raised: {error_text}", flush=True)
 

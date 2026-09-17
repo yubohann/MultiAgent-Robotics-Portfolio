@@ -2,9 +2,9 @@
 
 """Credit-card fraud CSV loader used by the legacy ``ccfd`` registry entry."""
 
-import hashlib
 import json
 import math
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -20,9 +20,9 @@ import pandas as pd
 import torch
 
 from .fraud_dataset import (
+    SEQUENCE_BUILDER_VERSION,
     ClientShard,
     DatasetBundle,
-    SEQUENCE_BUILDER_VERSION,
     _apply_active_learning_feedback,
     _apply_label_scarcity,
     _attach_dataset_context_defaults,
@@ -172,7 +172,7 @@ def _allocate_targets(
         return allocation
 
     raw = [size / reduced_total * target for size in reduced_sizes]
-    extra = [int(math.floor(value)) for value in raw]
+    extra = [math.floor(value) for value in raw]
     allocation = [allocation[index] + extra[index] for index in range(len(group_sizes))]
     remainder = target - int(sum(extra))
     fractions = sorted(
@@ -199,8 +199,8 @@ def _time_stratified_sample(
     if max_transactions is None or len(frame) <= int(max_transactions):
         return frame.reset_index(drop=True).copy(), {
             "sampling_applied": False,
-            "original_rows": int(len(frame)),
-            "sampled_rows": int(len(frame)),
+            "original_rows": len(frame),
+            "sampled_rows": len(frame),
             "time_bins": int(max(1, min(int(time_bins), len(frame)))) if len(frame) > 0 else 0,
             "sampling_strategy": "full_chronological_credit_card_dataset",
         }
@@ -223,7 +223,7 @@ def _time_stratified_sample(
         neg_index = bin_index[labels[bin_index] == 0]
         pos_index = bin_index[labels[bin_index] == 1]
         label_targets = _allocate_targets(
-            [int(len(neg_index)), int(len(pos_index))],
+            [len(neg_index), len(pos_index)],
             int(bin_target),
             preserve_present_groups=True,
         )
@@ -235,7 +235,7 @@ def _time_stratified_sample(
         chosen = np.sort(np.concatenate(chosen_parts, axis=0)) if chosen_parts else np.empty(0, dtype=np.int64)
         if len(chosen) < bin_target:
             remaining_candidates = np.setdiff1d(bin_index.astype(np.int64), chosen, assume_unique=False)
-            extra_needed = min(int(bin_target) - int(len(chosen)), int(len(remaining_candidates)))
+            extra_needed = min(int(bin_target) - len(chosen), len(remaining_candidates))
             if extra_needed > 0:
                 extra = np.sort(rng.choice(remaining_candidates, size=extra_needed, replace=False)).astype(np.int64)
                 chosen = np.sort(np.concatenate([chosen, extra], axis=0))
@@ -255,8 +255,8 @@ def _time_stratified_sample(
     sampled = frame.iloc[merged_indices].copy().reset_index(drop=True)
     return sampled, {
         "sampling_applied": True,
-        "original_rows": int(len(frame)),
-        "sampled_rows": int(len(sampled)),
+        "original_rows": len(frame),
+        "sampled_rows": len(sampled),
         "time_bins": int(bin_ids.max() + 1),
         "sampling_strategy": "chronological_time_bin_stratified_sample",
     }
@@ -268,11 +268,11 @@ def _chronological_split_masks(
     train_ratio: float,
     valid_ratio: float,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    num_rows = int(len(frame))
+    num_rows = len(frame)
     if num_rows < 10:
         raise ValueError("CCFD sample is too small to build chronological train/valid/test splits.")
-    train_end = int(round(num_rows * float(train_ratio)))
-    valid_end = int(round(num_rows * float(train_ratio + valid_ratio)))
+    train_end = round(num_rows * float(train_ratio))
+    valid_end = round(num_rows * float(train_ratio + valid_ratio))
     train_end = min(max(train_end, 1), num_rows - 2)
     valid_end = min(max(valid_end, train_end + 1), num_rows - 1)
 
@@ -459,7 +459,7 @@ def _build_edge_dict(
             torch.from_numpy(src.astype(np.int64)),
             torch.from_numpy(dst.astype(np.int64)),
         )
-        relation_edge_counts[relation] = int(len(src))
+        relation_edge_counts[relation] = len(src)
         homo_src_parts.append(src)
         homo_dst_parts.append(dst)
 
@@ -472,7 +472,7 @@ def _build_edge_dict(
             torch.from_numpy(temporal_src.astype(np.int64)),
             torch.from_numpy(temporal_dst.astype(np.int64)),
         )
-        relation_edge_counts["temporal_past"] = int(len(temporal_src))
+        relation_edge_counts["temporal_past"] = len(temporal_src)
         homo_src_parts.append(temporal_src)
         homo_dst_parts.append(temporal_dst)
 
@@ -488,7 +488,7 @@ def _build_edge_dict(
         torch.from_numpy(homo_src.astype(np.int64)),
         torch.from_numpy(homo_dst.astype(np.int64)),
     )
-    relation_edge_counts["homo"] = int(len(homo_src))
+    relation_edge_counts["homo"] = len(homo_src)
     return edge_dict, relation_edge_counts
 
 
@@ -545,9 +545,9 @@ def _resolve_cache_paths(signature: dict[str, Any]) -> tuple[Path, Path]:
     if default_signature is not None and signature == default_signature:
         return CCFD_CACHE_GRAPH_PATH, CCFD_CACHE_METADATA_PATH
 
-    digest = hashlib.sha1(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
+    tag = zlib.crc32(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")) & 0xFFFFFFFF
     cache_dir = CCFD_CACHE_GRAPH_PATH.parent / "cache"
-    return cache_dir / f"ccfd_{digest}.dgl", cache_dir / f"ccfd_{digest}.json"
+    return cache_dir / f"ccfd_{tag:08x}.dgl", cache_dir / f"ccfd_{tag:08x}.json"
 
 
 def _load_cached_graph(
@@ -673,7 +673,7 @@ def _build_graph_payload(
             "csv_path": str(csv_path),
             "feature_columns": feature_columns,
             "feature_dim": int(feature_matrix.shape[1]),
-            "numeric_feature_count": int(len(feature_metadata["numeric_columns"])),
+            "numeric_feature_count": len(feature_metadata["numeric_columns"]),
             "num_nodes": int(graph.num_nodes(NODE_TYPE)),
             "relation_columns_used": list(relation_order),
             "relation_edge_counts": relation_edge_counts,
@@ -839,7 +839,6 @@ def load_ccfd_dataset(
         clients.append(
             ClientShard(
                 client_id=client_id,
-                owned_global_nodes=owned_nodes,
                 subgraph=subgraph,
                 train_nodes=local_train_nodes,
             )
@@ -871,6 +870,6 @@ def load_ccfd_dataset(
         or data_summary.get("dataset_display_name")
         or _source_display_name(str(source_info["source_dataset_key"]))
     )
-    data_summary["num_clients"] = int(len(clients))
+    data_summary["num_clients"] = len(clients)
     bundle.data_summary = data_summary
     return bundle

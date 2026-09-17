@@ -18,7 +18,6 @@ if str(SRC) not in sys.path:
 
 from rivermark_benchmark.eight_cf2x_fleet import EightCF2XFleet
 
-
 PRIM_EXPRESSION = "/World/Swarm/Agent_.*/Robot"
 LITERAL_PATHS = tuple(f"/World/Swarm/Agent_{agent_id}/Robot" for agent_id in range(8))
 ALLOCATION = torch.tensor(
@@ -42,7 +41,6 @@ class _FakeData:
         self.root_lin_vel_w = torch.tensor([[base, base + 1.0, base + 2.0]])
         self.root_ang_vel_b = torch.tensor([[base + 3.0, base + 4.0, base + 5.0]])
         self.thrust_target = torch.full((1, 4), base)
-        self.computed_thrust = torch.full((1, 4), base + 0.25)
         self.applied_thrust = torch.full((1, 4), base + 0.5)
         self.default_thruster_rps = torch.full((1, 4), 263.34388)
         self.thruster_names = ["m1_prop", "m2_prop", "m3_prop", "m4_prop"]
@@ -131,7 +129,7 @@ class EightCF2XFleetTests(unittest.TestCase):
             self.assertEqual(len(robot.received_targets), 1)
             self.assertTrue(torch.equal(robot.received_targets[0], command[agent_id : agent_id + 1]))
 
-    def test_partial_command_requests_fail_closed(self) -> None:
+    def test_partial_command_requests_strict(self) -> None:
         fleet, _robots, _events = _fleet()
         command = torch.zeros((8, 4), dtype=torch.float32)
         with self.assertRaises(NotImplementedError):

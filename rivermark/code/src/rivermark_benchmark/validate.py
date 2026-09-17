@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import re
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
-from .abi import observation_abi_sha256, validate_observation_abi
+from ._identity import IdentityAccumulator
+from .abi import observation_abi_identity, validate_observation_abi
 from .collection_protocol import validate_collection_binding
 from .schema import (
     ALLOWED_OBSERVATION_SCOPES,
@@ -21,10 +22,9 @@ from .schema import (
     forbidden_policy_key,
     forbidden_policy_value_token,
     is_safe_relative_path,
-    is_sha256,
+    is_identity,
     iter_tree,
 )
-
 
 _ROOT_KEYS = frozenset(
     {
@@ -57,10 +57,10 @@ _STREAM_KEYS = frozenset(
         "timestamp_field",
         "agent_id",
         "path",
-        "sha256",
+        "identity",
         "path_template",
-        "content_hash_index_path",
-        "content_hash_index_sha256",
+        "content_identity_index_path",
+        "content_identity_index_identity",
     }
 )
 
@@ -131,8 +131,8 @@ def _contained_path(base_dir: Path, relative: object) -> Path | None:
         return None
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -153,8 +153,8 @@ def _check_bound_file(
         _issue(issues, "path_escape", path, "resolved path escapes the episode directory")
     elif not file_path.is_file():
         _issue(issues, "missing_file", path, f"missing stream file: {file_path}")
-    elif is_sha256(digest) and _sha256_file(file_path) != digest:
-        _issue(issues, "file_hash", path, "stream file hash does not match")
+    elif is_identity(digest) and _identity_file(file_path) != digest:
+        _issue(issues, "file_identity", path, "stream file identity does not match")
 
 
 def _scan_policy_value(value: Any, *, root_path: str, issues: list[ValidationIssue]) -> None:
@@ -248,11 +248,11 @@ def _validate_streams(
         if not isinstance(count, int) or isinstance(count, bool) or count < 0:
             _issue(issues, "sample_count", f"{path}.sample_count", "sample_count must be a non-negative integer")
 
-        concrete_keys = {"path", "sha256"}
+        concrete_keys = {"path", "identity"}
         template_keys = {
             "path_template",
-            "content_hash_index_path",
-            "content_hash_index_sha256",
+            "content_identity_index_path",
+            "content_identity_index_identity",
         }
         has_concrete = bool(concrete_keys & stream.keys())
         has_template = bool(template_keys & stream.keys())
@@ -261,18 +261,18 @@ def _validate_streams(
                 issues,
                 "stream_binding",
                 path,
-                "stream must use exactly one concrete path/hash or template/hash-index binding",
+                "stream must use exactly one concrete path/identity or template/identity-index binding",
             )
             continue
         if has_concrete:
             if not concrete_keys <= stream.keys():
-                _issue(issues, "stream_binding", path, "concrete binding requires path and sha256")
+                _issue(issues, "stream_binding", path, "concrete binding requires path and identity")
             relative = stream.get("path")
-            digest = stream.get("sha256")
+            digest = stream.get("identity")
             if not is_safe_relative_path(relative):
                 _issue(issues, "unsafe_path", f"{path}.path", "stream path must be relative without '..'")
-            if not is_sha256(digest):
-                _issue(issues, "sha256", f"{path}.sha256", "stream sha256 must be 64 lowercase hex digits")
+            if not is_identity(digest):
+                _issue(issues, "identity", f"{path}.identity", "stream identity must be 16 lowercase hex digits")
             _check_bound_file(
                 relative,
                 digest,
@@ -287,9 +287,9 @@ def _validate_streams(
                     issues,
                     "stream_binding",
                     path,
-                    "template binding requires path_template and complete content-hash index",
+                    "template binding requires path_template and complete content-identity index",
                 )
-            for key in ("path_template", "content_hash_index_path"):
+            for key in ("path_template", "content_identity_index_path"):
                 if not is_safe_relative_path(stream.get(key)):
                     _issue(issues, "unsafe_path", f"{path}.{key}", "template binding path is unsafe")
             if "{agent_id}" not in str(stream.get("path_template", "")):
@@ -299,17 +299,17 @@ def _validate_streams(
                     f"{path}.path_template",
                     "per-agent path_template must include '{agent_id}'",
                 )
-            if not is_sha256(stream.get("content_hash_index_sha256")):
+            if not is_identity(stream.get("content_identity_index_identity")):
                 _issue(
                     issues,
-                    "sha256",
-                    f"{path}.content_hash_index_sha256",
-                    "content hash index sha256 must be 64 lowercase hex digits",
+                    "identity",
+                    f"{path}.content_identity_index_identity",
+                    "content identity index identity must be 16 lowercase hex digits",
                 )
             _check_bound_file(
-                stream.get("content_hash_index_path"),
-                stream.get("content_hash_index_sha256"),
-                path=f"{path}.content_hash_index_path",
+                stream.get("content_identity_index_path"),
+                stream.get("content_identity_index_identity"),
+                path=f"{path}.content_identity_index_path",
                 base_dir=base_dir,
                 check_files=check_files,
                 issues=issues,
@@ -327,12 +327,12 @@ def _validate_observation_abi_ref(
     abi = _mapping(value, path=path, issues=issues)
     if abi is None:
         return
-    _reject_unknown(abi, frozenset({"path", "sha256"}), path=path, issues=issues)
-    _required(abi, ("path", "sha256"), path=path, issues=issues)
+    _reject_unknown(abi, frozenset({"path", "identity"}), path=path, issues=issues)
+    _required(abi, ("path", "identity"), path=path, issues=issues)
     if not is_safe_relative_path(abi.get("path")):
         _issue(issues, "unsafe_path", f"{path}.path", "observation ABI path is unsafe")
-    if not is_sha256(abi.get("sha256")):
-        _issue(issues, "sha256", f"{path}.sha256", "observation ABI hash must be SHA-256")
+    if not is_identity(abi.get("identity")):
+        _issue(issues, "identity", f"{path}.identity", "observation ABI identity must be a short identity")
     if not check_files or base_dir is None:
         return
     candidate = _contained_path(base_dir, abi.get("path"))
@@ -348,14 +348,14 @@ def _validate_observation_abi_ref(
     for abi_issue in abi_issues:
         suffix = abi_issue.path.lstrip("$").lstrip(".")
         _issue(issues, f"abi_{abi_issue.code}", f"{path}.{suffix}" if suffix else path, abi_issue.message)
-    if not abi_issues and is_sha256(abi.get("sha256")):
+    if not abi_issues and is_identity(abi.get("identity")):
         try:
-            actual = observation_abi_sha256(payload)
-        except Exception as exc:  # validation above should make this unreachable; fail closed if it is not
-            _issue(issues, "abi_hash", path, f"cannot canonicalize observation ABI: {exc}")
+            actual = observation_abi_identity(payload)
+        except Exception as exc:  # validation above should make this unreachable; stop the run if it is not
+            _issue(issues, "abi_identity", path, f"cannot canonicalize observation ABI: {exc}")
         else:
-            if actual != abi.get("sha256"):
-                _issue(issues, "abi_hash", f"{path}.sha256", "canonical observation ABI hash does not match")
+            if actual != abi.get("identity"):
+                _issue(issues, "abi_identity", f"{path}.identity", "canonical observation ABI identity does not match")
 
 
 def validate_episode_manifest(
@@ -429,10 +429,10 @@ def validate_episode_manifest(
             frozenset(
                 {
                     "layout_id",
-                    "layout_hash",
-                    "layout_lineage_hash",
+                    "layout_identity",
+                    "layout_lineage_identity",
                     "scene_manifest_ref",
-                    "scene_manifest_sha256",
+                    "scene_manifest_identity",
                 }
             ),
             path="$.layout",
@@ -442,24 +442,24 @@ def validate_episode_manifest(
             layout,
             (
                 "layout_id",
-                "layout_hash",
-                "layout_lineage_hash",
+                "layout_identity",
+                "layout_lineage_identity",
                 "scene_manifest_ref",
-                "scene_manifest_sha256",
+                "scene_manifest_identity",
             ),
             path="$.layout",
             issues=issues,
         )
-        for key in ("layout_hash", "layout_lineage_hash"):
-            if not is_sha256(layout.get(key)):
-                _issue(issues, "sha256", f"$.layout.{key}", "expected 64 lowercase hex digits")
+        for key in ("layout_identity", "layout_lineage_identity"):
+            if not is_identity(layout.get(key)):
+                _issue(issues, "identity", f"$.layout.{key}", "expected 16 lowercase hex digits")
         if not is_safe_relative_path(layout.get("scene_manifest_ref")):
             _issue(issues, "unsafe_path", "$.layout.scene_manifest_ref", "scene manifest path is unsafe")
-        if not is_sha256(layout.get("scene_manifest_sha256")):
-            _issue(issues, "sha256", "$.layout.scene_manifest_sha256", "invalid scene manifest hash")
+        if not is_identity(layout.get("scene_manifest_identity")):
+            _issue(issues, "identity", "$.layout.scene_manifest_identity", "invalid scene manifest identity")
         _check_bound_file(
             layout.get("scene_manifest_ref"),
-            layout.get("scene_manifest_sha256"),
+            layout.get("scene_manifest_identity"),
             path="$.layout.scene_manifest_ref",
             base_dir=base_dir,
             check_files=check_files,
@@ -479,7 +479,7 @@ def validate_episode_manifest(
                     "task_id",
                     "task_variant_id",
                     "task_spec_ref",
-                    "task_spec_sha256",
+                    "task_spec_identity",
                     "information_profile",
                     "observation_scope",
                     "agent_count",
@@ -494,7 +494,7 @@ def validate_episode_manifest(
                 "task_id",
                 "task_variant_id",
                 "task_spec_ref",
-                "task_spec_sha256",
+                "task_spec_identity",
                 "information_profile",
                 "observation_scope",
                 "agent_count",
@@ -510,11 +510,11 @@ def validate_episode_manifest(
             _issue(issues, "observation_scope", "$.task.observation_scope", "unknown observation scope")
         if not is_safe_relative_path(task.get("task_spec_ref")):
             _issue(issues, "unsafe_path", "$.task.task_spec_ref", "task spec path is unsafe")
-        if not is_sha256(task.get("task_spec_sha256")):
-            _issue(issues, "sha256", "$.task.task_spec_sha256", "invalid task spec hash")
+        if not is_identity(task.get("task_spec_identity")):
+            _issue(issues, "identity", "$.task.task_spec_identity", "invalid task spec identity")
         _check_bound_file(
             task.get("task_spec_ref"),
-            task.get("task_spec_sha256"),
+            task.get("task_spec_identity"),
             path="$.task.task_spec_ref",
             base_dir=base_dir,
             check_files=check_files,
@@ -697,14 +697,14 @@ def validate_episode_manifest(
             issues=issues,
         )
     if private is not None:
-        private_keys = frozenset({"distributed", "server_only", "manifest_sha256"})
+        private_keys = frozenset({"distributed", "server_only", "manifest_identity"})
         _reject_unknown(private, private_keys, path="$.evaluator_private", issues=issues)
         _required(private, tuple(private_keys), path="$.evaluator_private", issues=issues)
         for key in ("distributed", "server_only"):
             if not isinstance(private.get(key), bool):
                 _issue(issues, key, f"$.evaluator_private.{key}", "must be boolean")
-        if not is_sha256(private.get("manifest_sha256")):
-            _issue(issues, "sha256", "$.evaluator_private.manifest_sha256", "invalid evaluator manifest hash")
+        if not is_identity(private.get("manifest_identity")):
+            _issue(issues, "identity", "$.evaluator_private.manifest_identity", "invalid evaluator manifest identity")
         if isinstance(split, str) and split in {"blind_test", "ood_test"} and (
             private.get("distributed") is not False or private.get("server_only") is not True
         ):

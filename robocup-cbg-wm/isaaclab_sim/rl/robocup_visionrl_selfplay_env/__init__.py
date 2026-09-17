@@ -1,16 +1,58 @@
 from __future__ import annotations
 
+from .contact_mixin import ContactMixin
 from .env_core import RoboCupVisionRLSelfPlayEnvCore as _EnvCore
-from .nav_mixin import NavMixin
-from .tactics_mixin import TacticsMixin
 from .fire_mixin import FireMixin
 from .laser_mixin import LaserMixin
-from .contact_mixin import ContactMixin
+from .nav_mixin import NavMixin
 from .obs_mixin import ObsMixin
+from .tactics_mixin import TacticsMixin
+
 
 class RoboCupVisionRLSelfPlayEnv(_EnvCore, NavMixin, TacticsMixin, FireMixin, LaserMixin, ContactMixin, ObsMixin):
     """Uncertainty-aware self-play RL environment (multi-mixin split)."""
-    pass
+
+from robocup_visionrl_gym_env import (
+    ARENA_SIZE,
+    BASE_HIT_RADIUS,
+    BASE_HIT_SUCCESS_BY_NORMAL_HITS,
+    BASE_SHOOT_IDEAL_DISTANCE,
+    BASE_SHOOT_MIN_RANGE,
+    BASE_SHOOT_RANGE,
+    BLUE_BASE_TARGET_XY,
+    BLUE_BASE_XY,
+    BLUE_START,
+    HALF_ARENA,
+    LASER_DWELL_FULL_CONFIDENCE_S,
+    LASER_DWELL_REQUIRED_S,
+    LASER_FIRE_COOLDOWN_S,
+    PUSHABLE_OBSTACLE_HALF,
+    PUSHABLE_OBSTACLE_RANDOM_JITTER,
+    PUSHABLE_OBSTACLE_STARTS,
+    ROBOT_LENGTH,
+    ROBOT_PUSHABLE_CLEARANCE_RADIUS,
+    ROBOT_RADIUS,
+    ROBOT_WIDTH,
+    SHOOT_HIT_RADIUS,
+    SHOOT_IDEAL_DISTANCE,
+    SHOOT_MIN_RANGE,
+    SHOOT_RANGE,
+    SHOOTER_FORWARD_OFFSET,
+    YELLOW_BASE_TARGET_XY,
+    YELLOW_BASE_XY,
+    YELLOW_START,
+    RoboCupVisionRLGymEnv,
+    Target,
+    active_base_armor_blockers,
+    base_attack_pose_quality,
+    base_hit_success_cap,
+    base_removed_side_lane_quality,
+    ideal_shoot_distance,
+    normalized_laser_dwell_factor,
+    segment_intersects_aabb,
+    shooting_range_limits,
+    wrap_angle,
+)
 
 from .constants import (
     ACCEL_DRIFT_ANGULAR_THRESHOLD,
@@ -48,11 +90,11 @@ from .constants import (
     NORMAL_TARGET_CONTACT_RADIUS,
     POST_HIT_RETREAT_S,
     POST_HIT_RETREAT_SPEED,
-    PUSHABLE_CONTACT_RADIUS_SCALE,
     PUSH_CLEARANCE_MARGIN,
     PUSH_INTENT_THRESHOLD,
     PUSH_ROBOT_RECOIL_M,
     PUSH_STEP_M,
+    PUSHABLE_CONTACT_RADIUS_SCALE,
     RECOVERY_CONFIDENCE_THRESHOLD,
     RECOVERY_COOLDOWN_S,
     ROBOT_PUSHABLE_VISUAL_HALF_EXTENTS,
@@ -66,56 +108,15 @@ from .constants import (
     TACTICAL_STANDOFF_MAX,
     TACTICAL_STANDOFF_MIN,
     TOF_SENSOR_LATERAL_OFFSET_M,
-    TOF_SENSOR_RANGE_M
+    TOF_SENSOR_RANGE_M,
 )
-from .datatypes import ShotResult, DomainRandomizationParams
+from .datatypes import DomainRandomizationParams, ShotResult
 from .geometry import (
     circle_aabb_collision,
     laser_origin_from_pose,
     oriented_rect_aabb_collision,
     robot_pushable_collision,
-    team_frame_sign
-)
-from robocup_visionrl_gym_env import (
-    ARENA_SIZE,
-    BASE_HIT_RADIUS,
-    BASE_HIT_SUCCESS_BY_NORMAL_HITS,
-    BASE_SHOOT_IDEAL_DISTANCE,
-    BASE_SHOOT_MIN_RANGE,
-    BASE_SHOOT_RANGE,
-    BLUE_BASE_TARGET_XY,
-    BLUE_BASE_XY,
-    BLUE_START,
-    HALF_ARENA,
-    LASER_DWELL_FULL_CONFIDENCE_S,
-    LASER_DWELL_REQUIRED_S,
-    LASER_FIRE_COOLDOWN_S,
-    PUSHABLE_OBSTACLE_HALF,
-    PUSHABLE_OBSTACLE_RANDOM_JITTER,
-    PUSHABLE_OBSTACLE_STARTS,
-    ROBOT_LENGTH,
-    ROBOT_PUSHABLE_CLEARANCE_RADIUS,
-    ROBOT_RADIUS,
-    ROBOT_WIDTH,
-    RoboCupVisionRLGymEnv,
-    SHOOTER_FORWARD_OFFSET,
-    SHOOT_HIT_RADIUS,
-    SHOOT_IDEAL_DISTANCE,
-    SHOOT_MIN_RANGE,
-    SHOOT_RANGE,
-    Target,
-    YELLOW_BASE_TARGET_XY,
-    YELLOW_BASE_XY,
-    YELLOW_START,
-    active_base_armor_blockers,
-    base_attack_pose_quality,
-    base_hit_success_cap,
-    base_removed_side_lane_quality,
-    ideal_shoot_distance,
-    normalized_laser_dwell_factor,
-    segment_intersects_aabb,
-    shooting_range_limits,
-    wrap_angle
+    team_frame_sign,
 )
 
 __all__ = [
@@ -147,7 +148,6 @@ __all__ = [
     'CAMERA_MEMORY_FOV_RAD',
     'CAMERA_MEMORY_RANGE_M',
     'DRAW_TIMEOUT_PENALTY',
-    'DomainRandomizationParams',
     'FIRE_GOAL_READY_RADIUS',
     'FIRE_POSE_BLOCKED_STEP_LIMIT',
     'FIRE_YAW_TOLERANCE_RAD',
@@ -183,8 +183,6 @@ __all__ = [
     'ROBOT_PUSHABLE_VISUAL_HALF_EXTENTS',
     'ROBOT_RADIUS',
     'ROBOT_WIDTH',
-    'RoboCupVisionRLGymEnv',
-    'RoboCupVisionRLSelfPlayEnv',
     'SELFPLAY_OBSERVATION_DIM',
     'SENSOR_FUSION_FEATURE_DIM',
     'SENSOR_FUSION_FEATURE_LABELS',
@@ -195,17 +193,20 @@ __all__ = [
     'SHOOT_RANGE',
     'SHOT_CLOSE_DISTANCE',
     'SHOT_TIME_COST_SCALE',
-    'ShotResult',
     'TACTICAL_ACTION_DIM',
     'TACTICAL_ACTION_LABELS',
     'TACTICAL_STANDOFF_MAX',
     'TACTICAL_STANDOFF_MIN',
     'TOF_SENSOR_LATERAL_OFFSET_M',
     'TOF_SENSOR_RANGE_M',
-    'Target',
     'YELLOW_BASE_TARGET_XY',
     'YELLOW_BASE_XY',
     'YELLOW_START',
+    'DomainRandomizationParams',
+    'RoboCupVisionRLGymEnv',
+    'RoboCupVisionRLSelfPlayEnv',
+    'ShotResult',
+    'Target',
     'active_base_armor_blockers',
     'base_attack_pose_quality',
     'base_hit_success_cap',

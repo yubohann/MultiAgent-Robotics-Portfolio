@@ -1,8 +1,4 @@
-"""Deterministic L0 fleet runtime for training, debugging, and contract tests.
-
-L0 is never a formal leaderboard backend.  Formal ordinary-v3 scores require
-the L1 Isaac runtime and must carry an L1 execution receipt.
-"""
+"""Deterministic L0 fleet runtime for training, debugging, and contract tests."""
 
 from __future__ import annotations
 
@@ -15,7 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from .canonical import content_hash, derived_seed
+from .canonical import derived_seed
 from .contracts import (
     ActionPacket,
     BudgetLedger,
@@ -156,7 +152,6 @@ class L0FleetRuntime:
         }
         self.ledger = BudgetLedger()
         self.execution_receipts: list[ExecutionReceipt] = []
-        self._last_receipt_hash_by_drone: dict[str, str] = {}
         self.failures: list[FailureRecord] = []
         self.confirmation_log: list[dict[str, Any]] = []
         self.coverage_trace: list[tuple[float, int, int]] = []
@@ -195,9 +190,7 @@ class L0FleetRuntime:
                 self.public_episode["starts"],
                 self.config.raw["execution_contract"],
             )
-            if self.public_episode.get("mission_sector_hash") != mission_sector.get(
-                "sector_hash"
-            ):
+            if self.public_episode.get("layout_id") != mission_sector.get("layout_id"):
                 raise ValueError("G2-I public episode mission-sector binding differs")
             selected_cell_ids = {
                 str(value) for value in mission_sector["selected_cell_ids"]
@@ -295,17 +288,13 @@ class L0FleetRuntime:
         for binding_field in ("episode_id", "layout_id", "fleet_profile", "starts"):
             if binding_field not in self.private_episode:
                 raise ValueError(f"G2-I private episode lacks {binding_field}")
-            public_value = content_hash(self.public_episode[binding_field])
-            private_value = content_hash(self.private_episode[binding_field])
-            if public_value != private_value:
+            if self.public_episode[binding_field] != self.private_episode[binding_field]:
                 raise ValueError(f"G2-I public episode binding differs for {binding_field}")
         public_sector = self.public_episode.get("mission_sector")
         private_sector = self.private_episode.get("mission_sector")
         if (public_sector is None) != (private_sector is None):
             raise ValueError("G2-I public/private mission-sector presence differs")
-        if public_sector is not None and (
-            content_hash(public_sector) != content_hash(private_sector)
-        ):
+        if public_sector is not None and public_sector != private_sector:
             raise ValueError("G2-I public/private mission-sector binding differs")
 
     def _reset_public_atlas_dwell(
@@ -496,13 +485,9 @@ class L0FleetRuntime:
                 if other.drone_id != state.drone_id
                 and distance(state.pose.position, other.pose.position) <= communication_range
             ]
-            observation_payload = [
-                self.episode_id,
-                state.drone_id,
-                state.observation_sequence,
-                self.task_time_s,
-            ]
-            observation_id = f"obs-{content_hash(observation_payload)[:20]}"
+            observation_id = (
+                f"obs-{self.episode_id}-{state.drone_id}-{state.observation_sequence:05d}"
+            )
             occupancy_origin, occupancy_resolution, occupancy_radius, occupancy_cells = (
                 self._local_occupancy(state.pose.position)
             )
@@ -554,22 +539,6 @@ class L0FleetRuntime:
             "area_fraction": (0.0 if total_area <= 0.0 else visited_area / total_area),
         }
 
-    @staticmethod
-    def _receipt_state_payload(state: _DroneState) -> dict[str, Any]:
-        """Project only execution-authority state into the per-agent receipt chain."""
-
-        return {
-            "drone_id": state.drone_id,
-            "pose": state.pose.to_dict(),
-            "sensor_pitch_deg": state.sensor_pitch_deg,
-            "linear_velocity_world_mps": list(state.velocity),
-            "angular_speed_deg_s": state.angular_speed_deg_s,
-            "energy_remaining_j": state.energy_remaining_j,
-            "terminal": state.terminal,
-            "terminal_reason": state.terminal_reason,
-            "action_sequence": state.action_sequence,
-        }
-
     def _in_bounds(self, point: Vec3) -> bool:
         bounds = self.city["flight_bounds"]
         return all(
@@ -577,7 +546,7 @@ class L0FleetRuntime:
             for value, low, high in zip(point, bounds["minimum"], bounds["maximum"], strict=True)
         )
 
-    def _collision(self, start: Vec3, end: Vec3, state: _DroneState) -> tuple[bool, str | None]:
+    def _collision(self, start: Vec3, end: Vec3) -> tuple[bool, str | None]:
         vehicle = self.config.raw["execution_contract"]["vehicle"]
         margin = float(vehicle["radius_m"])
         for collider in self._colliders:
@@ -825,9 +794,7 @@ class L0FleetRuntime:
                 executed_kind = "HOVER"
                 status = str(safety["out_of_bounds_policy"])
                 intervention = True
-            collision, collision_id = self._collision(
-                state.pose.position, requested.position, state
-            )
+            collision, collision_id = self._collision(state.pose.position, requested.position)
             center_clearance, clearance_id = minimum_segment_clearance(
                 state.pose.position, requested.position, self._colliders
             )
@@ -846,9 +813,6 @@ class L0FleetRuntime:
             decisions[drone_id] = {
                 "action": action,
                 "source_observation": source_observation,
-                "action_packet_hash": content_hash(action.to_dict()),
-                "source_observation_hash": content_hash(source_observation.to_dict()),
-                "state_before_hash": content_hash(self._receipt_state_payload(state)),
                 "latency": latency,
                 "deadline_miss": deadline_miss,
                 "executed_kind": executed_kind,
@@ -998,7 +962,6 @@ class L0FleetRuntime:
                 )
             if not deadline_miss and not collision and not out_of_bounds:
                 self._queue_messages(action)
-            previous_receipt_hash = self._last_receipt_hash_by_drone.get(drone_id)
             receipt = ExecutionReceipt(
                 episode_id=self.episode_id,
                 drone_id=drone_id,
@@ -1017,19 +980,11 @@ class L0FleetRuntime:
                 safety_intervention=safety_intervention,
                 deadline_miss=deadline_miss,
                 execution_level="L0",
-                action_packet_hash=str(decision["action_packet_hash"]),
                 source_observation_id=source_observation.observation_id,
-                source_observation_hash=str(decision["source_observation_hash"]),
-                state_before_hash=str(decision["state_before_hash"]),
-                state_after_hash=content_hash(self._receipt_state_payload(state)),
-                previous_receipt_hash=previous_receipt_hash,
                 confirmation_ids=tuple(confirmation_ids),
                 planner_invoked=planner_invoked_by_drone[drone_id],
             )
             self.execution_receipts.append(receipt)
-            self._last_receipt_hash_by_drone[drone_id] = str(
-                receipt.to_dict()["receipt_hash"]
-            )
             step_receipts.append(receipt)
         self._step_index += 1
         self._deliver_messages()
@@ -1145,14 +1100,6 @@ class L0FleetRuntime:
             "wall_clock_s": wall_clock_s,
             "confirmations": list(self.confirmation_log),
             "execution_receipts": receipt_records,
-            "execution_receipt_set_hash": content_hash(receipt_records),
-            "execution_contract_hash": content_hash(self.config.raw["execution_contract"]),
-            "public_task_spec_hash": (
-                content_hash(self.public_task_spec) if self.public_task_spec is not None else None
-            ),
-            "public_episode_hash": (
-                content_hash(self.public_episode) if self.public_episode is not None else None
-            ),
             "failures": [failure.to_dict() for failure in self.failures],
             "budget_ledger": self.ledger.to_dict(),
             "coverage_trace": [list(item) for item in self.coverage_trace],

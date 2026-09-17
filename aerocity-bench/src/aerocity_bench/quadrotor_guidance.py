@@ -1,19 +1,4 @@
-"""Bounded, target-free guidance for internal CF2X preflight runs.
-
-This module deliberately sits below benchmark methods.  A method supplies a
-public waypoint; this helper converts it into a conservative velocity reference
-for the shared low-level controller.  It never receives evaluator-private
-targets, witnesses, or score state.
-
-The previous vertical-slice fixture combined a moving look-ahead position
-target with a high velocity reference.  With the candidate controller this
-caused the position and velocity terms to demand acceleration in the same
-direction, which made a long vertical leg oscillate around its waypoint.  The
-guidance below anchors the position term at the measured position during
-transit.  The controller therefore acts as a damped velocity servo; the
-position-to-speed law reduces the requested velocity continuously near the
-public waypoint.
-"""
+"""Bounded, target-free guidance for internal CF2X preflight runs."""
 
 from __future__ import annotations
 

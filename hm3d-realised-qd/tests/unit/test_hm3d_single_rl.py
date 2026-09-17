@@ -17,8 +17,8 @@ from aerocity_method.adapters.hm3d_single_rl import (
     public_context_features,
     select_single_rl,
 )
-from aerocity_method.contracts.models import PublicMethodContext
 from aerocity_method.contracts.hm3d_public_schema import public_schema_fields
+from aerocity_method.contracts.models import PublicMethodContext
 from aerocity_method.learning.rb_sf_sac import RBSFSAC, RBSFSACConfig
 
 try:
@@ -27,7 +27,7 @@ except ModuleNotFoundError:  # no silent skip: the real Isaac worker needs this 
     pytest.fail("PyTorch is required for the single-RL baseline tests", pytrace=False)
 
 
-SPLIT_HASH = "b" * 64
+SPLIT_ID = "b" * 64
 
 
 def _state() -> PublicSearchState:
@@ -65,10 +65,10 @@ def _checkpoint(tmp_path):
         training_updates=1,
         training_provenance={
             "real_runtime_outcomes": ["a" * 64],
-            "split_manifest_sha256": SPLIT_HASH,
+            "split_manifest_id": SPLIT_ID,
             **public_schema_fields(),
         },
-        split_manifest_sha256=SPLIT_HASH,
+        split_manifest_id=SPLIT_ID,
     )
     path = tmp_path / "single-rl.pt"
     torch.save(payload, path)
@@ -82,7 +82,7 @@ def test_single_rl_loads_a_train_provenanced_checkpoint_and_selects_only_public_
         state,
         pool,
         checkpoint_path=_checkpoint(tmp_path),
-        expected_split_manifest_sha256=SPLIT_HASH,
+        expected_split_manifest_id=SPLIT_ID,
     )
     assert selected.feasible
     assert selection.to_dict()["strategy"] == "single_rl"
@@ -100,9 +100,9 @@ def test_single_rl_checkpoint_builder_rejects_an_untrained_payload():
             training_updates=0,
             training_provenance={
                 "real_runtime_outcomes": ["a" * 64],
-                "split_manifest_sha256": SPLIT_HASH,
+                "split_manifest_id": SPLIT_ID,
             },
-            split_manifest_sha256=SPLIT_HASH,
+            split_manifest_id=SPLIT_ID,
         )
 
 
@@ -114,7 +114,7 @@ def test_single_rl_rejects_a_checkpoint_from_another_frozen_split(tmp_path) -> N
             state,
             pool,
             checkpoint_path=_checkpoint(tmp_path),
-            expected_split_manifest_sha256="c" * 64,
+            expected_split_manifest_id="c" * 64,
         )
 
 

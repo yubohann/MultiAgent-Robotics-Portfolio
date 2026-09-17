@@ -6,13 +6,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.researcher_entry import (  # noqa: E402
+from rivermark_benchmark.researcher_entry import (
     RESEARCHER_SMOKE_SCHEMA,
     ResearcherEntryError,
     run_researcher_smoke,
@@ -20,7 +19,7 @@ from rivermark_benchmark.researcher_entry import (  # noqa: E402
 
 
 class ResearcherEntryTests(unittest.TestCase):
-    def test_smoke_is_hash_bound_and_non_formal(self) -> None:
+    def test_smoke_is_identity_bound_and_non_formal(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "smoke"
             result = run_researcher_smoke(root)

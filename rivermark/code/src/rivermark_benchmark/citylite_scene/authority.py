@@ -10,7 +10,7 @@ from typing import Any
 
 from .constants import (
     _OUTPUT_BINDINGS,
-    AUTHORITY_SHA256,
+    AUTHORITY_IDENTITY,
     ENVIRONMENT_ID,
     EXPECTED_NATIVE_COLLISION_COUNTS,
     EXPECTED_UPSTREAM_PERMISSIONS,
@@ -19,17 +19,17 @@ from .constants import (
     RIVERMARK_LAYER_INVENTORY_SCHEMA,
     SCENE_CONTRACT_FILENAME,
     SCENE_CONTRACT_GATE_STATUS,
-    SCENE_CONTRACT_PAYLOAD_SHA256,
+    SCENE_CONTRACT_PAYLOAD_IDENTITY,
     SCENE_CONTRACT_SCHEMA,
-    SCENE_CONTRACT_SHA256,
+    SCENE_CONTRACT_IDENTITY,
     SELECTIVE_REFERENCES,
 )
 from .materials import validate_city_task_obstacle_material_closure_receipt
 from .scene import (
     CityLiteAuthorityError,
-    canonical_payload_sha256,
+    canonical_payload_identity,
     flight_contract_payload,
-    sha256_file,
+    identity_file,
 )
 
 
@@ -39,9 +39,9 @@ class CityLiteAuthority:
     contract_path: Path
     final_scene_path: Path
     asset_paths: Mapping[str, Path]
-    sha256: Mapping[str, str]
-    contract_sha256: str
-    contract_payload_sha256: str
+    identity: Mapping[str, str]
+    contract_identity: str
+    contract_payload_identity: str
 
     def provenance(self) -> dict[str, Any]:
         return {
@@ -49,8 +49,8 @@ class CityLiteAuthority:
             "authority_root": str(self.root.resolve()),
             "scene_contract": {
                 "path": str(self.contract_path.resolve()),
-                "sha256": self.contract_sha256,
-                "payload_sha256": self.contract_payload_sha256,
+                "identity": self.contract_identity,
+                "payload_identity": self.contract_payload_identity,
                 "schema": SCENE_CONTRACT_SCHEMA,
                 "gate_status": SCENE_CONTRACT_GATE_STATUS,
                 "permissions": dict(EXPECTED_UPSTREAM_PERMISSIONS),
@@ -58,7 +58,7 @@ class CityLiteAuthority:
             "authority_assets": {
                 name: {
                     "path": str(self.asset_paths[name].resolve()),
-                    "sha256": self.sha256[name],
+                    "identity": self.identity[name],
                 }
                 for name in sorted(self.asset_paths)
             },
@@ -119,16 +119,16 @@ def _rivermark_root_ancestor(path: Path) -> Path | None:
 
 def _layer_binding(path: Path) -> dict[str, Any]:
     before = path.stat()
-    digest = sha256_file(path)
+    digest = identity_file(path)
     after = path.stat()
     if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
-        raise CityLiteAuthorityError(f"OpenUSD layer changed while hashing: {path}")
+        raise CityLiteAuthorityError(f"OpenUSD layer changed while identifying: {path}")
     if after.st_size <= 0:
         raise CityLiteAuthorityError(f"OpenUSD layer is empty: {path}")
     return {
         "path": str(path),
         "size_bytes": after.st_size,
-        "sha256": digest,
+        "identity": digest,
     }
 
 
@@ -138,14 +138,7 @@ def make_rivermark_layer_inventory(
     *,
     asset_root: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Bind the layers used by a selective City-Lite OpenUSD composition.
-
-    ``resolved_layer_paths`` is intended to be populated from
-    ``Usd.Stage.GetUsedLayers()`` after composing only ``SELECTIVE_REFERENCES``.
-    Anonymous root/session layers are ignored. The three local generated
-    layers remain a separate authority class; every other admitted layer must
-    be a real USD file below one unique ``RivermarkSrc51`` asset root.
-    """
+    """Bind the layers used by a selective City-Lite OpenUSD composition."""
 
     if not isinstance(authority, CityLiteAuthority):
         raise CityLiteAuthorityError("authority must be a CityLiteAuthority")
@@ -160,22 +153,22 @@ def make_rivermark_layer_inventory(
     if not supplied_layers:
         raise CityLiteAuthorityError("resolved layer inventory is empty")
 
-    if set(authority.asset_paths) != set(AUTHORITY_SHA256):
+    if set(authority.asset_paths) != set(AUTHORITY_IDENTITY):
         raise CityLiteAuthorityError("local City-Lite authority layer set is not exact")
-    if set(authority.sha256) != set(AUTHORITY_SHA256):
+    if set(authority.identity) != set(AUTHORITY_IDENTITY):
         raise CityLiteAuthorityError("local City-Lite authority digest set is not exact")
 
     local_by_path: dict[str, str] = {}
     local_rows: list[dict[str, Any]] = []
-    for filename in sorted(AUTHORITY_SHA256):
+    for filename in sorted(AUTHORITY_IDENTITY):
         path = _resolved_file(
             authority.asset_paths[filename],
             label=f"local City-Lite authority layer {filename}",
         )
         row = _layer_binding(path)
-        if row["sha256"] != authority.sha256[filename]:
+        if row["identity"] != authority.identity[filename]:
             raise CityLiteAuthorityError(
-                f"local City-Lite authority hash mismatch for {filename}"
+                f"local City-Lite authority identity mismatch for {filename}"
             )
         local_by_path[_path_key(path)] = filename
         local_rows.append(
@@ -252,7 +245,7 @@ def make_rivermark_layer_inventory(
             )
         external_candidates[key] = path
 
-    missing_local = sorted(set(AUTHORITY_SHA256) - local_seen)
+    missing_local = sorted(set(AUTHORITY_IDENTITY) - local_seen)
     if missing_local:
         raise CityLiteAuthorityError(
             "resolved layer inventory is missing local City-Lite authority layers: "
@@ -303,7 +296,7 @@ def make_rivermark_layer_inventory(
         {
             "filename": row["filename"],
             "size_bytes": row["size_bytes"],
-            "sha256": row["sha256"],
+            "identity": row["identity"],
         }
         for row in local_rows
     ]
@@ -311,13 +304,13 @@ def make_rivermark_layer_inventory(
         {
             "root_relative_path": row["root_relative_path"],
             "size_bytes": row["size_bytes"],
-            "sha256": row["sha256"],
+            "identity": row["identity"],
         }
         for row in external_rows
     ]
-    local_inventory_sha256 = canonical_payload_sha256(local_portable)
-    external_inventory_sha256 = canonical_payload_sha256(external_portable)
-    inventory_sha256 = canonical_payload_sha256(
+    local_inventory_identity = canonical_payload_identity(local_portable)
+    external_inventory_identity = canonical_payload_identity(external_portable)
+    inventory_identity = canonical_payload_identity(
         {
             "schema": RIVERMARK_LAYER_INVENTORY_SCHEMA,
             "composition_mode": "selective_references_only",
@@ -348,18 +341,18 @@ def make_rivermark_layer_inventory(
         "ignored_anonymous_layer_count": anonymous_count,
         "local_authority_layer_count": len(local_rows),
         "local_authority_layers": local_rows,
-        "local_authority_inventory_sha256": local_inventory_sha256,
+        "local_authority_inventory_identity": local_inventory_identity,
         "rivermarksrc51_external_layer_count": len(external_rows),
         "rivermarksrc51_external_layers": external_rows,
-        "rivermarksrc51_external_inventory_sha256": external_inventory_sha256,
-        "inventory_sha256": inventory_sha256,
+        "rivermarksrc51_external_inventory_identity": external_inventory_identity,
+        "inventory_identity": inventory_identity,
     }
 
-def _receipt_sha256(value: Any, *, label: str) -> str:
-    if not isinstance(value, str) or len(value) != 64 or any(
+def _receipt_identity(value: Any, *, label: str) -> str:
+    if not isinstance(value, str) or len(value) != 16 or any(
         character not in "0123456789abcdef" for character in value
     ):
-        raise CityLiteAuthorityError(f"{label} must be a lowercase SHA-256")
+        raise CityLiteAuthorityError(f"{label} must be a lowercase IDENTITY")
     return value
 
 
@@ -418,11 +411,11 @@ def validate_rivermark_layer_inventory_receipt(
             "ignored_anonymous_layer_count",
             "local_authority_layer_count",
             "local_authority_layers",
-            "local_authority_inventory_sha256",
+            "local_authority_inventory_identity",
             "rivermarksrc51_external_layer_count",
             "rivermarksrc51_external_layers",
-            "rivermarksrc51_external_inventory_sha256",
-            "inventory_sha256",
+            "rivermarksrc51_external_inventory_identity",
+            "inventory_identity",
         },
         label="Rivermark layer inventory receipt",
     )
@@ -478,11 +471,11 @@ def validate_rivermark_layer_inventory_receipt(
     for index, raw_row in enumerate(local_layers):
         row = _exact_receipt_keys(
             raw_row,
-            {"filename", "path", "size_bytes", "sha256", "classification"},
+            {"filename", "path", "size_bytes", "identity", "classification"},
             label=f"local authority layer {index}",
         )
         filename = row["filename"]
-        if not isinstance(filename, str) or filename not in AUTHORITY_SHA256:
+        if not isinstance(filename, str) or filename not in AUTHORITY_IDENTITY:
             raise CityLiteAuthorityError(
                 f"local authority layer {index} filename is invalid"
             )
@@ -500,18 +493,18 @@ def validate_rivermark_layer_inventory_receipt(
             label=f"local authority layer {index} size_bytes",
             minimum=1,
         )
-        digest = _receipt_sha256(
-            row["sha256"],
-            label=f"local authority layer {index} sha256",
+        digest = _receipt_identity(
+            row["identity"],
+            label=f"local authority layer {index} identity",
         )
         if row["classification"] != "city_lite_local_authority":
             raise CityLiteAuthorityError(
                 f"local authority layer {index} classification is invalid"
             )
         local_portable.append(
-            {"filename": filename, "size_bytes": size_bytes, "sha256": digest}
+            {"filename": filename, "size_bytes": size_bytes, "identity": digest}
         )
-    expected_local_filenames = sorted(AUTHORITY_SHA256)
+    expected_local_filenames = sorted(AUTHORITY_IDENTITY)
     if [row["filename"] for row in local_portable] != expected_local_filenames:
         raise CityLiteAuthorityError(
             "local authority layers must be complete, unique, and sorted"
@@ -542,7 +535,7 @@ def validate_rivermark_layer_inventory_receipt(
                 "root_relative_path",
                 "path",
                 "size_bytes",
-                "sha256",
+                "identity",
                 "classification",
             },
             label=f"Rivermark external layer {index}",
@@ -582,9 +575,9 @@ def validate_rivermark_layer_inventory_receipt(
             label=f"Rivermark external layer {index} size_bytes",
             minimum=1,
         )
-        digest = _receipt_sha256(
-            row["sha256"],
-            label=f"Rivermark external layer {index} sha256",
+        digest = _receipt_identity(
+            row["identity"],
+            label=f"Rivermark external layer {index} identity",
         )
         if row["classification"] != "rivermarksrc51_external_authority":
             raise CityLiteAuthorityError(
@@ -594,7 +587,7 @@ def validate_rivermark_layer_inventory_receipt(
             {
                 "root_relative_path": relative,
                 "size_bytes": size_bytes,
-                "sha256": digest,
+                "identity": digest,
             }
         )
     if [row["root_relative_path"].casefold() for row in external_portable] != sorted(
@@ -616,21 +609,21 @@ def validate_rivermark_layer_inventory_receipt(
             "input_resolved_layer_count is smaller than the bound inventory"
         )
 
-    declared_local_hash = _receipt_sha256(
-        top["local_authority_inventory_sha256"],
-        label="local_authority_inventory_sha256",
+    declared_local_identity = _receipt_identity(
+        top["local_authority_inventory_identity"],
+        label="local_authority_inventory_identity",
     )
-    declared_external_hash = _receipt_sha256(
-        top["rivermarksrc51_external_inventory_sha256"],
-        label="rivermarksrc51_external_inventory_sha256",
+    declared_external_identity = _receipt_identity(
+        top["rivermarksrc51_external_inventory_identity"],
+        label="rivermarksrc51_external_inventory_identity",
     )
-    declared_inventory_hash = _receipt_sha256(
-        top["inventory_sha256"],
-        label="inventory_sha256",
+    declared_inventory_identity = _receipt_identity(
+        top["inventory_identity"],
+        label="inventory_identity",
     )
-    expected_local_hash = canonical_payload_sha256(local_portable)
-    expected_external_hash = canonical_payload_sha256(external_portable)
-    expected_inventory_hash = canonical_payload_sha256(
+    expected_local_identity = canonical_payload_identity(local_portable)
+    expected_external_identity = canonical_payload_identity(external_portable)
+    expected_inventory_identity = canonical_payload_identity(
         {
             "schema": RIVERMARK_LAYER_INVENTORY_SCHEMA,
             "composition_mode": "selective_references_only",
@@ -639,12 +632,12 @@ def validate_rivermark_layer_inventory_receipt(
             "rivermarksrc51_external_layers": external_portable,
         }
     )
-    if declared_local_hash != expected_local_hash:
-        raise CityLiteAuthorityError("local authority inventory hash mismatch")
-    if declared_external_hash != expected_external_hash:
-        raise CityLiteAuthorityError("Rivermark external inventory hash mismatch")
-    if declared_inventory_hash != expected_inventory_hash:
-        raise CityLiteAuthorityError("Rivermark overall inventory hash mismatch")
+    if declared_local_identity != expected_local_identity:
+        raise CityLiteAuthorityError("local authority inventory identity mismatch")
+    if declared_external_identity != expected_external_identity:
+        raise CityLiteAuthorityError("Rivermark external inventory identity mismatch")
+    if declared_inventory_identity != expected_inventory_identity:
+        raise CityLiteAuthorityError("Rivermark overall inventory identity mismatch")
 
 def _load_contract(path: Path) -> Mapping[str, Any]:
     try:
@@ -667,7 +660,7 @@ def validate_upstream_scene_contract(
     contract: Mapping[str, Any],
     *,
     path: Path | None = None,
-    expected_payload_sha256: str | None = None,
+    expected_payload_identity: str | None = None,
 ) -> str:
     """Validate the signed content and static-only boundary of the contract."""
 
@@ -708,30 +701,30 @@ def validate_upstream_scene_contract(
             raise CityLiteAuthorityError(f"missing City-Lite output binding {key}: {source}")
         if _basename(item.get("path")) != filename:
             raise CityLiteAuthorityError(f"invalid City-Lite output path for {key}: {source}")
-        if item.get("sha256") != AUTHORITY_SHA256[filename]:
+        if item.get("identity") != AUTHORITY_IDENTITY[filename]:
             raise CityLiteAuthorityError(f"invalid City-Lite output digest for {key}: {source}")
         size = item.get("size_bytes")
         if isinstance(size, bool) or not isinstance(size, int) or size <= 0:
             raise CityLiteAuthorityError(f"invalid City-Lite output size for {key}: {source}")
 
-    declared_payload = contract.get("payload_sha256")
-    if not isinstance(declared_payload, str) or len(declared_payload) != 64:
-        raise CityLiteAuthorityError(f"City-Lite payload_sha256 is invalid: {source}")
-    unsigned = {key: value for key, value in contract.items() if key != "payload_sha256"}
+    declared_payload = contract.get("payload_identity")
+    if not isinstance(declared_payload, str) or len(declared_payload) != 16:
+        raise CityLiteAuthorityError(f"City-Lite payload_identity is invalid: {source}")
+    unsigned = {key: value for key, value in contract.items() if key != "payload_identity"}
     try:
-        computed_payload = canonical_payload_sha256(unsigned)
+        computed_payload = canonical_payload_identity(unsigned)
     except (TypeError, ValueError) as exc:
         raise CityLiteAuthorityError(
-            f"City-Lite contract cannot be canonically hashed: {source}"
+            f"City-Lite contract cannot be canonically identified: {source}"
         ) from exc
     if declared_payload != computed_payload:
-        raise CityLiteAuthorityError(f"City-Lite contract payload hash mismatch: {source}")
-    if expected_payload_sha256 is not None and declared_payload != expected_payload_sha256:
+        raise CityLiteAuthorityError(f"City-Lite contract payload identity mismatch: {source}")
+    if expected_payload_identity is not None and declared_payload != expected_payload_identity:
         raise CityLiteAuthorityError(f"unexpected City-Lite authority payload: {source}")
     return declared_payload
 
 def resolve_city_lite_authority(contract_or_root: str | Path) -> CityLiteAuthority:
-    """Resolve and hash-check the exact md_qd_swarm v1_r2 scene authority."""
+    """Resolve and identity-check the exact md_qd_swarm v1_r2 scene authority."""
 
     supplied = Path(contract_or_root).expanduser()
     contract_path = (
@@ -746,31 +739,31 @@ def resolve_city_lite_authority(contract_or_root: str | Path) -> CityLiteAuthori
         )
 
     contract = _load_contract(contract_path)
-    payload_sha256 = validate_upstream_scene_contract(
+    payload_identity = validate_upstream_scene_contract(
         contract,
         path=contract_path,
-        expected_payload_sha256=SCENE_CONTRACT_PAYLOAD_SHA256,
+        expected_payload_identity=SCENE_CONTRACT_PAYLOAD_IDENTITY,
     )
-    contract_sha256 = sha256_file(contract_path)
-    if contract_sha256 != SCENE_CONTRACT_SHA256:
+    contract_identity = identity_file(contract_path)
+    if contract_identity != SCENE_CONTRACT_IDENTITY:
         raise CityLiteAuthorityError(
-            "City-Lite scene contract file hash does not match v1_r2: "
-            f"expected {SCENE_CONTRACT_SHA256}, got {contract_sha256}"
+            "City-Lite scene contract file identity does not match v1_r2: "
+            f"expected {SCENE_CONTRACT_IDENTITY}, got {contract_identity}"
         )
 
     outputs = contract["outputs"]
     paths: dict[str, Path] = {}
-    actual_hashes: dict[str, str] = {}
-    for filename, expected in AUTHORITY_SHA256.items():
+    actual_identities: dict[str, str] = {}
+    for filename, expected in AUTHORITY_IDENTITY.items():
         asset_path = root / filename
         if not asset_path.is_file():
             raise CityLiteAuthorityError(
                 f"City-Lite authority asset not found: {asset_path}"
             )
-        actual = sha256_file(asset_path)
+        actual = identity_file(asset_path)
         if actual != expected:
             raise CityLiteAuthorityError(
-                f"City-Lite authority hash mismatch for {filename}: "
+                f"City-Lite authority identity mismatch for {filename}: "
                 f"expected {expected}, got {actual}"
             )
         output_key = next(
@@ -784,16 +777,16 @@ def resolve_city_lite_authority(contract_or_root: str | Path) -> CityLiteAuthori
                 f"expected {declared_size}, got {asset_path.stat().st_size}"
             )
         paths[filename] = asset_path
-        actual_hashes[filename] = actual
+        actual_identities[filename] = actual
 
     return CityLiteAuthority(
         root=root,
         contract_path=contract_path,
         final_scene_path=paths[FINAL_SCENE_FILENAME],
         asset_paths=paths,
-        sha256=actual_hashes,
-        contract_sha256=contract_sha256,
-        contract_payload_sha256=payload_sha256,
+        identity=actual_identities,
+        contract_identity=contract_identity,
+        contract_payload_identity=payload_identity,
     )
 
 def validate_static_scene_receipt(receipt: Mapping[str, Any]) -> None:
@@ -826,8 +819,8 @@ def validate_static_scene_receipt(receipt: Mapping[str, Any]) -> None:
 
     scene_contract = receipt.get("scene_contract")
     expected_contract = {
-        "sha256": SCENE_CONTRACT_SHA256,
-        "payload_sha256": SCENE_CONTRACT_PAYLOAD_SHA256,
+        "identity": SCENE_CONTRACT_IDENTITY,
+        "payload_identity": SCENE_CONTRACT_PAYLOAD_IDENTITY,
         "schema": SCENE_CONTRACT_SCHEMA,
         "gate_status": SCENE_CONTRACT_GATE_STATUS,
         "permissions": dict(EXPECTED_UPSTREAM_PERMISSIONS),
@@ -840,9 +833,9 @@ def validate_static_scene_receipt(receipt: Mapping[str, Any]) -> None:
     assets = receipt.get("authority_assets")
     if not isinstance(assets, Mapping):
         raise CityLiteAuthorityError("authority_assets must be an object")
-    for filename, expected in AUTHORITY_SHA256.items():
+    for filename, expected in AUTHORITY_IDENTITY.items():
         item = assets.get(filename)
-        if not isinstance(item, Mapping) or item.get("sha256") != expected:
+        if not isinstance(item, Mapping) or item.get("identity") != expected:
             raise CityLiteAuthorityError(
                 f"missing or invalid authority digest: {filename}"
             )

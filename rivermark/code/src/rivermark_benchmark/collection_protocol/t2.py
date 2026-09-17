@@ -45,12 +45,7 @@ def _t2_canary_axes() -> list[dict[str, Any]]:
     ]
 
 def _validate_t2_native_canary_protocol(payload: Any) -> tuple[CollectionProtocolIssue, ...]:
-    """Validate a development-only T2 route contract, never a data protocol.
-
-    A native T2 canary needs a public route/condition commitment so its private
-    manifest can be replayed.  It must not borrow a completed T1 quota or
-    claim a train/validation split, episode admission, or method score.
-    """
+    """Validate a development-only T2 route contract, never a data protocol."""
 
     issues: list[CollectionProtocolIssue] = []
     if not isinstance(payload, Mapping):
@@ -105,13 +100,7 @@ def _validate_t2_native_canary_protocol(payload: Any) -> tuple[CollectionProtoco
     return tuple(issues)
 
 def _validate_t2_native_canary_v2_protocol(payload: Any) -> tuple[CollectionProtocolIssue, ...]:
-    """Validate the first motion-feasible native-T2 revision.
-
-    v2 is a new protocol rather than a patch to v1 because private target
-    placement now depends on route yaw and bounded action timing.  The exact
-    public motion contract lets the collector, sampler, and validator reject a
-    mismatch before an Isaac stage is launched.
-    """
+    """Validate the first motion-feasible native-T2 revision."""
 
     issues: list[CollectionProtocolIssue] = []
     if not isinstance(payload, Mapping):
@@ -175,14 +164,7 @@ def _validate_t2_native_canary_v2_protocol(payload: Any) -> tuple[CollectionProt
     return tuple(issues)
 
 def _validate_t2_native_canary_v3_protocol(payload: Any) -> tuple[CollectionProtocolIssue, ...]:
-    """Validate the immutable time-scaled successor to failed v2.
-
-    v2 remains readable historical evidence.  v3 deliberately changes only
-    the route clock and matching rollout duration: all sensor cadence and
-    bounded action limits remain identical, so a successful native run is
-    evidence of the conservative envelope rather than an unvalidated speed
-    increase.
-    """
+    """Validate the immutable time-scaled successor to failed v2."""
 
     issues: list[CollectionProtocolIssue] = []
     if not isinstance(payload, Mapping):
@@ -250,12 +232,7 @@ def is_native_t2_canary_protocol(protocol: Mapping[str, Any]) -> bool:
 
 
 def native_t2_motion_contract(protocol: Mapping[str, Any]) -> dict[str, Any] | None:
-    """Return the revision-specific public motion contract after validation.
-
-    Legacy v1 contains no motion contract and therefore deliberately returns
-    ``None``.  It can be read for historical evidence but cannot borrow v2's
-    speed or camera assumptions.
-    """
+    """Return the revision-specific public motion contract after validation."""
 
     if protocol.get("schema") == NATIVE_T2_CANARY_V2_PROTOCOL_SCHEMA:
         return dict(_T2_CANARY_V2_MOTION_CONTRACT)
@@ -267,12 +244,7 @@ def native_t2_motion_contract(protocol: Mapping[str, Any]) -> dict[str, Any] | N
 
 
 def native_t2_v2_motion_contract() -> dict[str, Any]:
-    """Return the immutable v2 motion contract used by independent validation.
-
-    Receipts bind to this contract but do not get to define it.  Any future
-    motion change requires a distinct protocol revision rather than a silent
-    mutation of the v2 canary.
-    """
+    """Return the immutable v2 motion contract used by independent validation."""
 
     return dict(_T2_CANARY_V2_MOTION_CONTRACT)
 

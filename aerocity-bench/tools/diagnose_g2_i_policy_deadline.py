@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from aerocity_bench.baselines import create_baseline
-from aerocity_bench.canonical import file_hash, read_json, write_json
+from aerocity_bench.canonical import read_json, write_json
 from aerocity_bench.contracts import ObservationPacket, Pose3D
 from aerocity_bench.ordinary_config import FORMAL_SPLITS, load_ordinary_config
 from aerocity_bench.public_boundary import assert_public_fields, validate_public_task_spec
@@ -86,16 +86,6 @@ def diagnose(
     method_id = str(recorded.get("method", ""))
     if method_id != "atlas-region-greedy":
         raise ValueError("this diagnosis is frozen to the failed atlas-region-greedy case")
-    if recorded.get("input_bindings", {}).get("task_spec_sha256") != file_hash(task_spec_path):
-        raise ValueError("recorded report is not bound to the supplied task specification")
-    if recorded.get("input_bindings", {}).get("public_episode_sha256") != file_hash(
-        public_episode_path
-    ):
-        raise ValueError("recorded report is not bound to the supplied public episode")
-    if recorded.get("input_bindings", {}).get("release_config_sha256") != file_hash(
-        release_config_path
-    ):
-        raise ValueError("recorded report is not bound to the supplied release configuration")
 
     policy = create_baseline(method_id, config, task_spec, public_episode)
     refinement_events: list[dict[str, Any]] = []
@@ -184,10 +174,6 @@ def diagnose(
         "formal_score_eligible": False,
         "diagnostic_only": True,
         "method_id": method_id,
-        "source_private_report_sha256": file_hash(recorded_private_report_path),
-        "source_baseline_sha256": file_hash(
-            Path(__file__).resolve().parents[1] / "src" / "aerocity_bench" / "baselines.py"
-        ),
         "planner_deadline_s": deadline_s,
         "action_replay": {
             "invocation_count": len(invocation_events),

@@ -1,12 +1,12 @@
 # Rivermark Benchmark source
 
-Auditable native Isaac Sim tooling for Search3D multi-agent 3D stealth-search data collection, validation, and scoring, with eight physically simulated CF2X vehicles in the procedural City-Lite scene.
+Native Isaac Sim tooling for Search3D multi-agent 3D stealth-search data collection, validation, and scoring, with eight physically simulated CF2X vehicles in the procedural City-Lite scene.
 
 This directory is the standalone source package. See `../README.md` for the portfolio-level overview, media, and evidence.
 
 ## Status
 
-The `t1-expert-coverage-v2` collection cohort is **frozen and complete**, holding the full four train and four validation episode sequence.
+The `t1-expert-coverage-v2` collection cohort is **frozen and complete**: the 4 train + 4 validation unique-candidate sequence is complete. No further collection binding is permitted under active protocol v2.
 
 ## Quick Start on CPU
 

@@ -6,9 +6,9 @@ The public local source is positive-only, so a usable binary benchmark still
 needs an external negative set.
 """
 
+import re
 from pathlib import Path
 from typing import Any
-import re
 from urllib.parse import urlparse
 
 try:
@@ -173,7 +173,7 @@ def _read_incident_table(resolved_root: Path, *, force_preview: bool = False) ->
         if not force_preview and parquet_path.exists():
             try:
                 return pd.read_parquet(parquet_path), {"path": str(parquet_path), "format": "parquet"}
-            except Exception:
+            except (ImportError, OSError, ValueError):
                 pass
         if csv_path.exists():
             return pd.read_csv(csv_path, low_memory=False), {"path": str(csv_path), "format": "csv"}
@@ -443,7 +443,7 @@ def _append_relation_edges(
         torch.from_numpy(src.astype(np.int64)),
         torch.from_numpy(dst.astype(np.int64)),
     )
-    relation_edge_counts[relation_name] = int(len(src))
+    relation_edge_counts[relation_name] = len(src)
 
 
 def _build_synthetic_edges(users: pd.DataFrame) -> tuple[dict[tuple[str, str, str], tuple[torch.Tensor, torch.Tensor]], dict[str, int]]:
@@ -458,7 +458,7 @@ def _build_synthetic_edges(users: pd.DataFrame) -> tuple[dict[tuple[str, str, st
         (NODE_TYPE, "homo", NODE_TYPE): (torch.from_numpy(src), torch.from_numpy(dst)),
         (NODE_TYPE, "severity_peer", NODE_TYPE): (torch.from_numpy(src.copy()), torch.from_numpy(dst.copy())),
     }
-    relation_edge_counts = {"homo": int(len(src)), "severity_peer": int(len(src))}
+    relation_edge_counts = {"homo": len(src), "severity_peer": len(src)}
 
     chain_signal = _numeric_column(users, "loss_log_usd") + 0.5 * _numeric_column(users, "semantic_profile_strength")
     chain_src, chain_dst = _group_window_edges(users["chain_clean"], chain_signal, neighbors=5)
@@ -490,7 +490,7 @@ def _build_incident_event_tensors(
     users: pd.DataFrame,
     history_len: int = RUG_PULL_EVENT_SEQUENCE_LENGTH,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    num_nodes = int(len(users))
+    num_nodes = len(users)
     sequence_length = max(int(history_len), 1)
     event_dim = 8
     event_sequence = np.zeros((num_nodes, sequence_length, event_dim), dtype=np.float32)
@@ -764,7 +764,6 @@ def load_defi_rug_pull_dataset(
         clients.append(
             ClientShard(
                 client_id=client_id,
-                owned_global_nodes=owned_nodes,
                 subgraph=subgraph,
                 train_nodes=int(subgraph.nodes[NODE_TYPE].data["train_mask"].sum().item()),
             )
@@ -791,7 +790,7 @@ def load_defi_rug_pull_dataset(
         "feature_columns": feature_columns,
         "feature_dim": int(feature_matrix.shape[1]),
         "num_nodes": int(graph.num_nodes(NODE_TYPE)),
-        "num_clients": int(len(clients)),
+        "num_clients": len(clients),
         "relation_edge_counts": relation_edge_counts,
         "graph_source": "synthetic_incident_semantic_graph",
         "train_nodes": int(train_mask.sum().item()),

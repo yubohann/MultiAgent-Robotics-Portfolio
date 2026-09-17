@@ -238,13 +238,15 @@ def should_inherit_resume_best_metrics(
     if auc_gap <= 0.01 and gmean_gap <= 0.03 and pr_auc_gap <= 0.03 and f1_macro_gap <= 0.03:
         return (
             True,
-            "resume_eval_matches_checkpoint("
-            f"auc_gap={auc_gap:.4f}, gmean_gap={gmean_gap:.4f}, "
-            f"pr_auc_gap={pr_auc_gap:.4f}, f1_macro_gap={f1_macro_gap:.4f})",
+            (
+                f"resume_eval_matches_checkpoint(auc_gap={auc_gap:.4f}, gmean_gap={gmean_gap:.4f}, "
+                f"pr_auc_gap={pr_auc_gap:.4f}, f1_macro_gap={f1_macro_gap:.4f})"
+            ),
         )
     return (
         False,
-        "resume_eval_diverged_from_checkpoint("
-        f"auc_gap={auc_gap:.4f}, gmean_gap={gmean_gap:.4f}, "
-        f"pr_auc_gap={pr_auc_gap:.4f}, f1_macro_gap={f1_macro_gap:.4f})",
+        (
+            f"resume_eval_diverged_from_checkpoint(auc_gap={auc_gap:.4f}, gmean_gap={gmean_gap:.4f}, "
+            f"pr_auc_gap={pr_auc_gap:.4f}, f1_macro_gap={f1_macro_gap:.4f})"
+        ),
     )

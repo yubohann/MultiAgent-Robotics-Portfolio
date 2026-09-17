@@ -23,13 +23,7 @@ def _clamp_norm(vector: np.ndarray, maximum: float) -> np.ndarray:
 
 @dataclass(frozen=True)
 class HighLevelAction:
-    """Public policy ABI compatible with a velocity/yaw fixed controller.
-
-    ``velocity_xyz`` is interpreted in ``frame``.  The third component is the
-    MD-QD-Swarm-compatible ``dz`` command: vertical velocity in m/s, not a
-    target altitude.  This keeps high-level policies independent of the
-    low-level controller and simulator-specific actuator ABI.
-    """
+    """Public policy ABI compatible with a velocity/yaw fixed controller."""
 
     velocity_xyz: tuple[float, float, float] = (0.0, 0.0, 0.0)
     yaw_rate_rad_s: float = 0.0
@@ -146,11 +140,7 @@ class SafetyEvent:
 
 @dataclass(frozen=True)
 class PublicObservation:
-    """The only object passed to native policies.
-
-    Sensor data are copied when exposed.  There is no target identifier,
-    evaluator result, reward, future state, or random seed in this type.
-    """
+    """The only object passed to native policies."""
 
     agent_id: int
     sim_time_ns: int
@@ -187,7 +177,7 @@ class EvaluationReport:
     normalized_confirmed_auc: float
     first_confirmation_latency_s: float | None
     collision_count: int
-    evaluator_truth_sha256: str
+    evaluator_truth_identity: str
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -198,5 +188,5 @@ class EvaluationReport:
             "normalized_confirmed_auc": self.normalized_confirmed_auc,
             "first_confirmation_latency_s": self.first_confirmation_latency_s,
             "collision_count": self.collision_count,
-            "evaluator_truth_sha256": self.evaluator_truth_sha256,
+            "evaluator_truth_identity": self.evaluator_truth_identity,
         }

@@ -7,7 +7,6 @@ from pathlib import Path
 
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
@@ -16,8 +15,8 @@ if str(SRC) not in sys.path:
 from rivermark_benchmark.citylite_scene import AABB
 from rivermark_benchmark.isaac_runtime_safety import (
     CF2X_RUNTIME_GUARD_RADIUS_M,
-    CONTACT_ABORT_FORCE_N,
     CONTACT_ABORT_FORCE_FLOAT32_CUTOFF_N,
+    CONTACT_ABORT_FORCE_N,
     INTER_AGENT_MINIMUM_CENTER_SEPARATION_M,
     INTER_AGENT_PAIR_COUNT,
     RUNTIME_SAFETY_FRAME_OUTCOME_CODES,
@@ -25,9 +24,9 @@ from rivermark_benchmark.isaac_runtime_safety import (
     RuntimeSafetyCheck,
     evaluate_runtime_safety,
     finalize_runtime_safety_guard,
+    physics_time_ns,
     record_runtime_safety_abort,
     record_runtime_safety_check,
-    physics_time_ns,
     runtime_safety_receipt_template,
 )
 
@@ -165,7 +164,7 @@ class RuntimeSafetyTests(unittest.TestCase):
             physics_dt_s=0.005,
         )
         self.assertTrue(receipt["enabled"])
-        self.assertTrue(receipt["fail_closed"])
+        self.assertTrue(receipt["strict"])
         self.assertEqual(receipt["agent_center_radius_m"], CF2X_RUNTIME_GUARD_RADIUS_M)
         self.assertEqual(receipt["swept_aabb_clearance_m"], 0.85)
         self.assertEqual(receipt["contact"]["force_abort_threshold_n"], CONTACT_ABORT_FORCE_N)
@@ -210,7 +209,7 @@ class RuntimeSafetyTests(unittest.TestCase):
         self.assertEqual(aborted["status"], "aborted")
         self.assertEqual(aborted["checks"]["contact_abort_count"], 1)
 
-        finalize_runtime_safety_guard(receipt, trace_sha256="a" * 64, physics_frame_count=2)
+        finalize_runtime_safety_guard(receipt, trace_identity="a" * 16, physics_frame_count=2)
         self.assertEqual(receipt["status"], "passed")
         self.assertEqual(receipt["evidence"]["physics_frame_count"], 2)
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-
 import pytest
 
 from aerocity_method.runtime.communication import (
@@ -11,8 +9,8 @@ from aerocity_method.runtime.communication import (
 )
 
 
-def _payload_digest(label: str) -> str:
-    return hashlib.sha256(label.encode("utf-8")).hexdigest()
+def _payload_id(label: str) -> str:
+    return f"payload-{label}"
 
 
 def test_relay_graph_connects_distant_agents_through_a_measured_intermediate() -> None:
@@ -62,7 +60,7 @@ def test_relay_message_waits_for_latency_and_a_measured_relay_path() -> None:
         line_of_sight_clear=lambda _source, _target: True,
     )
     queue = RelayMessageQueue(("uav0", "uav1"), 0.2, 0.1, 0.0)
-    digest = _payload_digest("public-range-map")
+    digest = _payload_id("public-range-map")
     queue.publish(RelayMessage("message0", "uav0", 0.0, digest, 2.0))
     assert not queue.advance(timestamp_s=0.1, graph=connected)
     assert not queue.advance(timestamp_s=0.3, graph=disconnected)
@@ -71,7 +69,7 @@ def test_relay_message_waits_for_latency_and_a_measured_relay_path() -> None:
     assert outcomes[0].status == "DELIVERED"
     assert outcomes[0].delivery is not None
     assert outcomes[0].delivery.relay_path_agent_indices == (0, 1)
-    assert queue.stale_age_seconds(receiver_id="uav1", payload_digest=digest, now_s=1.0) == 1.0
+    assert queue.stale_age_seconds(receiver_id="uav1", payload_id=digest, now_s=1.0) == 1.0
 
 
 def test_relay_message_records_timeout_and_deterministic_loss_instead_of_erasing_them() -> None:
@@ -81,11 +79,11 @@ def test_relay_message_records_timeout_and_deterministic_loss_instead_of_erasing
         line_of_sight_clear=lambda _source, _target: True,
     )
     queue = RelayMessageQueue(("uav0", "uav1"), 0.0, 0.0, 0.0)
-    queue.publish(RelayMessage("message0", "uav0", 0.0, _payload_digest("map0"), 0.5))
+    queue.publish(RelayMessage("message0", "uav0", 0.0, _payload_id("map0"), 0.5))
     outcomes = queue.advance(timestamp_s=0.6, graph=graph)
     assert outcomes[0].status == "EXPIRED"
     loss_queue = RelayMessageQueue(("uav0", "uav1"), 0.0, 0.0, 1.0)
-    loss_queue.publish(RelayMessage("message1", "uav0", 0.0, _payload_digest("map1"), 1.0))
+    loss_queue.publish(RelayMessage("message1", "uav0", 0.0, _payload_id("map1"), 1.0))
     dropped = loss_queue.advance(timestamp_s=0.0, graph=graph)
     assert dropped[0].status == "DROPPED"
 
@@ -97,7 +95,7 @@ def test_relay_message_finalization_preserves_unresolved_episode_denominator() -
         line_of_sight_clear=lambda _source, _target: True,
     )
     queue = RelayMessageQueue(("uav0", "uav1"), 1.0, 0.0, 0.0)
-    queue.publish(RelayMessage("message2", "uav0", 0.0, _payload_digest("map2"), 10.0))
+    queue.publish(RelayMessage("message2", "uav0", 0.0, _payload_id("map2"), 10.0))
     assert not queue.advance(timestamp_s=0.1, graph=graph)
     assert queue.pending_recipient_count == 1
     final = queue.finalize_episode(timestamp_s=0.2)

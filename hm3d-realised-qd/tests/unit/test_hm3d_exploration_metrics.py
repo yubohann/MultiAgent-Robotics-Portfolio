@@ -8,16 +8,15 @@ from aerocity_method.contracts.exploration import (
     ExplorationExecutionOutcome,
     TeamExplorationCandidate,
 )
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.evaluation.hm3d_exploration import (
     assemble_episode_ledger,
     build_decision_record,
-    candidate_set_hash,
+    candidate_set_id,
 )
 from aerocity_method.evaluation.hm3d_exploration_metrics import (
     ExplorationMetricSample,
     SceneMacroAggregate,
-    evaluation_denominator_sha256,
+    evaluation_denominator_id,
     score_exploration_episode,
 )
 
@@ -46,7 +45,7 @@ def test_exploration_metrics_score_auc_and_map_correctness():
     assert report.evaluator_reachable_free_flight_volume_m3 == pytest.approx(10.0)
     assert report.mean_explored_free_volume_rate_m3_per_s == pytest.approx(0.9)
     assert report.communication_delivery_ratio == pytest.approx(0.75)
-    assert report.report_hash == report.to_dict()["report_hash"]
+    assert report.report_id == report.to_dict()["report_id"]
 
 
 def test_exploration_metrics_reject_a_shifting_private_denominator():
@@ -64,17 +63,17 @@ def test_exploration_metrics_reject_a_shifting_private_denominator():
 def test_evaluator_denominator_digest_binds_p03_geometry_but_not_row_order():
     first = {
         "scene_id": "scene-a",
-        "source_geometry_sha256": "a" * 64,
-        "flight_space_manifest_hash": "b" * 64,
-        "collision_geometry_sha256": "c" * 64,
+        "source_geometry_id": "a" * 64,
+        "flight_space_manifest_id": "b" * 64,
+        "collision_geometry_id": "c" * 64,
         "resolution_m": 0.25,
         "vehicle_clearance_m": 0.30,
         "free_flight_volume_m3": 100.0,
     }
-    second = {**first, "scene_id": "scene-b", "source_geometry_sha256": "d" * 64}
-    digest = evaluation_denominator_sha256((first, second))
-    assert digest == evaluation_denominator_sha256((second, first))
-    assert digest != evaluation_denominator_sha256(
+    second = {**first, "scene_id": "scene-b", "source_geometry_id": "d" * 64}
+    digest = evaluation_denominator_id((first, second))
+    assert digest == evaluation_denominator_id((second, first))
+    assert digest != evaluation_denominator_id(
         ({**first, "free_flight_volume_m3": 101.0}, second)
     )
 
@@ -93,11 +92,10 @@ def test_exploration_metrics_reject_nonmonotone_unique_volume():
 
 
 def test_episode_ledger_binds_selected_candidate_to_outcome():
-    belief_hash = canonical_sha256({"belief": 1})
     candidate = TeamExplorationCandidate(
         candidate_id="candidate0",
-        context_sha256=canonical_sha256({"context": 1}),
-        belief_version_sha256s=(belief_hash,),
+        context_id="context-1",
+        belief_version_ids=("belief-1",),
         agent_plans=(
             AgentExplorationPlan(
                 "uav0",
@@ -117,7 +115,7 @@ def test_episode_ledger_binds_selected_candidate_to_outcome():
         outcome_id="outcome0",
         episode_id="episode0",
         decision_id="decision0",
-        candidate_sha256=candidate.digest,
+        candidate_id=candidate.candidate_id,
         started_timestamp_s=0.0,
         ended_timestamp_s=1.0,
         agent_outcomes=(
@@ -152,16 +150,16 @@ def test_episode_ledger_binds_selected_candidate_to_outcome():
         collision_count=0,
         energy_j=1.0,
     )
-    assert record.candidate_set_sha256 == candidate_set_hash((candidate,))
+    assert record.candidate_set_file_id == candidate_set_id((candidate,))
     assert ledger.status == "TASK_VALID"
-    assert ledger.ledger_hash == ledger.to_dict()["ledger_hash"]
+    assert ledger.ledger_id == ledger.to_dict()["ledger_id"]
 
 
 def test_episode_ledger_rejects_outcome_for_unselected_candidate():
     candidate = TeamExplorationCandidate(
         candidate_id="candidate0",
-        context_sha256=canonical_sha256({"context": 1}),
-        belief_version_sha256s=(canonical_sha256({"belief": 1}),),
+        context_id="context-1",
+        belief_version_ids=("belief-1",),
         agent_plans=(
             AgentExplorationPlan(
                 "uav0",
@@ -181,7 +179,7 @@ def test_episode_ledger_rejects_outcome_for_unselected_candidate():
         outcome_id="outcome0",
         episode_id="episode0",
         decision_id="decision0",
-        candidate_sha256=canonical_sha256({"other": 1}),
+        candidate_id="other-candidate",
         started_timestamp_s=0.0,
         ended_timestamp_s=1.0,
         agent_outcomes=(
@@ -201,7 +199,7 @@ def test_episode_ledger_rejects_outcome_for_unselected_candidate():
         observed_occupied_delta=0,
         realised_descriptor=(0.0, 1.0),
     )
-    with pytest.raises(ValueError, match="outcome candidate hash"):
+    with pytest.raises(ValueError, match="outcome candidate id"):
         build_decision_record(
             decision_id="decision0",
             candidate_set=(candidate,),

@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 
 from aerocity_method.runtime.hm3d_start_resets import (
-    largest_component_departure_witnesses,
     largest_component_clearance_points,
+    largest_component_departure_witnesses,
     select_local_spread_positions,
 )
 
@@ -102,7 +102,11 @@ def test_departure_witnesses_exclude_isolated_high_clearance_voxels() -> None:
     )
 
     assert grid_tube_clearance_m == pytest.approx(0.675)
-    assert {tuple(point) for point in starts} == {(0.0, 0.0, 0.0), (0.25, 0.0, 0.0), (0.5, 0.0, 0.0)}
+    assert {tuple(point) for point in starts} == {
+        (0.0, 0.0, 0.0),
+        (0.25, 0.0, 0.0),
+        (0.5, 0.0, 0.0),
+    }
     assert len(endpoints) == len(starts)
     assert np.all(np.linalg.norm(endpoints - starts, axis=1) == pytest.approx(0.25))
 

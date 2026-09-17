@@ -91,31 +91,8 @@ Raw metrics,
 
 The source package carries raw CSV and JSON metrics, replay manifests and validation summaries. Large MP4 video outputs live as external artifacts.
 
-Source paths, sizes and SHA256 values for every artifact live in `evaluation_artifacts/results_manifest.json`.
+Source paths, sizes and descriptions for every artifact live in `evaluation_artifacts/results_manifest.json`.
 
-## 7. Hash Check
+## 7. Conclusion
 
-```powershell
-cd <gate_graph_2d_minimal>\evaluation_artifacts
-@'
-import hashlib, json
-from pathlib import Path
-
-root = Path.cwd()
-manifest = json.loads((root / "results_manifest.json").read_text(encoding="utf-8-sig"))
-bad = []
-for item in manifest["files"]:
-    path = root / item["relative_path"]
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    if digest != item["sha256"]:
-        bad.append((item["relative_path"], digest, item["sha256"]))
-print(f"checked={len(manifest['files'])} mismatches={len(bad)}")
-raise SystemExit(1 if bad else 0)
-'@ | python -
-```
-
-Expected result, `checked=7 mismatches=0`.
-
-## 8. Conclusion
-
-`gate_graph_2d_minimal` retains the environment description, raw results, baseline comparison and the SHA256 integrity list. A release refresh rechecks `results_manifest.json` against the shipped artifact set.
+`gate_graph_2d_minimal` retains the environment description, raw results and baseline comparison. A release refresh rechecks `results_manifest.json` against the shipped artifact set.

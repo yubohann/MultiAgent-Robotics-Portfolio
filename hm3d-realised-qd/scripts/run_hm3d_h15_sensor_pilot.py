@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -28,12 +27,9 @@ ROW_SCHEMA_VERSION = "hm3d-h15-sensor-row-v3"
 RUNNER_VERSION = "hm3d-h15-real-sensor-row-v4"
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _write_new(path: Path, payload: dict[str, Any]) -> None:
@@ -206,15 +202,13 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         "synthetic": False,
         "evidence_class": "real_runtime_measurement",
         "runtime_run_id": f"isaac-hm3d-h15-{uuid.uuid4().hex}",
-        "runtime_command_sha256": hashlib.sha256(
-            "\0".join(str(value) for value in sys.argv).encode("utf-8")
-        ).hexdigest(),
+        "runtime_command_id": "command:" + "|".join(str(value) for value in sys.argv[:8]),
         "runner_version": RUNNER_VERSION,
         "source_observation_binding": True,
         "selection_partition": "train",
         "scene_id": args.scene_id,
-        "collision_usd_sha256": _sha256(paths["collision"]),
-        "receiver_position_source_sha256": _sha256(paths["receiver_positions"]),
+        "collision_usd_file_id": _file_id(paths["collision"]),
+        "receiver_position_source_file_id": _file_id(paths["receiver_positions"]),
         "pilot_claim_limit": (
             "Throughput and sensor-entitlement pilot only; no task-quality metric is measured."
         ),

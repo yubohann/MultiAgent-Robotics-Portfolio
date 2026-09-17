@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import math
 import random
+from dataclasses import asdict, dataclass
 
 import numpy as np
-
 
 UNIFIED_GATE_BOTTOM_HEIGHT_M = 0.0
 UNIFIED_GATE_TOP_HEIGHT_M = 8.0
@@ -84,19 +83,6 @@ class DynamicGate2D:
 
 def default_dynamic_gate_density_config() -> DynamicGateDensity2DConfig:
     return DynamicGateDensity2DConfig()
-
-
-def training_drone_speed_gradient() -> tuple[DroneSpeedGradientStage, ...]:
-    if len(TRAINING_DRONE_SPEED_AXIS_MPS) != len(TRAINING_DRONE_ACCEL_AXIS_MPS2):
-        raise RuntimeError("training drone speed and acceleration axes must have the same length")
-    return tuple(
-        DroneSpeedGradientStage(
-            stage_index=idx,
-            max_command_speed_mps=float(speed),
-            max_accel_mps2=float(TRAINING_DRONE_ACCEL_AXIS_MPS2[idx]),
-        )
-        for idx, speed in enumerate(TRAINING_DRONE_SPEED_AXIS_MPS)
-    )
 
 
 def speed_gradient_for_stage(stage_index: int) -> DroneSpeedGradientStage:
@@ -275,7 +261,7 @@ def gate_posts_by_gate(
     if len(gates) == 0:
         return np.zeros((0, 2, 2), dtype=np.float32)
     posts: list[list[np.ndarray]] = []
-    for gate, center in zip(gates, centers_xy):
+    for gate, center in zip(gates, centers_xy, strict=False):
         axis = _rotation(gate.yaw_rad) @ np.asarray([0.0, cfg.gate_half_width_m], dtype=np.float32)
         posts.append([np.asarray(center, dtype=np.float32) + axis, np.asarray(center, dtype=np.float32) - axis])
     return np.asarray(posts, dtype=np.float32)
@@ -441,8 +427,8 @@ def swept_post_clearance(
     nxt = np.asarray(next_positions_xy, dtype=np.float32)
     start_posts = np.asarray(start_posts_xy, dtype=np.float32)
     end_posts = np.asarray(end_posts_xy, dtype=np.float32)
-    for agent_start, agent_end in zip(prev, nxt):
-        for post_start, post_end in zip(start_posts, end_posts):
+    for agent_start, agent_end in zip(prev, nxt, strict=False):
+        for post_start, post_end in zip(start_posts, end_posts, strict=False):
             rel0 = agent_start - post_start
             rel1 = agent_end - post_end
             vel = rel1 - rel0

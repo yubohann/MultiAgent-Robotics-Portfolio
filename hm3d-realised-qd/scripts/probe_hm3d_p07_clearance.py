@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -19,12 +18,9 @@ from aerocity_method.adapters.hm3d_runtime import build_enclosed_esdf
 from aerocity_method.evaluation.hm3d_safety import ConservativeVoxelClearance
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _load_mesh(usd_path: Path) -> Any:
@@ -137,8 +133,8 @@ def main() -> int:
             "Evaluator-side static-clearance diagnostic only; no targets or result scores."
         ),
         "scene_id": source.get("scene_id"),
-        "collision_usd_sha256": _sha256(collision),
-        "receiver_position_source_sha256": _sha256(poses),
+        "collision_usd_file_id": _file_id(collision),
+        "receiver_position_source_file_id": _file_id(poses),
         "esdf_resolution_m": field.resolution_m,
         "esdf_discretization_margin_m": field.discretization_margin_m,
         "esdf_generation_method": report["generation_method"],

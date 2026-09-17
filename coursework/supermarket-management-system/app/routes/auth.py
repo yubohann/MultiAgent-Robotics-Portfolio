@@ -1,6 +1,5 @@
-from flask import flash, jsonify, redirect, render_template, request, session, url_for
+from flask import flash, redirect, render_template, request, session, url_for
 
-from app.models import User
 from app.routes.common import admin_required
 from app.services.analytics import get_dashboard_overview
 from app.services.auth import (

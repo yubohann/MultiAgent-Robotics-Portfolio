@@ -36,17 +36,17 @@ def _inferred_interactions(
         overlap = _overlap(left, right)
         if overlap <= 0.0:
             continue
-        left_hash = left.digest
-        right_hash = right.digest
+        left_id = left.instance_fragment_id
+        right_id = right.instance_fragment_id
 
         def add(
             kind: str,
             weight: float,
-            source_hash: str = left_hash,
-            target_hash: str = right_hash,
+            source_id: str = left_id,
+            target_id: str = right_id,
         ) -> None:
-            edge = InteractionEdge(source_hash, target_hash, kind, weight)
-            key = (edge.source_fragment_hash, edge.target_fragment_hash, edge.kind)
+            edge = InteractionEdge(source_id, target_id, kind, weight)
+            key = (edge.source_fragment_id, edge.target_fragment_id, edge.kind)
             previous = edge_rows.get(key)
             if previous is None or edge.weight > previous.weight:
                 edge_rows[key] = edge
@@ -64,7 +64,7 @@ def _inferred_interactions(
         if (
             left.type_signature.fragment_type == "observation"
             and right.type_signature.fragment_type == "observation"
-            and left.type_signature.digest == right.type_signature.digest
+            and left.type_signature == right.type_signature
         ):
             add("redundant_observation", overlap)
         if "communication" in {
@@ -76,8 +76,8 @@ def _inferred_interactions(
         sorted(
             edge_rows.values(),
             key=lambda edge: (
-                edge.source_fragment_hash,
-                edge.target_fragment_hash,
+                edge.source_fragment_id,
+                edge.target_fragment_id,
                 edge.kind,
                 edge.weight,
             ),
@@ -95,34 +95,26 @@ def build_candidate_graph(
     manifests_tuple = tuple(manifests)
     if not manifests_tuple:
         raise ValueError("graph construction requires at least one candidate manifest")
-    manifest_by_hash: dict[str, CandidateFragmentManifest] = {}
+    manifest_by_id: dict[str, CandidateFragmentManifest] = {}
     fragment_by_id: dict[str, FragmentInstance] = {}
-    fragment_by_hash: dict[str, FragmentInstance] = {}
     membership: set[tuple[str, str, int]] = set()
     all_interactions: dict[tuple[str, str, str], InteractionEdge] = {}
     for manifest in manifests_tuple:
-        manifest_hash = manifest.manifest_hash
-        existing_manifest = manifest_by_hash.get(manifest_hash)
-        if existing_manifest is not None and existing_manifest != manifest:
-            raise ValueError("candidate hash collision")
-        manifest_by_hash[manifest_hash] = manifest
+        manifest_id = manifest.manifest_id
+        manifest_by_id[manifest_id] = manifest
         for order, fragment in enumerate(manifest.fragments):
-            previous = fragment_by_id.get(fragment.instance_fragment_id)
-            if previous is not None and previous.digest != fragment.digest:
-                raise ValueError("fragment instance ID is bound to conflicting payloads")
             fragment_by_id[fragment.instance_fragment_id] = fragment
-            fragment_by_hash[fragment.digest] = fragment
-            membership.add((manifest_hash, fragment.digest, order))
+            membership.add((manifest_id, fragment.instance_fragment_id, order))
         for edge in _inferred_interactions(
             manifest.fragments, collision_tolerance=collision_tolerance
         ):
-            key = (edge.source_fragment_hash, edge.target_fragment_hash, edge.kind)
+            key = (edge.source_fragment_id, edge.target_fragment_id, edge.kind)
             previous_edge = all_interactions.get(key)
             if previous_edge is None or edge.weight > previous_edge.weight:
                 all_interactions[key] = edge
     return CandidateGraphBatch(
-        candidate_hashes=tuple(manifest_by_hash),
-        fragment_hashes=tuple(fragment_by_hash),
+        candidate_ids=tuple(manifest_by_id),
+        fragment_ids=tuple(fragment_by_id),
         membership_edges=tuple(membership),
         interaction_edges=tuple(all_interactions.values()),
     )

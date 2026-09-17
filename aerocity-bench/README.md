@@ -9,7 +9,7 @@
 
 Coverage is the standard proxy for search quality, and it breaks in cities. A quadrotor can pass a building and miss the roof, inspect the wrong facade, lose line of sight behind geometry, or cross the observation window too fast to score. AeroCityBench turns those cases into a measurable task: procedurally generated 3D cities, a public task contract, scorer-private target truth, and confirmation that requires a legal observation in flight.
 
-**Status.** `v0.2.0.dev0` pilot. Generator, contracts, scorer, audit tooling and calibration infrastructure are implemented. Formal blind scoring opens after the validation gates in [docs/research-notes.md](docs/research-notes.md).
+**Status.** `v0.2.0.dev0` pilot. Generator, contracts, scorer, calibration tooling and release builders are implemented. Formal blind scoring opens after validation in [docs/research-notes.md](docs/research-notes.md).
 
 ## What It Tests
 
@@ -35,11 +35,11 @@ An OBSERVE must satisfy range, field of view, facing, line of sight, allowed sur
 ## Inside the Benchmark
 
 - A constrained procedural city generator with versioned release configs and open-asset policy checks.
-- Public and private task projections, JSON schemas, content hashes and release validation.
+- Public and private task projections, JSON schemas and release manifests.
 - A G2-I inspection atlas compiled from geometry alone, with recursive leakage probes.
 - Scorer contracts for evidence-bound `OBSERVE` actions and private confirmation.
 - Baseline adapters plus CPU and native preflight tools for external methods.
-- Contract, integrity, host-guard and quality-gate tests that run on CPU.
+- Contract, generation, geometry, metric and adapter tests that run on CPU.
 
 ## Verified So Far
 
@@ -49,7 +49,7 @@ Development-grade evidence from the current pilot. Formal scores come only from 
 - L2 visual review batches passed at a frozen 960x640 profile across training, calibration and validation cities.
 - Twelve development cities passed static geometry, context and full-episode admission review.
 - The CC0 mini asset core closed with 32 USD layers, zero remote references and zero unresolved paths.
-- The mission-sector certificate recomputes flight, dwell, climb and reserve bounds from the public assignment and fails closed on any mismatch.
+- The mission-sector certificate recomputes flight, dwell, climb and reserve bounds from the public assignment and rejects any mismatch.
 
 ## Quick Start
 
@@ -68,11 +68,11 @@ $assetRoot = (Resolve-Path $env:AEROCITY_ASSET_ROOT)
 $outputRoot = Join-Path $env:AEROCITY_OUTPUT_ROOT "ordinary-v1-mini"
 
 python -m aerocity_bench build --release .\configs\releases\ordinary-v1-mini.json `
-  --asset-root $assetRoot --output $outputRoot --task-track G2-I --allow-uncommitted-development
+  --asset-root $assetRoot --output $outputRoot --allow-uncommitted-development
 python -m aerocity_bench validate $outputRoot
 ```
 
-More paths, including native and external adapters, live in the [run guide](docs/run-guide.md).
+More paths, including external adapters, live in the [run guide](docs/run-guide.md).
 
 ## Documentation
 

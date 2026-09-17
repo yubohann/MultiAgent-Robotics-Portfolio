@@ -8,9 +8,10 @@ import math
 import sys
 import threading
 import time
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 import rclpy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
@@ -219,7 +220,7 @@ class CameraYoloAdapter(Node):
             raise ImportError(f"cannot load legacy detector module: {module_path}")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        detector_class = getattr(module, "YOLODepthDetector")
+        detector_class = module.YOLODepthDetector
         return detector_class(
             weights=str(weights_path),
             device=self.device,
@@ -240,7 +241,7 @@ class CameraYoloAdapter(Node):
 
                 capture = cv2.VideoCapture(0)
                 if not capture.isOpened():
-                    raise RuntimeError("fallback camera could not be opened")
+                    raise RuntimeError("USB camera could not be opened")
             with self._lock:
                 self._status = "running"
                 self._failure_reason = ""
@@ -266,7 +267,7 @@ class CameraYoloAdapter(Node):
                     self._latest = observation
                     self._status = "running_with_target" if observation else "running_no_target"
                 time.sleep(0.01)
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - capture thread boundary: any failure is surfaced through node status
             with self._lock:
                 self._status = "error"
                 self._failure_reason = str(error)
@@ -274,8 +275,8 @@ class CameraYoloAdapter(Node):
             if detector is not None and self.use_berxel:
                 try:
                     detector.depth_camera.stop_camera()
-                except Exception:
-                    pass
+                except Exception as error:  # noqa: BLE001 - shutdown must not mask the capture failure
+                    self.get_logger().warn(f"depth camera stop failed: {error}")
             if capture is not None:
                 capture.release()
 

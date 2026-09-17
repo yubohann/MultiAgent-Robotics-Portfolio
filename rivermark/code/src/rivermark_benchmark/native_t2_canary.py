@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from collections.abc import Iterable, Mapping, Sequence
@@ -11,6 +10,7 @@ from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .cf2x_runtime_calibration import validate_calibration_report
 from .citylite_scene import AGENT_COUNT
 from .isaac_transfer import _wrap_angle
@@ -28,14 +28,14 @@ NATIVE_T2_CALIBRATION_BINDING_SCHEMA = "org.rivermark.native-t2-calibration-bind
 TARGET_SLOT_PREFIX = "search_target_slot_"
 
 
-def _canonical_sha256(value: Any) -> str:
+def _canonical_identity(value: Any) -> str:
     try:
         payload = json.dumps(
             value, allow_nan=False, ensure_ascii=True, separators=(",", ":"), sort_keys=True
         ).encode("utf-8")
     except (TypeError, ValueError) as exc:
         raise T2PolicyAbiError("native T2 provenance cannot be canonicalized") from exc
-    return hashlib.sha256(payload + b"\n").hexdigest()
+    return IdentityAccumulator(payload + b"\n").hexdigest()
 
 
 def _finite_array(value: Any, *, shape: tuple[int, ...], name: str) -> np.ndarray:
@@ -54,15 +54,7 @@ def native_rgbd_world_points(
     pos_w_m: np.ndarray,
     quat_w_ros: np.ndarray,
 ) -> np.ndarray:
-    """Return canonical CPU world points for a retained native RGB-D frame.
-
-    IsaacLab renders and exposes the live sensor tensors, but its Torch
-    unprojection can differ by a few float32 ULPs from a CPU replay.  Native
-    T2 events are hash-bound evidence, so their positions must instead be
-    derived from the exact arrays retained in the capture archive by this
-    shared, CPU-only implementation.  The pixel ordering matches IsaacLab's
-    ``unproject_depth`` (u-major after its H/W transpose).
-    """
+    """Return canonical CPU world points for a retained native RGB-D frame."""
 
     depth = np.asarray(depth_m, dtype=np.float32)
     matrices = np.asarray(intrinsics, dtype=np.float32)
@@ -108,30 +100,24 @@ def native_rgbd_world_points(
 def bind_native_t2_calibration(
     report: Any,
     *,
-    expected_usd_sha256: str,
-    expected_runtime_lock_sha256: str,
+    expected_usd_identity: str,
+    expected_runtime_lock_identity: str,
     expected_control_dt_s: float,
 ) -> dict[str, Any]:
-    """Return a path-free, hash-bound calibration commitment for native T2.
-
-    The report itself remains an operator-side calibration artifact.  This
-    public record deliberately retains only its self-hash and the physical
-    identities that must agree with the active CF2X runtime before a policy is
-    allowed to command it.
-    """
+    """Return a path-free, identity-bound calibration commitment for native T2."""
 
     issues = validate_calibration_report(report)
     if issues:
         raise T2PolicyAbiError("CF2X runtime calibration is invalid: " + "; ".join(issues))
     if not isinstance(report, Mapping) or report.get("status") != "passed":
         raise T2PolicyAbiError("CF2X runtime calibration must have passed")
-    if not isinstance(expected_usd_sha256, str) or len(expected_usd_sha256) != 64:
-        raise T2PolicyAbiError("expected CF2X USD hash must be a SHA-256")
+    if not isinstance(expected_usd_identity, str) or len(expected_usd_identity) != 16:
+        raise T2PolicyAbiError("expected CF2X USD identity must be a short identity")
     if (
-        not isinstance(expected_runtime_lock_sha256, str)
-        or len(expected_runtime_lock_sha256) != 64
+        not isinstance(expected_runtime_lock_identity, str)
+        or len(expected_runtime_lock_identity) != 16
     ):
-        raise T2PolicyAbiError("expected runtime-lock hash must be a SHA-256")
+        raise T2PolicyAbiError("expected runtime-lock identity must be a short identity")
     if not math.isfinite(float(expected_control_dt_s)) or float(expected_control_dt_s) <= 0.0:
         raise T2PolicyAbiError("expected control dt must be finite and positive")
 
@@ -139,10 +125,10 @@ def bind_native_t2_calibration(
     runtime = report.get("runtime")
     if not isinstance(asset, Mapping) or not isinstance(runtime, Mapping):
         raise T2PolicyAbiError("CF2X runtime calibration is missing asset or runtime evidence")
-    if asset.get("usd_sha256") != expected_usd_sha256:
-        raise T2PolicyAbiError("CF2X runtime calibration USD hash does not match capture")
-    if report.get("runtime_lock_sha256") != expected_runtime_lock_sha256:
-        raise T2PolicyAbiError("CF2X runtime calibration runtime-lock hash does not match capture")
+    if asset.get("usd_identity") != expected_usd_identity:
+        raise T2PolicyAbiError("CF2X runtime calibration USD identity does not match capture")
+    if report.get("runtime_lock_identity") != expected_runtime_lock_identity:
+        raise T2PolicyAbiError("CF2X runtime calibration runtime-lock identity does not match capture")
     actuator = runtime.get("actuator")
     if not isinstance(actuator, Mapping):
         raise T2PolicyAbiError("CF2X runtime calibration actuator evidence is missing")
@@ -164,22 +150,22 @@ def bind_native_t2_calibration(
         or axis.get("all_positive_body_z") is not True
     ):
         raise T2PolicyAbiError("CF2X runtime calibration physical evidence is incomplete")
-    report_hash = report.get("report_sha256")
+    report_identity = report.get("report_identity")
     source = report.get("source")
-    if not isinstance(report_hash, str) or len(report_hash) != 64 or not isinstance(source, Mapping):
+    if not isinstance(report_identity, str) or len(report_identity) != 16 or not isinstance(source, Mapping):
         raise T2PolicyAbiError("CF2X runtime calibration provenance is incomplete")
     return {
         "schema": NATIVE_T2_CALIBRATION_BINDING_SCHEMA,
-        "report_sha256": report_hash,
+        "report_identity": report_identity,
         "calibration_source_revision": source.get("source_revision"),
-        "calibration_source_tree_sha256": source.get("source_tree_sha256"),
-        "cf2x_usd_sha256": expected_usd_sha256,
-        "runtime_lock_sha256": expected_runtime_lock_sha256,
+        "calibration_source_tree_identity": source.get("source_tree_identity"),
+        "cf2x_usd_identity": expected_usd_identity,
+        "runtime_lock_identity": expected_runtime_lock_identity,
         "control_dt_s": float(expected_control_dt_s),
-        "rotor_order_sha256": _canonical_sha256(rotor_names),
-        "allocation_matrix_sha256": _canonical_sha256(allocation),
+        "rotor_order_identity": _canonical_identity(rotor_names),
+        "allocation_matrix_identity": _canonical_identity(allocation),
         "positive_body_z_thrust_axis": True,
-        "actuator_response_sha256": _canonical_sha256(dict(actuator)),
+        "actuator_response_identity": _canonical_identity(dict(actuator)),
         "calibration_path_released": False,
         "calibration_payload_released": False,
     }
@@ -187,12 +173,7 @@ def bind_native_t2_calibration(
 
 @dataclass(frozen=True)
 class PublicRouteCoveragePolicy:
-    """A deterministic, target-blind route follower for the T2 canary.
-
-    The fixed route is public task configuration, rather than policy input or
-    evaluator truth.  This is a canary baseline only: it proves the native ABI
-    and sensor event path, not a learned-search result.
-    """
+    """A deterministic, target-blind route follower for the T2 canary."""
 
     routes_w_m: np.ndarray
     waypoint_segment_seconds: float
@@ -261,7 +242,7 @@ class PublicRouteCoveragePolicy:
         return {
             "schema": NATIVE_T2_POLICY_SCHEMA,
             "policy_kind": "deterministic_public_route_coverage",
-            "route_sha256": _canonical_sha256(routes),
+            "route_identity": _canonical_identity(routes),
             "route_agent_count": AGENT_COUNT,
             "route_waypoint_count": int(self.routes_w_m.shape[1]),
             "waypoint_segment_seconds": float(self.waypoint_segment_seconds),
@@ -308,15 +289,7 @@ def native_semantic_rgbd_candidates(
     *,
     minimum_pixels: int,
 ) -> tuple[tuple[T2CandidateDetection, ...], ...]:
-    """Recover public candidates from synchronized semantic RGB-D point clouds.
-
-    ``points_w_m`` must originate from the same retained RGB-D frame as the
-    semantic image.  In the native runner it is produced by IsaacLab's
-    ``unproject_depth(...); transform_points(..., quat_w_ros)`` recipe.  The
-    result includes no semantic slot, target ID, evaluator input, or hidden
-    coordinate; those identities are intentionally discarded before events are
-    journaled.
-    """
+    """Recover public candidates from synchronized semantic RGB-D point clouds."""
 
     if isinstance(minimum_pixels, bool) or not isinstance(minimum_pixels, int) or minimum_pixels < 1:
         raise T2PolicyAbiError("minimum_pixels must be a positive integer")
@@ -369,13 +342,7 @@ def native_semantic_rgbd_candidates(
 
 @dataclass
 class SpatialCandidateDeduplicator:
-    """Suppress repeated public detections without consulting evaluator truth.
-
-    A semantic slot key is preferred when supplied.  This avoids converting
-    the same instance into a sequence of distant candidate events as a camera
-    moves around its surface; positions remain the fallback for detectors
-    without public instance semantics.
-    """
+    """Suppress repeated public detections without consulting evaluator truth."""
 
     merge_radius_m: float
     _accepted_positions_w_m: list[np.ndarray] | None = None

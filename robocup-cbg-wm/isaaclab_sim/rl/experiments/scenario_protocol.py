@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
-
-from robocup_visionrl_selfplay_env import DomainRandomizationParams, RoboCupVisionRLSelfPlayEnv
-
+from robocup_visionrl_selfplay_env import (
+    DomainRandomizationParams,
+    RoboCupVisionRLSelfPlayEnv,
+)
 
 SCENARIOS = (
     "nominal",

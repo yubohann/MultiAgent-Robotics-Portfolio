@@ -24,7 +24,9 @@ def _write_checkpoint_new(path: Path, payload: dict[str, object]) -> None:
     import torch
 
     if path.exists():
-        raise FileExistsError(f"refusing to overwrite MARVEL supplementary reference checkpoint: {path}")
+        raise FileExistsError(
+            f"refusing to overwrite MARVEL supplementary reference checkpoint: {path}"
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     try:
@@ -51,13 +53,15 @@ def main() -> int:
     checkpoint = args.checkpoint_output.expanduser().resolve()
     provenance = args.provenance_output.expanduser().resolve()
     if checkpoint == provenance or checkpoint.exists() or provenance.exists():
-        raise FileExistsError("MARVEL supplementary reference trainer refuses to overwrite its outputs")
+        raise FileExistsError(
+            "MARVEL supplementary reference trainer refuses to overwrite its outputs"
+        )
     split = read_json_object(args.p05_split_manifest.expanduser().resolve())
     train_scenes = training_scene_ids_from_split_manifest(split)
     root = split.get("payload", split)
     if not isinstance(root, dict):
         raise ValueError("P05 split manifest payload must be an object")
-    split_hash = str(root["split_manifest_sha256"])
+    split_id = str(root["split_manifest_id"])
     samples = tuple(
         sample
         for path in args.rollout
@@ -67,7 +71,7 @@ def main() -> int:
     )
     model_checkpoint, model_provenance = train_marvel_supplementary_reference_baseline(
         samples,
-        split_manifest_sha256=split_hash,
+        split_manifest_id=split_id,
         updates=args.updates,
         hidden_dim=args.hidden_dim,
         seed=args.seed,

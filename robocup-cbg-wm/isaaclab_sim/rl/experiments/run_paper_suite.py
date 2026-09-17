@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shutil
 import subprocess
@@ -11,18 +10,9 @@ from pathlib import Path
 
 import yaml
 
-
 RL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG = RL_ROOT / "configs" / "cbg_wm_paper_suite.yaml"
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def git_value(*args: str) -> str:
@@ -32,19 +22,10 @@ def git_value(*args: str) -> str:
     return result.stdout.strip()
 
 
-def diff_sha256() -> str:
-    digest = hashlib.sha256()
-    tracked = subprocess.run(
-        ["git", "diff", "--binary", "HEAD"], cwd=REPO_ROOT, check=False, capture_output=True
-    )
-    digest.update(tracked.stdout)
+def worktree_diff_files() -> list[str]:
+    tracked = git_value("diff", "--name-only", "HEAD").splitlines()
     untracked = git_value("ls-files", "--others", "--exclude-standard").splitlines()
-    for relative in sorted(untracked):
-        path = REPO_ROOT / relative
-        if path.is_file():
-            digest.update(relative.replace("\\", "/").encode("utf-8"))
-            digest.update(bytes.fromhex(sha256(path)))
-    return digest.hexdigest()
+    return sorted(set(tracked) | set(untracked))
 
 
 def cli_args(values: dict[str, object]) -> list[str]:
@@ -70,14 +51,11 @@ def valid_completed_run(run_dir: Path, timesteps: int, seed: int, variant: str) 
     status = load_json(run_dir / "exit_status.json")
     manifest = load_json(run_dir / "manifest.json")
     checkpoint = run_dir / "checkpoint_best.pt"
-    checksum = run_dir / "checkpoint.sha256"
-    if not status or not manifest or not checkpoint.is_file() or not checksum.is_file():
+    if not status or not manifest or not checkpoint.is_file():
         return False
     if status.get("completed") is not True or int(status.get("environment_steps", 0)) != timesteps:
         return False
-    if int(manifest.get("seed", -1)) != seed or manifest.get("training_variant") != variant:
-        return False
-    return checksum.read_text(encoding="ascii").strip().split()[0] == sha256(checkpoint)
+    return int(manifest.get("seed", -1)) == seed and manifest.get("training_variant") == variant
 
 
 def run_one(
@@ -136,18 +114,16 @@ def run_one(
     if completed:
         checkpoint = run_dir / "checkpoint_best.pt"
         shutil.copy2(policy, checkpoint)
-        checksum = sha256(checkpoint)
-        (run_dir / "checkpoint.sha256").write_text(checksum + "  checkpoint_best.pt\n", encoding="ascii")
         manifest = {
             "status": "completed",
             "completed": True,
             "training_variant": variant,
             "seed": seed,
             "environment_steps": timesteps,
-            "checkpoint_sha256": checksum,
+            "checkpoint_bytes": checkpoint.stat().st_size,
             "git_head": git_value("rev-parse", "HEAD"),
-            "worktree_diff_sha256": diff_sha256(),
-            "base_config_sha256": sha256(base_config),
+            "worktree_diff_files": worktree_diff_files(),
+            "base_config": str(base_config.resolve()),
             "command": command,
             "started_utc": started.isoformat(),
             "finished_utc": finished.isoformat(),

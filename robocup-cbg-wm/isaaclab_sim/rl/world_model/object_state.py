@@ -3,17 +3,14 @@ from __future__ import annotations
 import math
 
 import numpy as np
-
 from robocup_visionrl_gym_env import (
     ARENA_SIZE,
     BASE_ARMOR_SPECS,
     HALF_ARENA,
     PUSHABLE_OBSTACLE_HALF,
     active_base_armor_blockers,
-    wrap_angle,
 )
 from robocup_visionrl_selfplay_env import AGENTS, RoboCupVisionRLSelfPlayEnv
-
 
 MAX_TARGETS = 10
 TARGET_FEATURE_DIM = 9
@@ -150,11 +147,7 @@ def _blocker_features(env: RoboCupVisionRLSelfPlayEnv) -> list[np.ndarray]:
 
 
 def extract_object_state(env: RoboCupVisionRLSelfPlayEnv) -> np.ndarray:
-    """Return a fixed object-centric state vector for world-model and critic use.
-
-    The local actor stays decentralized, while critics and world models receive
-    explicit robot, target, box and armor-blocker tokens.
-    """
+    """Return a fixed object-centric state vector for world-model and critic use."""
 
     score_delta = float(env.scores["yellow"] - env.scores["blue"]) / 60.0
     robot_distance = float(np.linalg.norm(env.poses["yellow"][:2] - env.poses["blue"][:2])) / ARENA_SIZE

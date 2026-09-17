@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import json
 import os
@@ -15,6 +14,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from rivermark_benchmark._identity import IdentityAccumulator
 import rivermark_benchmark.cohort_audit as cohort_audit_module
 from rivermark_benchmark.cohort_audit import (
     COHORT_AUDIT_SCHEMA,
@@ -44,16 +44,16 @@ GATE_CHECKS = {
 }
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def _identity(path: Path) -> str:
+    return IdentityAccumulator(path.read_bytes()).hexdigest()
 
 
 def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _report_payload_sha256(payload: dict[str, object]) -> str:
-    normalized = {**payload, "report_payload_sha256": ""}
+def _report_payload_identity(payload: dict[str, object]) -> str:
+    normalized = {**payload, "report_payload_identity": ""}
     encoded = (
         json.dumps(
             normalized,
@@ -64,7 +64,7 @@ def _report_payload_sha256(payload: dict[str, object]) -> str:
         )
         + "\n"
     ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return IdentityAccumulator(encoded).hexdigest()
 
 
 def _capture(
@@ -108,7 +108,7 @@ def _capture(
         "ok": True,
         "source_worktree_dirty": False,
         "source_revision": "2" * 40,
-        "source_tree_sha256": ("3" if cell_id.startswith("train") else "4") * 64,
+        "source_tree_identity": ("3" if cell_id.startswith("train") else "4") * 16,
         "capture_attempt_id": attempt_id,
         "collection_binding": binding,
         "created_wall_time_ns": 1_000_000_000,
@@ -120,21 +120,21 @@ def _capture(
                 "private_commit_bytes": 20_000 + episode_index,
             }
         },
-        "artifact_hashes": {
+        "artifact_identities": {
             "payload.bin": {
-                "sha256": _sha256(payload_path),
+                "identity": _identity(payload_path),
                 "bytes": payload_path.stat().st_size,
             },
             "task_outcome.json": {
-                "sha256": _sha256(outcome_path),
+                "identity": _identity(outcome_path),
                 "bytes": outcome_path.stat().st_size,
             }
         },
     }
     receipt_path = capture / "capture_receipt.json"
     _write_json(receipt_path, receipt)
-    receipt_sha = _sha256(receipt_path)
-    (capture / "capture_receipt.sha256").write_text(
+    receipt_sha = _identity(receipt_path)
+    (capture / "capture_receipt.identity").write_text(
         f"{receipt_sha}  capture_receipt.json\n", encoding="ascii"
     )
     checks = {
@@ -149,7 +149,7 @@ def _capture(
             "schema": "org.rivermark.isaac-independent-validation.v1",
             "status": "passed",
             "issues": [],
-            "capture_receipt_sha256": receipt_sha,
+            "capture_receipt_identity": receipt_sha,
             "formal_benchmark_admission": False,
             "checks": checks,
         },
@@ -161,11 +161,11 @@ def _capture(
         stage="isaac_capture",
         recorded_at=f"2026-07-27T00:0{episode_index}:00Z",
         split=str(binding["split"]),
-        source_capture_sha256=receipt_sha,
-        receipt_sha256=receipt_sha,
+        source_capture_identity=receipt_sha,
+        receipt_identity=receipt_sha,
         reason_code="development_evidence_not_formal",
         collection_protocol_id=str(binding["protocol_id"]),
-        collection_protocol_sha256=str(binding["protocol_sha256"]),
+        collection_protocol_identity=str(binding["protocol_identity"]),
         collection_cell_id=str(binding["cell_id"]),
         collection_episode_index=int(binding["episode_index"]),
         episode_seed=int(binding["episode_seed"]),
@@ -203,11 +203,11 @@ def _fixture(tmp_path: Path) -> tuple[list[Path], Path]:
                 stage="isaac_capture",
                 recorded_at=f"2026-07-27T01:0{suffix}:00Z",
                 split=str(binding["split"]),
-                source_capture_sha256=str(suffix + 5) * 64,
-                receipt_sha256=str(suffix + 5) * 64,
+                source_capture_identity=str(suffix + 5) * 16,
+                receipt_identity=str(suffix + 5) * 16,
                 reason_code="development_evidence_not_formal",
                 collection_protocol_id=str(binding["protocol_id"]),
-                collection_protocol_sha256=str(binding["protocol_sha256"]),
+                collection_protocol_identity=str(binding["protocol_identity"]),
                 collection_cell_id=str(binding["cell_id"]),
                 collection_episode_index=0,
                 episode_seed=int(binding["episode_seed"]),
@@ -232,7 +232,7 @@ def _append_non_candidate_admissions(ledger: Path) -> None:
                 cell_id=cell_id,
                 episode_index=episode_index,
             )
-            suffix = hashlib.sha256(f"{cell_id}:{episode_index}".encode()).hexdigest()
+            suffix = IdentityAccumulator(f"{cell_id}:{episode_index}".encode()).hexdigest()
             records.append(
                 FailureRecord(
                     attempt_id=f"attempt-admitted-{suffix[:16]}",
@@ -242,10 +242,10 @@ def _append_non_candidate_admissions(ledger: Path) -> None:
                     recorded_at=f"2026-07-27T02:{episode_index:02d}:00Z",
                     split=str(binding["split"]),
                     episode_id=f"episode-{suffix[:16]}",
-                    source_capture_sha256=suffix,
-                    receipt_sha256=suffix,
+                    source_capture_identity=suffix,
+                    receipt_identity=suffix,
                     collection_protocol_id=str(binding["protocol_id"]),
-                    collection_protocol_sha256=str(binding["protocol_sha256"]),
+                    collection_protocol_identity=str(binding["protocol_identity"]),
                     collection_cell_id=str(binding["cell_id"]),
                     collection_episode_index=int(binding["episode_index"]),
                     episode_seed=int(binding["episode_seed"]),
@@ -273,19 +273,19 @@ def _rewrite_ledger_record(ledger: Path, attempt_id: str, **updates: object) -> 
 def _refresh_receipt_bindings(capture: Path, ledger: Path) -> None:
     receipt_path = capture / "capture_receipt.json"
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    receipt_sha = _sha256(receipt_path)
-    (capture / "capture_receipt.sha256").write_text(
+    receipt_sha = _identity(receipt_path)
+    (capture / "capture_receipt.identity").write_text(
         f"{receipt_sha}  capture_receipt.json\n", encoding="ascii"
     )
     validation_path = capture / "independent_validation.json"
     validation = json.loads(validation_path.read_text(encoding="utf-8"))
-    validation["capture_receipt_sha256"] = receipt_sha
+    validation["capture_receipt_identity"] = receipt_sha
     _write_json(validation_path, validation)
     _rewrite_ledger_record(
         ledger,
         receipt["capture_attempt_id"],
-        receipt_sha256=receipt_sha,
-        source_capture_sha256=receipt_sha,
+        receipt_identity=receipt_sha,
+        source_capture_identity=receipt_sha,
     )
 
 
@@ -293,8 +293,8 @@ def _rebind_outcome(capture: Path, ledger: Path) -> None:
     receipt_path = capture / "capture_receipt.json"
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     outcome_path = capture / "task_outcome.json"
-    receipt["artifact_hashes"]["task_outcome.json"] = {
-        "sha256": _sha256(outcome_path),
+    receipt["artifact_identities"]["task_outcome.json"] = {
+        "identity": _identity(outcome_path),
         "bytes": outcome_path.stat().st_size,
     }
     _write_json(receipt_path, receipt)
@@ -308,7 +308,7 @@ def test_cohort_audit_binds_eight_candidates_to_eleven_attempts(tmp_path: Path) 
     assert report["status"] == "passed"
     assert report["audit_provenance"] == {
         "analyzer_module": "rivermark_benchmark.cohort_audit",
-        "analyzer_source_sha256": _sha256(Path(cohort_audit_module.__file__)),
+        "analyzer_source_identity": _identity(Path(cohort_audit_module.__file__)),
         "construction_scope": "source_protocol_ledger_and_capture_artifacts",
         "offline_verification_scope": "internal_structure_and_unkeyed_digest_only",
     }
@@ -352,26 +352,26 @@ def test_cohort_audit_rejects_stale_validation_binding(tmp_path: Path) -> None:
     captures, ledger = _fixture(tmp_path)
     validation_path = captures[0] / "independent_validation.json"
     validation = json.loads(validation_path.read_text(encoding="utf-8"))
-    validation["capture_receipt_sha256"] = "0" * 64
+    validation["capture_receipt_identity"] = "0" * 16
     _write_json(validation_path, validation)
-    with pytest.raises(CohortAuditError, match="artifact_hash_binding_passed"):
+    with pytest.raises(CohortAuditError, match="artifact_identity_binding_passed"):
         build_development_cohort_audit(PROTOCOL, ledger, captures)
 
 
-def test_cohort_audit_rejects_post_validation_task_outcome_tampering(tmp_path: Path) -> None:
+def test_cohort_audit_rejects_post_validation_task_outcome_alteration(tmp_path: Path) -> None:
     captures, ledger = _fixture(tmp_path)
     outcome_path = captures[0] / "task_outcome.json"
     outcome = json.loads(outcome_path.read_text(encoding="utf-8"))
-    outcome["scoring_status"] = "tampered-after-validation"
+    outcome["scoring_status"] = "altered-after-validation"
     _write_json(outcome_path, outcome)
 
     with pytest.raises(CohortAuditError, match="task_outcome.json.*capture receipt"):
         build_development_cohort_audit(PROTOCOL, ledger, captures)
 
 
-def test_cohort_audit_rejects_post_validation_bound_payload_tampering(tmp_path: Path) -> None:
+def test_cohort_audit_rejects_post_validation_bound_payload_alteration(tmp_path: Path) -> None:
     captures, ledger = _fixture(tmp_path)
-    (captures[0] / "payload.bin").write_bytes(b"tampered-after-validation")
+    (captures[0] / "payload.bin").write_bytes(b"altered-after-validation")
 
     with pytest.raises(CohortAuditError, match="payload.bin.*capture receipt"):
         build_development_cohort_audit(PROTOCOL, ledger, captures)
@@ -450,7 +450,7 @@ def test_verifier_fail_closes_on_resigned_malformed_structure(tmp_path: Path) ->
     captures, ledger = _fixture(tmp_path)
     report = build_development_cohort_audit(PROTOCOL, ledger, captures)
     del report["candidates"][0]["binding"]["cell_id"]
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / "malformed.json"
     _write_json(output, report)
     with pytest.raises(CohortAuditError, match="candidate binding is malformed"):
@@ -461,7 +461,7 @@ def test_verifier_rejects_resigned_empty_quality_gates(tmp_path: Path) -> None:
     captures, ledger = _fixture(tmp_path)
     report = build_development_cohort_audit(PROTOCOL, ledger, captures)
     report["candidates"][0]["quality_gates"] = {}
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / "empty-gates.json"
     _write_json(output, report)
 
@@ -473,7 +473,7 @@ def test_verifier_rejects_resigned_failed_candidate_state(tmp_path: Path) -> Non
     captures, ledger = _fixture(tmp_path)
     report = build_development_cohort_audit(PROTOCOL, ledger, captures)
     report["candidates"][0]["ledger"]["outcome"] = "failed"
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / "failed-candidate.json"
     _write_json(output, report)
 
@@ -490,7 +490,7 @@ def test_verifier_rejects_resigned_schema_invalid_split(tmp_path: Path) -> None:
         "train": 3,
         "validation": 4,
     }
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / "invalid-split.json"
     _write_json(output, report)
 
@@ -515,7 +515,7 @@ def test_verifier_accepts_every_schema_split(tmp_path: Path, split: str) -> None
     report["aggregate"]["candidate_count_by_split"] = dict(
         sorted(Counter(item["binding"]["split"] for item in report["candidates"]).items())
     )
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / f"valid-{split}.json"
     _write_json(output, report)
 
@@ -534,7 +534,7 @@ def test_verifier_rejects_resigned_schema_forbidden_field(
     report = build_development_cohort_audit(PROTOCOL, ledger, captures)
     target = report if location == "report" else report["candidates"][0]
     target["unexpected_claim"] = True
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / f"unexpected-{location}.json"
     _write_json(output, report)
 
@@ -552,7 +552,7 @@ def test_verifier_rejects_resigned_false_resource_distribution(tmp_path: Path) -
         "mean": 1.0,
         "maximum": 1,
     }
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / "false-capture-byte-distribution.json"
     _write_json(output, report)
 
@@ -574,7 +574,7 @@ def test_verifier_rejects_resigned_weakened_target_quota(tmp_path: Path) -> None
     report["aggregate"]["target_count"] = len(report["candidates"])
     report["aggregate"]["targets_meeting_visibility"] = len(report["candidates"])
     report["aggregate"]["target_visibility_rate"] = 1.0
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / "weakened-target-quota.json"
     _write_json(output, report)
 
@@ -585,7 +585,7 @@ def test_verifier_rejects_resigned_weakened_target_quota(tmp_path: Path) -> None
 @pytest.mark.parametrize(
     ("mutation", "error"),
     [
-        ("ledger_hash", "ledger accounting"),
+        ("ledger_identity", "ledger accounting"),
         ("ledger_count", "ledger accounting"),
         ("blocking_reasons", "admission-readiness"),
     ],
@@ -597,13 +597,13 @@ def test_verifier_rejects_resigned_false_accounting_claim(
 ) -> None:
     captures, ledger = _fixture(tmp_path)
     report = build_development_cohort_audit(PROTOCOL, ledger, captures)
-    if mutation == "ledger_hash":
-        report["accounting"]["failure_ledger_sha256"] = "not-a-sha256"
+    if mutation == "ledger_identity":
+        report["accounting"]["failure_ledger_identity"] = "not-a-identity"
     elif mutation == "ledger_count":
         report["accounting"]["ledger_record_count"] += 1
     else:
         report["admission_readiness"]["blocking_reason_codes"] = []
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / f"false-{mutation}.json"
     _write_json(output, report)
 
@@ -626,7 +626,7 @@ def test_verifier_rejects_resigned_inconsistent_coverage(
         report["aggregate"]["capture_failure_rate"] = 1.0
     else:
         coverage["cells"][0]["quarantined_count"] = 0
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / f"inconsistent-coverage-{mutation}.json"
     _write_json(output, report)
 
@@ -641,7 +641,7 @@ def test_verifier_rejects_resigned_subthreshold_route_witness(tmp_path: Path) ->
     report["aggregate"]["route_witness_displacement_m"] = cohort_audit_module._distribution(
         [candidate["route_witness_displacement_m"] for candidate in report["candidates"]]
     )
-    report["report_payload_sha256"] = _report_payload_sha256(report)
+    report["report_payload_identity"] = _report_payload_identity(report)
     output = tmp_path / "subthreshold-route-witness.json"
     _write_json(output, report)
 
@@ -654,8 +654,8 @@ def test_cohort_audit_rejects_casefolded_artifact_alias(tmp_path: Path) -> None:
     captures, ledger = _fixture(tmp_path)
     receipt_path = captures[0] / "capture_receipt.json"
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    receipt["artifact_hashes"]["PAYLOAD.BIN"] = dict(
-        receipt["artifact_hashes"]["payload.bin"]
+    receipt["artifact_identities"]["PAYLOAD.BIN"] = dict(
+        receipt["artifact_identities"]["payload.bin"]
     )
     _write_json(receipt_path, receipt)
     _refresh_receipt_bindings(captures[0], ledger)

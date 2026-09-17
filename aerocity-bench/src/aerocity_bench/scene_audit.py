@@ -1,17 +1,10 @@
-"""Resumable, private-safe static admission audit for one development layout.
-
-This module deliberately audits one layout at a time.  Support-site witness
-compilation is more expensive than raw CitySpec generation; a per-layout report
-keeps the future 10--20 city quality review observable and recoverable instead
-of hiding host pressure in one opaque batch process.
-"""
+"""Resumable, private-safe static admission audit for one development layout."""
 
 from __future__ import annotations
 
 from collections import Counter
 from typing import Any
 
-from .canonical import content_hash
 from .errors import GenerationRejected
 from .generator_v3 import generate_city_v3
 from .geometry import AABB
@@ -55,12 +48,7 @@ def _component_boxes(city: dict[str, Any]) -> list[AABB]:
 def audit_generated_city(
     config: OrdinaryReleaseConfig, city: dict[str, Any]
 ) -> dict[str, Any]:
-    """Audit a generated development city without exposing target truth.
-
-    The report intentionally contains counts, layout/task hashes, and failure
-    categories only.  It never serializes target positions, support-site IDs,
-    distractors, target-process labels, or legal witness poses.
-    """
+    """Audit a generated development city without exposing target truth."""
 
     split = str(city["split"])
     if split in FORMAL_SPLITS:
@@ -104,13 +92,12 @@ def audit_generated_city(
         errors.append("support_site_without_structural_context")
 
     # Sampling every episode proves the task contract stays executable; the
-    # report keeps no target or support cardinality, which is evaluator-private
-    # even without coordinates.
+    # report keeps no target or support cardinality.
     episode_count = config.episodes(split)
     for episode_index in range(episode_count):
         episode = sample_episode_v3(config, city, support_sites, episode_index)
-        if str(episode["layout_hash"]) != str(city["layout_hash"]):
-            errors.append("episode_layout_hash_mismatch")
+        if str(episode["layout_id"]) != str(city["layout_id"]):
+            errors.append("episode_layout_mismatch")
         for target in episode["targets"]:
             if target["owner_collider_id"] in non_support_components:
                 errors.append("target_support_false_component_leaked_into_targets")
@@ -122,8 +109,7 @@ def audit_generated_city(
         "status": "PASS" if not errors else "FAIL",
         "split": split,
         "layout_id": str(city["layout_id"]),
-        "layout_hash": str(city["layout_hash"]),
-        "task_geometry_hash": str(city["task_geometry_hash"]),
+        "task_geometry_id": str(city["task_geometry_id"]),
         "generator_version": str(city["generator_version"]),
         "scene_counts": {
             "buildings": len(city["buildings"]),
@@ -138,7 +124,6 @@ def audit_generated_city(
         "generation_rejections_before_acceptance": 0,
         "error_categories": sorted(set(errors)),
     }
-    report["report_hash"] = content_hash(report)
     return report
 
 
@@ -172,9 +157,6 @@ def audit_development_layout(
             continue
         report["attempt"] = attempt
         report["generation_rejections_before_acceptance"] = rejection_count
-        report["report_hash"] = content_hash(
-            {key: value for key, value in report.items() if key != "report_hash"}
-        )
         return report
 
     report = {
@@ -186,7 +168,6 @@ def audit_development_layout(
         "error_categories": ["no_complete_city_episode_candidate"],
         "generation_rejection_count": rejection_count,
     }
-    report["report_hash"] = content_hash(report)
     return report
 
 
@@ -218,10 +199,6 @@ def _cohort_receipt_view(
 
     if not isinstance(report, dict):
         raise ValueError(f"scene audit receipt is not an object: {split}/{index}")
-    expected_hash = report.get("report_hash")
-    unhashed = {key: value for key, value in report.items() if key != "report_hash"}
-    if not isinstance(expected_hash, str) or expected_hash != content_hash(unhashed):
-        raise ValueError(f"scene audit receipt hash mismatch: {split}/{index}")
     if report.get("schema") != SCENE_AUDIT_SCHEMA:
         raise ValueError(f"scene audit receipt schema mismatch: {split}/{index}")
     if report.get("split") != split:
@@ -231,40 +208,28 @@ def _cohort_receipt_view(
         raise ValueError(f"scene audit status is invalid: {split}/{index}")
 
     if report["status"] == "FAIL":
-        required = {
-            "status",
-            "error_categories",
-            "generation_rejection_count",
-            "report_hash",
-        }
-        if not required.issubset(report):
-            raise ValueError(f"failed scene audit receipt is incomplete: {split}/{index}")
         return {
             "split": split,
             "index": index,
             "status": "FAIL",
             "layout_id": None,
-            "layout_hash": None,
-            "task_geometry_hash": None,
+            "task_geometry_id": None,
             "generator_version": generator_version,
             "scene_counts": None,
             "generation_rejections_before_acceptance": report[
                 "generation_rejection_count"
             ],
             "error_categories": report["error_categories"],
-            "scene_audit_report_hash": report["report_hash"],
         }
 
     required = {
         "status",
         "layout_id",
-        "layout_hash",
-        "task_geometry_hash",
+        "task_geometry_id",
         "generator_version",
         "scene_counts",
         "generation_rejections_before_acceptance",
         "error_categories",
-        "report_hash",
     }
     if not required.issubset(report):
         raise ValueError(f"scene audit receipt is incomplete: {split}/{index}")
@@ -278,15 +243,13 @@ def _cohort_receipt_view(
         "index": index,
         "status": report["status"],
         "layout_id": report["layout_id"],
-        "layout_hash": report["layout_hash"],
-        "task_geometry_hash": report["task_geometry_hash"],
+        "task_geometry_id": report["task_geometry_id"],
         "generator_version": report["generator_version"],
         "scene_counts": report["scene_counts"],
         "generation_rejections_before_acceptance": report[
             "generation_rejections_before_acceptance"
         ],
         "error_categories": report["error_categories"],
-        "scene_audit_report_hash": report["report_hash"],
     }
 
 
@@ -296,7 +259,7 @@ def summarize_development_scene_audit_cohort(
     *,
     per_split: int,
 ) -> dict[str, Any]:
-    """Create a fail-closed summary for a stratified generator-quality audit."""
+    """Create a summary for a stratified generator-quality audit."""
 
     plan = development_scene_audit_plan(per_split)
     expected = set(plan)
@@ -317,14 +280,14 @@ def summarize_development_scene_audit_cohort(
         )
         for split, index in plan
     ]
-    layout_hashes = [
-        str(member["layout_hash"])
+    layout_ids = [
+        str(member["layout_id"])
         for member in members
-        if member["layout_hash"] is not None
+        if member["layout_id"] is not None
     ]
-    duplicate_layout_hashes = sorted(
-        layout_hash
-        for layout_hash, count in Counter(layout_hashes).items()
+    duplicate_layout_ids = sorted(
+        layout_id
+        for layout_id, count in Counter(layout_ids).items()
         if count > 1
     )
     failed_members = [
@@ -338,10 +301,10 @@ def summarize_development_scene_audit_cohort(
     ]
     report: dict[str, Any] = {
         "schema": SCENE_AUDIT_COHORT_SCHEMA,
-        "status": "PASS" if not failed_members and not duplicate_layout_hashes else "FAIL",
+        "status": "PASS" if not failed_members and not duplicate_layout_ids else "FAIL",
         "formal_score_eligible": False,
         "scope": "development_generator_scene_admission_only",
-        "release_config_hash": config.config_hash,
+        "release_config_id": config.config_id,
         "generator_version": config.generator_version,
         "sampling": {
             "splits": list(DEVELOPMENT_AUDIT_SPLITS),
@@ -352,10 +315,9 @@ def summarize_development_scene_audit_cohort(
                 split: config.count(split) for split in DEVELOPMENT_AUDIT_SPLITS
             },
         },
-        "all_layout_hashes_unique": not duplicate_layout_hashes,
-        "duplicate_layout_hashes": duplicate_layout_hashes,
+        "all_layout_ids_unique": not duplicate_layout_ids,
+        "duplicate_layout_ids": duplicate_layout_ids,
         "failed_members": failed_members,
         "members": members,
     }
-    report["report_hash"] = content_hash(report)
     return report

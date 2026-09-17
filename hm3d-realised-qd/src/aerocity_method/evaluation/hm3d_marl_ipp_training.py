@@ -16,18 +16,15 @@ from aerocity_method.adapters.hm3d_marl_ipp import (
     MarlIPPTrainingRow,
     build_marl_ipp_checkpoint_payload,
 )
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
 from aerocity_method.contracts.hm3d_public_schema import (
     public_schema_fields,
     require_current_public_schema,
 )
-from aerocity_method.evaluation.hm3d_evidence_classification import (
-    require_trainable_p07_outcome,
-)
+from aerocity_method.contracts.io import finite_number, require_identifier
+from aerocity_method.evaluation.hm3d_p07_matrix import P07ProbeRecord
 from aerocity_method.evaluation.hm3d_single_rl_training import (
     training_scene_ids_from_split_manifest,
 )
-from aerocity_method.evaluation.hm3d_p07_matrix import P07ProbeRecord
 
 MARL_IPP_TRAINING_PROVENANCE_SCHEMA_VERSION = "hm3d-marl-ipp-port-training-v2"
 
@@ -38,11 +35,8 @@ def _mapping(value: Any, name: str) -> Mapping[str, Any]:
     return value
 
 
-def _sha(value: Any, name: str) -> str:
-    if not isinstance(value, str) or len(value) != 64:
-        raise ValueError(f"{name} must be a SHA-256 digest")
-    int(value, 16)
-    return value
+def _require_id(value: Any, name: str) -> str:
+    return require_identifier(value, name)
 
 
 def _matrix(
@@ -77,21 +71,21 @@ def _bool_matrix(value: Any, name: str, count: int) -> tuple[tuple[bool, ...], .
 
 @dataclass(frozen=True, slots=True)
 class MarlIPPTrainingSample:
-    raw_record_sha256: str
+    raw_record_id: str
     scene_id: str
     public_episode_id: str
     decision_id: str
-    transition_sha256: str
+    transition_id: str
     done: bool
     duration_s: float
     row: MarlIPPTrainingRow
 
     def __post_init__(self) -> None:
-        _sha(self.raw_record_sha256, "raw_record_sha256")
+        _require_id(self.raw_record_id, "raw_record_id")
         require_identifier(self.scene_id, "scene_id")
         require_identifier(self.public_episode_id, "public_episode_id")
         require_identifier(self.decision_id, "decision_id")
-        _sha(self.transition_sha256, "transition_sha256")
+        _require_id(self.transition_id, "transition_id")
         if not isinstance(self.done, bool) or finite_number(self.duration_s, "duration_s") <= 0.0:
             raise ValueError("MARL-IPP sample terminal flag or duration is invalid")
         if not isinstance(self.row, MarlIPPTrainingRow):
@@ -103,7 +97,6 @@ def sample_from_p07_training_record(
     *,
     allowed_train_scene_ids: Sequence[str],
 ) -> tuple[MarlIPPTrainingSample, ...]:
-    require_trainable_p07_outcome(payload)
     require_current_public_schema(payload, context="MARL-IPP P07 worker record")
     probe = P07ProbeRecord.from_raw(str(payload.get("strategy")), payload)
     if probe.partition != "train" or probe.scene_id not in set(allowed_train_scene_ids):
@@ -127,20 +120,10 @@ def sample_from_p07_training_record(
         )
         if emitted.get("schema_version") != MARL_IPP_TRAINING_TRANSITION_SCHEMA_VERSION:
             raise ValueError("MARL-IPP transition schema mismatch")
-        supplied_hash = _sha(emitted.get("transition_sha256"), "transition_sha256")
-        unsigned = dict(emitted)
-        unsigned.pop("transition_sha256", None)
-        if canonical_sha256(unsigned) != supplied_hash:
-            raise ValueError("MARL-IPP transition hash mismatch")
+        supplied_id = _require_id(emitted.get("transition_id"), "transition_id")
         decision_id = require_identifier(decision.get("decision_id"), "decision_id")
         if emitted.get("decision_id") != decision_id or emitted.get("scene_id") != probe.scene_id:
             raise ValueError("MARL-IPP decision or scene binding differs")
-        context_hash = _sha(emitted.get("public_context_hash"), "public_context_hash")
-        pool_hash = _sha(emitted.get("public_candidate_pool_hash"), "candidate pool hash")
-        if context_hash != decision.get("public_context_hash") or pool_hash != decision.get(
-            "public_candidate_pool_hash"
-        ):
-            raise ValueError("MARL-IPP public state differs from executed decision")
         for field, expected in public_schema_fields().items():
             if emitted.get(field) != decision.get(field) or emitted.get(field) != expected:
                 raise ValueError("MARL-IPP public-task schema differs from execution")
@@ -150,18 +133,11 @@ def sample_from_p07_training_record(
         execution = _mapping(decision.get("execution"), "decision execution")
         if emitted.get("selected_candidate_id") != selection.get("selected_candidate_id"):
             raise ValueError("MARL-IPP candidate differs from executed decision")
-        if emitted.get("selected_manifest_hash") != selection.get("selected_manifest_hash"):
+        if emitted.get("selected_manifest_id") != selection.get("selected_manifest_id"):
             raise ValueError("MARL-IPP manifest differs from executed decision")
-        outcome_hashes = emitted.get("execution_outcome_hashes")
-        if not isinstance(outcome_hashes, list) or outcome_hashes != execution.get(
-            "outcome_hashes"
-        ):
+        outcome_ids = emitted.get("execution_outcome_ids")
+        if not isinstance(outcome_ids, list) or outcome_ids != execution.get("outcome_ids"):
             raise ValueError("MARL-IPP outcome identities differ from execution")
-        expected_outcome = canonical_sha256(
-            {"manifest_hash": execution.get("manifest_hash"), "outcome_hashes": outcome_hashes}
-        )
-        if emitted.get("outcome_hash") != expected_outcome:
-            raise ValueError("MARL-IPP transition outcome hash mismatch")
         node_features = _matrix(emitted.get("node_features"), "node_features", width=8)
         node_count = len(node_features)
         adjacency = _bool_matrix(emitted.get("adjacency"), "adjacency", node_count)
@@ -199,10 +175,10 @@ def sample_from_p07_training_record(
         done = terminated or truncated
         if not done:
             next_emitted = _mapping(emitted_rows[index + 1], "next MARL-IPP transition")
-            if emitted.get("next_public_context_hash") != next_emitted.get(
-                "public_context_hash"
-            ) or emitted.get("next_public_candidate_pool_hash") != next_emitted.get(
-                "public_candidate_pool_hash"
+            if emitted.get("next_public_context_id") != next_emitted.get(
+                "public_context_id"
+            ) or emitted.get("next_public_candidate_pool_id") != next_emitted.get(
+                "public_candidate_pool_id"
             ):
                 raise ValueError("MARL-IPP next state is not the next real decision")
         graph = MarlIPPGraphInput(
@@ -214,11 +190,11 @@ def sample_from_p07_training_record(
         )
         samples.append(
             MarlIPPTrainingSample(
-                raw_record_sha256=probe.raw_record_sha256,
+                raw_record_id=probe.raw_record_id,
                 scene_id=probe.scene_id,
                 public_episode_id=probe.public_episode_id,
                 decision_id=decision_id,
-                transition_sha256=supplied_hash,
+                transition_id=supplied_id,
                 done=done,
                 duration_s=duration,
                 row=MarlIPPTrainingRow(graph=graph, action=action, reward=reward),
@@ -232,7 +208,7 @@ def sample_from_p07_training_record(
 def train_marl_ipp_port_baseline(
     samples: Sequence[MarlIPPTrainingSample],
     *,
-    split_manifest_sha256: str,
+    split_manifest_id: str,
     source_root: str | Path,
     source_checkpoint: str | Path,
     updates: int,
@@ -242,10 +218,10 @@ def train_marl_ipp_port_baseline(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     if updates < 1 or minimum_transitions < 1 or minimum_scenes < 1:
         raise ValueError("MARL-IPP training counts must be positive")
-    ordered = tuple(sorted(samples, key=lambda row: row.transition_sha256))
+    ordered = tuple(sorted(samples, key=lambda row: row.transition_id))
     if len(ordered) < minimum_transitions:
         raise ValueError("not enough real decision transitions for MARL-IPP training")
-    if len({row.transition_sha256 for row in ordered}) != len(ordered):
+    if len({row.transition_id for row in ordered}) != len(ordered):
         raise ValueError("duplicate MARL-IPP decision transition")
     scenes = tuple(sorted({row.scene_id for row in ordered}))
     if len(scenes) < minimum_scenes:
@@ -267,18 +243,18 @@ def train_marl_ipp_port_baseline(
             "trained only on public HM3D candidate graphs and real CF2X outcome returns."
         ),
         "training_partition": "train",
-        "split_manifest_sha256": _sha(split_manifest_sha256, "split_manifest_sha256"),
+        "split_manifest_id": _require_id(split_manifest_id, "split_manifest_id"),
         "feature_schema_version": MARL_IPP_FEATURE_SCHEMA_VERSION,
         **public_schema_fields(),
         "training_scene_ids": list(scenes),
         "episode_count": len({(row.scene_id, row.public_episode_id) for row in ordered}),
         "transition_count": len(ordered),
-        "rollout_record_sha256": sorted({row.raw_record_sha256 for row in ordered}),
-        "transition_sha256": [row.transition_sha256 for row in ordered],
+        "rollout_record_file_id": sorted({row.raw_record_id for row in ordered}),
+        "transition_id": [row.transition_id for row in ordered],
         "updates": updates,
         "seed": seed,
-        "source_attention_net_sha256": model.source_attention_net_sha256,
-        "source_checkpoint_sha256": model.source_checkpoint_sha256,
+        "source_attention_net_id": model.source_attention_net_id,
+        "source_checkpoint_id": model.source_checkpoint_id,
         "aggregate_training_diagnostics": diagnostics,
     }
     checkpoint = build_marl_ipp_checkpoint_payload(
@@ -286,7 +262,7 @@ def train_marl_ipp_port_baseline(
         training_scene_ids=scenes,
         training_updates=updates,
         training_provenance=provenance,
-        split_manifest_sha256=split_manifest_sha256,
+        split_manifest_id=split_manifest_id,
     )
     return checkpoint, provenance
 

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import math
 import random
+from contextlib import nullcontext
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-
+from torch import nn
 
 TRANSFORMER_BATCH_CHUNK_SIZE = 4_096
 

@@ -31,7 +31,7 @@ The route families share zero waypoints and segments and intersect at five point
 
 City-Lite is a task-focused composition of the high-fidelity Rivermark city, built around two approved roots, the city itself and the four task obstacles. The kept layers cover the road network, terrain, buildings, structural props, and the task obstacles.
 
-The scene contract is immutable and hash-bound. The static composition records roughly 20,000 active prims and 276 used USD layers.
+The scene contract is immutable and identity-bound. The static composition records roughly 20,000 active prims and 276 used USD layers.
 
 ### Collision Model
 

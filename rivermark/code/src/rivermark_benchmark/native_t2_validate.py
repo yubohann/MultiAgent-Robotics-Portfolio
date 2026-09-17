@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from collections.abc import Mapping, Sequence
@@ -12,10 +11,14 @@ from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .cf2x_runtime_calibration import validate_calibration_report
-from .citylite_task import validate_route_timing_feasibility
 from .citylite_scene import AGENT_COUNT
-from .collection_protocol import native_t2_v2_motion_contract, native_t2_v3_motion_contract
+from .citylite_task import validate_route_timing_feasibility
+from .collection_protocol import (
+    native_t2_v2_motion_contract,
+    native_t2_v3_motion_contract,
+)
 from .frame_archive import ChunkedFrameArchive, FrameArchiveError
 from .isaac_capture import (
     CONTROL_MODE_NATIVE_T2_CANARY,
@@ -57,7 +60,7 @@ from .private_evaluator_manifest import (
     NATIVE_T2_V2_TASK_VARIANT_ID,
     NATIVE_T2_V3_TASK_VARIANT_ID,
 )
-from .runtime_lock import RuntimeLockError, load_runtime_lock, runtime_lock_sha256
+from .runtime_lock import RuntimeLockError, load_runtime_lock, runtime_lock_identity
 from .schema import iter_tree, normalized_key
 from .search_event_evaluator import PRIVATE_TASK_SCHEMA, evaluate_search_events
 from .t2_policy_abi import (
@@ -66,7 +69,7 @@ from .t2_policy_abi import (
     T2PublicFleetObservation,
     T2PublicSensorObservation,
 )
-from .video import sha256_file
+from .video import identity_file
 
 NATIVE_T2_EXPECTED_ARTIFACTS = frozenset(
     {
@@ -255,16 +258,16 @@ def _issue(issues: list[NativeT2ValidationIssue], code: str, path: str, message:
     issues.append(NativeT2ValidationIssue(code, path, message))
 
 
-def _canonical_sha256(value: Any) -> str:
+def _canonical_identity(value: Any) -> str:
     encoded = (
         json.dumps(value, ensure_ascii=True, allow_nan=False, sort_keys=True, separators=(",", ":"))
         + "\n"
     ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return IdentityAccumulator(encoded).hexdigest()
 
 
-def _is_sha256(value: Any) -> bool:
-    return isinstance(value, str) and len(value) == 64 and set(value) <= _HEX
+def _is_identity(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 16 and set(value) <= _HEX
 
 
 def _read_json(path: Path, issues: list[NativeT2ValidationIssue]) -> Mapping[str, Any] | None:
@@ -409,14 +412,7 @@ def _audit_native_t2_public_artifact_privacy(
     private_target_positions: Sequence[Sequence[float]],
     issues: list[NativeT2ValidationIssue],
 ) -> None:
-    """Apply the shared public-artifact boundary without hiding T2 candidates.
-
-    T2 candidate positions are public RGB-D estimates and therefore cannot use
-    the generic coordinate scan.  Everything else, including every ordinary
-    public JSON document and the semantic metadata, keeps the mature T1 scan.
-    The event journal has its own narrow schema: evaluator-owned identifiers
-    and paths are forbidden, while anonymous candidate positions remain valid.
-    """
+    """Apply the shared public-artifact boundary without hiding T2 candidates."""
 
     from .isaac_validate import (
         _PUBLIC_PRIVATE_ARTIFACT_KEYS,
@@ -427,7 +423,7 @@ def _audit_native_t2_public_artifact_privacy(
 
     # The existing scanner owns the canonical private-ID/path/coordinate
     # semantics.  Translate its diagnostics so this validator has one result
-    # type and one fail-closed exit condition.
+    # type and one strict exit condition.
     shared_issues: list[Any] = []
     for payload, relative in public_json:
         _scan_public_private_artifact_json(
@@ -511,12 +507,7 @@ def _audit_native_evidence_binding(
     native_extrinsics: Mapping[str, np.ndarray] | None,
     issues: list[NativeT2ValidationIssue],
 ) -> None:
-    """Cross-check the receipt's concise T2 index against raw artifacts.
-
-    The complete artifact inventory is already content-addressed, but this
-    additional binding catches stale counts or a receipt summary that points
-    to a different raw trace.  It deliberately contains no target truth.
-    """
+    """Cross-check the receipt's concise T2 index against raw artifacts."""
 
     evidence = receipt.get("native_t2_evidence")
     trace_path = root / NATIVE_T2_DECISION_TRACE_RELATIVE_PATH
@@ -546,13 +537,13 @@ def _audit_native_evidence_binding(
         "claim_boundary": "development_native_t2_canary_only",
         "decision_trace": {
             "path": NATIVE_T2_DECISION_TRACE_RELATIVE_PATH,
-            "sha256": sha256_file(trace_path) if trace_path.is_file() else None,
+            "identity": identity_file(trace_path) if trace_path.is_file() else None,
             "decision_count": len(decisions),
             "physical_step_count": len(physical_steps),
         },
         "candidate_events": {
             "path": NATIVE_T2_EVENT_JOURNAL_RELATIVE_PATH,
-            "sha256": sha256_file(event_path) if event_path.is_file() else None,
+            "identity": identity_file(event_path) if event_path.is_file() else None,
             "source_observation_count": len(source_observations)
             if isinstance(source_observations, list)
             else None,
@@ -560,7 +551,7 @@ def _audit_native_evidence_binding(
         },
         "camera_extrinsics": {
             "path": NATIVE_T2_CAMERA_EXTRINSICS_RELATIVE_PATH,
-            "sha256": sha256_file(extrinsics_path)
+            "identity": identity_file(extrinsics_path)
             if extrinsics_path.is_file()
             else None,
             "frame_count": frame_count,
@@ -586,7 +577,7 @@ def _check_external_inputs(
     issues: list[NativeT2ValidationIssue],
 ) -> tuple[Mapping[str, Any] | None, np.ndarray | None]:
     manifest: Mapping[str, Any] | None = None
-    expected_manifest_hash = receipt.get("evaluator_manifest_sha256")
+    expected_manifest_identity = receipt.get("evaluator_manifest_identity")
     expected_collection_binding = receipt.get("collection_binding")
     expected_task_variant = _native_t2_task_variant_from_receipt(receipt)
     motion_contract = _native_t2_motion_contract_from_receipt(
@@ -622,16 +613,16 @@ def _check_external_inputs(
         manifest_path = evaluator_manifest.expanduser().resolve()
         if _within(manifest_path, root):
             _issue(issues, "evaluator_manifest_location", str(manifest_path), "private manifest must remain outside the capture")
-        elif not manifest_path.is_file() or sha256_file(manifest_path) != expected_manifest_hash:
-            _issue(issues, "evaluator_manifest_hash", str(manifest_path), "private manifest does not match capture commitment")
+        elif not manifest_path.is_file() or identity_file(manifest_path) != expected_manifest_identity:
+            _issue(issues, "evaluator_manifest_identity", str(manifest_path), "private manifest does not match capture commitment")
         else:
             manifest = _read_json(manifest_path, issues)
             if manifest is not None:
                 try:
                     validate_external_private_evaluator_manifest(
                         manifest,
-                        city_lite_scene_contract_sha256=receipt.get("city_lite_scene", {}).get("scene_contract_sha256"),
-                        city_lite_scene_payload_sha256=receipt.get("city_lite_scene", {}).get("scene_contract_payload_sha256"),
+                        city_lite_scene_contract_identity=receipt.get("city_lite_scene", {}).get("scene_contract_identity"),
+                        city_lite_scene_payload_identity=receipt.get("city_lite_scene", {}).get("scene_contract_payload_identity"),
                         expected_collection_binding=(
                             expected_collection_binding
                             if isinstance(expected_collection_binding, Mapping)
@@ -656,11 +647,11 @@ def _check_external_inputs(
     calibration_path = cf2x_runtime_calibration.expanduser().resolve()
     try:
         lock = load_runtime_lock(lock_path)
-        lock_hash = runtime_lock_sha256(lock)
+        lock_identity = runtime_lock_identity(lock)
     except (OSError, RuntimeLockError, ValueError) as exc:
         _issue(issues, "runtime_lock", str(lock_path), str(exc))
         return manifest, allocation
-    if receipt.get("runtime_lock", {}).get("sha256") != lock_hash:
+    if receipt.get("runtime_lock", {}).get("identity") != lock_identity:
         _issue(issues, "runtime_lock", "capture_receipt.json.runtime_lock", "runtime lock does not match the external lock")
     report = _read_json(calibration_path, issues)
     command = receipt.get("command")
@@ -673,8 +664,8 @@ def _check_external_inputs(
     try:
         expected = bind_native_t2_calibration(
             report,
-            expected_usd_sha256=str(command.get("drone_usd_sha256")),
-            expected_runtime_lock_sha256=lock_hash,
+            expected_usd_identity=str(command.get("drone_usd_identity")),
+            expected_runtime_lock_identity=lock_identity,
             expected_control_dt_s=float(command.get("dt_s")),
         )
     except (TypeError, ValueError) as exc:
@@ -705,13 +696,7 @@ def _audit_native_runtime_safety_and_overview(
     issues: list[NativeT2ValidationIssue],
     checks: dict[str, Any],
 ) -> None:
-    """Reuse the proven physical trace gates and verify the fixed overview.
-
-    Native T2 differs from T1 in control and candidate evidence, not in the
-    City-Lite physical, synchronized-sensor, or route-witness requirements.
-    Keeping those audits shared prevents a canary-specific weakened version of
-    collision, timing, or fixed-world-camera validation.
-    """
+    """Reuse the proven physical trace gates and verify the fixed overview."""
 
     # These CPU-only helpers are deliberately imported lazily.  The public
     # CLI owns the native dispatch, while both tracks retain one identical
@@ -730,7 +715,7 @@ def _audit_native_runtime_safety_and_overview(
     else:
         structural_aabbs = _validate_city_lite_scene(
             scene,
-            evaluator_sha256=receipt.get("evaluator_manifest_sha256"),
+            evaluator_identity=receipt.get("evaluator_manifest_identity"),
             issues=issues,  # type: ignore[arg-type]
             checks=checks,
         )
@@ -880,7 +865,7 @@ def validate_native_t2_capture(
     receipt = _read_json(receipt_path, issues)
     if receipt is None:
         return NativeT2ValidationResult(checks, tuple(issues))
-    receipt_hash = sha256_file(receipt_path)
+    receipt_identity = identity_file(receipt_path)
     if receipt.get("status") != "captured" or receipt.get("ok") is not True:
         _issue(issues, "capture_status", "capture_receipt.json", "capture did not complete")
     if receipt.get("task_kind") != NATIVE_T2_TASK_KIND or receipt.get("information_profile") != "state_only_control_plus_rgbd_semantic_events":
@@ -901,14 +886,14 @@ def validate_native_t2_capture(
     if not isinstance(boundary, Mapping) or boundary.get("formal_benchmark_admission") is not False or boundary.get("development_native_t2_canary") is not True:
         _issue(issues, "claim_boundary", "capture_receipt.json", "native canary claim boundary is invalid")
 
-    bound = receipt.get("artifact_hashes")
+    bound = receipt.get("artifact_identities")
     if not isinstance(bound, Mapping) or set(bound) not in (NATIVE_T2_EXPECTED_ARTIFACTS, NATIVE_T2_EXPECTED_ARTIFACTS | _CONTROL_ARTIFACTS):
         _issue(issues, "artifact_inventory", "capture_receipt.json", "native T2 artifact inventory is not exact")
         bound = {}
     present = {
         path.relative_to(root).as_posix()
         for path in root.rglob("*")
-        if path.is_file() and path.name not in {"capture_receipt.json", "capture_receipt.sha256", "independent_validation.json"}
+        if path.is_file() and path.name not in {"capture_receipt.json", "capture_receipt.identity", "independent_validation.json"}
     }
     expected = NATIVE_T2_EXPECTED_ARTIFACTS | (_CONTROL_ARTIFACTS if "capture_start.json" in present else frozenset())
     if present != expected:
@@ -916,11 +901,11 @@ def validate_native_t2_capture(
     for relative in NATIVE_T2_EXPECTED_ARTIFACTS:
         path = root / PurePosixPath(relative)
         item = bound.get(relative) if isinstance(bound, Mapping) else None
-        if not path.is_file() or not isinstance(item, Mapping) or item.get("bytes") != path.stat().st_size or item.get("sha256") != sha256_file(path):
-            _issue(issues, "artifact_hash", relative, "capture-bound artifact is missing or modified")
-    checksum = root / "capture_receipt.sha256"
-    if not checksum.is_file() or checksum.read_text(encoding="ascii", errors="replace") != f"{receipt_hash}  capture_receipt.json\n":
-        _issue(issues, "receipt_checksum", "capture_receipt.sha256", "receipt checksum is missing or stale")
+        if not path.is_file() or not isinstance(item, Mapping) or item.get("bytes") != path.stat().st_size or item.get("identity") != identity_file(path):
+            _issue(issues, "artifact_identity", relative, "capture-bound artifact is missing or modified")
+    checksum = root / "capture_receipt.identity"
+    if not checksum.is_file() or checksum.read_text(encoding="ascii", errors="replace") != f"{receipt_identity}  capture_receipt.json\n":
+        _issue(issues, "receipt_checksum", "capture_receipt.identity", "receipt checksum is missing or stale")
 
     manifest, allocation = _check_external_inputs(
         root,
@@ -991,14 +976,16 @@ def validate_native_t2_capture(
         if expected_task_variant in (
             NATIVE_T2_V2_TASK_VARIANT_ID,
             NATIVE_T2_V3_TASK_VARIANT_ID,
+        ) and (
+            motion_contract is None
+            or public_task.get("motion_contract") != motion_contract
         ):
-            if motion_contract is None or public_task.get("motion_contract") != motion_contract:
-                _issue(
-                    issues,
-                    "native_t2_motion_contract",
-                    "public_task.json.motion_contract",
-                    "public task motion contract does not match the receipt-bound native T2 contract",
-                )
+            _issue(
+                issues,
+                "native_t2_motion_contract",
+                "public_task.json.motion_contract",
+                "public task motion contract does not match the receipt-bound native T2 contract",
+            )
         try:
             routes = np.asarray(public_task["routes_w_m"], dtype=np.float64)
         except (KeyError, TypeError, ValueError):
@@ -1131,8 +1118,8 @@ def validate_native_t2_capture(
             if cadence is None or step != expected_index * cadence.every_physics_steps or step >= steps:
                 _issue(issues, "native_t2_decision_cadence", NATIVE_T2_DECISION_TRACE_RELATIVE_PATH, "decision cadence has a gap or unexpected step")
                 continue
-            if record.get("decision_sha256") != _canonical_sha256(decision):
-                _issue(issues, "native_t2_decision_hash", NATIVE_T2_DECISION_TRACE_RELATIVE_PATH, "decision hash is stale")
+            if record.get("decision_identity") != _canonical_identity(decision):
+                _issue(issues, "native_t2_decision_identity", NATIVE_T2_DECISION_TRACE_RELATIVE_PATH, "decision identity is stale")
             try:
                 observation = T2PublicFleetObservation.from_rigid_body_state(
                     physics_step=step,
@@ -1144,7 +1131,7 @@ def validate_native_t2_capture(
                 )
                 expected_raw = route_policy(observation)
                 expected_action = bounds.apply(expected_raw[:, :3], expected_raw[:, 3]) if bounds is not None else None
-                if decision.get("observation") != observation.public_dict() or decision.get("observation_sha256") != observation.sha256:
+                if decision.get("observation") != observation.public_dict() or decision.get("observation_identity") != observation.identity:
                     raise ValueError("decision observation is not the pre-command native state")
                 action = decision.get("action")
                 emitted = np.concatenate((expected_action[0], expected_action[1][:, None]), axis=1) if expected_action is not None else None
@@ -1166,7 +1153,7 @@ def validate_native_t2_capture(
             if not isinstance(evidence, Mapping) or record.get("rollout_physics_step") != step or record.get("global_applied_physics_step") != int(command.get("warmup_steps", 0)) + step + 1:
                 _issue(issues, "native_t2_physical_trace", NATIVE_T2_DECISION_TRACE_RELATIVE_PATH, f"physical step {step} is malformed")
                 continue
-            if current_decision is None or evidence.get("decision_sha256") != current_decision.get("decision_sha256"):
+            if current_decision is None or evidence.get("decision_identity") != current_decision.get("decision_identity"):
                 _issue(issues, "native_t2_action_causality", NATIVE_T2_DECISION_TRACE_RELATIVE_PATH, f"physical step {step} is not bound to its current decision")
             decision_payload = current_decision.get("decision") if isinstance(current_decision, Mapping) else None
             decision_observation = decision_payload.get("observation") if isinstance(decision_payload, Mapping) else None
@@ -1256,7 +1243,7 @@ def validate_native_t2_capture(
                         journal.append(observation, deduplicator.filter(rows))
                 replay = journal.public_dict()
                 replay_submission = replay["submission"]
-                if event_payload.get("schema") != NATIVE_T2_EVENTS_SCHEMA or event_payload.get("decision_trace_sha256") != sha256_file(root / NATIVE_T2_DECISION_TRACE_RELATIVE_PATH) or event_payload.get("source_observations") != source_observations or event_payload.get("candidate_event_journal") != replay:
+                if event_payload.get("schema") != NATIVE_T2_EVENTS_SCHEMA or event_payload.get("decision_trace_identity") != identity_file(root / NATIVE_T2_DECISION_TRACE_RELATIVE_PATH) or event_payload.get("source_observations") != source_observations or event_payload.get("candidate_event_journal") != replay:
                     _issue(issues, "native_t2_event_replay", NATIVE_T2_EVENT_JOURNAL_RELATIVE_PATH, "event journal is not an exact replay of raw public RGB-D semantics")
         except (KeyError, TypeError, ValueError, FrameArchiveError, np.linalg.LinAlgError) as exc:
             _issue(issues, "native_t2_sensor_replay", "sensors/onboard_rgbd.npz", str(exc))

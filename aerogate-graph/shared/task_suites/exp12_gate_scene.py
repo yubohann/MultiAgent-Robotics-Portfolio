@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 from assets.gate_scene_layouts import (
-    CircularObstacleSpec,
     EXP1_EXTERNAL_GATE_LAYOUT,
     EXP2_INTERNAL_GATE_LAYOUT,
-    GateCourseLayout2D,
     RACE50_MULTI_YAW_GATE_LAYOUT,
+    CircularObstacleSpec,
+    GateCourseLayout2D,
     gate_post_obstacle_specs,
 )
+from shared.core.collision_2d import GateObstacleMap2D, GatePostObstacle2D
 from single_internal_gate.configs.experiment_config import Exp2SingleInternalConfig
 from single_internal_gate.planners.interfaces import PlannerTask2D
-from shared.core.collision_2d import GateObstacleMap2D, GatePostObstacle2D
-
 
 TASK_SUITE_NAMES: tuple[str, ...] = ("gate", "race50", "race50_gate", "gate50", "legacy_gate")
 

@@ -175,13 +175,7 @@ def _visible_from_any_robot(
 
 
 class BeliefTracker:
-    """Maintain object beliefs from sensor measurements and propagate them through occlusion.
-
-    The simulator feeds measurements through a small adapter that a ROS
-    detection source can replace. Simulator state only forms a measurement
-    while the object is visible, and the tracker ages the previous belief
-    otherwise.
-    """
+    """Maintain object beliefs from sensor measurements and propagate them through occlusion."""
 
     def __init__(
         self,
@@ -420,22 +414,8 @@ def tokens_from_flat(state: torch.Tensor) -> torch.Tensor:
     return state.reshape(*state.shape[:-1], NUM_BELIEF_NODES, BELIEF_TOKEN_DIM)
 
 
-def _point_segment_distance(points: torch.Tensor, start: torch.Tensor, end: torch.Tensor) -> torch.Tensor:
-    segment = end - start
-    denom = segment.square().sum(dim=-1).clamp_min(1e-8)
-    alpha = ((points - start) * segment).sum(dim=-1) / denom
-    alpha = alpha.clamp(0.0, 1.0).unsqueeze(-1)
-    projection = start + alpha * segment
-    return torch.linalg.vector_norm(points - projection, dim=-1)
-
-
 def build_typed_edges(tokens: torch.Tensor, node_types: torch.Tensor) -> torch.Tensor:
-    """Build sparse typed interaction edges from current beliefs.
-
-    Returns an adjacency tensor shaped ``[batch, edge_type, source, target]``.
-    The result is equivariant to a joint permutation of tokens and type labels
-    because construction depends only on token contents and types.
-    """
+    """Build sparse typed interaction edges from current beliefs."""
 
     if tokens.ndim == 2:
         tokens = tokens.unsqueeze(0)

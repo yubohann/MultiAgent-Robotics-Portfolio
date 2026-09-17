@@ -5,13 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from aerocity_method.contracts.io import (
-    canonical_sha256,
-    finite_number,
-    require_identifier,
-    require_sha256,
-)
-from aerocity_method.contracts.privacy import walk_public_payload
+from aerocity_method.contracts.io import finite_number, require_identifier
 
 EXPLORATION_SCHEMA_VERSION = "hm3d-multi-uav-exploration-v1"
 Point3 = tuple[float, float, float]
@@ -43,14 +37,10 @@ def _nonnegative(value: float, name: str) -> float:
 
 
 def _numeric_pairs(values: NumericPairs, name: str) -> NumericPairs:
-    rows: list[tuple[str, float]] = []
-    seen: set[str] = set()
-    for key, raw_value in values:
-        require_identifier(key, f"{name} key")
-        if key in seen:
-            raise ValueError(f"{name} contains duplicate key {key!r}")
-        seen.add(key)
-        rows.append((key, finite_number(raw_value, f"{name}.{key}")))
+    rows = [
+        (require_identifier(key, f"{name} key"), finite_number(raw_value, f"{name}.{key}"))
+        for key, raw_value in values
+    ]
     return tuple(sorted(rows))
 
 
@@ -61,13 +51,14 @@ class BeliefVersion:
     reset_epoch: int
     timestamp_s: float
     resolution_m: float
-    content_sha256: str
+    content_id: str
     schema_version: str = EXPLORATION_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         _schema(self.schema_version)
         require_identifier(self.scene_id, "scene_id")
         require_identifier(self.agent_id, "agent_id")
+        require_identifier(self.content_id, "content_id")
         if (
             not isinstance(self.reset_epoch, int)
             or isinstance(self.reset_epoch, bool)
@@ -78,7 +69,6 @@ class BeliefVersion:
         resolution = finite_number(self.resolution_m, "resolution_m")
         if resolution <= 0.0:
             raise ValueError("resolution_m must be positive")
-        require_sha256(self.content_sha256, "content_sha256")
         object.__setattr__(self, "timestamp_s", timestamp)
         object.__setattr__(self, "resolution_m", resolution)
 
@@ -90,12 +80,8 @@ class BeliefVersion:
             "reset_epoch": self.reset_epoch,
             "timestamp_s": self.timestamp_s,
             "resolution_m": self.resolution_m,
-            "content_sha256": self.content_sha256,
+            "content_id": self.content_id,
         }
-
-    @property
-    def digest(self) -> str:
-        return canonical_sha256(self.to_dict())
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,14 +92,20 @@ class MapDeltaMessage:
     created_timestamp_s: float
     time_to_live_s: float
     payload_bytes: int
-    belief_version_sha256: str
-    delta_sha256: str
+    belief_version_id: str
+    delta_id: str
     delivered_timestamp_s: float | None = None
     schema_version: str = EXPLORATION_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         _schema(self.schema_version)
-        for name in ("message_id", "source_agent_id", "destination_agent_id"):
+        for name in (
+            "message_id",
+            "source_agent_id",
+            "destination_agent_id",
+            "belief_version_id",
+            "delta_id",
+        ):
             require_identifier(getattr(self, name), name)
         if self.source_agent_id == self.destination_agent_id:
             raise ValueError("map delta sender and receiver must differ")
@@ -127,8 +119,6 @@ class MapDeltaMessage:
             or self.payload_bytes < 0
         ):
             raise ValueError("payload_bytes must be a non-negative integer")
-        for name in ("belief_version_sha256", "delta_sha256"):
-            require_sha256(getattr(self, name), name)
         delivered = self.delivered_timestamp_s
         if delivered is not None:
             delivered = _nonnegative(delivered, "delivered_timestamp_s")
@@ -163,15 +153,15 @@ class MapDeltaMessage:
             "delivered_timestamp_s": self.delivered_timestamp_s,
             "time_to_live_s": self.time_to_live_s,
             "payload_bytes": self.payload_bytes,
-            "belief_version_sha256": self.belief_version_sha256,
-            "delta_sha256": self.delta_sha256,
+            "belief_version_id": self.belief_version_id,
+            "delta_id": self.delta_id,
         }
 
 
 @dataclass(frozen=True, slots=True)
 class FrontierCluster:
     frontier_id: str
-    belief_version_sha256: str
+    belief_version_id: str
     centroid_m: Point3
     outward_normal: Point3
     viewpoint_candidates_m: tuple[Point3, ...]
@@ -183,7 +173,7 @@ class FrontierCluster:
     def __post_init__(self) -> None:
         _schema(self.schema_version)
         require_identifier(self.frontier_id, "frontier_id")
-        require_sha256(self.belief_version_sha256, "belief_version_sha256")
+        require_identifier(self.belief_version_id, "belief_version_id")
         object.__setattr__(self, "centroid_m", _point(self.centroid_m, "centroid_m"))
         object.__setattr__(self, "outward_normal", _point(self.outward_normal, "outward_normal"))
         viewpoints = _points(self.viewpoint_candidates_m, "viewpoint_candidates_m")
@@ -204,13 +194,12 @@ class FrontierCluster:
         ):
             raise ValueError("relative_height_band must be an integer")
         object.__setattr__(self, "expected_gain_m3", gain)
-        walk_public_payload(self.to_dict())
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema_version": self.schema_version,
             "frontier_id": self.frontier_id,
-            "belief_version_sha256": self.belief_version_sha256,
+            "belief_version_id": self.belief_version_id,
             "centroid_m": self.centroid_m,
             "outward_normal": self.outward_normal,
             "viewpoint_candidates_m": self.viewpoint_candidates_m,
@@ -275,8 +264,8 @@ class AgentExplorationPlan:
 @dataclass(frozen=True, slots=True)
 class TeamExplorationCandidate:
     candidate_id: str
-    context_sha256: str
-    belief_version_sha256s: tuple[str, ...]
+    context_id: str
+    belief_version_ids: tuple[str, ...]
     agent_plans: tuple[AgentExplorationPlan, ...]
     planned_descriptor: tuple[float, ...]
     feasible: bool
@@ -288,13 +277,13 @@ class TeamExplorationCandidate:
         _schema(self.schema_version)
         require_identifier(self.candidate_id, "candidate_id")
         require_identifier(self.source, "source")
-        require_sha256(self.context_sha256, "context_sha256")
-        belief_hashes = tuple(sorted(set(self.belief_version_sha256s)))
-        if not belief_hashes:
+        require_identifier(self.context_id, "context_id")
+        belief_ids = tuple(sorted(set(self.belief_version_ids)))
+        if not belief_ids:
             raise ValueError("team candidate requires at least one belief version")
-        for digest in belief_hashes:
-            require_sha256(digest, "belief_version_sha256")
-        object.__setattr__(self, "belief_version_sha256s", belief_hashes)
+        for belief_id in belief_ids:
+            require_identifier(belief_id, "belief_version_id")
+        object.__setattr__(self, "belief_version_ids", belief_ids)
         plans = tuple(sorted(self.agent_plans, key=lambda row: row.agent_id))
         if not plans or len({row.agent_id for row in plans}) != len(plans):
             raise ValueError("team candidate requires unique agent plans")
@@ -313,24 +302,19 @@ class TeamExplorationCandidate:
         if self.feasible and reasons:
             raise ValueError("a feasible candidate cannot contain rejection reasons")
         object.__setattr__(self, "admission_reasons", reasons)
-        walk_public_payload(self.to_dict())
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema_version": self.schema_version,
             "candidate_id": self.candidate_id,
-            "context_sha256": self.context_sha256,
-            "belief_version_sha256s": self.belief_version_sha256s,
+            "context_id": self.context_id,
+            "belief_version_ids": self.belief_version_ids,
             "agent_plans": [row.to_dict() for row in self.agent_plans],
             "planned_descriptor": self.planned_descriptor,
             "feasible": self.feasible,
             "admission_reasons": self.admission_reasons,
             "source": self.source,
         }
-
-    @property
-    def digest(self) -> str:
-        return canonical_sha256(self.to_dict())
 
 
 @dataclass(frozen=True, slots=True)
@@ -377,7 +361,7 @@ class ExplorationExecutionOutcome:
     outcome_id: str
     episode_id: str
     decision_id: str
-    candidate_sha256: str
+    candidate_id: str
     started_timestamp_s: float
     ended_timestamp_s: float
     agent_outcomes: tuple[AgentExecutionOutcome, ...]
@@ -391,9 +375,8 @@ class ExplorationExecutionOutcome:
 
     def __post_init__(self) -> None:
         _schema(self.schema_version)
-        for name in ("outcome_id", "episode_id", "decision_id"):
+        for name in ("outcome_id", "episode_id", "decision_id", "candidate_id"):
             require_identifier(getattr(self, name), name)
-        require_sha256(self.candidate_sha256, "candidate_sha256")
         start = _nonnegative(self.started_timestamp_s, "started_timestamp_s")
         end = _nonnegative(self.ended_timestamp_s, "ended_timestamp_s")
         if end <= start:
@@ -428,7 +411,7 @@ class ExplorationExecutionOutcome:
             "outcome_id": self.outcome_id,
             "episode_id": self.episode_id,
             "decision_id": self.decision_id,
-            "candidate_sha256": self.candidate_sha256,
+            "candidate_id": self.candidate_id,
             "started_timestamp_s": self.started_timestamp_s,
             "ended_timestamp_s": self.ended_timestamp_s,
             "agent_outcomes": [row.to_dict() for row in self.agent_outcomes],
@@ -440,20 +423,16 @@ class ExplorationExecutionOutcome:
             "unrecoverable_failure": self.unrecoverable_failure,
         }
 
-    @property
-    def digest(self) -> str:
-        return canonical_sha256(self.to_dict())
-
 
 @dataclass(frozen=True, slots=True)
 class ExplorationTransition:
     episode_id: str
     decision_id: str
-    state_sha256: str
-    candidate_set_sha256: str
-    selected_candidate_sha256: str
-    outcome_sha256: str
-    next_state_sha256: str
+    state_id: str
+    candidate_set_id: str
+    selected_candidate_id: str
+    outcome_id: str
+    next_state_id: str
     duration_s: float
     reward_features: NumericPairs
     cost_features: NumericPairs
@@ -463,16 +442,16 @@ class ExplorationTransition:
 
     def __post_init__(self) -> None:
         _schema(self.schema_version)
-        for name in ("episode_id", "decision_id"):
-            require_identifier(getattr(self, name), name)
         for name in (
-            "state_sha256",
-            "candidate_set_sha256",
-            "selected_candidate_sha256",
-            "outcome_sha256",
-            "next_state_sha256",
+            "episode_id",
+            "decision_id",
+            "state_id",
+            "candidate_set_id",
+            "selected_candidate_id",
+            "outcome_id",
+            "next_state_id",
         ):
-            require_sha256(getattr(self, name), name)
+            require_identifier(getattr(self, name), name)
         duration = finite_number(self.duration_s, "duration_s")
         if duration <= 0.0:
             raise ValueError("transition duration must be positive")
@@ -495,11 +474,11 @@ class ExplorationTransition:
             "schema_version": self.schema_version,
             "episode_id": self.episode_id,
             "decision_id": self.decision_id,
-            "state_sha256": self.state_sha256,
-            "candidate_set_sha256": self.candidate_set_sha256,
-            "selected_candidate_sha256": self.selected_candidate_sha256,
-            "outcome_sha256": self.outcome_sha256,
-            "next_state_sha256": self.next_state_sha256,
+            "state_id": self.state_id,
+            "candidate_set_id": self.candidate_set_id,
+            "selected_candidate_id": self.selected_candidate_id,
+            "outcome_id": self.outcome_id,
+            "next_state_id": self.next_state_id,
             "duration_s": self.duration_s,
             "reward_features": dict(self.reward_features),
             "cost_features": dict(self.cost_features),

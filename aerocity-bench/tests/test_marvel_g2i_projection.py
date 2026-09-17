@@ -23,7 +23,7 @@ def _public_reset() -> tuple[dict, dict]:
         "mission_sector": {
             "truth_independent": True,
             "frozen_before_sampling": True,
-            "atlas_hash": "public-atlas",
+            "layout_id": "city-calibration-000-a0",
             "selected_cell_ids": [cell["cell_id"] for cell in cells],
             "cell_assignment_by_drone": {"uav-00": [cell["cell_id"] for cell in cells]},
             "capacity_certificate": {"return_reserve_s": 2.0},
@@ -39,7 +39,7 @@ def _public_reset() -> tuple[dict, dict]:
             "observe": {"continuous_dwell_s": 0.5},
             "vehicle": {"horizontal_speed_mps": 3.0, "vertical_speed_mps": 2.0},
         },
-        "inspection_atlas": {"atlas_hash": "public-atlas", "regions": [{"cells": cells}]},
+        "inspection_atlas": {"layout_id": "city-calibration-000-a0", "regions": [{"cells": cells}]},
     }
     return episode, task
 

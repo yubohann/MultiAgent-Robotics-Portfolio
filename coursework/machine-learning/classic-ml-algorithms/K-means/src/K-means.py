@@ -86,7 +86,6 @@ class KMeans:
 	def fit(self, X):
 		if len(X) == 0:
 			raise ValueError('Empty data')
-		n_features = len(X[0])
 
 		centers = self._init_centroids(X)
 

@@ -34,14 +34,9 @@ rl = ["gymnasium>=1.0", "pettingzoo>=1.24"]
 aerocity-bench = "aerocity_bench.cli:main"
 
 [tool.hatch.build]
-# Engineering investigations and local release logs stay out of source distributions.
 exclude = [
-  "/.wheel_verify_*/",
-  "/debug/",
   "/dist/",
   "/fix-results.tsv",
-  "/reason/",
-  "/scenario/",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -50,8 +45,6 @@ packages = ["src/aerocity_bench"]
 [tool.hatch.build.targets.wheel.force-include]
 "configs/releases/ordinary-v1-mini.json" = "aerocity_bench/resources/presets/ordinary-v1-mini.json"
 "schemas/release_config_ordinary_v3.schema.json" = "aerocity_bench/resources/schemas/release_config_ordinary_v3.schema.json"
-"tools/isaac_capture.py" = "aerocity_bench/tools/isaac_capture.py"
-"tools/isaac_native_gate.py" = "aerocity_bench/tools/isaac_native_gate.py"
 
 [tool.pytest.ini_options]
 addopts = "-q"

@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-import hashlib
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from .._identity import IdentityAccumulator
 from ..failure_ledger import FAILURE_LEDGER_SCHEMA, validate_failure_record
 from .common import (
     CollectionProtocolError,
     _canonical_bytes,
-    protocol_sha256,
+    protocol_identity,
 )
 from .constants import (
     _ID,
@@ -35,7 +35,7 @@ def coverage_report(protocol: Mapping[str, Any], attempts: Sequence[Mapping[str,
     protocol_issues = validate_collection_protocol(protocol)
     if protocol_issues:
         raise CollectionProtocolError("invalid collection protocol: " + "; ".join(issue.code for issue in protocol_issues))
-    expected_protocol_hash = protocol_sha256(protocol)
+    expected_protocol_identity = protocol_identity(protocol)
     cells = {str(cell["cell_id"]): cell for cell in protocol["cells"]}
     seed_start = int(protocol["randomization"]["episode_seed_start"])
     seen_attempts: set[str] = set()
@@ -53,7 +53,7 @@ def coverage_report(protocol: Mapping[str, Any], attempts: Sequence[Mapping[str,
     }
     canonical_attempts: list[dict[str, Any]] = []
     excluded_protocol_id_count = 0
-    excluded_protocol_hash_count = 0
+    excluded_protocol_identity_count = 0
     for index, attempt in enumerate(attempts):
         path = f"$[{index}]"
         if not isinstance(attempt, Mapping):
@@ -67,15 +67,15 @@ def coverage_report(protocol: Mapping[str, Any], attempts: Sequence[Mapping[str,
             raise CollectionProtocolError(f"attempt {path} has a duplicate attempt_id")
         seen_attempts.add(attempt_id)
         # The ledger is append-only across protocol eras. Coverage has to select
-        # the exact frozen (ID, hash) pair, while exposing how many valid
+        # the exact frozen (ID, identity) pair, while exposing how many valid
         # records were excluded. This prevents legacy records and prior frozen
         # revisions from contaminating the current cohort without hiding that
         # they exist in the public denominator.
         if attempt.get("collection_protocol_id") != protocol["protocol_id"]:
             excluded_protocol_id_count += 1
             continue
-        if attempt.get("collection_protocol_sha256") != expected_protocol_hash:
-            excluded_protocol_hash_count += 1
+        if attempt.get("collection_protocol_identity") != expected_protocol_identity:
+            excluded_protocol_identity_count += 1
             continue
         cell_id = attempt.get("collection_cell_id")
         if not isinstance(cell_id, str) or cell_id not in cells:
@@ -142,15 +142,15 @@ def coverage_report(protocol: Mapping[str, Any], attempts: Sequence[Mapping[str,
     report = {
         "schema": T1_COVERAGE_REPORT_SCHEMA if is_t1 else COVERAGE_REPORT_SCHEMA,
         "protocol_id": protocol["protocol_id"],
-        "protocol_sha256": expected_protocol_hash,
+        "protocol_identity": expected_protocol_identity,
         "failure_ledger_schema": FAILURE_LEDGER_SCHEMA,
         "ledger_record_count": len(attempts),
         "excluded_ledger_record_count": (
-            excluded_protocol_id_count + excluded_protocol_hash_count
+            excluded_protocol_id_count + excluded_protocol_identity_count
         ),
         "excluded_protocol_id_count": excluded_protocol_id_count,
-        "excluded_protocol_hash_count": excluded_protocol_hash_count,
-        "attempts_sha256": hashlib.sha256(_canonical_bytes(canonical_attempts)).hexdigest(),
+        "excluded_protocol_identity_count": excluded_protocol_identity_count,
+        "attempts_identity": IdentityAccumulator(_canonical_bytes(canonical_attempts)).hexdigest(),
         "attempt_count": len(canonical_attempts),
         "admitted_count": sum(item["admitted_count"] for item in cell_reports),
         "quarantined_count": sum(item["quarantined_count"] for item in cell_reports),

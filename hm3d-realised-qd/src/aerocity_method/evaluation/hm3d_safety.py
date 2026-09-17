@@ -279,7 +279,9 @@ class CollisionAvoidanceRecoveryAssessment:
             "initial_minimum_separation_m": self.initial_minimum_separation_m,
             "endpoint_minimum_separation_m": self.endpoint_minimum_separation_m,
             "maximum_boundary_speed_mps": self.maximum_boundary_speed_mps,
-            "synchronized_physical_assessment": self.synchronized_physical_assessment.to_public_dict(),
+            "synchronized_physical_assessment": (
+                self.synchronized_physical_assessment.to_public_dict()
+            ),
             "route_tube_physical_assessment": self.route_tube_physical_assessment.to_public_dict(),
             "nonconverging": self.nonconverging,
             "rejection_reasons": list(self.rejection_reasons),
@@ -507,7 +509,10 @@ def assess_collision_avoidance_recovery(
     speed_limit = float(boundary_speed_limit_mps)
     if (
         not recovery_agent_id
-        or not all(math.isfinite(value) and value > 0.0 for value in (physical, planned, endpoint_required))
+        or not all(
+            math.isfinite(value) and value > 0.0
+            for value in (physical, planned, endpoint_required)
+        )
         or not math.isfinite(speed_limit)
         or speed_limit < 0.0
         or physical >= planned

@@ -1,21 +1,15 @@
-from __future__ import annotations
-
 """Training helpers for the multi-agent 2D gate experiment."""
 
+from __future__ import annotations
 
-import json
 import math
-import subprocess
-import sys
 from typing import Literal
 
 import numpy as np
-import torch
 
 from multi_gate.configs.experiment_config import MultiExperimentConfig
 from multi_gate.env.multi_gate_env import MultiGate2DEnv
 from multi_gate.env.multi_gate_kinematic_3d_env import MultiGateKinematic3DEnv
-
 
 MultiResumeMode = Literal["reset_train_state", "keep_optimizer_state"]
 MultiEnvType = MultiGate2DEnv | MultiGateKinematic3DEnv

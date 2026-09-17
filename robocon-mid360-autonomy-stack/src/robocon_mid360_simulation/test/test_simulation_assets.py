@@ -6,7 +6,6 @@ import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT / "scripts"))
 
@@ -68,7 +67,7 @@ class SimulationAssetTests(unittest.TestCase):
         self.assertIn('! map_is_eligible "$selected_map"', dispatcher)
         self.assertIn('run_rgbd || failed=1', dispatcher)
         self.assertIn('MIN_FREE_SPACE_GB', dispatcher)
-        self.assertIn('pcd_sha256 == actual_sha256', dispatcher)
+        self.assertIn('point_count_matches', dispatcher)
         self.assertIn('[[ "$dry_run" == true ]] || require_free_space', dispatcher)
         self.assertIn('[[ "$dry_run" == false ]] && ! map_is_eligible', dispatcher)
 
@@ -84,7 +83,8 @@ class SimulationAssetTests(unittest.TestCase):
         runner = (PACKAGE_ROOT / "scripts" / "run_fixed_map_localization_smoke.sh").read_text(encoding="utf-8")
         probe = (PACKAGE_ROOT / "scripts" / "fixed_map_localization_smoke.py").read_text(encoding="utf-8")
         self.assertIn("ROS_DOMAIN_ID", runner)
-        self.assertIn("map_input.sha256", runner)
+        self.assertIn('map_file:="$map_file"', runner)
+        self.assertIn('--map-file "$map_file"', runner)
         self.assertIn("/cloud_registered", runner)
         self.assertIn("map_locked_seen", probe)
         self.assertIn("gazebo_simulation", probe)

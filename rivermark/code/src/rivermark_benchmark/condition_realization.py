@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import numpy as np
 
@@ -12,9 +13,8 @@ from .citylite_scene import (
     PUBLIC_ROUTE_FAMILIES_W_M,
     START_ANCHOR_IDS_BY_ROUTE_FAMILY,
     TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M,
-    canonical_payload_sha256,
+    canonical_payload_identity,
 )
-
 
 CONDITION_REALIZATION_SCHEMA = "org.rivermark.isaac-condition-realization.v1"
 CONDITION_AXES = (
@@ -74,7 +74,7 @@ UNSUPPORTED_CONDITION_AXES = tuple(
     axis for axis in CONDITION_AXES if axis not in SUPPORTED_CONDITION_VALUE_SETS
 )
 _ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 
 
 def _issue(code: str, path: str, message: str) -> dict[str, str]:
@@ -85,7 +85,7 @@ def condition_request_from_protocol(
     protocol: Mapping[str, Any],
     *,
     protocol_id: str,
-    protocol_sha256: str,
+    protocol_identity: str,
     cell_id: str,
 ) -> dict[str, Any]:
     """Build the public condition request for an already resolved binding."""
@@ -95,11 +95,12 @@ def condition_request_from_protocol(
         (item for item in cells if isinstance(item, Mapping) and item.get("cell_id") == cell_id),
         None,
     ) if isinstance(cells, list) else None
-    if not isinstance(cell, Mapping):
+    if cell is None:
         raise ValueError(f"unknown collection cell: {cell_id}")
     conditions = cell.get("conditions")
+    # Protocol-data validation: ValueError is the established contract for malformed cells.
     if not isinstance(conditions, Mapping):
-        raise ValueError("collection cell conditions must be an object")
+        raise ValueError("collection cell conditions must be an object")  # noqa: TRY004
     declared_axes = tuple(axis for axis in CONDITION_AXES if axis in conditions)
     if not declared_axes or set(conditions) != set(declared_axes):
         raise ValueError("collection cell conditions must be a non-empty subset of known axes")
@@ -114,7 +115,7 @@ def condition_request_from_protocol(
     return {
         "schema": CONDITION_REALIZATION_SCHEMA,
         "protocol_id": protocol_id,
-        "protocol_sha256": protocol_sha256,
+        "protocol_identity": protocol_identity,
         "cell_id": cell_id,
         "conditions": {axis: conditions[axis] for axis in declared_axes},
         "axis_support": axis_support,
@@ -132,7 +133,7 @@ def validate_condition_request(
     issues: list[dict[str, str]] = []
     if not isinstance(request, Mapping):
         return (_issue("condition_request_type", "condition_request", "must be an object"),)
-    expected = {"schema", "protocol_id", "protocol_sha256", "cell_id", "conditions", "axis_support", "status"}
+    expected = {"schema", "protocol_id", "protocol_identity", "cell_id", "conditions", "axis_support", "status"}
     for key in sorted(set(request) - expected):
         issues.append(_issue("condition_request_unknown_field", f"condition_request.{key}", "field is not supported"))
     if request.get("schema") != CONDITION_REALIZATION_SCHEMA:
@@ -141,8 +142,8 @@ def validate_condition_request(
         value = request.get(key)
         if not isinstance(value, str) or not _ID.fullmatch(value):
             issues.append(_issue("condition_request_id", f"condition_request.{key}", "must be a public identifier"))
-    if not isinstance(request.get("protocol_sha256"), str) or not _SHA256.fullmatch(request.get("protocol_sha256", "")):
-        issues.append(_issue("condition_request_hash", "condition_request.protocol_sha256", "must be SHA-256"))
+    if not isinstance(request.get("protocol_identity"), str) or not _IDENTITY.fullmatch(request.get("protocol_identity", "")):
+        issues.append(_issue("condition_request_identity", "condition_request.protocol_identity", "must be a short identity"))
     conditions = request.get("conditions")
     condition_axes = set(conditions) if isinstance(conditions, Mapping) else set()
     if (
@@ -173,7 +174,7 @@ def validate_condition_request(
     if request.get("status") != "pending_independent_check":
         issues.append(_issue("condition_request_status", "condition_request.status", "must remain pending until independent verification"))
     if binding is not None:
-        for key in ("protocol_id", "protocol_sha256", "cell_id"):
+        for key in ("protocol_id", "protocol_identity", "cell_id"):
             if request.get(key) != binding.get(key):
                 issues.append(_issue("condition_request_binding", f"condition_request.{key}", "does not match collection binding"))
     return tuple(issues)
@@ -226,12 +227,12 @@ def _route_family_evidence_ok(
     routes = public_task.get("routes_w_m")
     contract = public_task.get("route_contract")
     expected_routes = PUBLIC_ROUTE_FAMILIES_W_M[requested_family]
-    expected_hash = canonical_payload_sha256(expected_routes)
+    expected_identity = canonical_payload_identity(expected_routes)
     return bool(
         public_task.get("route_family_id") == requested_family
-        and canonical_payload_sha256(routes) == expected_hash
+        and canonical_payload_identity(routes) == expected_identity
         and isinstance(contract, Mapping)
-        and contract.get("routes_sha256") == expected_hash
+        and contract.get("routes_identity") == expected_identity
     )
 
 
@@ -325,7 +326,7 @@ def _one_step_latency_ok(state: Any, receipt: Mapping[str, Any]) -> bool:
         or float(dt_s) <= 0.0
     ):
         return False
-    expected_delta_ns = int(round(float(dt_s) * 1.0e9))
+    expected_delta_ns = round(float(dt_s) * 1.0e9)
     return bool(np.all(effective - command == expected_delta_ns))
 
 
@@ -364,7 +365,7 @@ def evaluate_condition_realization(
         add("route", conditions.get("route") == SUPPORTED_CONDITION_VALUES["route"] and route_ok, "public_task.json route_conditioning/routes_w_m", "public route evidence is missing or unsupported" if not route_ok else None)
     if requested("route_family"):
         family_ok = _route_family_evidence_ok(public_task, conditions.get("route_family"))
-        add("route_family", family_ok, "public_task.json route_family_id/routes_w_m/route_contract.routes_sha256", "route family is not exactly realized by the public trajectory contract" if not family_ok else None)
+        add("route_family", family_ok, "public_task.json route_family_id/routes_w_m/route_contract.routes_identity", "route family is not exactly realized by the public trajectory contract" if not family_ok else None)
     object_ok = (
         isinstance(public_task, Mapping)
         and public_task.get("nominal_object_count") == 4

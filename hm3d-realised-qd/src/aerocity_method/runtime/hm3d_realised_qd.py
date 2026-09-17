@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import math
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -16,12 +15,7 @@ from aerocity_method.archives.qd import (
     Elite,
     QDArchive,
 )
-from aerocity_method.contracts.io import (
-    canonical_sha256,
-    finite_number,
-    require_identifier,
-    require_sha256,
-)
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.contracts.models import CandidateFragmentManifest
 from aerocity_method.runtime.hm3d_belief import PublicRangeRayOutcome, SparseVoxelBelief
 
@@ -120,18 +114,16 @@ HM3D_QD_DESCRIPTOR_FAMILIES: tuple[tuple[str, tuple[str, str, str]], ...] = (
 HM3D_CURRENT_QD_DESCRIPTOR_FAMILY_ID = "v4_motion_dispersion_complementarity"
 
 
-def qd_selector_backbone_sha256(*, utility_slack: float) -> str:
+def qd_selector_backbone_id(*, utility_slack: float) -> str:
     """Identify the common public value layer shared by all three P08 QD controls."""
 
     slack = finite_number(utility_slack, "QD utility_slack")
     if not 0.0 <= slack <= 1.0:
         raise ValueError("QD utility_slack must lie in [0, 1]")
-    return canonical_sha256(
-        {
-            "candidate_value_provider": QD_PUBLIC_VALUE_BACKBONE_ID,
-            "utility_slack": slack,
-            "selector_schema": HM3D_REALISED_QD_SCHEMA_VERSION,
-        }
+    # Explicit backbone label: value provider, slack and selector schema in one string.
+    return (
+        f"{QD_PUBLIC_VALUE_BACKBONE_ID}:slack={slack:.6f}:"
+        f"selector={HM3D_REALISED_QD_SCHEMA_VERSION}"
     )
 
 
@@ -165,8 +157,8 @@ class PublicExplorationNeed:
     vertical_exploration_deficit: float
     spatial_dispersion_deficit: float
     duplicate_observation_deficit: float
-    source_public_belief_sha256: str
-    source_agent_footprints_sha256: str
+    source_public_belief_id: str
+    source_agent_footprints_id: str
     source_public_outcome_count: int
     schema_version: str = HM3D_PUBLIC_EXPLORATION_NEED_SCHEMA_VERSION
 
@@ -177,8 +169,8 @@ class PublicExplorationNeed:
         object.__setattr__(self, "vertical_exploration_deficit", values[0])
         object.__setattr__(self, "spatial_dispersion_deficit", values[1])
         object.__setattr__(self, "duplicate_observation_deficit", values[2])
-        require_sha256(self.source_public_belief_sha256, "public need belief hash")
-        require_sha256(self.source_agent_footprints_sha256, "public need footprint hash")
+        require_identifier(self.source_public_belief_id, "public need belief id")
+        require_identifier(self.source_agent_footprints_id, "public need footprint id")
         if (
             not isinstance(self.source_public_outcome_count, int)
             or isinstance(self.source_public_outcome_count, bool)
@@ -221,8 +213,8 @@ class PublicExplorationNeed:
             "strength": self.strength,
             "active": self.active,
             "minimum_active_strength": MINIMUM_PUBLIC_EXPLORATION_NEED_STRENGTH,
-            "source_public_belief_sha256": self.source_public_belief_sha256,
-            "source_agent_footprints_sha256": self.source_agent_footprints_sha256,
+            "source_public_belief_id": self.source_public_belief_id,
+            "source_agent_footprints_id": self.source_agent_footprints_id,
             "source_public_outcome_count": self.source_public_outcome_count,
         }
 
@@ -291,15 +283,14 @@ def public_exploration_need_from_public_belief(
                 union = left | right
                 overlaps.append(0.0 if not union else len(left & right) / len(union))
         duplicate_deficit = sum(overlaps) / len(overlaps) if overlaps else 1.0
-    footprint_hash = canonical_sha256(
-        {"agent_free_voxel_keys": {agent_id: footprints[agent_id] for agent_id in identifiers}}
-    )
+    # Readable footprint label: one entry per agent with its public free-voxel count.
+    footprint_id = "|".join(f"{agent_id}:{len(footprints[agent_id])}" for agent_id in identifiers)
     return PublicExplorationNeed(
         vertical_exploration_deficit=vertical_deficit,
         spatial_dispersion_deficit=spatial_deficit,
         duplicate_observation_deficit=duplicate_deficit,
-        source_public_belief_sha256=belief.content_sha256,
-        source_agent_footprints_sha256=footprint_hash,
+        source_public_belief_id=belief.content_id,
+        source_agent_footprints_id=footprint_id,
         source_public_outcome_count=belief.outcome_count,
     )
 
@@ -815,7 +806,7 @@ class RealisedQDReproducibilityAudit:
 
 
 def audit_realised_qd_reproducibility(
-    descriptors_by_manifest_sha256: Mapping[str, Sequence[RealisedQDDescriptor]],
+    descriptors_by_manifest_id: Mapping[str, Sequence[RealisedQDDescriptor]],
     *,
     spec: ArchiveSpec = HM3D_REALISED_QD_ARCHIVE_SPEC,
     minimum_repeated_manifest_groups: int = 3,
@@ -839,8 +830,8 @@ def audit_realised_qd_reproducibility(
     pair_count = 0
     stable_pair_count = 0
     normalized_l2: list[float] = []
-    for manifest_sha256, raw_descriptors in descriptors_by_manifest_sha256.items():
-        require_sha256(manifest_sha256, "QD replay manifest hash")
+    for manifest_id, raw_descriptors in descriptors_by_manifest_id.items():
+        require_identifier(manifest_id, "QD replay manifest id")
         descriptors = tuple(raw_descriptors)
         if len(descriptors) < 2:
             continue
@@ -1894,7 +1885,7 @@ class OutcomeGroundedQDExperience:
     realised: RealisedQDDescriptor
     public_quality: float
     public_cost: float
-    execution_outcome_sha256: str
+    execution_outcome_id: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "intent", _checked_descriptor(self.intent, "candidate intent"))
@@ -1904,7 +1895,7 @@ class OutcomeGroundedQDExperience:
             raise ValueError("public outcome quality and cost must be non-negative")
         object.__setattr__(self, "public_quality", quality)
         object.__setattr__(self, "public_cost", cost)
-        require_sha256(self.execution_outcome_sha256, "execution outcome hash")
+        require_identifier(self.execution_outcome_id, "execution outcome id")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1912,7 +1903,7 @@ class OutcomeGroundedQDSelection:
     """Auditable selection result; no archived trajectory is re-executed."""
 
     selected_candidate_id: str
-    selected_manifest_hash: str
+    selected_manifest_id: str
     scores: tuple[tuple[str, float], ...]
     predicted_descriptors: tuple[tuple[str, tuple[float, float, float]], ...]
     evidence_count: int
@@ -1935,7 +1926,7 @@ class OutcomeGroundedQDSelection:
     def to_dict(self) -> dict[str, object]:
         return {
             "selected_candidate_id": self.selected_candidate_id,
-            "selected_manifest_hash": self.selected_manifest_hash,
+            "selected_manifest_id": self.selected_manifest_id,
             "scores": list(self.scores),
             "predicted_descriptors": [
                 {"candidate_id": candidate_id, "descriptor": list(descriptor)}
@@ -1965,7 +1956,7 @@ class PlannedQDSelection:
     """Diagnostic selection record for the intentionally flawed planned-QD control."""
 
     selected_candidate_id: str
-    selected_manifest_hash: str
+    selected_manifest_id: str
     scores: tuple[tuple[str, float], ...]
     archive_entry_count: int
     base_best_candidate_id: str
@@ -1975,7 +1966,7 @@ class PlannedQDSelection:
     def to_dict(self) -> dict[str, object]:
         return {
             "selected_candidate_id": self.selected_candidate_id,
-            "selected_manifest_hash": self.selected_manifest_hash,
+            "selected_manifest_id": self.selected_manifest_id,
             "scores": list(self.scores),
             "archive_entry_count": self.archive_entry_count,
             "archive_semantics": "planned_intent_diagnostic_only",
@@ -2022,14 +2013,12 @@ class PlannedQDSelector:
         require_identifier(source_id, "planned-QD source_id")
         index = self._admission_index
         self._admission_index += 1
-        synthetic_hash = hashlib.sha256(
-            f"planned-qd-diagnostic:{source_id}:{index}".encode()
-        ).hexdigest()
+        record_id = f"planned-qd-diagnostic:{source_id}:{index}"
         self.archive.add_or_update(
             Elite(
                 candidate_id=f"planned-qd-{index}",
-                manifest_hash=synthetic_hash,
-                behavior_hash=synthetic_hash,
+                manifest_id=record_id,
+                behavior_id=record_id,
                 realised_descriptor=descriptor,
                 quality=quality,
                 cost=cost,
@@ -2064,7 +2053,7 @@ class PlannedQDSelector:
         base_low = min(utilities)
         base_high = max(utilities)
         base_best_index = min(
-            range(len(legal)), key=lambda index: (-utilities[index], legal[index].manifest_hash)
+            range(len(legal)), key=lambda index: (-utilities[index], legal[index].manifest_id)
         )
         base_best = legal[base_best_index]
         utility_floor = base_high - self.utility_slack * (base_high - base_low)
@@ -2097,7 +2086,7 @@ class PlannedQDSelector:
                 else (base_utility - base_low) / (base_high - base_low)
             )
             scores.append((normalized_base + self.diversity_weight * novelty, candidate))
-        scores.sort(key=lambda row: (-row[0], row[1].manifest_hash))
+        scores.sort(key=lambda row: (-row[0], row[1].manifest_id))
         _, selected = scores[0]
         self.observe_intent(
             selected.planned_descriptor,
@@ -2107,7 +2096,7 @@ class PlannedQDSelector:
         )
         return selected, PlannedQDSelection(
             selected_candidate_id=selected.candidate_id,
-            selected_manifest_hash=selected.manifest_hash,
+            selected_manifest_id=selected.manifest_id,
             scores=tuple((candidate.candidate_id, score) for score, candidate in scores),
             archive_entry_count=len(tuple(self.archive.items())),
             base_best_candidate_id=base_best.candidate_id,
@@ -2171,14 +2160,16 @@ class OutcomeGroundedQDSelector:
         *,
         public_quality: float,
         public_cost: float,
-        execution_outcome_sha256: str,
+        execution_outcome_id: str,
         execution_feasible: bool,
     ) -> AdmissionDecision:
         """Admit one executed candidate into the predictor and archive."""
 
         if not candidate.feasible:
             raise ValueError("infeasible candidates cannot train the realised-QD selector")
-        require_sha256(execution_outcome_sha256, "execution outcome hash")
+        require_identifier(execution_outcome_id, "execution outcome id")
+        if not execution_outcome_id.startswith("outcome-"):
+            raise ValueError("execution outcome id must name a real execution outcome")
         if not isinstance(execution_feasible, bool):
             raise ValueError("execution_feasible must be a boolean")
         if execution_feasible is not True:
@@ -2194,13 +2185,13 @@ class OutcomeGroundedQDSelector:
             realised,
             public_quality=public_quality,
             public_cost=public_cost,
-            execution_outcome_sha256=execution_outcome_sha256,
+            execution_outcome_id=execution_outcome_id,
         )
         return self.archive.add_or_update(
             Elite(
                 candidate_id=candidate.candidate_id,
-                manifest_hash=candidate.manifest_hash,
-                behavior_hash=execution_outcome_sha256,
+                manifest_id=candidate.manifest_id,
+                behavior_id=execution_outcome_id,
                 realised_descriptor=realised.values,
                 quality=public_quality,
                 cost=public_cost,
@@ -2216,7 +2207,7 @@ class OutcomeGroundedQDSelector:
         *,
         public_quality: float,
         public_cost: float,
-        execution_outcome_sha256: str,
+        execution_outcome_id: str,
     ) -> None:
         """Record an outcome-backed history row without retaining a trajectory."""
 
@@ -2226,7 +2217,7 @@ class OutcomeGroundedQDSelector:
                 realised=realised,
                 public_quality=public_quality,
                 public_cost=public_cost,
-                execution_outcome_sha256=execution_outcome_sha256,
+                execution_outcome_id=execution_outcome_id,
             )
         )
 
@@ -2294,7 +2285,7 @@ class OutcomeGroundedQDSelector:
         base_low = min(utilities)
         base_high = max(utilities)
         base_best_index = min(
-            range(len(legal)), key=lambda index: (-utilities[index], legal[index].manifest_hash)
+            range(len(legal)), key=lambda index: (-utilities[index], legal[index].manifest_id)
         )
         base_best = legal[base_best_index]
         base_intent = _checked_descriptor(base_best.planned_descriptor, "candidate intent")
@@ -2359,7 +2350,7 @@ class OutcomeGroundedQDSelector:
                 - self.uncertainty_weight * uncertainty
             )
             scores.append((score, candidate, prediction, uncertainty, need_alignment))
-        scores.sort(key=lambda row: (-row[0], row[1].manifest_hash))
+        scores.sort(key=lambda row: (-row[0], row[1].manifest_id))
         if scores:
             (
                 selected_score,
@@ -2384,7 +2375,7 @@ class OutcomeGroundedQDSelector:
         )
         selection = OutcomeGroundedQDSelection(
             selected_candidate_id=selected.candidate_id,
-            selected_manifest_hash=selected.manifest_hash,
+            selected_manifest_id=selected.manifest_id,
             scores=tuple((candidate.candidate_id, score) for score, candidate, _, _, _ in scores),
             predicted_descriptors=tuple(
                 (candidate.candidate_id, prediction) for _, candidate, prediction, _, _ in scores
@@ -2460,6 +2451,6 @@ __all__ = [
     "outcome_qd_feature_vector_from_public_outcomes",
     "realised_descriptor_from_public_outcomes",
     "descriptor_values_for_qd_family",
-    "qd_selector_backbone_sha256",
+    "qd_selector_backbone_id",
     "ValueProtectedCandidateDiversityAudit",
 ]

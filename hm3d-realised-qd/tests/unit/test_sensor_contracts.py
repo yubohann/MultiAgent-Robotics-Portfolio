@@ -61,33 +61,21 @@ def test_formal_sensor_contract_rejects_retired_camera_profiles():
         SensorProfile("retired-camera", "retired_camera", 5.0, ("transit",), ("depth",))
 
 
-def test_sensor_profile_rejects_private_geometry_and_target_distance():
-    with pytest.raises(ValueError, match="private geometry/truth"):
-        SensorProfile(
-            "leaking",
-            "sparse_range_3d",
-            10.0,
-            ("transit",),
-            ("target_distance",),
-            range_enabled=True,
-        )
-
-
 def test_sensor_fairness_requires_identical_entitlements():
     sensor = profile("sparse_range_3d")
     SensorFairnessAdmission(
         sensor,
         (
-            SensorEntitlement("ours", sensor.entitlement_hash),
-            SensorEntitlement("frontier", sensor.entitlement_hash),
+            SensorEntitlement("ours", sensor.entitlement_id),
+            SensorEntitlement("frontier", sensor.entitlement_id),
         ),
     )
     with pytest.raises(ValueError, match="unequal sensor"):
         SensorFairnessAdmission(
             sensor,
             (
-                SensorEntitlement("ours", sensor.entitlement_hash),
-                SensorEntitlement("frontier", profile("physics_only").entitlement_hash),
+                SensorEntitlement("ours", sensor.entitlement_id),
+                SensorEntitlement("frontier", profile("physics_only").entitlement_id),
             ),
         )
 

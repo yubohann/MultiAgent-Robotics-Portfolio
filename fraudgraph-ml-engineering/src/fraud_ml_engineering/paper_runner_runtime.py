@@ -1,12 +1,12 @@
 ﻿from __future__ import annotations
 
-import hashlib
 import json
 import platform
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import torch
 
@@ -42,7 +42,7 @@ class StageTimer:
         self._totals[stage] += float(max(seconds, 0.0))
         self._counts[stage] += 1
 
-    def merge(self, other: "StageTimer") -> None:
+    def merge(self, other: StageTimer) -> None:
         for stage, seconds in other._totals.items():
             self._totals[stage] = self._totals.get(stage, 0.0) + float(seconds)
             self._counts[stage] = self._counts.get(stage, 0) + int(other._counts.get(stage, 0))
@@ -59,17 +59,6 @@ class StageTimer:
             }
             for stage in ordered
         }
-
-
-def stable_cache_key(payload: dict[str, Any]) -> str:
-    normalized = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:24]
-
-
-def ensure_cache_dir(root: str | Path, namespace: str) -> Path:
-    path = Path(root).expanduser().resolve() / namespace
-    path.mkdir(parents=True, exist_ok=True)
-    return path
 
 
 def atomic_write_json(path: str | Path, payload: dict[str, Any]) -> None:

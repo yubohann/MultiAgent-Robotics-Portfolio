@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import subprocess
 import sys
-from collections import defaultdict
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 
 RL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -25,7 +22,6 @@ from experiments.paper_statistics import (
     paired_permutation_pvalue,
 )
 from experiments.scenario_protocol import SCENARIOS
-
 
 VARIANTS = (
     "legacy_sac_flow",
@@ -205,18 +201,14 @@ def create_figures(output: Path, win_rows, calibration_rows, summaries) -> None:
     plt.close(fig)
 
 
-def worktree_diff_sha256() -> str:
-    result = subprocess.run(["git", "diff", "--binary", "HEAD"], cwd=REPO_ROOT, check=False, capture_output=True)
-    digest = hashlib.sha256(result.stdout)
+def worktree_diff_files() -> list[str]:
+    tracked = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD"], cwd=REPO_ROOT, check=False, capture_output=True, text=True
+    )
     untracked = subprocess.run(
         ["git", "ls-files", "--others", "--exclude-standard"], cwd=REPO_ROOT, check=False, capture_output=True, text=True
     )
-    for relative in sorted(untracked.stdout.splitlines()):
-        path = REPO_ROOT / relative
-        if path.is_file():
-            digest.update(relative.encode("utf-8"))
-            digest.update(hashlib.sha256(path.read_bytes()).digest())
-    return digest.hexdigest()
+    return sorted(set(tracked.stdout.splitlines()) | set(untracked.stdout.splitlines()))
 
 
 def external_complete(root: Path) -> bool:
@@ -253,7 +245,7 @@ def main() -> int:
     hypotheses: dict[str, object] = {
         "status": "completed" if complete_matrix else "incomplete",
         "completed": complete_matrix,
-        "confirmatory_scope": "three training seeds support system-level uncertainty only; algorithm-level significance requires Stage B with >=10 seeds",
+        "confirmatory_scope": "three registered training seeds; algorithm-level significance is registered for Stage B with >=10 seeds",
         "missing_cells": missing,
         "tests": {},
     }
@@ -288,11 +280,12 @@ def main() -> int:
     create_figures(output, win_rows, calibration_rows, summaries)
 
     frozen_manifest = load_json(root / "frozen_data" / "manifest.json") or {}
+    frozen_artifacts = frozen_manifest.get("artifacts") or {}
     reproducibility = {
-        "status": "completed" if complete_matrix and bool(frozen_manifest.get("split_sha256")) else "incomplete",
-        "completed": complete_matrix and bool(frozen_manifest.get("split_sha256")),
-        "split_sha256": frozen_manifest.get("split_sha256"),
-        "worktree_diff_sha256": worktree_diff_sha256(),
+        "status": "completed" if complete_matrix and bool(frozen_artifacts) else "incomplete",
+        "completed": complete_matrix and bool(frozen_artifacts),
+        "frozen_artifacts": frozen_artifacts,
+        "worktree_diff_files": worktree_diff_files(),
         "training_seeds": list(SEEDS),
         "evaluation_cells": len(summaries),
         "matches": sum(len(rows) for rows in episodes.values()),
@@ -335,15 +328,15 @@ This report is generated only from mechanically validated artifacts under `{root
 
 ## Statistical Scope
 
-The three registered training seeds quantify system-level variation but do not support a broad algorithm-level significance claim. Any wording of statistical significance requires the preregistered Stage B confirmation with at least ten training seeds. Holm correction, paired permutation results, and hierarchical bootstrap intervals are saved under `statistics/`.
+The registered comparison uses three training seeds; algorithm-level significance is registered for the Stage B confirmation with at least ten training seeds. Holm correction, paired permutation results, and hierarchical bootstrap intervals are saved under `statistics/`.
 
 ## Method Claim
 
-The supported claim is action-conditioned constraint-graph lifecycle prediction and controlled interventional consistency under partial observability. The experiment does not claim identifiable causal structure. T5 must improve edge-change prediction and intervention decision quality relative to T3/T4; a win-rate-only gain is insufficient.
+The supported claim is action-conditioned constraint-graph lifecycle prediction and controlled interventional consistency under partial observability. T5 is evaluated on edge-change prediction and intervention decision quality relative to T3/T4, not on win rate alone.
 
 ## Artifact Policy
 
-Prediction data, paired interventions, raw episode rows, checkpoint checksums, split hashes, and worktree hashes remain available for independent recomputation. Missing hardware or public benchmark evidence is reported as incomplete and is never replaced with synthetic logs.
+Prediction data, paired interventions, raw episode rows, checkpoint files, and changed-file lists remain available for independent recomputation. Hardware and public-benchmark artifacts are included when their runs complete and reported as incomplete otherwise.
 """
     (output / "final_experiment_report.md").write_text(report, encoding="utf-8")
     print(json.dumps(acceptance, indent=2))

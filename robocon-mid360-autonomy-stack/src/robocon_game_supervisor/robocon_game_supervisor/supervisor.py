@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import ClassVar
 
 from .actions import ACTION_NAMES
 
@@ -59,7 +60,7 @@ class GameSupervisor:
     # These requests move the robot or release a ball toward a field-relative
     # target, so they cross the adapter boundary only while localization is
     # locked, ahead of the periodic safety monitor entering RECOVERY.
-    _LOCALIZATION_GATED_ACTIONS = {
+    _LOCALIZATION_GATED_ACTIONS: ClassVar[set[str]] = {
         "NavigateToPose",
         "PreparePass",
         "ExecutePass",

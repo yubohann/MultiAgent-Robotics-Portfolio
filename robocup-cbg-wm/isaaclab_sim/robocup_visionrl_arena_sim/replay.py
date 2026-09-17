@@ -5,18 +5,17 @@ import json
 import math
 from pathlib import Path
 
-
 from ._bootstrap import (
     ARENA_SIZE,
     BASE_ARMOR,
     MATCH_STATE,
     NAV_BLOCKERS,
-    PUSHABLE_OBSTACLES,
-    PUSHABLE_OBSTACLE_HALF,
     PUSH_OBSTACLE_CLEARANCE,
+    PUSHABLE_OBSTACLE_HALF,
+    PUSHABLE_OBSTACLES,
     TARGET_REGISTRY,
     TRAINED_REPLAY,
-    args_cli
+    args_cli,
 )
 from .costmap import (
     clamp_to_arena,
@@ -24,11 +23,12 @@ from .costmap import (
     dynamic_target_costmap,
     robot_pushable_collision,
     warn_costmap,
-    wrap_angle
+    wrap_angle,
 )
 from .laser import apply_fire_rule
 from .spawn import segment_intersects_aabb, target_path_from_name
 from .transforms import get_xform, quat_from_euler, set_xform
+
 
 def load_trained_replay():
     if TRAINED_REPLAY["loaded"]:
@@ -149,7 +149,7 @@ def replay_row_at(team: str, t: float) -> dict[str, object]:
             yaw0 = float(row0["yaw"])
             yaw1 = yaw0 + wrap_angle(float(row1["yaw"]) - yaw0)
 
-            def interp_box(name: str):
+            def interp_box(name: str, row0=row0, row1=row1, alpha=alpha):
                 box0 = row0.get(name)
                 box1 = row1.get(name)
                 if not isinstance(box0, tuple) or not isinstance(box1, tuple):

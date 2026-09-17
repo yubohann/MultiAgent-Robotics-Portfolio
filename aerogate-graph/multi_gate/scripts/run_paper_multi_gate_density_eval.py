@@ -6,19 +6,18 @@ from __future__ import annotations
 
 import argparse
 import csv
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from dataclasses import replace
 import importlib.util
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import time
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import numpy as np
-
 
 GATE_AXIS: tuple[int, ...] = (0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60)
 TEAM_SIZE_AXIS: tuple[int, ...] = (2, 3, 5, 7, 8, 9)
@@ -761,13 +760,13 @@ def _evaluate_planner_only(
                     heading = heading / heading_norm
                 forward_speed = float(
                     min(
-                        getattr(env, "_resolved_forward_command_speed_mps")(),
-                        getattr(env, "_resolved_max_command_speed_mps")(),
+                        env._resolved_forward_command_speed_mps(),
+                        env._resolved_max_command_speed_mps(),
                     )
                 )
                 slot_gain = 0.65
                 desired_velocities = heading.reshape(1, 2) * forward_speed + (slots - positions) * slot_gain
-                max_speed = max(float(getattr(env, "_resolved_max_command_speed_mps")()), 1.0e-6)
+                max_speed = max(float(env._resolved_max_command_speed_mps()), 1.0e-6)
                 action = np.zeros(env.action_shape, dtype=np.float32)
                 for idx, velocity in enumerate(desired_velocities[: int(num_agents)]):
                     speed = float(np.linalg.norm(velocity))
@@ -867,11 +866,12 @@ def _evaluate_planner_only(
         env.close()
 
     resolved_episodes = max(int(episodes), 1)
-    collect = lambda key: [
-        value
-        for value in (_finite_float(summary.get(key)) for summary in episode_summaries)
-        if value is not None
-    ]
+    def collect(key):
+        return [
+            value
+            for value in (_finite_float(summary.get(key)) for summary in episode_summaries)
+            if value is not None
+        ]
     max_slot_error_values = collect("max_slot_error_m")
     per_agent_success_values = collect("per_agent_success_fraction")
     progress_distance_values = collect("goal_distance_improvement_m")

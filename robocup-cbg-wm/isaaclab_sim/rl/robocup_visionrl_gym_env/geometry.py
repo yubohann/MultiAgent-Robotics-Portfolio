@@ -19,10 +19,11 @@ from .constants import (
     PUSHABLE_OBSTACLE_HALF,
     ROBOT_PUSHABLE_VISUAL_HALF_EXTENTS,
     ROUTE_CLEARANCE,
-    SHOOTER_FORWARD_OFFSET,
     SHOOT_HIT_RADIUS,
-    TARGET_WALL_ANGLE_RAD
+    SHOOTER_FORWARD_OFFSET,
+    TARGET_WALL_ANGLE_RAD,
 )
+
 
 def wrap_angle(angle: float) -> float:
     return (angle + math.pi) % (2.0 * math.pi) - math.pi
@@ -200,11 +201,7 @@ def base_hit_success_cap(normal_hits: int) -> float:
 
 
 def base_removed_side_lane_quality(normal_hits: int, base_xy: np.ndarray, xy: np.ndarray) -> float:
-    """Score whether a base shot is taken from the side whose armor was removed.
-
-    The four plates open the base progressively, so a one-hit rush may only
-    shoot through the first removed side and two hits open the second side.
-    """
+    """Score whether a base shot is taken from the side whose armor was removed."""
 
     hits = max(0, min(4, int(normal_hits)))
     if hits <= 0:

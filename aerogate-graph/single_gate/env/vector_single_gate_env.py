@@ -6,12 +6,6 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from single_gate.configs.experiment_config import (
-    SINGLE_EXPERIMENT_CONFIG,
-    SingleGateEnvConfig,
-    SingleGraphObservationConfig,
-)
-from single_gate.env.single_gate_env import SingleGate2DEnv
 from shared.core.collision_2d import GateObstacleMap2D
 from shared.runtime.vector_training_utils import (
     done_indices,
@@ -19,6 +13,12 @@ from shared.runtime.vector_training_utils import (
     resolve_seeds,
     stack_observations,
 )
+from single_gate.configs.experiment_config import (
+    SINGLE_EXPERIMENT_CONFIG,
+    SingleGateEnvConfig,
+    SingleGraphObservationConfig,
+)
+from single_gate.env.single_gate_env import SingleGate2DEnv
 
 
 @dataclass(frozen=True)
@@ -66,7 +66,7 @@ class VectorSingleGate2DEnv:
         seeds = resolve_seeds(seed, self.num_envs)
         observations = []
         infos = []
-        for env, env_seed in zip(self.envs, seeds):
+        for env, env_seed in zip(self.envs, seeds, strict=False):
             observation, info = env.reset(seed=env_seed)
             observations.append(observation)
             infos.append(info)
@@ -88,7 +88,7 @@ class VectorSingleGate2DEnv:
         seeds = resolve_seeds(seed, int(indices.size))
         observations = []
         infos = []
-        for env_idx, env_seed in zip(indices.tolist(), seeds):
+        for env_idx, env_seed in zip(indices.tolist(), seeds, strict=False):
             observation, info = self.envs[int(env_idx)].reset(seed=env_seed)
             observations.append(observation)
             infos.append(info)

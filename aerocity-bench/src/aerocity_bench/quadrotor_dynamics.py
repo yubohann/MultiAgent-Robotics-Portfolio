@@ -1,11 +1,4 @@
-"""Pure-Python contract for the AeroCityBench quadrotor execution model.
-
-This module intentionally has no Isaac/torch dependency.  It is the single
-place where the formal executor and CPU contract tests agree on the rotor
-layout, thrust model, motor response, and model provenance.  A model is not
-formal-score eligible merely because it contains four rotors: its parameter
-provenance must be explicitly promoted to ``frozen_and_verified``.
-"""
+"""Pure-Python contract for the AeroCityBench quadrotor execution model."""
 
 from __future__ import annotations
 

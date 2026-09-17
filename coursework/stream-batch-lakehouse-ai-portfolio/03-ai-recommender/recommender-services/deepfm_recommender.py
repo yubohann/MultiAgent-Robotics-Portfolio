@@ -2,9 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
-import numpy as np
 import pandas as pd
-from collections import defaultdict
 import pickle
 import os
 
@@ -242,7 +240,7 @@ class DeepFMRecommender:
             pickle.dump(self.metadata, f)
         
         print("\n" + "="*80)
-        print(f"🎉 DeepFM模型训练完成！")
+        print("🎉 DeepFM模型训练完成！")
         print(f"💾 模型保存到: {self.model_path}")
         print(f"💾 元数据保存到: {self.metadata_path}")
         print("="*80)
@@ -255,7 +253,7 @@ class DeepFMRecommender:
             self.model = DeepFM(self.metadata['feature_dims']).to(self.device)
             self.model.load_state_dict(torch.load(self.model_path, map_location=self.device))
             self.model.eval()
-            print(f"✅ DeepFM模型加载成功")
+            print("✅ DeepFM模型加载成功")
             return True
         else:
             print("❌ 模型文件不存在，需要先训练")

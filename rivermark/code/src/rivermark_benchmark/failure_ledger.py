@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
+from ._identity import IdentityAccumulator
+
 import argparse
-import hashlib
 import json
 import re
 import time
 from collections import Counter
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Sequence
-
+from typing import Any
 
 FAILURE_LEDGER_SCHEMA = "org.rivermark.benchmark.failure-ledger.v1"
 CAPTURE_START_SCHEMA = "org.rivermark.isaac-capture-start.v1"
@@ -31,13 +32,13 @@ FAILURE_CATEGORIES = frozenset(
 )
 OUTCOMES = frozenset({"admitted", "quarantined", "failed"})
 SPLITS = frozenset({"pilot", "train", "inner_dev", "validation", "blind_test", "ood_test"})
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
 _PRIVATE_TOKENS = ("evaluator", "private", "hidden_target", "target_truth")
 _CAPTURE_TERMINAL_STATUSES = frozenset({"captured", "failed", "aborted"})
 DEFAULT_CRASH_LEFT_MIN_AGE_HOURS = 24.0
 _COLLECTION_BINDING_KEYS = frozenset(
-    {"protocol_id", "protocol_sha256", "cell_id", "split", "episode_index", "episode_seed"}
+    {"protocol_id", "protocol_identity", "cell_id", "split", "episode_index", "episode_seed"}
 )
 
 
@@ -71,11 +72,11 @@ class FailureRecord:
     recorded_at: str
     split: str | None = None
     episode_id: str | None = None
-    source_capture_sha256: str | None = None
-    receipt_sha256: str | None = None
+    source_capture_identity: str | None = None
+    receipt_identity: str | None = None
     reason_code: str | None = None
     collection_protocol_id: str | None = None
-    collection_protocol_sha256: str | None = None
+    collection_protocol_identity: str | None = None
     collection_cell_id: str | None = None
     collection_episode_index: int | None = None
     episode_seed: int | None = None
@@ -108,11 +109,11 @@ def validate_failure_record(record: Any) -> tuple[FailureLedgerIssue, ...]:
         "recorded_at",
         "split",
         "episode_id",
-        "source_capture_sha256",
-        "receipt_sha256",
+        "source_capture_identity",
+        "receipt_identity",
         "reason_code",
         "collection_protocol_id",
-        "collection_protocol_sha256",
+        "collection_protocol_identity",
         "collection_cell_id",
         "collection_episode_index",
         "episode_seed",
@@ -155,13 +156,13 @@ def validate_failure_record(record: Any) -> tuple[FailureLedgerIssue, ...]:
     episode_id = record.get("episode_id")
     if episode_id is not None and isinstance(episode_id, str) and not _ID.fullmatch(episode_id):
         issues.append(FailureLedgerIssue("episode_id", "$.episode_id", "invalid episode identifier"))
-    for key in ("source_capture_sha256", "receipt_sha256"):
+    for key in ("source_capture_identity", "receipt_identity"):
         value = record.get(key)
-        if value is not None and (not isinstance(value, str) or not _SHA256.fullmatch(value)):
-            issues.append(FailureLedgerIssue("sha256", f"$.{key}", "must be 64 lowercase hexadecimal characters"))
+        if value is not None and (not isinstance(value, str) or not _IDENTITY.fullmatch(value)):
+            issues.append(FailureLedgerIssue("identity", f"$.{key}", "must be 16 lowercase hexadecimal characters"))
     protocol_fields = (
         "collection_protocol_id",
-        "collection_protocol_sha256",
+        "collection_protocol_identity",
         "collection_cell_id",
         "collection_episode_index",
         "episode_seed",
@@ -172,7 +173,7 @@ def validate_failure_record(record: Any) -> tuple[FailureLedgerIssue, ...]:
             FailureLedgerIssue(
                 "collection_binding",
                 "$.collection_protocol_id",
-                "collection protocol ID, hash, cell, and episode seed must be declared together",
+                "collection protocol ID, identity, cell, and episode seed must be declared together",
             )
         )
     for key in ("collection_protocol_id", "collection_cell_id"):
@@ -180,13 +181,13 @@ def validate_failure_record(record: Any) -> tuple[FailureLedgerIssue, ...]:
         _public_text(value, path=f"$.{key}", issues=issues)
         if value is not None and isinstance(value, str) and not _ID.fullmatch(value):
             issues.append(FailureLedgerIssue(key, f"$.{key}", "invalid public identifier"))
-    protocol_hash = record.get("collection_protocol_sha256")
-    if protocol_hash is not None and (not isinstance(protocol_hash, str) or not _SHA256.fullmatch(protocol_hash)):
+    protocol_identity = record.get("collection_protocol_identity")
+    if protocol_identity is not None and (not isinstance(protocol_identity, str) or not _IDENTITY.fullmatch(protocol_identity)):
         issues.append(
             FailureLedgerIssue(
-                "sha256",
-                "$.collection_protocol_sha256",
-                "must be 64 lowercase hexadecimal characters",
+                "identity",
+                "$.collection_protocol_identity",
+                "must be 16 lowercase hexadecimal characters",
             )
         )
     episode_seed = record.get("episode_seed")
@@ -219,7 +220,7 @@ def _validated_collection_binding(value: Any) -> dict[str, Any] | None:
         return None
     protocol_id = value.get("protocol_id")
     cell_id = value.get("cell_id")
-    protocol_sha256 = value.get("protocol_sha256")
+    protocol_identity = value.get("protocol_identity")
     split = value.get("split")
     episode_index = value.get("episode_index")
     episode_seed = value.get("episode_seed")
@@ -230,8 +231,8 @@ def _validated_collection_binding(value: Any) -> dict[str, Any] | None:
         or not isinstance(cell_id, str)
         or not _ID.fullmatch(cell_id)
         or any(token in cell_id.lower() for token in _PRIVATE_TOKENS)
-        or not isinstance(protocol_sha256, str)
-        or not _SHA256.fullmatch(protocol_sha256)
+        or not isinstance(protocol_identity, str)
+        or not _IDENTITY.fullmatch(protocol_identity)
         or split not in SPLITS
         or isinstance(episode_index, bool)
         or not isinstance(episode_index, int)
@@ -243,7 +244,7 @@ def _validated_collection_binding(value: Any) -> dict[str, Any] | None:
         return None
     return {
         "protocol_id": protocol_id,
-        "protocol_sha256": protocol_sha256,
+        "protocol_identity": protocol_identity,
         "cell_id": cell_id,
         "split": split,
         "episode_index": episode_index,
@@ -269,15 +270,7 @@ def append_failure_record(path: Path, record: FailureRecord | Mapping[str, Any])
 
 
 def append_failure_record_once(path: Path, record: FailureRecord | Mapping[str, Any]) -> str:
-    """Append a terminal record once, rejecting a conflicting retry.
-
-    Capture finalization can be retried after a process interruption or an
-    ambiguous control-plane error.  Rewriting the ledger would hide history,
-    while blindly appending would make a single physical attempt invalid due
-    to a duplicate ID.  The terminal capture path is single-owner, so a
-    validated read-before-append is sufficient here; concurrent writers are
-    still outside the capture contract.
-    """
+    """Append a terminal record once, rejecting a conflicting retry."""
 
     payload = record.as_dict() if isinstance(record, FailureRecord) else dict(record)
     _raise_if_invalid(payload)
@@ -334,7 +327,7 @@ def summarize_failure_ledger(path: Path) -> dict[str, Any]:
         "quarantined_count": outcomes.get("quarantined", 0),
         "failed_count": outcomes.get("failed", 0),
         "failure_categories": dict(sorted(categories.items())),
-        "attempt_ids_sha256": hashlib.sha256("\n".join(sorted(seen)).encode("utf-8")).hexdigest(),
+        "attempt_ids_identity": IdentityAccumulator("\n".join(sorted(seen)).encode("utf-8")).hexdigest(),
     }
 
 
@@ -352,7 +345,7 @@ def _load_capture_start(path: Path) -> Mapping[str, Any] | None:
         "attempt_id",
         "started_wall_time_ns",
         "source_revision",
-        "source_tree_sha256",
+        "source_tree_identity",
         "source_worktree_dirty",
         "task_kind",
         "control_mode",
@@ -370,7 +363,7 @@ def _load_capture_start(path: Path) -> Mapping[str, Any] | None:
     source_revision = value.get("source_revision")
     if not isinstance(source_revision, str) or not re.fullmatch(r"[0-9a-f]{7,64}", source_revision):
         return None
-    if not isinstance(value.get("source_tree_sha256"), str) or not _SHA256.fullmatch(value["source_tree_sha256"]):
+    if not isinstance(value.get("source_tree_identity"), str) or not _IDENTITY.fullmatch(value["source_tree_identity"]):
         return None
     if not isinstance(value.get("source_worktree_dirty"), bool):
         return None
@@ -395,9 +388,9 @@ def _capture_receipt_status(path: Path) -> str | None:
     return value.get("status") if isinstance(value, Mapping) and isinstance(value.get("status"), str) else None
 
 
-def _sha256_file(path: Path) -> str | None:
+def _identity_file(path: Path) -> str | None:
     try:
-        digest = hashlib.sha256()
+        digest = IdentityAccumulator()
         with path.open("rb") as stream:
             for block in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(block)
@@ -413,7 +406,7 @@ def _terminal_recovery_record(
     recorded_at: str,
     collection_binding: Mapping[str, Any] | None = None,
 ) -> FailureRecord:
-    receipt_hash = _sha256_file(receipt_path)
+    receipt_identity = _identity_file(receipt_path)
     binding_kwargs = _failure_binding_kwargs(collection_binding)
     split = collection_binding.get("split") if isinstance(collection_binding, Mapping) else "pilot"
     if receipt_status == "captured":
@@ -424,7 +417,7 @@ def _terminal_recovery_record(
             stage="isaac_capture_recovery",
             recorded_at=recorded_at,
             split=split if isinstance(split, str) else "pilot",
-            receipt_sha256=receipt_hash,
+            receipt_identity=receipt_identity,
             reason_code="development_evidence_not_formal",
             **binding_kwargs,
         )
@@ -435,7 +428,7 @@ def _terminal_recovery_record(
         stage="isaac_capture_recovery",
         recorded_at=recorded_at,
         split=split if isinstance(split, str) else "pilot",
-        receipt_sha256=receipt_hash,
+        receipt_identity=receipt_identity,
         reason_code="capture_not_completed",
         **binding_kwargs,
     )
@@ -446,7 +439,7 @@ def _failure_binding_kwargs(binding: Mapping[str, Any] | None) -> dict[str, Any]
         return {}
     return {
         "collection_protocol_id": binding.get("protocol_id"),
-        "collection_protocol_sha256": binding.get("protocol_sha256"),
+        "collection_protocol_identity": binding.get("protocol_identity"),
         "collection_cell_id": binding.get("cell_id"),
         "collection_episode_index": binding.get("episode_index"),
         "episode_seed": binding.get("episode_seed"),
@@ -472,15 +465,7 @@ def recover_crash_left_attempts(
     now_ns: int | None = None,
     dry_run: bool = False,
 ) -> tuple[CrashLeftRecovery, ...]:
-    """Record stale start markers whose capture process never wrote a final receipt.
-
-    Recovery is deliberately conservative: only direct child directories of a
-    directory named ``rivermark-runs`` are considered, schema-invalid markers
-    are ignored, and the newest file must exceed the age threshold.  A running
-    or recently-updated capture therefore remains untouched.  Re-running this
-    function is idempotent because the marker's attempt ID is checked against
-    the validated ledger before an append.
-    """
+    """Record stale start markers whose capture process never wrote a final receipt."""
 
     if min_age_hours < 0:
         raise ValueError("min_age_hours must be non-negative")

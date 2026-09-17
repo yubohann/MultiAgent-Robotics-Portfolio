@@ -7,7 +7,6 @@
   "required": [
     "schema",
     "layout_id",
-    "layout_hash",
     "episode_index",
     "episode_seed",
     "target_count",
@@ -15,13 +14,11 @@
     "starts",
     "smoke",
     "communication",
-    "energy_budget_j",
-    "episode_hash"
+    "energy_budget_j"
   ],
   "properties": {
     "schema": {"const": "org.aerocity.bench.episode-private.v1"},
     "layout_id": {"type": "string"},
-    "layout_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "episode_index": {"type": "integer", "minimum": 0},
     "episode_seed": {"type": "integer", "minimum": 0},
     "target_count": {"type": "integer", "minimum": 1},
@@ -34,8 +31,8 @@
         "properties": {
           "target_id": {"type": "string"},
           "site_id": {"type": "string"},
-          "support_class": {"enum": ["roof", "facade", "entrance", "rubble"]},
-          "altitude_band": {"enum": ["low", "mid", "high", "very_high"]},
+          "support_class": {"enum": ["roof", "opening", "entrance", "rubble"]},
+          "altitude_band": {"enum": ["near_ground", "lower", "mid", "elevated", "highrise"]},
           "position": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "items": false},
           "normal": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "items": false}
         }
@@ -44,7 +41,6 @@
     "starts": {"type": "array", "minItems": 1},
     "smoke": {"type": "object"},
     "communication": {"type": "object"},
-    "energy_budget_j": {"type": "number", "exclusiveMinimum": 0},
-    "episode_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "energy_budget_j": {"type": "number", "exclusiveMinimum": 0}
   }
 }

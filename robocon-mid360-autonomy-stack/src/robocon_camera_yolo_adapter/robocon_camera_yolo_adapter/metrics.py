@@ -1,17 +1,13 @@
-"""Deterministic offline metrics for recorded target detections.
-
-The evaluator consumes an explicit ground-truth stream, so labels stay tied to
-recorded evidence and detector-quality claims come only from the replay.
-"""
+"""Offline detection metrics computed against an explicit ground-truth stream."""
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from collections import defaultdict
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 
 def _bbox(value: Any) -> tuple[float, float, float, float]:
@@ -74,7 +70,7 @@ def evaluate_records(
 
     for record in records:
         if not isinstance(record, Mapping):
-            raise ValueError("each record must be an object")
+            raise TypeError("each record must be an object")
         frame_count += 1
         evidence = str(record.get("evidence_level", "unknown")).strip() or "unknown"
         evidence_levels.add(evidence)
@@ -82,7 +78,7 @@ def evaluate_records(
         predictions = []
         for candidate in record.get("predictions", []):
             if not isinstance(candidate, Mapping):
-                raise ValueError("predictions must contain objects")
+                raise TypeError("predictions must contain objects")
             confidence = _finite_number(candidate.get("confidence", 0.0))
             if confidence is None or confidence < confidence_threshold:
                 continue
@@ -99,7 +95,7 @@ def evaluate_records(
         truth_items = []
         for item in truth:
             if not isinstance(item, Mapping):
-                raise ValueError("ground_truth must contain objects")
+                raise TypeError("ground_truth must contain objects")
             truth_items.append({**item, "_bbox": _bbox(item.get("bbox"))})
 
         used_truth: set[int] = set()
@@ -163,9 +159,7 @@ def evaluate_records(
 
 
 def evaluate_jsonl(path: Path, *, iou_threshold: float = 0.5, confidence_threshold: float = 0.0) -> dict[str, Any]:
-    raw = path.read_bytes()
-    records = [json.loads(line) for line in raw.decode("utf-8").splitlines() if line.strip()]
+    records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     result = evaluate_records(records, iou_threshold=iou_threshold, confidence_threshold=confidence_threshold)
-    result["input_sha256"] = hashlib.sha256(raw).hexdigest()
     result["input_file"] = str(path)
     return result

@@ -49,7 +49,7 @@ def test_public_route_policy_uses_only_static_routes_and_public_state() -> None:
     assert np.all(action[:, 0] > 0.0)
     provenance = policy.provenance()
     assert provenance["private_evaluator_inputs"] is False
-    assert len(provenance["route_sha256"]) == 64
+    assert len(provenance["route_identity"]) == 16
 
 
 def test_public_route_policy_corrects_toward_the_public_waypoint() -> None:
@@ -159,7 +159,7 @@ def test_native_rgbd_world_points_uses_retained_frame_contract_for_nontrivial_po
     )
 
 
-def test_native_detector_and_deduplicator_fail_closed() -> None:
+def test_native_detector_and_deduplicator_strict() -> None:
     labels = np.zeros((AGENT_COUNT, 2, 2, 1), dtype=np.int32)
     metadata = {"per_camera": []}
     with pytest.raises(T2PolicyAbiError, match="one mapping"):

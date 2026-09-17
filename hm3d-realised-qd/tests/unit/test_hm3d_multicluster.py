@@ -65,8 +65,8 @@ def test_qd_outcomes_merge_in_pre_registered_order() -> None:
 def test_reference_cluster_invariance_separates_peer_behavior_from_leakage() -> None:
     reference = {
         "selected_candidate_ids": ["a"],
-        "action_hashes": ["1"],
-        "outcome_hashes": ["2"],
+        "action_ids": ["1"],
+        "outcome_ids": ["2"],
         "local_root_trace_m": [[[0.0, 0.0, 1.0]]],
         "cross_cluster_contact_count": 0,
         "cross_cluster_message_count": 0,

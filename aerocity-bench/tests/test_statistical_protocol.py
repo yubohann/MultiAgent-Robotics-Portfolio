@@ -4,17 +4,16 @@ import copy
 
 import pytest
 
-from aerocity_bench.canonical import content_hash
 from aerocity_bench.statistical_protocol import build_statistical_planning_report
 
 
 def _protocol() -> dict[str, object]:
-    protocol: dict[str, object] = {
+    return {
         "schema": "org.aerocity.bench.g2-i-statistical-protocol.v1",
         "formal_score_eligible": False,
         "primary_metric": "mean_final_confirmed_recall",
         "independent_unit": "layout_ancestor",
-        "pairing_key": "layout_hash",
+        "pairing_key": "layout_id",
         "reference_method_id": "reference",
         "comparator_method_ids": ["candidate"],
         "alpha_two_sided": 0.05,
@@ -26,8 +25,6 @@ def _protocol() -> dict[str, object]:
         "multiple_comparison_control": "holm_within_primary_family",
         "failure_denominator_policy": "retain_all_completed_ancestor_rows",
     }
-    protocol["protocol_hash"] = content_hash(protocol)
-    return protocol
 
 
 def _method(method_id: str, values: list[float]) -> dict[str, object]:
@@ -36,7 +33,7 @@ def _method(method_id: str, values: list[float]) -> dict[str, object]:
         "requires_private_truth": False,
         "ancestors": [
             {
-                "layout_hash": f"layout-{index}",
+                "layout_id": f"layout-{index}",
                 "episode_count": 3,
                 "mean_final_confirmed_recall": value,
                 "all_returned_home": index != 3,
@@ -49,7 +46,7 @@ def _method(method_id: str, values: list[float]) -> dict[str, object]:
 
 
 def _report() -> dict[str, object]:
-    report: dict[str, object] = {
+    return {
         "schema": "org.aerocity.bench.g2-i-l0-searchability-calibration.v1",
         "formal_score_eligible": False,
         "method_reports": [
@@ -57,8 +54,6 @@ def _report() -> dict[str, object]:
             _method("candidate", [0.10, 0.20, 0.20, 0.35, 0.30]),
         ],
     }
-    report["report_hash"] = content_hash(report)
-    return report
 
 
 def test_planning_uses_layout_ancestors_and_retains_failure_denominators() -> None:
@@ -80,9 +75,6 @@ def test_planning_uses_layout_ancestors_and_retains_failure_denominators() -> No
 def test_planning_rejects_unpaired_ancestor_sets() -> None:
     report = _report()
     report["method_reports"][1]["ancestors"].pop()
-    report["report_hash"] = content_hash(
-        {key: value for key, value in report.items() if key != "report_hash"}
-    )
 
     with pytest.raises(ValueError, match="different layout-ancestor sets"):
         build_statistical_planning_report(_protocol(), report)
@@ -91,17 +83,14 @@ def test_planning_rejects_unpaired_ancestor_sets() -> None:
 def test_planning_rejects_private_oracle_from_primary_family() -> None:
     report = _report()
     report["method_reports"][1]["requires_private_truth"] = True
-    report["report_hash"] = content_hash(
-        {key: value for key, value in report.items() if key != "report_hash"}
-    )
 
     with pytest.raises(ValueError, match="private-truth method"):
         build_statistical_planning_report(_protocol(), report)
 
 
-def test_protocol_hash_is_fail_closed() -> None:
+def test_protocol_pairing_key_is_validated() -> None:
     protocol = copy.deepcopy(_protocol())
-    protocol["protocol_hash"] = "0" * 64
+    protocol["pairing_key"] = "episode_id"
 
-    with pytest.raises(ValueError, match="protocol hash mismatch"):
+    with pytest.raises(ValueError, match="pairing key"):
         build_statistical_planning_report(protocol, _report())

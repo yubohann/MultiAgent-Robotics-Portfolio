@@ -6,7 +6,7 @@ import random
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_sha256
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.contracts.models import ABI_VERSION, FragmentReplayRecord
 
 
@@ -43,7 +43,7 @@ class CandidateTransition:
     next_preference: tuple[float, ...]
     done: bool
     duration: float
-    outcome_hash: str
+    outcome_id: str
     terminated: bool | None = None
     truncated: bool = False
     schema_version: str = ABI_VERSION
@@ -96,7 +96,7 @@ class CandidateTransition:
             raise ValueError("a transition cannot be both terminated and truncated")
         if self.done != (terminated or self.truncated):
             raise ValueError("done must equal terminated or truncated")
-        require_sha256(self.outcome_hash, "outcome_hash")
+        require_identifier(self.outcome_id, "outcome_id")
         object.__setattr__(self, "context", context)
         object.__setattr__(self, "next_context", next_context)
         object.__setattr__(self, "candidates", candidates)
@@ -208,25 +208,23 @@ class FragmentReplayBuffer(ReplayBuffer[FragmentReplayRecord]):
         self._keys: set[tuple[str, str]] = set()
 
     def add(self, item: FragmentReplayRecord) -> None:
-        key = (item.instance_fragment_id, item.outcome_hash)
+        key = (item.instance_fragment_id, item.outcome_id)
         if key in self._keys:
             return
         if len(self._items) == self.capacity:
             evicted = self._items[self._cursor]
-            self._keys.remove((evicted.instance_fragment_id, evicted.outcome_hash))
+            self._keys.remove((evicted.instance_fragment_id, evicted.outcome_id))
         super().add(item)
         self._keys.add(key)
 
     def state_dict(self) -> dict[str, object]:
-        payload: dict[str, object] = {
+        return {
             "schema_version": ABI_VERSION,
             "capacity": self.capacity,
             "cursor": self._cursor,
             "items": [item.to_dict() for item in self._items],
             "rng_state": self._rng.getstate(),
         }
-        payload["checkpoint_hash"] = canonical_sha256(payload)
-        return payload
 
     @staticmethod
     def _tuplify(value: object) -> object:
@@ -238,10 +236,6 @@ class FragmentReplayBuffer(ReplayBuffer[FragmentReplayRecord]):
     def from_state_dict(cls, state: dict[str, object]) -> FragmentReplayBuffer:
         if state.get("schema_version") != ABI_VERSION:
             raise ValueError("fragment replay checkpoint schema mismatch")
-        supplied_hash = state.get("checkpoint_hash")
-        unsigned = {key: value for key, value in state.items() if key != "checkpoint_hash"}
-        if canonical_sha256(unsigned) != supplied_hash:
-            raise ValueError("fragment replay checkpoint content hash mismatch")
         capacity = state.get("capacity")
         if not isinstance(capacity, int) or isinstance(capacity, bool):
             raise ValueError("fragment replay checkpoint capacity is invalid")

@@ -1,8 +1,4 @@
-"""Executable constraints from the ABU ROBOCON 2025 Robot Basketball rulebook.
-
-The rule engine stays independent of Gazebo and ROS messages and takes physical
-evidence as method inputs, so a sent command never implies a boolean claim.
-"""
+"""Executable constraints from the ABU ROBOCON 2025 Robot Basketball rulebook."""
 
 from __future__ import annotations
 
@@ -36,12 +32,7 @@ class RuleDecision:
 
 
 class ABURobocon2025RuleEngine:
-    """Track the rulebook constraints that can be evaluated from explicit evidence.
-
-    Source is the ABU ROBOCON 2025 Rulebook (2024-08-14), sections 2, 6, 7, 10
-    and 12. Referee-only decisions, contact judgement and officially undefined
-    zone geometry arrive as external evidence inputs.
-    """
+    """Track the rulebook constraints that can be evaluated from explicit evidence."""
 
     FIELD_LENGTH_M = 15.0
     FIELD_WIDTH_M = 8.0
@@ -92,10 +83,13 @@ class ABURobocon2025RuleEngine:
         if self._game_expired(now_sec):
             self.state = MatchState.FINISHED
             return RuleDecision(False, "game_time_expired", "official game duration has elapsed")
-        if self.state is MatchState.ACTIVE and self.possession_start_sec is not None:
-            if now_sec - self.possession_start_sec > self.POSSESSION_DURATION_SEC:
-                self.state = MatchState.REFEREE_STOP
-                return RuleDecision(False, "shot_clock_expired", "20-second possession limit exceeded")
+        if (
+            self.state is MatchState.ACTIVE
+            and self.possession_start_sec is not None
+            and now_sec - self.possession_start_sec > self.POSSESSION_DURATION_SEC
+        ):
+            self.state = MatchState.REFEREE_STOP
+            return RuleDecision(False, "shot_clock_expired", "20-second possession limit exceeded")
         return RuleDecision(True, "clock_running", "game and possession clocks are within limits")
 
     def record_dribble(

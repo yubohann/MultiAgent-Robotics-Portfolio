@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from aerocity_method.contracts.exploration import BeliefVersion
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
+from aerocity_method.contracts.io import finite_number, require_identifier
 
 Point3 = tuple[float, float, float]
 VoxelKey = tuple[int, int, int]
@@ -256,8 +256,12 @@ class SparseVoxelBelief:
         }
 
     @property
-    def content_sha256(self) -> str:
-        return canonical_sha256(self.to_public_dict())
+    def content_id(self) -> str:
+        # Readable content label: scene, agent, reset epoch, last update and outcome count.
+        return (
+            f"{self.scene_id}:{self.agent_id}:epoch{self.reset_epoch}:"
+            f"t{self._last_timestamp_s:.3f}:n{self.outcome_count}"
+        )
 
     def version(self) -> BeliefVersion:
         return BeliefVersion(
@@ -266,7 +270,7 @@ class SparseVoxelBelief:
             reset_epoch=self.reset_epoch,
             timestamp_s=self._last_timestamp_s,
             resolution_m=self.resolution_m,
-            content_sha256=self.content_sha256,
+            content_id=self.content_id,
         )
 
 

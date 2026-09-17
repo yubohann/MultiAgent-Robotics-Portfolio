@@ -1,6 +1,13 @@
 """Versioned public contracts and serialization helpers."""
 
-from aerocity_method.contracts.io import canonical_sha256, write_json_atomic
+from aerocity_method.contracts.hm3d_public_schema import (
+    PUBLIC_CANDIDATE_POOL_SCHEMA_VERSION,
+    PUBLIC_TASK_RESERVATION_SCHEMA_VERSION,
+    public_schema_fields,
+    require_current_public_schema,
+)
+from aerocity_method.contracts.io import write_json_atomic
+from aerocity_method.contracts.models import ABI_VERSION
 from aerocity_method.runtime.range_sensing import (
     DENSE_26_RAY_PATTERN,
     LEGACY_SIX_AXIS_PATTERN,
@@ -8,15 +15,8 @@ from aerocity_method.runtime.range_sensing import (
     resolve_public_range_directions,
     validate_public_range_directions,
 )
-from aerocity_method.contracts.hm3d_public_schema import (
-    PUBLIC_CANDIDATE_POOL_SCHEMA_VERSION,
-    PUBLIC_TASK_RESERVATION_SCHEMA_VERSION,
-    public_schema_fields,
-    require_current_public_schema,
-)
-from aerocity_method.contracts.models import ABI_VERSION
 
-# Single-scale formal paper contract; outcomes retain the value for provenance.
+# The formal comparison keeps one fleet size so every method faces the same team.
 FORMAL_FLEET_SIZE = 4
 
 __all__ = [
@@ -26,7 +26,6 @@ __all__ = [
     "LEGACY_SIX_AXIS_PATTERN",
     "PUBLIC_CANDIDATE_POOL_SCHEMA_VERSION",
     "PUBLIC_TASK_RESERVATION_SCHEMA_VERSION",
-    "canonical_sha256",
     "public_range_direction_count",
     "public_schema_fields",
     "require_current_public_schema",

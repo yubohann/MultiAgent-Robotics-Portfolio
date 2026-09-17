@@ -1,46 +1,54 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
 from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
 from rivermark_benchmark.citylite_scene import (
+    AABB,
     AGENT_COUNT,
-    AUTHORITY_SHA256,
+    AUTHORITY_IDENTITY,
     CITY_LITE_COMMAND_VOLUME_W_M,
     CITY_LITE_FLIGHT_VOLUME_W_M,
-    CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_SHA256,
     CITY_TASK_OBSTACLE_MATERIAL_CLOSURE_SCHEMA,
+    CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_IDENTITY,
     EXPECTED_NATIVE_COLLISION_COUNTS,
     EXPECTED_UPSTREAM_PERMISSIONS,
     FORMAL_SCORING_VOLUME_W_M,
     ROUTE_CLEARANCE_M,
     SCENE_CONTRACT_GATE_STATUS,
-    SCENE_CONTRACT_PAYLOAD_SHA256,
+    SCENE_CONTRACT_PAYLOAD_IDENTITY,
     SCENE_CONTRACT_SCHEMA,
-    SCENE_CONTRACT_SHA256,
+    SCENE_CONTRACT_IDENTITY,
     SELECTIVE_REFERENCES,
     TARGET_FREE_SAFE_STARTS_W_M,
-    AABB,
     CityLiteAuthority,
     CityLiteAuthorityError,
     CityLiteRouteError,
-    aabb_geometry_sha256,
-    canonical_payload_sha256,
+    aabb_geometry_identity,
+    canonical_payload_identity,
     city_task_obstacle_material_closure_receipt_template,
     city_task_obstacle_material_contract_payload,
     flight_contract_payload,
     forbidden_scene_paths,
-    make_rivermark_layer_inventory,
     make_public_route_contract,
+    make_rivermark_layer_inventory,
     resolve_city_lite_authority,
     segment_has_clearance,
     segment_intersects_aabb,
-    sha256_file,
+    identity_file,
+    validate_city_task_obstacle_material_closure_receipt,
     validate_public_route_contract,
     validate_public_routes,
-    validate_city_task_obstacle_material_closure_receipt,
     validate_rivermark_layer_inventory_receipt,
     validate_static_scene_receipt,
     validate_upstream_scene_contract,
@@ -65,14 +73,14 @@ def _upstream_contract() -> dict:
         "outputs": {
             key: {
                 "path": f"C:\\authority\\{filename}",
-                "sha256": AUTHORITY_SHA256[filename],
+                "identity": AUTHORITY_IDENTITY[filename],
                 "size_bytes": index + 1,
             }
             for index, (key, filename) in enumerate(filenames.items())
         },
         "created_utc": "2026-07-14T18:48:15+00:00",
     }
-    payload["payload_sha256"] = canonical_payload_sha256(payload)
+    payload["payload_identity"] = canonical_payload_identity(payload)
     return payload
 
 
@@ -86,15 +94,15 @@ def _receipt() -> dict:
         "city_task_obstacle_material_closure": city_task_obstacle_material_closure_receipt_template(),
         "scene_contract": {
             "path": "/authority/rivermark_city_lite_scene_contract_v1.json",
-            "sha256": SCENE_CONTRACT_SHA256,
-            "payload_sha256": SCENE_CONTRACT_PAYLOAD_SHA256,
+            "identity": SCENE_CONTRACT_IDENTITY,
+            "payload_identity": SCENE_CONTRACT_PAYLOAD_IDENTITY,
             "schema": SCENE_CONTRACT_SCHEMA,
             "gate_status": SCENE_CONTRACT_GATE_STATUS,
             "permissions": dict(EXPECTED_UPSTREAM_PERMISSIONS),
         },
         "authority_assets": {
-            name: {"path": f"/authority/{name}", "sha256": digest}
-            for name, digest in AUTHORITY_SHA256.items()
+            name: {"path": f"/authority/{name}", "identity": digest}
+            for name, digest in AUTHORITY_IDENTITY.items()
         },
         "selective_references": [
             {"source_prim": source, "destination_prim": destination}
@@ -142,20 +150,20 @@ def _temporary_authority(tmp_path: Path) -> tuple[CityLiteAuthority, list[Path]]
     root = tmp_path / "authority"
     root.mkdir()
     assets: dict[str, Path] = {}
-    hashes: dict[str, str] = {}
-    for index, filename in enumerate(sorted(AUTHORITY_SHA256), start=1):
+    identities: dict[str, str] = {}
+    for index, filename in enumerate(sorted(AUTHORITY_IDENTITY), start=1):
         path = root / filename
         path.write_text(f"#usda 1.0\n# local authority {index}\n", encoding="ascii")
         assets[filename] = path
-        hashes[filename] = sha256_file(path)
+        identities[filename] = identity_file(path)
     authority = CityLiteAuthority(
         root=root,
         contract_path=root / "contract.json",
         final_scene_path=assets["hi_fi_search_rescue_rivermark_city_lite_v1.usda"],
         asset_paths=assets,
-        sha256=hashes,
-        contract_sha256="0" * 64,
-        contract_payload_sha256="1" * 64,
+        identity=identities,
+        contract_identity="0" * 16,
+        contract_payload_identity="1" * 16,
     )
     return authority, [assets[name] for name in sorted(assets)]
 
@@ -195,7 +203,7 @@ def test_forbidden_scene_paths_rejects_only_exact_legacy_and_removed_roots() -> 
 
 def test_validate_upstream_scene_contract_accepts_self_bound_static_contract() -> None:
     contract = _upstream_contract()
-    assert validate_upstream_scene_contract(contract) == contract["payload_sha256"]
+    assert validate_upstream_scene_contract(contract) == contract["payload_identity"]
 
 
 @pytest.mark.parametrize(
@@ -215,8 +223,8 @@ def test_validate_upstream_scene_contract_rejects_invalid_authority_fields(
 ) -> None:
     contract = _upstream_contract()
     contract[field] = value
-    contract["payload_sha256"] = canonical_payload_sha256(
-        {key: item for key, item in contract.items() if key != "payload_sha256"}
+    contract["payload_identity"] = canonical_payload_identity(
+        {key: item for key, item in contract.items() if key != "payload_identity"}
     )
     with pytest.raises(CityLiteAuthorityError, match=message):
         validate_upstream_scene_contract(contract)
@@ -229,38 +237,38 @@ def test_validate_upstream_scene_contract_rejects_positive_or_missing_permission
             contract["permissions"]["formal_collection"] = True
         else:
             del contract["permissions"]["formal_collection"]
-        contract["payload_sha256"] = canonical_payload_sha256(
-            {key: item for key, item in contract.items() if key != "payload_sha256"}
+        contract["payload_identity"] = canonical_payload_identity(
+            {key: item for key, item in contract.items() if key != "payload_identity"}
         )
         with pytest.raises(CityLiteAuthorityError, match="permissions"):
             validate_upstream_scene_contract(contract)
 
 
-def test_validate_upstream_scene_contract_rejects_payload_tampering() -> None:
+def test_validate_upstream_scene_contract_rejects_payload_alteration() -> None:
     contract = _upstream_contract()
-    contract["created_utc"] = "tampered"
-    with pytest.raises(CityLiteAuthorityError, match="payload hash mismatch"):
+    contract["created_utc"] = "altered"
+    with pytest.raises(CityLiteAuthorityError, match="payload identity mismatch"):
         validate_upstream_scene_contract(contract)
     with pytest.raises(CityLiteAuthorityError, match="unexpected.*payload"):
         validate_upstream_scene_contract(
             _upstream_contract(),
-            expected_payload_sha256="0" * 64,
+            expected_payload_identity="0" * 16,
         )
 
 
 def test_validate_upstream_scene_contract_rejects_failed_check_and_output_binding() -> None:
     contract = _upstream_contract()
     contract["checks"]["zero_unresolved"] = False
-    contract["payload_sha256"] = canonical_payload_sha256(
-        {key: item for key, item in contract.items() if key != "payload_sha256"}
+    contract["payload_identity"] = canonical_payload_identity(
+        {key: item for key, item in contract.items() if key != "payload_identity"}
     )
     with pytest.raises(CityLiteAuthorityError, match="checks"):
         validate_upstream_scene_contract(contract)
 
     contract = _upstream_contract()
-    contract["outputs"]["final_combined_usd"]["sha256"] = "0" * 64
-    contract["payload_sha256"] = canonical_payload_sha256(
-        {key: item for key, item in contract.items() if key != "payload_sha256"}
+    contract["outputs"]["final_combined_usd"]["identity"] = "0" * 16
+    contract["payload_identity"] = canonical_payload_identity(
+        {key: item for key, item in contract.items() if key != "payload_identity"}
     )
     with pytest.raises(CityLiteAuthorityError, match="output digest"):
         validate_upstream_scene_contract(contract)
@@ -320,13 +328,13 @@ def test_segment_aabb_clearance_is_conservative_and_treats_touch_as_collision() 
     )
 
 
-def test_aabb_hash_is_order_independent_and_binds_source_semantics() -> None:
+def test_aabb_identity_is_order_independent_and_binds_source_semantics() -> None:
     first = AABB((0.0, 0.0, 0.0), (1.0, 1.0, 1.0), source_prim="/a")
     second = AABB((2.0, 2.0, 2.0), (3.0, 3.0, 3.0), source_prim="/b")
-    assert aabb_geometry_sha256([first, second]) == aabb_geometry_sha256(
+    assert aabb_geometry_identity([first, second]) == aabb_geometry_identity(
         [second, first]
     )
-    assert aabb_geometry_sha256([first]) != aabb_geometry_sha256(
+    assert aabb_geometry_identity([first]) != aabb_geometry_identity(
         [AABB(first.minimum, first.maximum, source_prim="/other")]
     )
 
@@ -340,7 +348,7 @@ def test_public_route_contract_accepts_target_free_clear_routes() -> None:
     assert report.waypoint_count_per_agent == 3
     assert report.segment_count == 16
     assert report.clearance_m == ROUTE_CLEARANCE_M
-    assert report.aabb_geometry_sha256 == contract["aabb_geometry_sha256"]
+    assert report.aabb_geometry_identity == contract["aabb_geometry_identity"]
     assert validate_public_routes(routes, boxes) == report
 
 
@@ -358,7 +366,7 @@ def test_public_route_contract_rejects_legacy_or_private_conditioning() -> None:
         validate_public_route_contract(contract, routes, boxes)
 
 
-def test_public_route_contract_rejects_wrong_start_volume_and_aabb_hash() -> None:
+def test_public_route_contract_rejects_wrong_start_volume_and_aabb_identity() -> None:
     boxes = [_remote_box()]
     contract = make_public_route_contract(boxes)
 
@@ -373,8 +381,8 @@ def test_public_route_contract_rejects_wrong_start_volume_and_aabb_hash() -> Non
         validate_public_route_contract(contract, routes, boxes)
 
     stale = deepcopy(contract)
-    stale["aabb_geometry_sha256"] = "0" * 64
-    with pytest.raises(CityLiteRouteError, match="geometry hash"):
+    stale["aabb_geometry_identity"] = "0" * 16
+    with pytest.raises(CityLiteRouteError, match="geometry identity"):
         validate_public_route_contract(stale, _safe_routes(), boxes)
 
 
@@ -401,7 +409,7 @@ def test_city_task_obstacle_material_contract_is_exact_and_closed() -> None:
 
     assert contract["schema"] == CITY_TASK_OBSTACLE_MATERIAL_CLOSURE_SCHEMA
     assert contract["binding_count"] == 8
-    assert receipt["contract_sha256"] == CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_SHA256
+    assert receipt["contract_identity"] == CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_IDENTITY
     assert receipt["post_repair_binding_closure"] is True
     assert [row["obstacle_prim"] for row in contract["bindings"]] == [
         "/World/StaticScene/CityTaskObstacles/south_collapsed_facade",
@@ -455,7 +463,7 @@ def test_static_scene_receipt_fails_closed(field: str, value: object) -> None:
 
 def test_static_scene_receipt_rejects_stale_contract_or_flight_contract() -> None:
     receipt = _receipt()
-    receipt["scene_contract"]["payload_sha256"] = "0" * 64
+    receipt["scene_contract"]["payload_identity"] = "0" * 16
     with pytest.raises(CityLiteAuthorityError, match="scene_contract"):
         validate_static_scene_receipt(receipt)
 
@@ -515,7 +523,7 @@ def test_rivermark_layer_inventory_binds_selective_external_layers(
         row["classification"] == "rivermarksrc51_external_authority"
         for row in receipt["rivermarksrc51_external_layers"]
     )
-    assert len(receipt["inventory_sha256"]) == 64
+    assert len(receipt["inventory_identity"]) == 16
 
 
 def test_rivermark_layer_inventory_is_order_independent_and_deduplicated(
@@ -540,14 +548,14 @@ def test_rivermark_layer_inventory_is_order_independent_and_deduplicated(
     )
 
     assert second["rivermarksrc51_external_layer_count"] == 2
-    assert second["inventory_sha256"] == first["inventory_sha256"]
+    assert second["inventory_identity"] == first["inventory_identity"]
     assert (
-        second["rivermarksrc51_external_inventory_sha256"]
-        == first["rivermarksrc51_external_inventory_sha256"]
+        second["rivermarksrc51_external_inventory_identity"]
+        == first["rivermarksrc51_external_inventory_identity"]
     )
 
 
-def test_rivermark_layer_inventory_hash_detects_external_tampering(
+def test_rivermark_layer_inventory_identity_detects_external_alteration(
     tmp_path: Path,
 ) -> None:
     authority, local_layers = _temporary_authority(tmp_path)
@@ -557,7 +565,7 @@ def test_rivermark_layer_inventory_hash_detects_external_tampering(
         [*local_layers, *external_layers],
     )
     external_layers[0].write_text(
-        "#usda 1.0\n# externally tampered\n",
+        "#usda 1.0\n# externally altered\n",
         encoding="ascii",
     )
     after = make_rivermark_layer_inventory(
@@ -565,10 +573,10 @@ def test_rivermark_layer_inventory_hash_detects_external_tampering(
         [*local_layers, *external_layers],
     )
 
-    assert after["inventory_sha256"] != before["inventory_sha256"]
+    assert after["inventory_identity"] != before["inventory_identity"]
     assert (
-        after["rivermarksrc51_external_inventory_sha256"]
-        != before["rivermarksrc51_external_inventory_sha256"]
+        after["rivermarksrc51_external_inventory_identity"]
+        != before["rivermarksrc51_external_inventory_identity"]
     )
 
 
@@ -639,7 +647,7 @@ def test_rivermark_layer_inventory_never_classifies_local_layers_as_external(
     }
     assert external_paths.isdisjoint({str(path.resolve()) for path in local_layers})
     assert {row["filename"] for row in receipt["local_authority_layers"]} == set(
-        AUTHORITY_SHA256
+        AUTHORITY_IDENTITY
     )
 
 
@@ -658,7 +666,7 @@ def test_validate_rivermark_layer_inventory_receipt_accepts_serialized_receipt(
     validate_rivermark_layer_inventory_receipt(receipt)
 
 
-def test_validate_rivermark_layer_inventory_receipt_rejects_tampering(
+def test_validate_rivermark_layer_inventory_receipt_rejects_alteration(
     tmp_path: Path,
 ) -> None:
     authority, local_layers = _temporary_authority(tmp_path)
@@ -668,60 +676,60 @@ def test_validate_rivermark_layer_inventory_receipt_rejects_tampering(
         ["anon:root", *local_layers, *external_layers],
     )
 
-    tampered_receipts: list[dict] = []
+    altered_receipts: list[dict] = []
 
-    tampered = deepcopy(original)
-    tampered["schema"] = "org.rivermark.invalid.v1"
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["schema"] = "org.rivermark.invalid.v1"
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["composition_scope"]["whole_final_stage_inventory"] = True
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["composition_scope"]["whole_final_stage_inventory"] = True
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["local_authority_layers"].pop()
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["local_authority_layers"].pop()
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["rivermarksrc51_external_layer_count"] = 0
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["rivermarksrc51_external_layer_count"] = 0
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["rivermarksrc51_external_layers"][0]["root_relative_path"] = (
+    altered = deepcopy(original)
+    altered["rivermarksrc51_external_layers"][0]["root_relative_path"] = (
         "../Mission_Drones_CF2X.usd"
     )
-    tampered_receipts.append(tampered)
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["rivermarksrc51_external_layers"][0]["classification"] = (
+    altered = deepcopy(original)
+    altered["rivermarksrc51_external_layers"][0]["classification"] = (
         "city_lite_local_authority"
     )
-    tampered_receipts.append(tampered)
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["rivermarksrc51_external_layers"][0]["size_bytes"] = 0
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["rivermarksrc51_external_layers"][0]["size_bytes"] = 0
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["rivermarksrc51_external_layers"][0]["sha256"] = "0" * 64
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["rivermarksrc51_external_layers"][0]["identity"] = "0" * 16
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["local_authority_inventory_sha256"] = "0" * 64
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["local_authority_inventory_identity"] = "0" * 16
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["rivermarksrc51_external_inventory_sha256"] = "0" * 64
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["rivermarksrc51_external_inventory_identity"] = "0" * 16
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["inventory_sha256"] = "0" * 64
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["inventory_identity"] = "0" * 16
+    altered_receipts.append(altered)
 
-    tampered = deepcopy(original)
-    tampered["unexpected_field"] = False
-    tampered_receipts.append(tampered)
+    altered = deepcopy(original)
+    altered["unexpected_field"] = False
+    altered_receipts.append(altered)
 
-    for receipt in tampered_receipts:
+    for receipt in altered_receipts:
         with pytest.raises(CityLiteAuthorityError):
             validate_rivermark_layer_inventory_receipt(receipt)

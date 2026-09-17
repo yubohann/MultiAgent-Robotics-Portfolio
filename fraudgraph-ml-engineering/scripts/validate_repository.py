@@ -7,9 +7,8 @@ import ast
 import compileall
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOT = REPO_ROOT / "src" / "fraud_ml_engineering"
@@ -42,31 +41,32 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig")
 
 
-def check_required_files() -> None:
+def check_required_files() -> str | None:
     missing = [path for path in REQUIRED_FILES if not (REPO_ROOT / path).is_file()]
     if missing:
-        raise AssertionError(f"Missing required files: {', '.join(missing)}")
+        return f"Missing required files: {', '.join(missing)}"
+    return None
 
 
-def check_configuration_inventory() -> None:
+def check_configuration_inventory() -> str | None:
     splitgnn_configs = sorted((REPO_ROOT / "configs" / "splitgnn").glob("*.yaml"))
     experiment_configs = sorted((REPO_ROOT / "configs" / "experiments").glob("*.yaml"))
     if len(splitgnn_configs) < 7 or len(experiment_configs) < 3:
-        raise AssertionError(
-            f"Expected at least 7 SplitGNN and 3 experiment configs, got {len(splitgnn_configs)} and {len(experiment_configs)}"
-        )
+        return f"Expected at least 7 SplitGNN and 3 experiment configs, got {len(splitgnn_configs)} and {len(experiment_configs)}"
     if any(not _read(path).strip() for path in splitgnn_configs + experiment_configs):
-        raise AssertionError("An experiment configuration file is empty")
+        return "An experiment configuration file is empty"
+    return None
 
 
-def check_package_compiles() -> None:
+def check_package_compiles() -> str | None:
     if not compileall.compile_dir(str(REPO_ROOT / "src"), quiet=1):
-        raise AssertionError("Python compilation failed under src/")
+        return "Python compilation failed under src/"
     if not compileall.compile_dir(str(REPO_ROOT / "scripts"), quiet=1):
-        raise AssertionError("Python compilation failed under scripts/")
+        return "Python compilation failed under scripts/"
+    return None
 
 
-def check_internal_imports() -> None:
+def check_internal_imports() -> str | None:
     local_modules = {path.stem for path in PACKAGE_ROOT.glob("*.py")}
     violations: list[str] = []
     for source_path in PACKAGE_ROOT.glob("*.py"):
@@ -75,10 +75,11 @@ def check_internal_imports() -> None:
             if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module in local_modules:
                 violations.append(f"{source_path.name}: from {node.module} import ...")
     if violations:
-        raise AssertionError("Bare internal imports: " + "; ".join(violations))
+        return "Bare internal imports: " + "; ".join(violations)
+    return None
 
 
-def check_source_hygiene() -> None:
+def check_source_hygiene() -> str | None:
     source_paths = list((REPO_ROOT / "src").rglob("*.py")) + list((REPO_ROOT / "scripts").rglob("*.py"))
     for source_path in source_paths:
         if source_path.resolve() == Path(__file__).resolve():
@@ -86,36 +87,39 @@ def check_source_hygiene() -> None:
         text = _read(source_path)
         for marker in LEGACY_PATH_MARKERS:
             if marker in text:
-                raise AssertionError(f"Legacy machine-specific path {marker!r} in {source_path}")
+                return f"Legacy machine-specific path {marker!r} in {source_path}"
         for marker in LEGACY_ARTIFACT_MARKERS:
             if marker in text:
-                raise AssertionError(f"Retired artifact prefix {marker!r} in {source_path}")
+                return f"Retired artifact prefix {marker!r} in {source_path}"
         if any(marker in text for marker in PLACEHOLDER_MARKERS):
-            raise AssertionError(f"Placeholder marker in production path: {source_path}")
+            return f"Placeholder marker in production path: {source_path}"
+    return None
 
 
-def check_gitignore_contract() -> None:
+def check_gitignore_contract() -> str | None:
     ignore_rules = _read(REPO_ROOT / ".gitignore")
     required_rules = ("data/**", "artifacts/**", ".venv/", "dist/", "build/")
     missing = [rule for rule in required_rules if rule not in ignore_rules]
     if missing:
-        raise AssertionError(f"Missing ignore rules: {', '.join(missing)}")
+        return f"Missing ignore rules: {', '.join(missing)}"
+    return None
 
 
-def check_version_metadata() -> None:
+def check_version_metadata() -> str | None:
     pyproject = _read(REPO_ROOT / "pyproject.toml")
     changelog = _read(REPO_ROOT / "CHANGELOG.md")
     citation = _read(REPO_ROOT / "CITATION.cff")
     version_match = re.search(r"^version\s*=\s*\"([^\"]+)\"", pyproject, flags=re.MULTILINE)
     if version_match is None:
-        raise AssertionError("No project version found in pyproject.toml")
+        return "No project version found in pyproject.toml"
     version = version_match.group(1)
     if f"## {version} " not in changelog or f"version: {version}" not in citation:
-        raise AssertionError(f"Version {version} is not consistent across metadata")
+        return f"Version {version} is not consistent across metadata"
+    return None
 
 
 def run_checks() -> list[str]:
-    checks: tuple[tuple[str, Callable[[], None]], ...] = (
+    checks: tuple[tuple[str, Callable[[], str | None]], ...] = (
         ("required files", check_required_files),
         ("configuration inventory", check_configuration_inventory),
         ("Python compilation", check_package_compiles),
@@ -126,12 +130,11 @@ def run_checks() -> list[str]:
     )
     failures: list[str] = []
     for label, check in checks:
-        try:
-            check()
-        except Exception as error:  # pragma: no cover - exercised by CLI failures
-            failures.append(f"FAIL {label}: {error}")
-        else:
+        failure = check()
+        if failure is None:
             print(f"PASS {label}")
+        else:
+            failures.append(f"FAIL {label}: {failure}")
     return failures
 
 

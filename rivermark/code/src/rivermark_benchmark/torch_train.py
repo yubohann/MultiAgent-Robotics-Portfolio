@@ -7,13 +7,14 @@ import json
 import os
 import random
 import tempfile
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 import numpy as np
 
-from .dataset import PilotEpisode, load_pilot_episodes, sha256_file
+from .dataset import PilotEpisode, load_pilot_episodes, identity_file
 from .learned import (
     TinyActionDynamicsNet,
     TinyVisionLanguageActionNet,
@@ -28,7 +29,7 @@ try:
     import torch
     from torch import nn
     from torch.utils.data import DataLoader, TensorDataset
-except ImportError:  # pragma: no cover - exercised through CLI fail-closed behavior.
+except ImportError:  # pragma: no cover - exercised through CLI strict behavior.
     torch = None
     nn = None
     DataLoader = None
@@ -166,7 +167,7 @@ def _save_checkpoint(
     _atomic_torch_save(checkpoint, {"state_dict": model.state_dict()})
     metadata_path = checkpoint.with_suffix(".rivermark.json")
     final_metadata = dict(metadata)
-    final_metadata["checkpoint_sha256"] = sha256_file(checkpoint)
+    final_metadata["checkpoint_identity"] = identity_file(checkpoint)
     _atomic_json(metadata_path, final_metadata)
     return checkpoint, metadata_path
 
@@ -197,7 +198,7 @@ def _common_metadata(
         "learning_rate": learning_rate,
         "seed": seed,
         "source_revision": source.source_revision,
-        "source_tree_sha256": source.source_tree_sha256,
+        "source_tree_identity": source.source_tree_identity,
         "source_worktree_dirty": source.source_worktree_dirty,
     }
 

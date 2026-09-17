@@ -58,7 +58,7 @@ def load_data(data_dir, max_docs_per_class=None):
 
                     data.append((text, class_name))
 
-            except Exception as e:
+            except Exception:
 
                 continue
 

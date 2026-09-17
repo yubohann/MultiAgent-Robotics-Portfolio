@@ -61,9 +61,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# The recorder owns readiness. Starting a separate probe first can race a slow
-# Gazebo model spawn and discard a run before the simulator has created its
-# sensor topics. Motion remains disabled until the recorder sees valid input.
+# The recorder owns readiness; motion stays disabled until valid sensor input arrives.
 set +e
 python3 "$workspace/src/robocon_mid360_simulation/scripts/controlled_lio_run.py" \
   --run-dir "$output_dir" --duration-sec "$duration_sec" --lidar-samples "$lidar_samples" \
@@ -89,7 +87,7 @@ if [[ ! -s "$pcd" || ! -s "$metadata" ]]; then
 fi
 python3 - "$pcd" "$metadata" "$min_frozen_map_points" "$sparse_coverage" \
   "$lidar_samples" "$lidar_downsample" "$world_file" <<'PY'
-import hashlib, json, sys
+import json, sys
 from pathlib import Path
 pcd, metadata = map(Path, sys.argv[1:3])
 minimum_points = int(sys.argv[3])
@@ -110,7 +108,6 @@ eligible = (
 )
 diagnostic_only = sparse_coverage or requested_rays < 30000 or downsample != 1 or scene != "indoor_competition_candidate"
 payload = {
-    "pcd_sha256": hashlib.sha256(pcd.read_bytes()).hexdigest(),
     "pcd_bytes": pcd.stat().st_size,
     "point_count": point_count,
     "minimum_points_for_fixed_map": minimum_points,

@@ -46,7 +46,7 @@ Large USD scenes live under `assets/5_in_drone/` and regenerate through the scen
 ## Documentation
 
 - `evaluation_artifacts/README.md` maps the scoring artifact set.
-- `evaluation_artifacts/reproducibility.md` records versions, commands, seeds and hash checks.
+- `evaluation_artifacts/reproducibility.md` records versions, commands, seeds and expected outputs.
 - `evaluation_artifacts/report/gate_graph_2d_evaluation_report.md` holds the compact scoring report.
 - `assets/5_in_drone/5_in_drone_spec_and_official_safety.md` documents the drone asset and the official safety distance basis.
 - `CONTRIBUTING.md` records the development setup and change discipline.

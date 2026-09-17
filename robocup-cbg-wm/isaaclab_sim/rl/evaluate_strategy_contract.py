@@ -3,16 +3,14 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import math
 import time
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
 import torch
-
-from expert_policy import compose_policy_action
 from evaluate_policy import actor_action, json_safe, load_policy
+from expert_policy import compose_policy_action
 from replay_policy_strict import pushable_box_penetration, static_blocker_penetration
 from robocup_visionrl_gym_env import (
     BASE_HIT_SUCCESS_BY_NORMAL_HITS,
@@ -21,18 +19,15 @@ from robocup_visionrl_gym_env import (
 )
 from robocup_visionrl_selfplay_env import AGENTS, RoboCupVisionRLSelfPlayEnv
 
-
 ROOT = Path(__file__).resolve().parents[2]
 ABNORMAL_SPIN_YAW_DELTA_RAD = 0.11
 ABNORMAL_SPIN_TRANSLATION_M = 0.006
 
 
 def normal_hits_before_base(order: list[str]) -> int | None:
-    hits = 0
-    for name in order:
+    for hits, name in enumerate(order):
         if name.endswith("BaseTarget"):
             return hits
-        hits += 1
     return None
 
 

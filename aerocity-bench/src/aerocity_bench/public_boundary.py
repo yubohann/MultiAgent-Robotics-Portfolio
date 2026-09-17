@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .canonical import content_hash, read_json
+from .canonical import read_json
 from .inspection_atlas import validate_public_inspection_atlas, validate_public_mission_sector
 from .ordinary_config import validate_public_execution_contract
 
@@ -57,22 +57,14 @@ def assert_public_fields(value: object, *, path: str = "$") -> None:
 
 
 def validate_public_task_spec(task_spec: object) -> None:
-    """Validate task integrity and information boundary before method exposure."""
-
     if not isinstance(task_spec, dict):
         raise ValueError("public task spec must be an object")
-    expected_hash = str(task_spec.get("task_spec_hash", ""))
-    payload = {key: value for key, value in task_spec.items() if key != "task_spec_hash"}
-    if len(expected_hash) != 64 or expected_hash != content_hash(payload):
-        raise ValueError("public task spec hash is invalid")
-    assert_public_fields(payload, path="task_spec")
-    contract = payload.get("execution_contract")
+    assert_public_fields(task_spec, path="task_spec")
+    contract = task_spec.get("execution_contract")
     if not isinstance(contract, dict):
         raise ValueError("public task spec lacks an execution contract")
     validate_public_execution_contract(contract)
-    if payload.get("public_execution_contract_hash") != content_hash(contract):
-        raise ValueError("public task spec execution-contract hash is invalid")
-    atlas = payload.get("inspection_atlas")
+    atlas = task_spec.get("inspection_atlas")
     if atlas is not None:
         if not isinstance(atlas, dict):
             raise ValueError("public inspection atlas must be an object")
@@ -83,13 +75,7 @@ def validate_public_episode(
     episode: object,
     task_spec: object,
 ) -> None:
-    """Validate one method-visible episode before a public policy receives it.
-
-    A public episode deliberately has no content hash: it is a projection of
-    authority-held data, and its binding is verified against that projection by
-    the evaluator/runtime.  This function validates only fields that are safe
-    for a method to read.
-    """
+    """Validate one method-visible episode before a public policy receives it."""
 
     validate_public_task_spec(task_spec)
     if not isinstance(episode, dict):
@@ -104,7 +90,7 @@ def validate_public_episode(
         "target_count_public",
         "target_process_public",
     }
-    allowed = required | {"mission_sector", "mission_sector_hash", "coarse_region_ids"}
+    allowed = required | {"mission_sector", "coarse_region_ids"}
     if not required.issubset(episode) or set(episode) - allowed:
         raise ValueError("public episode fields differ")
     if episode["schema"] != "org.aerocity.bench.episode-public.ordinary.v1":
@@ -125,16 +111,11 @@ def validate_public_episode(
         return
     atlas = task_node.get("inspection_atlas")
     sector = episode.get("mission_sector")
-    sector_hash = episode.get("mission_sector_hash")
-    if (sector is None) != (sector_hash is None):
-        raise ValueError("public episode mission-sector binding is incomplete")
     if sector is not None:
         if not isinstance(atlas, dict):
             raise ValueError("public mission sector requires the full G2-I atlas")
         if not isinstance(sector, dict):
             raise ValueError("G2-I public episode mission sector is invalid")
-        if sector_hash != sector.get("sector_hash"):
-            raise ValueError("public episode mission-sector hash differs")
         contract = task_node["execution_contract"]
         validate_public_mission_sector(sector, atlas, episode["starts"], contract)
 
@@ -172,8 +153,6 @@ def audit_public_layout(layout_root: Path) -> dict[str, Any]:
         "schema": "org.aerocity.bench.public-boundary-audit.v1",
         "status": "PASS",
         "layout_id": str(task_spec["layout_id"]),
-        "task_spec_sha256": content_hash(task_spec),
-        "public_execution_contract_hash": str(task_spec["public_execution_contract_hash"]),
         "task_track": task_track,
         "public_episode_count": len(episodes),
     }

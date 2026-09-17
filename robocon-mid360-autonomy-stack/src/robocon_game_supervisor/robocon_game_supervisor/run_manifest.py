@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import subprocess
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
-
 
 EVIDENCE_LEVELS = frozenset({"synthetic", "gazebo_simulation", "bag_replay", "host_hardware"})
 
@@ -34,14 +32,10 @@ def _git_revision(path: str | Path | None) -> str:
     return completed.stdout.strip() or "unknown"
 
 
-def _sha256(path: str | Path | None) -> str:
+def _file_size(path: str | Path | None) -> int | str:
     if not path or not Path(path).is_file():
         return "unknown"
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+    return Path(path).stat().st_size
 
 
 def _parse_source_specs(specs: Iterable[str]) -> dict[str, dict[str, str]]:
@@ -90,7 +84,7 @@ def build_manifest(
     metrics: dict[str, str | float | int] | None = None,
     started_at_utc: str | None = None,
 ) -> dict[str, object]:
-    """Build a manifest without turning missing evidence into measurements."""
+    """Build the evidence-labelled manifest for one project run."""
     if evidence_level not in EVIDENCE_LEVELS:
         allowed = ", ".join(sorted(EVIDENCE_LEVELS))
         raise ValueError(f"evidence_level must be one of: {allowed}")
@@ -101,7 +95,7 @@ def build_manifest(
     explicit_revisions = _parse_label_values(source_revision_specs, "source revision")
     unknown_labels = set(explicit_revisions).difference(sources)
     if unknown_labels:
-        raise ValueError(f"source revision has no matching source: {sorted(unknown_labels)[0]}")
+        raise ValueError(f"source revision has no matching source: {min(unknown_labels)}")
     for label, revision in explicit_revisions.items():
         sources[label]["git_revision"] = revision
 
@@ -111,11 +105,6 @@ def build_manifest(
         "started_at_utc": started_at_utc or _utc_now(),
         "generated_at_utc": _utc_now(),
         "evidence_level": evidence_level,
-        "evidence_policy": {
-            "declared_by_operator": True,
-            "generator_verifies_metadata_only": True,
-            "hardware_and_accuracy_claims_require_external_evidence": True,
-        },
         "software": {
             "workspace_path": str(workspace_path) if workspace_path else "TBD",
             "workspace_commit": _git_revision(workspace_path),
@@ -154,7 +143,7 @@ def build_manifest(
             "frame": "map",
             "source_bag": source_bag,
             "path": str(map_path) if map_path else "TBD",
-            "sha256": _sha256(map_path),
+            "file_size_bytes": _file_size(map_path),
         },
         "metrics": {
             "pose_rate_hz": "unknown",

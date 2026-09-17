@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import importlib.util
 import json
 import math
@@ -12,28 +11,27 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.runtime_lock import (  # noqa: E402
+from rivermark_benchmark.runtime_lock import (
     RUNTIME_LOCK_SCHEMA,
-    config_sha256,
+    RuntimeLockError,
     compare_live_simulation,
     compare_runtime,
+    config_identity,
     configure_simulation_cfg,
-    environment_lock_sha256,
+    environment_lock_identity,
     load_runtime_lock,
     locked_launcher_kwargs,
     observe_live_simulation,
-    runtime_lock_sha256,
     resolve_locked_environment_lock,
-    source_tree_sha256,
-    RuntimeLockError,
-    validate_runtime_lock,
+    runtime_lock_identity,
+    source_tree_identity,
     validate_locked_launcher_environment,
+    validate_runtime_lock,
 )
 
 
@@ -47,27 +45,27 @@ def _lock() -> dict:
         "python": {"implementation": "CPython", "version": "3.11.14"},
         "host": {"system": "Windows", "machine": "AMD64", "minimum_windows_build": 26100},
         "distributions": {"isaacsim": "5.1.0.0", "isaaclab": "2.3.0", "isaaclab-contrib": "0.0.2"},
-        "isaaclab_source": {"relative_path": "isaaclab", "tree_sha256": "a" * 64, "file_count": 2, "byte_count": 8, "version_file": "2.3.2", "extension_version": "0.54.3"},
-        "isaaclab_contrib_source": {"relative_path": "isaaclab_contrib", "tree_sha256": "b" * 64, "file_count": 2, "byte_count": 8, "version_file": "2.3.2", "extension_version": "0.0.2"},
-        "environment_lock": {"repository_relative_path": "requirements-isaac-capture.lock", "sha256": "f" * 64},
+        "isaaclab_source": {"relative_path": "isaaclab", "tree_identity": "a" * 16, "file_count": 2, "byte_count": 8, "version_file": "2.3.2", "extension_version": "0.54.3"},
+        "isaaclab_contrib_source": {"relative_path": "isaaclab_contrib", "tree_identity": "b" * 16, "file_count": 2, "byte_count": 8, "version_file": "2.3.2", "extension_version": "0.0.2"},
+        "environment_lock": {"repository_relative_path": "requirements-isaac-capture.lock", "identity": "f" * 16},
         "gpu": {"vendor": "NVIDIA", "minimum_driver_version": "576.80", "minimum_vram_bytes": 8 * 1024**3},
         "launcher": {
             "headless": True, "enable_cameras": True, "device": "cuda:0",
             "rendering_mode": "balanced", "livestream": 0, "xr": False,
             "distributed": False, "kit_args": "",
-            "experience": {"path": "apps/isaaclab.python.headless.rendering.kit", "sha256": "c" * 64},
+            "experience": {"path": "apps/isaaclab.python.headless.rendering.kit", "identity": "c" * 16},
         },
         "simulation": {
             "device": "cuda:0", "dt_s": 0.005,
             "gravity_w_mps2": [0.0, 0.0, -9.81], "agent_count": 8,
             "render_interval": 1, "use_fabric": True,
             "config_digests": {
-                "render": {"settings": render, "sha256": config_sha256(render)},
-                "fabric": {"settings": fabric, "sha256": config_sha256(fabric)},
-                "physx": {"settings": physx, "sha256": config_sha256(physx)},
+                "render": {"settings": render, "identity": config_identity(render)},
+                "fabric": {"settings": fabric, "identity": config_identity(fabric)},
+                "physx": {"settings": physx, "identity": config_identity(physx)},
             },
         },
-        "assets": {"city_lite_contract_sha256": "d" * 64, "cf2x_usd_sha256": "e" * 64},
+        "assets": {"city_lite_contract_identity": "d" * 16, "cf2x_usd_identity": "e" * 16},
     }
 
 
@@ -110,31 +108,31 @@ class RuntimeLockTests(unittest.TestCase):
         self.assertEqual(dependencies["opencv-python"], "4.11.0.86")
         self.assertEqual(lock["distributions"]["opencv-python"], dependencies["opencv-python"])
         self.assertEqual(
-            lock["environment_lock"]["sha256"],
-            environment_lock_sha256(dependency_lock),
+            lock["environment_lock"]["identity"],
+            environment_lock_identity(dependency_lock),
         )
 
     def test_valid_lock_and_observation_pass(self) -> None:
         lock = _lock()
         self.assertEqual(validate_runtime_lock(lock), ())
         self.assertEqual(compare_runtime(lock, _observed(lock)), ())
-        self.assertEqual(runtime_lock_sha256(lock), runtime_lock_sha256(copy.deepcopy(lock)))
+        self.assertEqual(runtime_lock_identity(lock), runtime_lock_identity(copy.deepcopy(lock)))
 
     def test_version_asset_source_and_gpu_drift_fail(self) -> None:
         lock = _lock()
         observed = _observed(lock)
         observed["distributions"]["isaacsim"] = "5.2.0.0"
-        observed["assets"]["cf2x_usd_sha256"] = "d" * 64
-        observed["isaaclab_source"]["tree_sha256"] = "e" * 64
-        observed["isaaclab_contrib_source"]["tree_sha256"] = "f" * 64
+        observed["assets"]["cf2x_usd_identity"] = "d" * 16
+        observed["isaaclab_source"]["tree_identity"] = "e" * 16
+        observed["isaaclab_contrib_source"]["tree_identity"] = "f" * 16
         observed["gpu"]["devices"] = []
-        observed["environment_lock"]["sha256"] = "0" * 64
+        observed["environment_lock"]["identity"] = "0" * 16
         paths = {issue.path for issue in compare_runtime(lock, observed)}
         self.assertIn("$.distributions.isaacsim", paths)
-        self.assertIn("$.assets.cf2x_usd_sha256", paths)
-        self.assertIn("$.isaaclab_source.tree_sha256", paths)
-        self.assertIn("$.isaaclab_contrib_source.tree_sha256", paths)
-        self.assertIn("$.environment_lock.sha256", paths)
+        self.assertIn("$.assets.cf2x_usd_identity", paths)
+        self.assertIn("$.isaaclab_source.tree_identity", paths)
+        self.assertIn("$.isaaclab_contrib_source.tree_identity", paths)
+        self.assertIn("$.environment_lock.identity", paths)
         self.assertIn("$.gpu", paths)
 
     def test_environment_lock_is_required_and_resolves_inside_repository(self) -> None:
@@ -151,7 +149,7 @@ class RuntimeLockTests(unittest.TestCase):
             resolved = resolve_locked_environment_lock(runtime_path, _lock())
             self.assertEqual(resolved, dependency_lock.resolve())
 
-    def test_tree_hash_is_path_independent_and_content_sensitive(self) -> None:
+    def test_tree_identity_is_path_independent_and_content_sensitive(self) -> None:
         with tempfile.TemporaryDirectory() as first_temp, tempfile.TemporaryDirectory() as second_temp:
             first = Path(first_temp)
             second = Path(second_temp)
@@ -160,11 +158,11 @@ class RuntimeLockTests(unittest.TestCase):
                 (root / "pkg" / "a.py").write_text("a = 1\n", encoding="utf-8")
                 (root / "config.toml").write_text("x = 2\n", encoding="utf-8")
                 (root / "ignored.bin").write_bytes(b"ignored")
-            self.assertEqual(source_tree_sha256(first), source_tree_sha256(second))
+            self.assertEqual(source_tree_identity(first), source_tree_identity(second))
             (second / "pkg" / "a.py").write_text("a = 3\n", encoding="utf-8")
-            self.assertNotEqual(source_tree_sha256(first)[0], source_tree_sha256(second)[0])
+            self.assertNotEqual(source_tree_identity(first)[0], source_tree_identity(second)[0])
 
-    def test_tree_hash_ignores_unreadable_non_source_links(self) -> None:
+    def test_tree_identity_ignores_unreadable_non_source_links(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "pkg").mkdir()
@@ -179,18 +177,18 @@ class RuntimeLockTests(unittest.TestCase):
                 return original_is_file(path)
 
             with patch.object(Path, "is_file", is_file_without_binary_links):
-                digest, file_count, byte_count = source_tree_sha256(root)
+                digest, file_count, byte_count = source_tree_identity(root)
 
             self.assertEqual(file_count, 1)
             self.assertEqual(byte_count, (root / "pkg" / "a.py").stat().st_size)
-            self.assertEqual(digest, source_tree_sha256(root)[0])
+            self.assertEqual(digest, source_tree_identity(root)[0])
 
-    def test_unknown_fields_fail_closed(self) -> None:
+    def test_unknown_fields_strict(self) -> None:
         lock = _lock()
         lock["guess"] = True
         self.assertIn("fields", {issue.code for issue in validate_runtime_lock(lock)})
 
-    def test_legacy_v1_and_cross_section_drift_fail_closed(self) -> None:
+    def test_legacy_v1_and_cross_section_drift_strict(self) -> None:
         lock = _lock()
         lock["schema"] = "org.rivermark.benchmark.isaac-runtime-lock.v1"
         self.assertIn("schema", {issue.code for issue in validate_runtime_lock(lock)})
@@ -257,9 +255,8 @@ class RuntimeLockTests(unittest.TestCase):
         self.assertEqual(compare_live_simulation(lock, observed), ())
 
     def test_xr_environment_conflict_fails_before_launcher(self) -> None:
-        with patch.dict("os.environ", {"XR": "1"}, clear=False):
-            with self.assertRaisesRegex(ValueError, "conflicts"):
-                validate_locked_launcher_environment(_lock())
+        with patch.dict("os.environ", {"XR": "1"}, clear=False), self.assertRaisesRegex(ValueError, "conflicts"):
+            validate_locked_launcher_environment(_lock())
 
     def test_live_gravity_accepts_only_float32_readback_error(self) -> None:
         lock = _lock()
@@ -272,7 +269,7 @@ class RuntimeLockTests(unittest.TestCase):
             "use_fabric": True,
             "rendering_mode": "balanced",
             "config_digests": {
-                name: payload["sha256"]
+                name: payload["identity"]
                 for name, payload in lock["simulation"]["config_digests"].items()
             },
         }
@@ -302,7 +299,7 @@ class RuntimeLockTests(unittest.TestCase):
             "use_fabric": True,
             "rendering_mode": "balanced",
             "config_digests": {
-                name: payload["sha256"]
+                name: payload["identity"]
                 for name, payload in lock["simulation"]["config_digests"].items()
             },
         }

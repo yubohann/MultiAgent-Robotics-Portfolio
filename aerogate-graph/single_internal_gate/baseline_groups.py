@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 _GROUPS: dict[str, tuple[str, ...]] = {
     "planner_only_main": ("straight", "detour"),
     "classic_planner_only": ("astar", "theta_star", "rrt_star", "informed_rrt_star", "heuristic"),

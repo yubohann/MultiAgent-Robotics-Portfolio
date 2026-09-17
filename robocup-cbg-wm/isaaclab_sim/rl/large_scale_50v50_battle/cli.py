@@ -2,21 +2,11 @@ from __future__ import annotations
 
 import argparse
 
+from .config import DATA_DIR
+from .render import render_video
+from .report import make_figures, write_report
+from .train import evaluate, train
 
-from .config import (
-    DATA_DIR
-)
-from .render import (
-    render_video
-)
-from .report import (
-    make_figures,
-    write_report
-)
-from .train import (
-    evaluate,
-    train
-)
 
 def run_all(args: argparse.Namespace) -> None:
     train_args = argparse.Namespace(**vars(args))

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.metadata
 import json
 import math
@@ -11,22 +10,23 @@ import os
 import platform
 import re
 import sys
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Any, Mapping, Sequence
+from typing import Any
 
-from .preflight import _probe_nvidia_smi, _version_at_least, sha256_file
-
+from ._identity import IdentityAccumulator
+from .preflight import _probe_nvidia_smi, _version_at_least, identity_file
 
 RUNTIME_LOCK_SCHEMA = "org.rivermark.benchmark.isaac-runtime-lock.v2"
 RUNTIME_AUDIT_SCHEMA = "org.rivermark.benchmark.isaac-runtime-audit.v2"
 RUNTIME_AUDIT_OBSERVATION = "public_runtime_environment_and_locked_assets"
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _SOURCE_SUFFIXES = frozenset({".py", ".toml", ".json", ".yaml", ".yml"})
 _SOURCE_FIELDS = frozenset(
-    {"relative_path", "tree_sha256", "file_count", "byte_count", "version_file", "extension_version"}
+    {"relative_path", "tree_identity", "file_count", "byte_count", "version_file", "extension_version"}
 )
-_ENVIRONMENT_LOCK_FIELDS = frozenset({"repository_relative_path", "sha256"})
+_ENVIRONMENT_LOCK_FIELDS = frozenset({"repository_relative_path", "identity"})
 LIVE_GRAVITY_ABS_TOLERANCE_MPS2 = 1.0e-6
 
 
@@ -45,23 +45,23 @@ def _canonical_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=True, allow_nan=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
 
 
-def runtime_lock_sha256(lock: Mapping[str, Any]) -> str:
-    return hashlib.sha256(_canonical_bytes(lock)).hexdigest()
+def runtime_lock_identity(lock: Mapping[str, Any]) -> str:
+    return IdentityAccumulator(_canonical_bytes(lock)).hexdigest()
 
 
-def config_sha256(settings: Mapping[str, Any]) -> str:
+def config_identity(settings: Mapping[str, Any]) -> str:
     """Return the digest used for a locked render/Fabric/PhysX settings map."""
 
     if not isinstance(settings, Mapping):
         raise TypeError("configuration settings must be a mapping")
-    return hashlib.sha256(_canonical_bytes(settings)).hexdigest()
+    return IdentityAccumulator(_canonical_bytes(settings)).hexdigest()
 
 
-def environment_lock_sha256(path: Path) -> str:
-    """Hash the dependency lock with stable LF semantics on every host."""
+def environment_lock_identity(path: Path) -> str:
+    """Identity the dependency lock with stable LF semantics on every host."""
 
     content = Path(path).read_bytes().replace(b"\r\n", b"\n")
-    return hashlib.sha256(content).hexdigest()
+    return IdentityAccumulator(content).hexdigest()
 
 
 def _finite_number(value: Any) -> bool:
@@ -116,14 +116,7 @@ def _reject_json_constant(value: str) -> None:
 
 
 def live_gravity_matches(expected: Any, observed: Any) -> bool:
-    """Compare a locked gravity vector with a PhysX float32 readback.
-
-    Isaac's public gravity API returns a direction/magnitude representation
-    backed by single-precision USD/PhysX values.  Keep the lock's intended
-    decimal values, but allow no more than one float32-scale absolute ULP at
-    Earth gravity.  Type, shape, finite-value, and all other runtime checks
-    remain fail-closed.
-    """
+    """Compare a locked gravity vector with a PhysX float32 readback."""
 
     if not isinstance(expected, list) or not isinstance(observed, list):
         return False
@@ -151,8 +144,8 @@ def live_gravity_matches(expected: Any, observed: Any) -> bool:
     return True
 
 
-def source_tree_sha256(root: Path) -> tuple[str, int, int]:
-    """Hash selected source files by relative POSIX path and content."""
+def source_tree_identity(root: Path) -> tuple[str, int, int]:
+    """Identity selected source files by relative POSIX path and content."""
 
     resolved = Path(root).expanduser().resolve()
     if not resolved.is_dir():
@@ -169,7 +162,7 @@ def source_tree_sha256(root: Path) -> tuple[str, int, int]:
     )
     if not files:
         raise RuntimeLockError("IsaacLab source root contains no lockable source files")
-    digest = hashlib.sha256()
+    digest = IdentityAccumulator()
     byte_count = 0
     for path in files:
         relative = PurePosixPath(path.relative_to(resolved)).as_posix().encode("utf-8")
@@ -258,7 +251,7 @@ def validate_runtime_lock(payload: Any) -> tuple[RuntimeLockIssue, ...]:
         issue(
             "environment_lock",
             "$.environment_lock",
-            "must bind the repository-relative dependency lock path and SHA-256",
+            "must bind the repository-relative dependency lock path and IDENTITY",
         )
     else:
         _validate_relative_path(
@@ -266,8 +259,8 @@ def validate_runtime_lock(payload: Any) -> tuple[RuntimeLockIssue, ...]:
             environment_lock.get("repository_relative_path"),
             issue,
         )
-        if not _SHA256.fullmatch(str(environment_lock.get("sha256", ""))):
-            issue("sha256", "$.environment_lock.sha256", "must be a lowercase SHA-256")
+        if not _IDENTITY.fullmatch(str(environment_lock.get("identity", ""))):
+            issue("identity", "$.environment_lock.identity", "must be a lowercase IDENTITY")
     gpu = payload.get("gpu")
     if not isinstance(gpu, Mapping) or set(gpu) != {"vendor", "minimum_driver_version", "minimum_vram_bytes"}:
         issue("gpu", "$.gpu", "must declare vendor, minimum driver, and minimum VRAM")
@@ -309,12 +302,12 @@ def validate_runtime_lock(payload: Any) -> tuple[RuntimeLockIssue, ...]:
         if not isinstance(launcher.get("kit_args"), str):
             issue("kit_args", "$.launcher.kit_args", "must be one command-line argument string")
         experience = launcher.get("experience")
-        if not isinstance(experience, Mapping) or set(experience) != {"path", "sha256"}:
-            issue("experience", "$.launcher.experience", "must contain relative path and SHA-256")
+        if not isinstance(experience, Mapping) or set(experience) != {"path", "identity"}:
+            issue("experience", "$.launcher.experience", "must contain relative path and IDENTITY")
         else:
             _validate_relative_path("$.launcher.experience.path", experience.get("path"), issue)
-            if not _SHA256.fullmatch(str(experience.get("sha256", ""))):
-                issue("sha256", "$.launcher.experience.sha256", "must be a lowercase SHA-256")
+            if not _IDENTITY.fullmatch(str(experience.get("identity", ""))):
+                issue("identity", "$.launcher.experience.identity", "must be a lowercase IDENTITY")
     simulation = payload.get("simulation")
     simulation_fields = {
         "device", "dt_s", "gravity_w_mps2", "agent_count", "render_interval", "use_fabric", "config_digests"
@@ -344,8 +337,8 @@ def validate_runtime_lock(payload: Any) -> tuple[RuntimeLockIssue, ...]:
         else:
             for name in ("render", "fabric", "physx"):
                 digest = digests.get(name)
-                if not isinstance(digest, Mapping) or set(digest) != {"settings", "sha256"}:
-                    issue("config_digest", f"$.simulation.config_digests.{name}", "must contain settings and sha256")
+                if not isinstance(digest, Mapping) or set(digest) != {"settings", "identity"}:
+                    issue("config_digest", f"$.simulation.config_digests.{name}", "must contain settings and identity")
                 else:
                     settings = digest.get("settings")
                     if not isinstance(settings, Mapping):
@@ -356,8 +349,8 @@ def validate_runtime_lock(payload: Any) -> tuple[RuntimeLockIssue, ...]:
                             f"$.simulation.config_digests.{name}.settings",
                             "must contain only finite JSON values",
                         )
-                    elif digest.get("sha256") != config_sha256(settings):
-                        issue("config_digest", f"$.simulation.config_digests.{name}.sha256", "does not match canonical settings digest")
+                    elif digest.get("identity") != config_identity(settings):
+                        issue("config_digest", f"$.simulation.config_digests.{name}.identity", "does not match canonical settings digest")
         launcher_values = launcher if isinstance(launcher, Mapping) else {}
         render_digest = digests.get("render") if isinstance(digests, Mapping) else None
         fabric_digest = digests.get("fabric") if isinstance(digests, Mapping) else None
@@ -372,10 +365,10 @@ def validate_runtime_lock(payload: Any) -> tuple[RuntimeLockIssue, ...]:
         if launcher_values.get("device") != simulation.get("device"):
             issue("device", "$.launcher.device", "must match simulation device")
     assets = payload.get("assets")
-    if not isinstance(assets, Mapping) or set(assets) != {"city_lite_contract_sha256", "cf2x_usd_sha256"}:
-        issue("assets", "$.assets", "must bind City-Lite and CF2X hashes")
-    elif any(not _SHA256.fullmatch(str(value)) for value in assets.values()):
-        issue("sha256", "$.assets", "asset hashes must be lowercase SHA-256 values")
+    if not isinstance(assets, Mapping) or set(assets) != {"city_lite_contract_identity", "cf2x_usd_identity"}:
+        issue("assets", "$.assets", "must bind City-Lite and CF2X identities")
+    elif any(not _IDENTITY.fullmatch(str(value)) for value in assets.values()):
+        issue("identity", "$.assets", "asset identities must be lowercase IDENTITY values")
     return tuple(issues)
 
 
@@ -390,8 +383,8 @@ def _validate_relative_path(path: str, value: Any, issue: Any) -> None:
 
 def _validate_source_binding(name: str, source: Mapping[str, Any], issue: Any) -> None:
     _validate_relative_path(f"$.{name}.relative_path", source.get("relative_path"), issue)
-    if not _SHA256.fullmatch(str(source.get("tree_sha256", ""))):
-        issue("sha256", f"$.{name}.tree_sha256", "must be a lowercase SHA-256")
+    if not _IDENTITY.fullmatch(str(source.get("tree_identity", ""))):
+        issue("identity", f"$.{name}.tree_identity", "must be a lowercase IDENTITY")
     for field in ("file_count", "byte_count"):
         if not _positive_integer(source.get(field)):
             issue("count", f"$.{name}.{field}", "must be a positive integer")
@@ -404,7 +397,7 @@ def _source_binding(root: Path, *, relative_path: str) -> dict[str, Any]:
     """Measure a source extension without importing Isaac or Kit."""
 
     resolved = Path(root).expanduser().resolve()
-    digest, file_count, byte_count = source_tree_sha256(resolved)
+    digest, file_count, byte_count = source_tree_identity(resolved)
     extension_path = resolved / "config" / "extension.toml"
     extension_version: str | None = None
     if extension_path.is_file():
@@ -422,7 +415,7 @@ def _source_binding(root: Path, *, relative_path: str) -> dict[str, Any]:
     )
     return {
         "relative_path": relative_path,
-        "tree_sha256": digest,
+        "tree_identity": digest,
         "file_count": file_count,
         "byte_count": byte_count,
         "version_file": version_file,
@@ -443,14 +436,7 @@ def resolve_locked_experience(lock: Mapping[str, Any], isaaclab_source: Path) ->
 
 
 def resolve_locked_environment_lock(lock_path: Path, lock: Mapping[str, Any]) -> Path:
-    """Resolve the repository-level dependency lock bound by a runtime lock.
-
-    Runtime profiles are checked in at ``<repository>/config/*.json``.  The
-    environment lock path is deliberately repository-relative so a clone can
-    move as a unit without rewriting machine-specific paths.  Resolution is
-    constrained to that repository root and never permits an absolute or
-    escaping path.
-    """
+    """Resolve the repository-level dependency lock bound by a runtime lock."""
 
     runtime_path = Path(lock_path).expanduser().resolve()
     repository_root = runtime_path.parent.parent
@@ -481,12 +467,7 @@ def locked_launcher_kwargs(lock: Mapping[str, Any], isaaclab_source: Path) -> di
 
 
 def validate_locked_launcher_environment(lock: Mapping[str, Any]) -> None:
-    """Reject environment variables AppLauncher cannot override safely.
-
-    ``xr=False`` does not override ``XR=1`` in IsaacLab 2.3.2.  The remaining
-    locked launch arguments are explicitly passed, so their ambient values are
-    recorded by the process but cannot change the resolved launcher state.
-    """
+    """Reject environment variables AppLauncher cannot override safely."""
 
     launcher = lock["launcher"]
     xr = os.environ.get("XR", "0")
@@ -541,15 +522,15 @@ def observe_live_simulation(lock: Mapping[str, Any], sim: Any) -> dict[str, Any]
         "physics_dt_s": float(sim.get_physics_dt()),
         "rendering_dt_s": float(sim.get_rendering_dt()),
         "gravity_w_mps2": gravity,
-        "render_interval": int(round(float(sim.get_rendering_dt()) / float(sim.get_physics_dt()))),
+        "render_interval": round(float(sim.get_rendering_dt()) / float(sim.get_physics_dt())),
         "use_fabric": bool(sim.is_fabric_enabled()),
         "enable_scene_query_support": bool(sim.cfg.enable_scene_query_support),
         "rendering_mode": sim.carb_settings.get("/isaaclab/rendering/rendering_mode"),
         "rtx_sensors_active": bool(sim.has_rtx_sensors()),
         "config_digests": {
-            "render": config_sha256(render_settings),
-            "fabric": config_sha256(fabric_settings),
-            "physx": config_sha256(physx_settings),
+            "render": config_identity(render_settings),
+            "fabric": config_identity(fabric_settings),
+            "physx": config_identity(physx_settings),
         },
         "configuration_observation": "public_simulation_context_and_locked_cfg",
     }
@@ -589,10 +570,10 @@ def compare_live_simulation(
         mismatch("$.launcher.rendering_mode", lock["launcher"]["rendering_mode"], observed.get("rendering_mode"))
     observed_digests = observed.get("config_digests", {})
     for name, payload in simulation["config_digests"].items():
-        if observed_digests.get(name) != payload["sha256"]:
+        if observed_digests.get(name) != payload["identity"]:
             mismatch(
-                f"$.simulation.config_digests.{name}.sha256",
-                payload["sha256"],
+                f"$.simulation.config_digests.{name}.identity",
+                payload["identity"],
                 observed_digests.get(name),
             )
     return tuple(issues)
@@ -638,18 +619,18 @@ def observe_runtime(
         "launcher": {
             "experience": {
                 "path": str(lock["launcher"]["experience"]["path"]),
-                "sha256": sha256_file(experience) if experience.is_file() else None,
+                "identity": identity_file(experience) if experience.is_file() else None,
             },
             "isaaclab_source_path_matches": source_root == expected_source,
         },
         "gpu": {"devices": gpus, "probe_error": gpu_error},
         "assets": {
-            "city_lite_contract_sha256": sha256_file(scene_contract.resolve()) if scene_contract.is_file() else None,
-            "cf2x_usd_sha256": sha256_file(cf2x_usd.resolve()) if cf2x_usd.is_file() else None,
+            "city_lite_contract_identity": identity_file(scene_contract.resolve()) if scene_contract.is_file() else None,
+            "cf2x_usd_identity": identity_file(cf2x_usd.resolve()) if cf2x_usd.is_file() else None,
         },
         "environment_lock": {
             "repository_relative_path": lock["environment_lock"]["repository_relative_path"],
-            "sha256": environment_lock_sha256(environment_lock) if environment_lock is not None and environment_lock.is_file() else None,
+            "identity": environment_lock_identity(environment_lock) if environment_lock is not None and environment_lock.is_file() else None,
         },
     }
 
@@ -693,9 +674,9 @@ def compare_runtime(lock: Mapping[str, Any], observed: Mapping[str, Any]) -> tup
         launcher_observed.get("experience", {}).get("path"),
     )
     exact(
-        "$.launcher.experience.sha256",
-        lock["launcher"]["experience"]["sha256"],
-        launcher_observed.get("experience", {}).get("sha256"),
+        "$.launcher.experience.identity",
+        lock["launcher"]["experience"]["identity"],
+        launcher_observed.get("experience", {}).get("identity"),
     )
     for key, expected in lock["assets"].items():
         exact(f"$.assets.{key}", expected, observed.get("assets", {}).get(key))
@@ -706,9 +687,9 @@ def compare_runtime(lock: Mapping[str, Any], observed: Mapping[str, Any]) -> tup
         environment_observed.get("repository_relative_path"),
     )
     exact(
-        "$.environment_lock.sha256",
-        lock["environment_lock"]["sha256"],
-        environment_observed.get("sha256"),
+        "$.environment_lock.identity",
+        lock["environment_lock"]["identity"],
+        environment_observed.get("identity"),
     )
     gpu_lock = lock["gpu"]
     devices = observed.get("gpu", {}).get("devices", [])
@@ -745,7 +726,7 @@ def audit_runtime_lock(
         "schema": RUNTIME_AUDIT_SCHEMA,
         "status": "passed" if not issues else "failed",
         "profile_id": lock["profile_id"],
-        "runtime_lock_sha256": runtime_lock_sha256(lock),
+        "runtime_lock_identity": runtime_lock_identity(lock),
         "configuration_observation": RUNTIME_AUDIT_OBSERVATION,
         "observed": observed,
         "issues": [issue.__dict__ for issue in issues],

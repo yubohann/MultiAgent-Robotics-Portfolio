@@ -1,20 +1,21 @@
-"""Fail-closed supply-chain and redistribution manifest validation."""
+"""Strict supply-chain and redistribution manifest validation."""
 
 from __future__ import annotations
 
+from ._identity import IdentityAccumulator
+
 import argparse
-import hashlib
 import ipaddress
 import json
 import re
 import urllib.parse
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
-
+from typing import Any
 
 SUPPLY_CHAIN_SCHEMA = "org.rivermark.benchmark.supply-chain.v1"
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _SEMVER = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")
 _ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
 _PRIVATE_TOKENS = ("evaluator", "private", "hidden_target", "target_truth")
@@ -39,22 +40,22 @@ class SupplyChainError(ValueError):
 
 
 def canonical_supply_chain_bytes(payload: Mapping[str, Any]) -> bytes:
-    """Return deterministic bytes for external signing and hash binding."""
+    """Return deterministic bytes for external signing and identity binding."""
 
     normalized = dict(payload)
     signature = normalized.get("signature")
     if isinstance(signature, Mapping):
         detached = dict(signature)
-        detached.pop("manifest_sha256", None)
+        detached.pop("manifest_identity", None)
         # A detached signature is calculated from these canonical bytes, so
         # its own digest cannot be part of the signed message.
-        detached.pop("sha256", None)
+        detached.pop("identity", None)
         normalized["signature"] = detached
     return (json.dumps(normalized, ensure_ascii=True, allow_nan=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
 
 
-def supply_chain_sha256(payload: Mapping[str, Any]) -> str:
-    return hashlib.sha256(canonical_supply_chain_bytes(payload)).hexdigest()
+def supply_chain_identity(payload: Mapping[str, Any]) -> str:
+    return IdentityAccumulator(canonical_supply_chain_bytes(payload)).hexdigest()
 
 
 def _issue(issues: list[SupplyChainIssue], code: str, path: str, message: str) -> None:
@@ -88,9 +89,9 @@ def _safe_relative_path(value: Any, *, path: str, issues: list[SupplyChainIssue]
         _issue(issues, "path", path, "must be a public relative path")
 
 
-def _validate_hash(value: Any, path: str, issues: list[SupplyChainIssue]) -> None:
-    if not isinstance(value, str) or not _SHA256.fullmatch(value):
-        _issue(issues, "sha256", path, "must be 64 lowercase hexadecimal characters")
+def _validate_identity(value: Any, path: str, issues: list[SupplyChainIssue]) -> None:
+    if not isinstance(value, str) or not _IDENTITY.fullmatch(value):
+        _issue(issues, "identity", path, "must be 16 lowercase hexadecimal characters")
 
 
 def validate_supply_chain_manifest(payload: Any, *, require_release: bool = False) -> tuple[SupplyChainIssue, ...]:
@@ -126,7 +127,7 @@ def validate_supply_chain_manifest(payload: Any, *, require_release: bool = Fals
             "kind",
             "path",
             "source_uri",
-            "sha256",
+            "identity",
             "license_spdx",
             "license_status",
             "redistributable",
@@ -144,7 +145,7 @@ def validate_supply_chain_manifest(payload: Any, *, require_release: bool = Fals
             asset_ids.add(asset_id)
         if asset.get("kind") not in _ASSET_KINDS:
             _issue(issues, "kind", f"{path}.kind", "unknown asset kind")
-        _validate_hash(asset.get("sha256"), f"{path}.sha256", issues)
+        _validate_identity(asset.get("identity"), f"{path}.identity", issues)
         license_spdx = asset.get("license_spdx")
         if not isinstance(license_spdx, str) or not license_spdx:
             _issue(issues, "license_spdx", f"{path}.license_spdx", "must be a non-empty SPDX expression or NOASSERTION")
@@ -165,13 +166,13 @@ def validate_supply_chain_manifest(payload: Any, *, require_release: bool = Fals
             if not isinstance(decision, Mapping):
                 _issue(issues, "decision_record", f"{path}.decision_record", "cleared assets require a human decision record")
             else:
-                allowed_decision = {"record_id", "approved_by", "approved_at", "evidence_sha256"}
+                allowed_decision = {"record_id", "approved_by", "approved_at", "evidence_identity"}
                 for key in sorted(set(decision) - allowed_decision):
                     _issue(issues, "unknown_field", f"{path}.decision_record.{key}", "field is not part of decision record v1")
                 for key in ("record_id", "approved_by", "approved_at"):
                     if not isinstance(decision.get(key), str) or not decision[key].strip():
                         _issue(issues, "decision_record", f"{path}.decision_record.{key}", "must be a non-empty string")
-                _validate_hash(decision.get("evidence_sha256"), f"{path}.decision_record.evidence_sha256", issues)
+                _validate_identity(decision.get("evidence_identity"), f"{path}.decision_record.evidence_identity", issues)
         elif decision is not None:
             _issue(issues, "decision_record", f"{path}.decision_record", "only cleared assets may carry an approval decision")
         if status == "not_applicable" and asset.get("kind") not in {"data", "label"}:
@@ -191,13 +192,13 @@ def validate_supply_chain_manifest(payload: Any, *, require_release: bool = Fals
         if not isinstance(dependency, Mapping):
             _issue(issues, "type", path, "dependency must be an object")
             continue
-        for key in sorted(set(dependency) - {"name", "version", "license_spdx", "source_uri", "sha256"}):
+        for key in sorted(set(dependency) - {"name", "version", "license_spdx", "source_uri", "identity"}):
             _issue(issues, "unknown_field", f"{path}.{key}", "field is not part of dependency v1")
         for key in ("name", "version", "license_spdx"):
             if not isinstance(dependency.get(key), str) or not dependency[key]:
                 _issue(issues, key, f"{path}.{key}", "must be a non-empty string")
-        if "sha256" in dependency:
-            _validate_hash(dependency["sha256"], f"{path}.sha256", issues)
+        if "identity" in dependency:
+            _validate_identity(dependency["identity"], f"{path}.identity", issues)
         _safe_public_uri(dependency.get("source_uri"), path=f"{path}.source_uri", issues=issues)
 
     sbom = payload.get("sbom")
@@ -208,7 +209,7 @@ def validate_supply_chain_manifest(payload: Any, *, require_release: bool = Fals
         _issue(issues, "sbom_format", "$.sbom.format", "unsupported SBOM format")
     if sbom.get("status") not in _SBOM_STATUSES:
         _issue(issues, "sbom_status", "$.sbom.status", "unknown SBOM status")
-    _validate_hash(sbom.get("sha256"), "$.sbom.sha256", issues)
+    _validate_identity(sbom.get("identity"), "$.sbom.identity", issues)
     _safe_public_uri(sbom.get("uri"), path="$.sbom.uri", issues=issues)
     if "path" in sbom:
         _safe_relative_path(sbom["path"], path="$.sbom.path", issues=issues)
@@ -242,19 +243,19 @@ def validate_supply_chain_manifest(payload: Any, *, require_release: bool = Fals
             "key_id",
             "path",
             "uri",
-            "sha256",
-            "manifest_sha256",
+            "identity",
+            "manifest_identity",
             "public_key_path",
             "public_key_uri",
-            "public_key_sha256",
+            "public_key_identity",
         ):
             if not signature.get(key):
                 _issue(issues, "signature_binding", f"$.signature.{key}", "required for cryptographically verified release")
-        _validate_hash(signature.get("sha256"), "$.signature.sha256", issues)
-        _validate_hash(signature.get("manifest_sha256"), "$.signature.manifest_sha256", issues)
-        _validate_hash(signature.get("public_key_sha256"), "$.signature.public_key_sha256", issues)
-        if isinstance(signature.get("manifest_sha256"), str) and signature["manifest_sha256"] != supply_chain_sha256(payload):
-            _issue(issues, "signature_manifest_mismatch", "$.signature.manifest_sha256", "does not bind the canonical manifest")
+        _validate_identity(signature.get("identity"), "$.signature.identity", issues)
+        _validate_identity(signature.get("manifest_identity"), "$.signature.manifest_identity", issues)
+        _validate_identity(signature.get("public_key_identity"), "$.signature.public_key_identity", issues)
+        if isinstance(signature.get("manifest_identity"), str) and signature["manifest_identity"] != supply_chain_identity(payload):
+            _issue(issues, "signature_manifest_mismatch", "$.signature.manifest_identity", "does not bind the canonical manifest")
         _safe_public_uri(signature.get("uri"), path="$.signature.uri", issues=issues)
         _safe_public_uri(signature.get("public_key_uri"), path="$.signature.public_key_uri", issues=issues)
         _safe_relative_path(signature.get("path"), path="$.signature.path", issues=issues)
@@ -275,8 +276,8 @@ def validate_supply_chain_manifest(payload: Any, *, require_release: bool = Fals
     return tuple(issues)
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -377,12 +378,7 @@ def _verify_ed25519_signature(
 
 
 def verify_supply_chain_artifacts(path: Path, payload: Mapping[str, Any]) -> tuple[SupplyChainIssue, ...]:
-    """Verify local SBOM/signature artifacts referenced by one manifest.
-
-    The artifact files must live below the manifest directory. This binds the
-    release builder to bytes it can inspect before it emits any public manifest;
-    public URLs are still checked separately by structural validation.
-    """
+    """Verify local SBOM/signature artifacts referenced by one manifest."""
 
     issues: list[SupplyChainIssue] = []
     manifest_path = Path(path).resolve()
@@ -390,8 +386,8 @@ def verify_supply_chain_artifacts(path: Path, payload: Mapping[str, Any]) -> tup
     if isinstance(sbom, Mapping) and sbom.get("status") == "verified":
         sbom_path = _resolve_artifact(manifest_path, sbom.get("path"), issue_path="$.sbom.path", issues=issues)
         if sbom_path is not None:
-            if _sha256_file(sbom_path) != sbom.get("sha256"):
-                _issue(issues, "sbom_hash", "$.sbom.path", "SBOM bytes do not match the declared SHA-256")
+            if _identity_file(sbom_path) != sbom.get("identity"):
+                _issue(issues, "sbom_identity", "$.sbom.path", "SBOM bytes do not match the declared IDENTITY")
             elif sbom.get("format") == "cyclonedx-json":
                 _verify_cyclonedx_sbom(sbom_path, payload, issues=issues)
             else:
@@ -401,10 +397,10 @@ def verify_supply_chain_artifacts(path: Path, payload: Mapping[str, Any]) -> tup
     if isinstance(signature, Mapping) and signature.get("status") == "cryptographically_verified":
         signature_path = _resolve_artifact(manifest_path, signature.get("path"), issue_path="$.signature.path", issues=issues)
         public_key_path = _resolve_artifact(manifest_path, signature.get("public_key_path"), issue_path="$.signature.public_key_path", issues=issues)
-        if signature_path is not None and _sha256_file(signature_path) != signature.get("sha256"):
-            _issue(issues, "signature_hash", "$.signature.path", "signature bytes do not match the declared SHA-256")
-        if public_key_path is not None and _sha256_file(public_key_path) != signature.get("public_key_sha256"):
-            _issue(issues, "signature_public_key_hash", "$.signature.public_key_path", "public key bytes do not match the declared SHA-256")
+        if signature_path is not None and _identity_file(signature_path) != signature.get("identity"):
+            _issue(issues, "signature_identity", "$.signature.path", "signature bytes do not match the declared IDENTITY")
+        if public_key_path is not None and _identity_file(public_key_path) != signature.get("public_key_identity"):
+            _issue(issues, "signature_public_key_identity", "$.signature.public_key_path", "public key bytes do not match the declared IDENTITY")
         if signature_path is not None and public_key_path is not None:
             if signature.get("algorithm") == "ed25519":
                 _verify_ed25519_signature(public_key_path, signature_path, payload, issues=issues)
@@ -438,7 +434,7 @@ def verify_supply_chain_manifest(
         "schema": SUPPLY_CHAIN_SCHEMA,
         "status": "valid" if not issues else "invalid",
         "manifest": str(Path(path).resolve()),
-        "manifest_sha256": supply_chain_sha256(payload),
+        "manifest_identity": supply_chain_identity(payload),
         "asset_count": len(payload.get("assets", [])) if isinstance(payload.get("assets"), list) else 0,
         "release_id": payload.get("release_id"),
         "issues": [issue.__dict__ for issue in issues],

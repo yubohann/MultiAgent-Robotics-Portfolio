@@ -8,16 +8,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from aerocity_method.adapters.hm3d_baselines import PublicSearchState
-from aerocity_method.contracts.io import finite_number, require_identifier, require_sha256
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.contracts.models import CandidateFragmentManifest
-from aerocity_method.contracts.privacy import walk_public_payload
 
 GVP_MREP_PORT_ID = "gvp_mrep_port"
 GVP_MREP_PORT_SCHEMA_VERSION = "hm3d-gvp-mrep-controlled-transfer-v4"
 GVP_MREP_AUTHOR_COMMIT = "f5865b9c9c39e9d85095555f3e04b4fa349fce40"
-GVP_MREP_GRAPH_PARTITION_SHA256 = (
-    "9eb02ce91f6e49184b224649ab6d6563139a82de58031ba5a60797ff36cbc846"
-)
+GVP_MREP_GRAPH_PARTITION_ID = "gvp-mrep-author-graph-partition-v1"
 GVP_DISTANCE_DECAY_LAMBDA = 0.2
 GVP_FRONTIER_ALLOWANCE = 0.1
 GVP_JOB_DELAY_TAU = 0.3
@@ -184,7 +181,7 @@ def _predicted_connected_fraction(
 class GVPPortSelection:
     """Auditable output of the graph-Voronoi controlled transfer."""
 
-    selected_manifest_hash: str
+    selected_manifest_id: str
     selected_candidate_id: str
     scores: tuple[tuple[str, float], ...]
     selected_diagnostics: dict[str, object]
@@ -193,14 +190,13 @@ class GVPPortSelection:
     def __post_init__(self) -> None:
         if self.schema_version != GVP_MREP_PORT_SCHEMA_VERSION:
             raise ValueError("GVP-port selection schema mismatch")
-        require_sha256(self.selected_manifest_hash, "selected_manifest_hash")
+        require_identifier(self.selected_manifest_id, "selected_manifest_id")
         require_identifier(self.selected_candidate_id, "selected_candidate_id")
         if not self.scores:
             raise ValueError("GVP-port selection needs candidate scores")
         for candidate_id, score in self.scores:
             require_identifier(candidate_id, "candidate_id")
             finite_number(score, "GVP-port score")
-        walk_public_payload(self.to_dict())
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -210,9 +206,9 @@ class GVPPortSelection:
             "author_source": {
                 "repository": "https://github.com/NKU-MobFly-Robotics/GVP-MREP",
                 "commit": GVP_MREP_AUTHOR_COMMIT,
-                "graph_partition_sha256": GVP_MREP_GRAPH_PARTITION_SHA256,
+                "graph_partition_file_id": GVP_MREP_GRAPH_PARTITION_ID,
             },
-            "selected_manifest_hash": self.selected_manifest_hash,
+            "selected_manifest_id": self.selected_manifest_id,
             "selected_candidate_id": self.selected_candidate_id,
             "scores": [list(row) for row in self.scores],
             "selected_diagnostics": self.selected_diagnostics,
@@ -364,7 +360,7 @@ def _score_candidate(
             "GVP-MREP GraphVoronoiPartition::GetBestTarget at commit "
             f"{GVP_MREP_AUTHOR_COMMIT}, graph_partition.cpp lines 786-822"
         ),
-        "author_graph_partition_sha256": GVP_MREP_GRAPH_PARTITION_SHA256,
+        "author_graph_partition_file_id": GVP_MREP_GRAPH_PARTITION_ID,
     }
     return score, diagnostics
 
@@ -384,7 +380,7 @@ def select_gvp_mrep_port(
         key=lambda row: (row[1], row[0].candidate_id),
     )
     selection = GVPPortSelection(
-        selected_manifest_hash=selected.manifest_hash,
+        selected_manifest_id=selected.manifest_id,
         selected_candidate_id=selected.candidate_id,
         scores=tuple(sorted((row.candidate_id, score) for row, score, _ in scored)),
         selected_diagnostics=diagnostics,
@@ -396,7 +392,7 @@ __all__ = [
     "GVP_MREP_PORT_ID",
     "GVP_MREP_PORT_SCHEMA_VERSION",
     "GVP_MREP_AUTHOR_COMMIT",
-    "GVP_MREP_GRAPH_PARTITION_SHA256",
+    "GVP_MREP_GRAPH_PARTITION_ID",
     "GVPPortSelection",
     "select_gvp_mrep_port",
 ]

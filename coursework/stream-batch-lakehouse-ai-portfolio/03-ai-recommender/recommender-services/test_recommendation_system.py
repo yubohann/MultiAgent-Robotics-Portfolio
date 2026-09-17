@@ -2,7 +2,6 @@ import unittest
 import sys
 import os
 import pandas as pd
-import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -204,8 +203,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
         
         try:
             from recommendation_algorithms import (
-                Product, UserProfile, ContentBasedRecommender,
-                ItemBasedCFRecommender, HybridRecommender
+                Product, UserProfile
             )
             print("✅ 推荐算法模块导入成功")
             
@@ -231,7 +229,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
         
         try:
             from recommendation_algorithms import (
-                Product, UserProfile, ContentBasedRecommender, get_sample_products
+                UserProfile, ContentBasedRecommender, get_sample_products
             )
             
             products = get_sample_products()
@@ -265,7 +263,7 @@ class TestRecommendationAlgorithms(unittest.TestCase):
         
         try:
             from recommendation_algorithms import (
-                Product, UserProfile, HybridRecommender, get_sample_products
+                UserProfile, HybridRecommender, get_sample_products
             )
             
             products = get_sample_products()

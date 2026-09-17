@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-import hashlib
 import http.server
 import json
 import sys
 import tempfile
 import threading
-import urllib.request
 import unittest
+import urllib.request
 from pathlib import Path
+from typing import ClassVar
 from unittest.mock import patch
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from rivermark_benchmark._identity import IdentityAccumulator
 from rivermark_benchmark.release_manifest import (
     DownloadError,
     ReleaseManifestError,
@@ -28,8 +28,8 @@ from rivermark_benchmark.release_manifest import (
 )
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def _identity(path: Path) -> str:
+    return IdentityAccumulator(path.read_bytes()).hexdigest()
 
 
 def _manifest(source: Path) -> dict:
@@ -52,8 +52,8 @@ def _manifest(source: Path) -> dict:
                 "path": "validation/episode-001/rgb.bin",
                 "url": source.as_uri(),
                 "size_bytes": source.stat().st_size,
-                "sha256": _sha256(source),
-                "source_capture_sha256": "b" * 64,
+                "identity": _identity(source),
+                "source_capture_identity": "b" * 16,
             }
         ],
     }
@@ -71,7 +71,7 @@ class ReleaseManifestTests(unittest.TestCase):
                 "shard_id": shard["shard_id"],
                 "episode_id": shard["episode_id"],
                 "path": shard["path"],
-                "original_sha256": shard["sha256"],
+                "original_identity": shard["identity"],
             }],
             "version_bump_policy": "patch",
             "deprecation_window": {"grace_releases": 0, "replacement_required": True},
@@ -104,13 +104,13 @@ class ReleaseManifestTests(unittest.TestCase):
             with self.assertRaises(ReleaseManifestError):
                 download_shards(manifest_path, root / "download")
 
-    def test_defect_index_rejects_stale_hash_and_private_path(self) -> None:
+    def test_defect_index_rejects_stale_identity_and_private_path(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.bin"
             source.write_bytes(b"x")
             payload = _manifest(source)
             defect = self._withdrawn_defect(payload)
-            defect["affected_shards"][0]["original_sha256"] = "c" * 64
+            defect["affected_shards"][0]["original_identity"] = "c" * 16
             defect["affected_shards"][0]["path"] = "private/evaluator.bin"
             payload["defects"] = [defect]
             codes = {issue.code for issue in validate_release_manifest(payload)}
@@ -141,7 +141,7 @@ class ReleaseManifestTests(unittest.TestCase):
             self.assertEqual(plan["shard_count"], 1)
             self.assertEqual(plan["total_bytes"], source.stat().st_size)
             self.assertFalse(cache.exists())
-            self.assertEqual(plan["shards"][0]["sha256"], _sha256(source))
+            self.assertEqual(plan["shards"][0]["identity"], _identity(source))
 
     def test_frame_range_selects_only_complete_pre_sharded_ranges(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -156,7 +156,7 @@ class ReleaseManifestTests(unittest.TestCase):
             with self.assertRaises(ReleaseManifestError):
                 select_shards(payload, frame_start=20, frame_end=20)
 
-    def test_frame_range_download_is_hash_bound_and_does_not_slice(self) -> None:
+    def test_frame_range_download_is_identity_bound_and_does_not_slice(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "source.bin"
@@ -200,7 +200,7 @@ class ReleaseManifestTests(unittest.TestCase):
             payload["shards"][0]["path"] = "validation//episode/rgb.bin"
             self.assertIn("unsafe_path", {issue.code for issue in validate_release_manifest(payload)})
 
-    def test_download_is_hash_bound_and_idempotent(self) -> None:
+    def test_download_is_identity_bound_and_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "source.bin"
@@ -248,9 +248,9 @@ class ReleaseManifestTests(unittest.TestCase):
             source.write_bytes(b"0123456789abcdef")
 
             class RangeHandler(http.server.BaseHTTPRequestHandler):
-                requests: list[tuple[str, str | None]] = []
+                requests: ClassVar[list[tuple[str, str | None]]] = []
 
-                def do_GET(self) -> None:  # noqa: N802
+                def do_GET(self) -> None:
                     RangeHandler.requests.append((self.path, self.headers.get("Range")))
                     body = source.read_bytes()
                     value = self.headers.get("Range")
@@ -302,7 +302,7 @@ class ReleaseManifestTests(unittest.TestCase):
                 # A wrong start offset must not be appended. The downloader
                 # retries from byte zero and verifies the complete object.
                 class WrongRangeHandler(RangeHandler):
-                    def do_GET(self) -> None:  # noqa: N802
+                    def do_GET(self) -> None:
                         WrongRangeHandler.requests.append((self.path, self.headers.get("Range")))
                         body = source.read_bytes()
                         self.send_response(206 if self.headers.get("Range") else 200)
@@ -369,7 +369,7 @@ class ReleaseManifestTests(unittest.TestCase):
                     "path": "manifests/failure_ledger.jsonl",
                     "url": ledger.as_uri(),
                     "size_bytes": ledger.stat().st_size,
-                    "sha256": _sha256(ledger),
+                    "identity": _identity(ledger),
                     "schema": "org.rivermark.benchmark.failure-ledger.v1",
                     "media_type": "application/x-ndjson",
                     "compression": "none",
@@ -382,7 +382,7 @@ class ReleaseManifestTests(unittest.TestCase):
                     "quarantined_count": 0,
                     "failed_count": 0,
                     "failure_categories": {},
-                    "attempt_ids_sha256": "a" * 64,
+                    "attempt_ids_identity": "a" * 16,
                 },
             }
             self.assertEqual(validate_release_manifest(payload), ())
@@ -409,7 +409,7 @@ class ReleaseManifestTests(unittest.TestCase):
                     "path": "manifests/failure_ledger.jsonl",
                     "url": "https://example.org/rivermark/failure_ledger.jsonl",
                     "size_bytes": 1,
-                    "sha256": "a" * 64,
+                    "identity": "a" * 16,
                     "schema": "org.rivermark.benchmark.failure-ledger.v1",
                     "media_type": "application/x-ndjson",
                 },
@@ -420,7 +420,7 @@ class ReleaseManifestTests(unittest.TestCase):
                     "quarantined_count": 1,
                     "failed_count": 0,
                     "failure_categories": {},
-                    "attempt_ids_sha256": "a" * 64,
+                    "attempt_ids_identity": "a" * 16,
                 },
             }
             self.assertIn(
@@ -439,7 +439,7 @@ class ReleaseManifestTests(unittest.TestCase):
                     "path": "manifests/failure_ledger.jsonl",
                     "url": "https://example.org/rivermark/failure_ledger.jsonl",
                     "size_bytes": 1,
-                    "sha256": "a" * 64,
+                    "identity": "a" * 16,
                     "schema": "org.rivermark.benchmark.failure-ledger.v1",
                     "media_type": "application/x-ndjson",
                 },
@@ -450,7 +450,7 @@ class ReleaseManifestTests(unittest.TestCase):
                     "quarantined_count": 0,
                     "failed_count": 0,
                     "failure_categories": {},
-                    "attempt_ids_sha256": "a" * 64,
+                    "attempt_ids_identity": "a" * 16,
                 },
             }
             self.assertIn(

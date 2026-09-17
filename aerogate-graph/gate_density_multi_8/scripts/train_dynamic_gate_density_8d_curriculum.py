@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, replace
 import argparse
 import csv
 import json
 import math
 import os
-from pathlib import Path
-import random
 import sys
-from typing import Iterable
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass, replace
+from pathlib import Path
 
 import numpy as np
 
@@ -25,21 +24,24 @@ def _bootstrap_shared_imports() -> None:
 
 _bootstrap_shared_imports()
 
-from shared.core.dynamic_gate_density_2d import (  # noqa: E402
+from shared.core.dynamic_gate_density_2d import (
     DynamicGate2D as SharedGate,
+)
+from shared.core.dynamic_gate_density_2d import (
     default_dynamic_gate_density_config,
     drone_accel_limit_for_speed_mps2,
     eval_drone_speed_axis_mps,
-    gate_posts as shared_gate_posts,
     generate_gate_layout,
-    gate_gate_clearance_stats,
-    live_gate_centers as shared_live_gate_centers,
-    live_gate_velocities,
     post_clearance,
     speed_gradient_for_stage,
     swept_post_clearance,
 )
-
+from shared.core.dynamic_gate_density_2d import (
+    gate_posts as shared_gate_posts,
+)
+from shared.core.dynamic_gate_density_2d import (
+    live_gate_centers as shared_live_gate_centers,
+)
 
 DGD_CONFIG = default_dynamic_gate_density_config()
 TEAM_SIZE = 8
@@ -90,7 +92,7 @@ class ControllerParams:
     guidance_speed_bias: float = 0.12
     formation_scale: float = 0.72
 
-    def clipped(self) -> "ControllerParams":
+    def clipped(self) -> ControllerParams:
         return ControllerParams(
             base_speed_mps=float(np.clip(self.base_speed_mps, 1.35, 3.50)),
             slot_gain=float(np.clip(self.slot_gain, 0.35, 1.45)),
@@ -173,12 +175,6 @@ def generate_gates(gate_count: int, seed: int) -> list[SharedGate]:
     return generate_gate_layout(gate_count=int(gate_count), seed=int(seed), config=DGD_CONFIG)
 
 
-def _moving_gate_speed_hz(amplitude_m: float, speed_mps: float) -> float:
-    if amplitude_m <= 1e-6 or speed_mps <= 1e-6:
-        return 0.0
-    return float(min(MAX_MOVING_GATE_SPEED_MPS, speed_mps) / max(2.0 * math.pi * amplitude_m, 1e-6))
-
-
 def live_gate_centers(gates: list[SharedGate], *, t_sec: float, amplitude_m: float, speed_mps: float) -> np.ndarray:
     return shared_live_gate_centers(
         gates,
@@ -207,38 +203,6 @@ def _pair_min_distance(points: np.ndarray) -> float:
 def _obstacle_clearance(positions: np.ndarray, posts: np.ndarray) -> float:
     return post_clearance(positions, posts, config=DGD_CONFIG)
 
-
-def _post_velocity_estimate(
-    gates: list[SharedGate],
-    *,
-    t_sec: float,
-    amplitude_m: float,
-    speed_mps: float,
-) -> np.ndarray:
-    centers_a = live_gate_centers(gates, t_sec=t_sec, amplitude_m=amplitude_m, speed_mps=speed_mps)
-    centers_b = live_gate_centers(gates, t_sec=t_sec + DT_S, amplitude_m=amplitude_m, speed_mps=speed_mps)
-    posts_a = gate_posts(gates, centers_a)
-    posts_b = gate_posts(gates, centers_b)
-    if len(posts_a) == 0:
-        return np.zeros((0, 2), dtype=np.float32)
-    return (posts_b - posts_a) / DT_S
-
-
-def _center_velocity_estimate(
-    gates: list[SharedGate],
-    *,
-    t_sec: float,
-    amplitude_m: float,
-    speed_mps: float,
-) -> np.ndarray:
-    return live_gate_velocities(
-        gates,
-        t_sec=float(t_sec),
-        dt_s=DT_S,
-        amplitude_m=float(amplitude_m),
-        speed_mps=float(speed_mps),
-        config=DGD_CONFIG,
-    )
 
 
 def _risk_guidance(
@@ -342,7 +306,7 @@ def _adaptive_formation_offsets(
     weighted_y = 0.0
     weight_sum = 0.0
     deformation = 0.0
-    for idx, (gate, center) in enumerate(zip(gates, centers)):
+    for idx, (gate, center) in enumerate(zip(gates, centers, strict=False)):
         if int(getattr(gate, "lane_index", 0)) != 0:
             continue
         dx = float(center[0] - team_center[0])
@@ -405,7 +369,7 @@ def _shield_adjustment(
             close = dist < 2.05
             if np.any(close):
                 rep = np.zeros(2, dtype=np.float32)
-                for d, r in zip(delta[close], dist[close]):
+                for d, r in zip(delta[close], dist[close], strict=False):
                     if float(r) <= 1e-6:
                         continue
                     strength = (2.05 - float(r)) / 2.05

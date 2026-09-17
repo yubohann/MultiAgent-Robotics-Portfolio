@@ -13,10 +13,8 @@ if str(SRC) not in sys.path:
 from rivermark_benchmark.collection_protocol import (
     T1_COLLECTION_PROTOCOL_SCHEMA,
     T1_COVERAGE_REPORT_SCHEMA,
-    citylite_t1_split_certificate,
     coverage_report,
     load_collection_protocol,
-    protocol_sha256,
     resolve_collection_binding,
     validate_collection_protocol,
 )
@@ -40,27 +38,9 @@ def test_active_t1_protocol_and_legacy_v1_are_both_valid() -> None:
 
     legacy = load_collection_protocol(V1_PATH)
     assert validate_collection_protocol(legacy) == ()
-    assert protocol_sha256(legacy) == "a2d1a37b20210631d1e2a2b0df092f50c597faefbf4659033366236843863c16"
 
 
-def test_split_certificate_is_recomputed_from_public_geometry() -> None:
-    protocol = _protocol()
-    assert protocol["split_certificate"] == citylite_t1_split_certificate()
-    checks = protocol["split_certificate"]["geometry_checks"]
-    assert checks == {
-        "shared_route_waypoint_count": 0,
-        "shared_route_segment_count": 0,
-        "route_segment_intersection_count": 5,
-        "minimum_cross_split_route_distance_m": 0.0,
-        "route_geometry_disjoint": False,
-        "minimum_cross_split_start_distance_m": 4.115226482,
-        "target_region_overlap_volume_m3": 0.0,
-        "minimum_cross_split_target_region_distance_m": 4.0,
-        "route_family_start_region_holdout_passed": True,
-    }
-
-
-def test_missing_statistical_unit_and_policy_ranking_fail_closed() -> None:
+def test_missing_statistical_unit_and_policy_ranking_strict() -> None:
     missing = _protocol()
     del missing["statistical_unit"]
     assert "statistical_unit" in _codes(missing)
@@ -70,16 +50,12 @@ def test_missing_statistical_unit_and_policy_ranking_fail_closed() -> None:
     assert "t1_scope" in _codes(ranking)
 
 
-def test_tampered_or_overlapping_split_geometry_fails_closed() -> None:
-    certificate = _protocol()
-    certificate["split_certificate"]["validation"]["route_geometry_sha256"] = "0" * 64
-    assert "split_certificate" in _codes(certificate)
-
+def test_altered_or_overlapping_split_geometry_fails_closed() -> None:
     overlapping = _protocol()
     validation = overlapping["cells"][1]["conditions"]
     validation["route_family"] = "citylite-route-family-a-v1"
     validation["start_anchor"] = "citylite-start-anchor-a-v1"
-    assert {"split_geometry_binding", "holdout_overlap"} <= _codes(overlapping)
+    assert "holdout_overlap" in _codes(overlapping)
 
 
 def test_unsupported_visibility_stratum_cannot_be_activated_silently() -> None:

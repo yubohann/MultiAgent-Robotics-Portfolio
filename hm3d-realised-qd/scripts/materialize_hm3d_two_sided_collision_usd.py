@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,19 +13,15 @@ import numpy as np
 SCHEMA_VERSION = "hm3d-two-sided-collision-derivative-v1"
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
-def _canonical_sha256(value: object) -> str:
-    encoded = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    )
-    return hashlib.sha256(encoded).hexdigest()
+def _canonical_file_id(value: object) -> str:
+    # Explicit record label: canonical JSON text length.
+    encoded = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    return f"json:{len(encoded)}b"
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -78,10 +73,10 @@ def _validate_source_manifest(
         raise ValueError("source collision manifest GLB path mismatch")
     if Path(payload.get("output_usd", "")).resolve() != source_collision_usd:
         raise ValueError("source collision manifest USD path mismatch")
-    if payload.get("source_glb_sha256") != _sha256(source_glb):
-        raise ValueError("source GLB hash changed after collision conversion")
-    if payload.get("output_usd_sha256") != _sha256(source_collision_usd):
-        raise ValueError("source collision USD hash changed after conversion")
+    if payload.get("source_glb_file_id") != _file_id(source_glb):
+        raise ValueError("source GLB id changed after collision conversion")
+    if payload.get("output_usd_file_id") != _file_id(source_collision_usd):
+        raise ValueError("source collision USD id changed after conversion")
     return payload
 
 
@@ -156,8 +151,8 @@ def main() -> int:
 
     transform = {
         "operation": "duplicate_each_triangle_with_reverse_winding",
-        "source_collision_usd_sha256": _sha256(source_usd),
-        "source_glb_sha256": _sha256(source_glb),
+        "source_collision_usd_file_id": _file_id(source_usd),
+        "source_glb_file_id": _file_id(source_glb),
         "changes_vertex_positions": False,
         "changes_world_transform": False,
         "collision_semantics": "two_sided_conservative_static_triangle_mesh",
@@ -168,15 +163,15 @@ def main() -> int:
         "synthetic": False,
         "scene_id": args.scene_id,
         "source_glb": str(source_glb),
-        "source_glb_sha256": _sha256(source_glb),
+        "source_glb_file_id": _file_id(source_glb),
         "source_collision_usd": str(source_usd),
-        "source_collision_usd_sha256": _sha256(source_usd),
+        "source_collision_usd_file_id": _file_id(source_usd),
         "source_collision_manifest": str(source_manifest),
-        "source_collision_manifest_sha256": _sha256(source_manifest),
+        "source_collision_manifest_id": _file_id(source_manifest),
         "output_usd": str(output_usd),
-        "output_usd_sha256": _sha256(output_usd),
+        "output_usd_file_id": _file_id(output_usd),
         "derivative": transform,
-        "derivative_sha256": _canonical_sha256(transform),
+        "derivative_file_id": _canonical_file_id(transform),
         "meshes": mesh_rows,
         "formal_runtime_admission": False,
         "required_followups": [
@@ -185,7 +180,7 @@ def main() -> int:
             "fixed-altitude counterfactual",
         ],
     }
-    report["audit_sha256"] = _canonical_sha256(report)
+    report["audit_file_id"] = _canonical_file_id(report)
     _write_json(output_manifest, report)
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0

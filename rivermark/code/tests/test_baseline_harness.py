@@ -11,7 +11,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.baseline_harness import (  # noqa: E402
+from rivermark_benchmark.baseline_harness import (
     BASELINE_SUITE_SCHEMA,
     BaselineConfigError,
     run_baseline_suite,
@@ -61,11 +61,11 @@ class BaselineHarnessTests(unittest.TestCase):
             self.assertEqual(report["passed_count"], 2)
             self.assertEqual(report["failed_count"], 0)
             self.assertFalse(report["formal_benchmark_admission"])
-            self.assertTrue(all("evaluator_truth_sha256" not in row.get("metrics", {}) for row in report["attempts"]))
+            self.assertTrue(all("evaluator_truth_identity" not in row.get("metrics", {}) for row in report["attempts"]))
             self.assertTrue(all(row["metrics"]["private_truth_digest_emitted"] is False for row in report["attempts"]))
-            self.assertEqual(verify_baseline_report(report_path)["config_sha256"], report["config_sha256"])
+            self.assertEqual(verify_baseline_report(report_path)["config_identity"], report["config_identity"])
             serialized = report_path.read_text(encoding="utf-8")
-            self.assertNotIn("evaluator_truth_sha256", serialized)
+            self.assertNotIn("evaluator_truth_identity", serialized)
             self.assertEqual(report_path.read_text(encoding="utf-8"), report_path.read_text(encoding="utf-8"))
 
     def test_existing_report_is_preserved_without_overwrite(self) -> None:
@@ -94,7 +94,7 @@ class BaselineHarnessTests(unittest.TestCase):
             self.assertEqual(report["failed_count"], 1)
             self.assertTrue(report_path.is_file())
 
-    def test_report_verifier_rejects_config_hash_tamper(self) -> None:
+    def test_report_verifier_rejects_config_identity_alter(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config_path = root / "config.json"
@@ -102,7 +102,7 @@ class BaselineHarnessTests(unittest.TestCase):
             config_path.write_text(json.dumps(_config()), encoding="utf-8")
             run_baseline_suite(config_path, report_path)
             report = json.loads(report_path.read_text(encoding="utf-8"))
-            report["config_sha256"] = "0" * 64
+            report["config_identity"] = "0" * 16
             report_path.write_text(json.dumps(report), encoding="utf-8")
             with self.assertRaises(ValueError):
                 verify_baseline_report(report_path)

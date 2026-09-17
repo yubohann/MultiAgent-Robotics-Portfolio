@@ -59,7 +59,7 @@ def main() -> int:
     train_scene_ids = training_scene_ids_from_split_manifest(split_payload)
     root = split_payload.get("payload", split_payload)
     assert isinstance(root, dict)
-    split_hash = str(root["split_manifest_sha256"])
+    split_id = str(root["split_manifest_id"])
     samples = tuple(
         sample
         for path in args.rollout
@@ -70,7 +70,7 @@ def main() -> int:
     )
     checkpoint, provenance = train_single_rl_baseline(
         samples,
-        split_manifest_sha256=split_hash,
+        split_manifest_id=split_id,
         updates=args.updates,
         hidden_dim=args.hidden_dim,
         seed=args.seed,

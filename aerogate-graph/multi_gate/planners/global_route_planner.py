@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import heapq
 import math
+from dataclasses import dataclass
 
 from multi_gate.configs.experiment_config import MultiGateEnvConfig, MultiPlannerConfig
 from shared.core.collision_2d import GateObstacleMap2D
-
 
 GridCell = tuple[int, int]
 

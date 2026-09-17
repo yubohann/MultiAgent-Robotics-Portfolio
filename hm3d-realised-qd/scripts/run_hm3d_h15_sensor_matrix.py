@@ -1,4 +1,4 @@
-"""Run every H15 sensor cell in a fresh Isaac process, then assemble P06."""
+"""Run every H15 sensor cell in a fresh Isaac process and index the rows."""
 
 from __future__ import annotations
 
@@ -12,8 +12,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from assemble_hm3d_h15_sensor_pilot import assemble  # noqa: E402
-
 from aerocity_method.contracts import FORMAL_FLEET_SIZE  # noqa: E402
 from aerocity_method.contracts.io import write_json_atomic  # noqa: E402
 from aerocity_method.runtime.sensors import FORMAL_H15_SENSOR_PILOT_MODES  # noqa: E402
@@ -26,8 +24,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--collision-usd", type=Path, required=True)
     parser.add_argument("--receiver-positions-json", type=Path, required=True)
     parser.add_argument("--rows-dir", type=Path, required=True)
-    parser.add_argument("--p06-output", type=Path, required=True)
-    parser.add_argument("--audit-output", type=Path, required=True)
+    parser.add_argument("--summary-output", type=Path, required=True)
     parser.add_argument("--ledger-output", type=Path, required=True)
     parser.add_argument("--steps", type=int, default=120)
     parser.add_argument("--physics-dt-s", type=float, default=1.0 / 120.0)
@@ -58,21 +55,16 @@ def main() -> int:
     runner = ROOT / "scripts" / "run_hm3d_h15_sensor_pilot.py"
     rows_dir = args.rows_dir.expanduser().resolve()
     rows_dir.mkdir(parents=True, exist_ok=True)
-    p06_output = args.p06_output.expanduser().resolve()
-    audit_output = args.audit_output.expanduser().resolve()
+    summary_output = args.summary_output.expanduser().resolve()
     ledger_output = args.ledger_output.expanduser().resolve()
-    if p06_output.exists() or audit_output.exists() or ledger_output.exists():
-        raise FileExistsError("refusing to overwrite H15 P06, audit, or ledger evidence")
+    if summary_output.exists() or ledger_output.exists():
+        raise FileExistsError("refusing to overwrite H15 summary or ledger")
 
     plan = tuple(FORMAL_H15_SENSOR_PILOT_MODES)
-    existing = [
-        path
-        for mode in plan
-        if (path := _row_path(rows_dir, mode)).exists()
-    ]
+    existing = [path for mode in plan if (path := _row_path(rows_dir, mode)).exists()]
     if existing and not args.resume:
         raise FileExistsError(
-            "formal H15 rows already exist; inspect them or pass --resume to continue"
+            "H15 rows already exist; inspect them or pass --resume to continue"
         )
     ledger_rows: list[dict[str, object]] = []
     for mode in plan:
@@ -147,29 +139,20 @@ def main() -> int:
         "schema_version": "hm3d-h15-matrix-ledger-v3",
         "status": "H15_MATRIX_COMPLETE",
         "completed_rows": ledger_rows,
-        "p06_output": str(p06_output),
-        "audit_output": str(audit_output),
+        "summary_output": str(summary_output),
     }
     write_json_atomic(ledger_output, ledger)
-    try:
-        payload, audit = assemble(
-            rows_dir,
-            "sparse_range_3d",
-            matrix_ledger=ledger,
-            matrix_ledger_path=ledger_output,
-        )
-        write_json_atomic(audit_output, audit)
-        write_json_atomic(p06_output, payload)
-    except BaseException:
-        audit_output.unlink(missing_ok=True)
-        p06_output.unlink(missing_ok=True)
-        raise
-    print(
-        json.dumps(
-            {"status": "H15_MATRIX_COMPLETE", "p06_output": str(p06_output)},
-            sort_keys=True,
-        )
+    write_json_atomic(
+        summary_output,
+        {
+            "schema_version": "hm3d-h15-sensor-summary-v1",
+            "status": "H15_SENSOR_MATRIX_COMPLETE",
+            "mode_rows": [
+                {"mode": mode, "output": str(_row_path(rows_dir, mode))} for mode in plan
+            ],
+        },
     )
+    print(json.dumps({"status": "H15_MATRIX_COMPLETE"}, sort_keys=True))
     return 0
 
 

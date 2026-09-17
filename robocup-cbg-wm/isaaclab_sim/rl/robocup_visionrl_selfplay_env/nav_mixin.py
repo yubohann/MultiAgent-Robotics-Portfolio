@@ -1,9 +1,23 @@
 from __future__ import annotations
 
-import math
 import heapq
+import math
 
 import numpy as np
+from robocup_visionrl_gym_env import (
+    BLUE_BASE_XY,
+    HALF_ARENA,
+    PUSHABLE_OBSTACLE_HALF,
+    ROBOT_LENGTH,
+    ROBOT_PUSHABLE_CLEARANCE_RADIUS,
+    ROBOT_RADIUS,
+    ROBOT_WIDTH,
+    YELLOW_BASE_XY,
+    active_base_armor_blockers,
+    segment_intersects_aabb,
+    shooting_range_limits,
+    wrap_angle,
+)
 
 from .constants import (
     BASE_ATTACK_STALE_STEP_LIMIT,
@@ -18,21 +32,7 @@ from .constants import (
     POST_HIT_RETREAT_SPEED,
     PUSH_INTENT_THRESHOLD,
     RECOVERY_CONFIDENCE_THRESHOLD,
-    TACTICAL_ACTION_LABELS
-)
-from robocup_visionrl_gym_env import (
-    BLUE_BASE_XY,
-    HALF_ARENA,
-    PUSHABLE_OBSTACLE_HALF,
-    ROBOT_LENGTH,
-    ROBOT_PUSHABLE_CLEARANCE_RADIUS,
-    ROBOT_RADIUS,
-    ROBOT_WIDTH,
-    YELLOW_BASE_XY,
-    active_base_armor_blockers,
-    segment_intersects_aabb,
-    shooting_range_limits,
-    wrap_angle
+    TACTICAL_ACTION_LABELS,
 )
 
 
@@ -443,7 +443,7 @@ class NavMixin:
         return goal_xy, True
     def _segment_blocked_for_nav(self, start_xy: np.ndarray, goal_xy: np.ndarray) -> bool:
         distance = float(np.linalg.norm(goal_xy - start_xy))
-        samples = max(2, int(math.ceil(distance / 0.06)))
+        samples = max(2, math.ceil(distance / 0.06))
         for index in range(1, samples + 1):
             alpha = index / samples
             point = start_xy * (1.0 - alpha) + goal_xy * alpha
@@ -481,7 +481,7 @@ class NavMixin:
                 ],
                 dtype=np.float32,
             )
-            return (int(round(float(clamped[0]) / resolution)), int(round(float(clamped[1]) / resolution)))
+            return (round(float(clamped[0]) / resolution), round(float(clamped[1]) / resolution))
         def to_point(key: tuple[int, int]) -> np.ndarray:
             return np.array(
                 [
@@ -501,8 +501,8 @@ class NavMixin:
         cache_key = (start_key, goal_key, obstacle_signature)
         if cache_key in self._path_cache:
             return self._path_cache[cache_key]
-        min_cell = int(math.floor(-limit / resolution))
-        max_cell = int(math.ceil(limit / resolution))
+        min_cell = math.floor(-limit / resolution)
+        max_cell = math.ceil(limit / resolution)
         open_heap: list[tuple[float, tuple[int, int]]] = []
         heapq.heappush(open_heap, (0.0, start_key))
         came_from: dict[tuple[int, int], tuple[int, int]] = {}
@@ -647,7 +647,7 @@ class NavMixin:
     def _route_distance_to(self, start_xy: np.ndarray, goal_xy: np.ndarray) -> float:
         resolution = 0.05
         def to_key(point: np.ndarray) -> tuple[int, int]:
-            return (int(round(float(point[0]) / resolution)), int(round(float(point[1]) / resolution)))
+            return (round(float(point[0]) / resolution), round(float(point[1]) / resolution))
         obstacle_signature = tuple(
             sorted((round(float(v[0]) / resolution), round(float(v[1]) / resolution)) for v in self.pushable_obstacles.values())
         )

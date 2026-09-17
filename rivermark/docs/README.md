@@ -1,8 +1,8 @@
 # Rivermark Documentation
 
-Rivermark is a benchmark toolchain for multi-agent 3D stealth-search research. Eight physically simulated CF2X vehicles search a procedurally generated city while sensors, state, actions, and provenance are recorded under cryptographic contracts.
+Rivermark is a benchmark toolchain for multi-agent 3D stealth-search research. Eight physically simulated CF2X vehicles search a procedurally generated city while sensors, state, actions, and provenance are recorded under explicit data contracts.
 
-These documents cover what the benchmark does, how data is captured and audited, and how to extend the pipeline. They serve researchers who run the pipeline, read the data, or extend the benchmark.
+These documents cover what the benchmark does, how data is captured and checked, and how to extend the pipeline. They serve researchers who run the pipeline, read the data, or extend the benchmark.
 
 ## Where to Start
 

@@ -5,7 +5,6 @@ import os
 import sys
 import time
 
-
 from ._bootstrap import (
     BASE_ARMOR,
     BLUE_ROBOT_PATH,
@@ -18,13 +17,13 @@ from ._bootstrap import (
     YELLOW_START_XY,
     args_cli,
     sim_utils,
-    simulation_app
+    simulation_app,
 )
 from .laser import (
     export_stage,
     update_armor_removals,
     update_target_contacts,
-    update_target_falls
+    update_target_falls,
 )
 from .recorder import MatchVideoRecorder
 from .replay import sync_pushable_obstacles_from_stage
@@ -32,8 +31,9 @@ from .scene import (
     create_sensor_streams,
     design_arena,
     design_robot,
-    update_robot_animation
+    update_robot_animation,
 )
+
 
 def run_simulator(sim: sim_utils.SimulationContext, sensors: dict[str, object], recorder: MatchVideoRecorder | None):
     sim_dt = sim.get_physics_dt()

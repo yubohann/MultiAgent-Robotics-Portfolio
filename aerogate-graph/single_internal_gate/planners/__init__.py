@@ -54,7 +54,7 @@ class _DetourPlanner:
         )
         collision = any(
             task.obstacles_2d.segment_collides(a, b, drone_radius_m=task.drone_radius_m)
-            for a, b in zip(path[:-1], path[1:])
+            for a, b in zip(path[:-1], path[1:], strict=False)
         )
         return PlannerResult(self.name, not collision, path, path_length(path), float(self.config.detour_latency_ms))
 

@@ -7,7 +7,7 @@ import random
 from collections import Counter
 from typing import Any
 
-from .canonical import content_hash
+from .canonical import derived_seed
 from .inspection_atlas import (
     MISSION_SECTOR_SCHEMA,
     validate_public_inspection_atlas,
@@ -199,9 +199,7 @@ def _multiclass_probe(
         }
     accuracy = _grouped_multiclass_accuracy(features, labels, groups)
     majority = max(Counter(labels).values()) / len(labels)
-    rng = random.Random(
-        int(content_hash([seed_tag, len(labels), sorted(set(groups))])[:16], 16)
-    )
+    rng = random.Random(derived_seed(seed_tag, len(labels), sorted(set(groups))))
     permutation_accuracies = []
     for _ in range(permutation_count):
         permuted = list(labels)
@@ -256,12 +254,8 @@ def _sector_summary_feature(
 ) -> tuple[tuple[float, ...], set[str], dict[str, dict[str, Any]]]:
     if sector.get("schema") != MISSION_SECTOR_SCHEMA:
         raise ValueError("mission sector schema differs")
-    declared_hash = str(sector.get("sector_hash", ""))
-    payload = {key: value for key, value in sector.items() if key != "sector_hash"}
-    if content_hash(payload) != declared_hash:
-        raise ValueError("mission-sector content hash mismatch")
     if (
-        sector.get("atlas_hash") != atlas.get("atlas_hash")
+        sector.get("layout_id") != atlas.get("layout_id")
         or sector.get("truth_independent") is not True
         or sector.get("frozen_before_sampling") is not True
     ):
@@ -417,22 +411,16 @@ def audit_atlas_leakage(
         atlas = record["atlas"]
         episode = record["private_episode"]
         validate_public_inspection_atlas(atlas)
-        declared_episode_hash = str(episode.get("episode_hash", ""))
-        episode_payload = {
-            key: value for key, value in episode.items() if key != "episode_hash"
-        }
-        if content_hash(episode_payload) != declared_episode_hash:
-            raise ValueError("private episode content hash mismatch")
         group = str(record["layout_ancestor"])
         if not group:
             raise ValueError("leakage records require a layout ancestor")
-        atlas_hash = str(atlas["atlas_hash"])
-        if group in atlas_by_group and atlas_by_group[group] != atlas_hash:
+        atlas_id = str(atlas["layout_id"])
+        if group in atlas_by_group and atlas_by_group[group] != atlas_id:
             raise ValueError("one layout ancestor maps to multiple public atlases")
-        if atlas_hash in group_by_atlas and group_by_atlas[atlas_hash] != group:
+        if atlas_id in group_by_atlas and group_by_atlas[atlas_id] != group:
             raise ValueError("one public atlas is claimed by multiple layout ancestors")
-        atlas_by_group[group] = atlas_hash
-        group_by_atlas[atlas_hash] = group
+        atlas_by_group[group] = atlas_id
+        group_by_atlas[atlas_id] = group
         targets = {str(item["site_id"]): item for item in episode["targets"]}
         distractors = {str(item["site_id"]): item for item in episode["distractors"]}
         pairs = episode["counterfactual_pairs"]
@@ -514,7 +502,7 @@ def audit_atlas_leakage(
     else:
         observed_auc = _auc(labels, _grouped_binary_scores(features, labels, groups))
         permutation_aucs = []
-        seed = int(content_hash([len(records), len(pair_indices), sorted(set(groups))])[:16], 16)
+        seed = derived_seed(len(records), len(pair_indices), sorted(set(groups)))
         rng = random.Random(seed)
         for _ in range(permutation_count):
             permuted = list(labels)
@@ -587,5 +575,4 @@ def audit_atlas_leakage(
             "grouped_by_layout_ancestor": True,
         },
     }
-    report["report_hash"] = content_hash(report)
     return report

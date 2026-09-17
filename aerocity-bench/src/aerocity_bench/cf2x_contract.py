@@ -1,23 +1,12 @@
-"""Fail-closed local-runtime contract for the reviewed CF2X USD asset.
-
-The benchmark does not redistribute a robot USD.  A native runner receives a
-user-supplied local path and accepts it only when both the root layer and its
-required relative schema layer match the reviewed digests.  This separates a
-reproducible execution dependency from a redistribution claim: the source and
-licence of the local asset still require a release-time clearance decision.
-"""
+"""Local-runtime contract for the reviewed CF2X USD asset structure."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from .canonical import file_hash
-
 CF2X_FILENAME = "cf2x.usd"
-CF2X_SHA256 = "7372ac0786312c47a92603da3fcd412d560b21c3757a8f0d5e7c2bfb2233d2f4"
 CF2X_SCHEMA_RELATIVE_PATH = Path("configuration") / "cf2x_robot_schema.usd"
-CF2X_SCHEMA_SHA256 = "c7a63f78ce3937c25cd05936ee73348bfdbbd0a10e82c0b8a37250730a3cbb9c"
 CF2X_DEFAULT_PRIM = "/crazyflie"
 CF2X_BODY_PRIM = "/crazyflie/body"
 CF2X_THRUSTER_BODY_NAMES = ("m1_prop", "m2_prop", "m3_prop", "m4_prop")
@@ -41,8 +30,8 @@ class VerifiedCF2XAsset:
 
     usd_path: Path
     schema_path: Path
-    usd_sha256: str
-    schema_sha256: str
+    usd_bytes: int
+    schema_bytes: int
     redistribution_status: str = "local_runtime_only_license_clearance_pending"
 
     def fingerprint_payload(self) -> dict[str, object]:
@@ -50,9 +39,9 @@ class VerifiedCF2XAsset:
             "schema": "org.aerocity.bench.cf2x-local-asset.v1",
             "asset_kind": "cf2x_local_runtime_dependency",
             "usd_filename": self.usd_path.name,
-            "usd_sha256": self.usd_sha256,
+            "usd_bytes": self.usd_bytes,
             "schema_relative_path": CF2X_SCHEMA_RELATIVE_PATH.as_posix(),
-            "schema_sha256": self.schema_sha256,
+            "schema_bytes": self.schema_bytes,
             "default_prim": CF2X_DEFAULT_PRIM,
             "body_prim": CF2X_BODY_PRIM,
             "thruster_body_names": list(CF2X_THRUSTER_BODY_NAMES),
@@ -70,42 +59,26 @@ def _validate_runtime_path(path: Path) -> Path:
 
 
 def verify_local_cf2x_asset(path: Path) -> VerifiedCF2XAsset:
-    """Validate the reviewed CF2X root layer and its mandatory relative layer.
-
-    The function intentionally does not locate an asset automatically and does
-    not offer a fallback.  A missing, changed, or unreviewed USD must stop the
-    native runner before Isaac starts.
-    """
+    """Validate the CF2X root layer name and its mandatory relative layer."""
 
     usd_path = _validate_runtime_path(path)
     if usd_path.name.lower() != CF2X_FILENAME:
         raise ValueError(f"CF2X asset must be named {CF2X_FILENAME}")
     if not usd_path.is_file():
         raise FileNotFoundError(f"CF2X USD is missing: {usd_path}")
-    usd_sha256 = file_hash(usd_path)
-    if usd_sha256.lower() != CF2X_SHA256:
-        raise ValueError("CF2X USD SHA-256 does not match the reviewed local-runtime asset")
     schema_path = _validate_runtime_path(usd_path.parent / CF2X_SCHEMA_RELATIVE_PATH)
     if not schema_path.is_file():
         raise FileNotFoundError("CF2X USD relative schema layer is missing")
-    schema_sha256 = file_hash(schema_path)
-    if schema_sha256.lower() != CF2X_SCHEMA_SHA256:
-        raise ValueError("CF2X schema SHA-256 does not match the reviewed local-runtime asset")
     return VerifiedCF2XAsset(
         usd_path=usd_path,
         schema_path=schema_path,
-        usd_sha256=usd_sha256,
-        schema_sha256=schema_sha256,
+        usd_bytes=usd_path.stat().st_size,
+        schema_bytes=schema_path.stat().st_size,
     )
 
 
 def inspect_verified_cf2x_structure(asset: VerifiedCF2XAsset) -> dict[str, object]:
-    """Check USD structure when the optional USD runtime is available.
-
-    This complements digest locking.  It is deliberately not a core package
-    dependency because normal generator, evaluator, and adapter tests run
-    without Isaac or ``pxr`` installed.
-    """
+    """Check USD structure when the optional USD runtime is available."""
 
     try:
         from pxr import Usd

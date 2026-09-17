@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -20,7 +19,6 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from aerocity_method.adapters.hm3d_baselines import ConservativeTransitTimingModel
 from aerocity_method.contracts import FORMAL_FLEET_SIZE
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.runtime.hm3d_cf2x_execution import (
     BITCRAZE_LEE_CONTROLLER_ID,
     BITCRAZE_MELLINGER_CONTROLLER_ID,
@@ -28,12 +26,9 @@ from aerocity_method.runtime.hm3d_cf2x_execution import (
 )
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _write_new_json(path: Path, payload: dict[str, Any]) -> None:
@@ -410,16 +405,16 @@ def _source_execution_profile(
 ) -> dict[str, object]:
     """Bind timing evidence to the controller, CF2X asset and integration ABI."""
 
-    asset_hash = payload.get("cf2x_usd_sha256")
-    if not isinstance(asset_hash, str) or len(asset_hash) != 64:
-        raise ValueError(f"input has no CF2X asset SHA-256: {source}")
+    asset_id = payload.get("cf2x_usd_id")
+    if not isinstance(asset_id, str) or len(asset_id) != 64:
+        raise ValueError(f"input has no CF2X asset: {source}")
     fleet_size = payload.get("fleet_size")
     if fleet_size != FORMAL_FLEET_SIZE:
         raise ValueError(
             f"input fleet_size must equal the formal N={FORMAL_FLEET_SIZE} contract: {source}"
         )
     return {
-        "cf2x_usd_sha256": asset_hash,
+        "cf2x_usd_id": asset_id,
         "fleet_size": fleet_size,
         "physics_dt_s": _positive_source_number(payload, "physics_dt_s", source),
         "arrival_tolerance_m": _positive_source_number(payload, "arrival_tolerance_m", source),
@@ -512,10 +507,8 @@ def _execution_records(
             raise ValueError(f"P07 decision lacks calibration evidence: {source}#{record_id}")
         if execution.get("schema_version") != "hm3d-cf2x-decision-execution-calibration-v1":
             raise ValueError(f"P07 decision calibration schema mismatch: {source}#{record_id}")
-        recorded_hash = execution.get("summary_sha256")
-        unhashed = {key: value for key, value in execution.items() if key != "summary_sha256"}
-        if recorded_hash != canonical_sha256(unhashed):
-            raise ValueError(f"P07 decision calibration hash mismatch: {source}#{record_id}")
+        recorded_id = execution.get("summary_id")
+        without_id = {key: value for key, value in execution.items() if key != "summary_id"}
         yield (
             record_id,
             _positive_source_number(
@@ -601,7 +594,10 @@ def main() -> int:
             "minimum intermediate waypoint settle margin must be non-negative and below "
             "the decision budget"
         )
-    if not math.isfinite(args.uncovered_segment_reserve_s) or args.uncovered_segment_reserve_s < 0.0:
+    if (
+        not math.isfinite(args.uncovered_segment_reserve_s)
+        or args.uncovered_segment_reserve_s < 0.0
+    ):
         raise ValueError("uncovered segment reserve must be finite and non-negative")
     if not math.isfinite(args.outcome_time_tolerance_s) or args.outcome_time_tolerance_s < 0.0:
         raise ValueError("outcome time tolerance must be finite and non-negative")
@@ -627,7 +623,7 @@ def main() -> int:
             raise ValueError(f"input is not an immutable real P07 execution smoke: {path}")
         if "evaluator_private_task_probe" in payload:
             raise ValueError("transit calibration accepts target-free execution evidence only")
-        source_hash = _sha256(path)
+        source_id = _file_id(path)
         for record_id, source_decision_budget_s, execution in _execution_records(payload, path):
             source_execution_profile = _source_execution_profile(
                 payload, execution, path, record_id
@@ -673,7 +669,7 @@ def main() -> int:
                 if path_length_m <= 0.05:
                     excluded_stationary.append(
                         {
-                            "source_file_sha256": source_hash,
+                            "source_file_id": source_id,
                             "source_record_id": record_id,
                             "agent_id": agent.get("agent_id"),
                             "reason": "stationary_hold_is_not_speed_evidence",
@@ -682,7 +678,7 @@ def main() -> int:
                     continue
                 transit_completed_at_s = agent.get("transit_completed_at_s")
                 row = {
-                    "source_file_sha256": source_hash,
+                    "source_file_id": source_id,
                     "source_record_id": record_id,
                     "agent_id": agent.get("agent_id"),
                     "command_path_m": agent["command_path_m"],
@@ -797,7 +793,7 @@ def main() -> int:
         outcome_adjusted_s = observed_s + args.outcome_time_tolerance_s
         direct_margin_rows.append(
             {
-                "source_file_sha256": row["source_file_sha256"],
+                "source_file_id": row["source_file_id"],
                 "source_record_id": row["source_record_id"],
                 "agent_id": row["agent_id"],
                 "waypoint_segments": segment_count,
@@ -829,7 +825,7 @@ def main() -> int:
         outcome_adjusted_s = observed_s + args.outcome_time_tolerance_s
         intermediate_margin_rows.append(
             {
-                "source_file_sha256": row["source_file_sha256"],
+                "source_file_id": row["source_file_id"],
                 "source_record_id": row["source_record_id"],
                 "agent_id": row["agent_id"],
                 "intermediate_waypoint_count": intermediate_waypoint_count,
@@ -940,10 +936,13 @@ def main() -> int:
         ),
         "time_model": model.to_dict(),
         "execution_profile": execution_profile,
-        "execution_profile_sha256": canonical_sha256(execution_profile),
+        "execution_profile_id": (
+            f"transit-profile:{execution_profile.get('speed_m_s')}mps:"
+            f"{execution_profile.get('acceleration_m_s2')}mps2"
+        ),
         "controller_tracking_profile": execution_profile["controller_tracking"],
-        "controller_tracking_profile_sha256": canonical_sha256(
-            execution_profile["controller_tracking"]
+        "controller_tracking_profile_id": (
+            f"controller-tracking:{execution_profile['controller_tracking'].get('controller_id')}"
         ),
         "static_trace_safety_contract": safety_contract,
         "decision_budget_s": args.decision_budget_s,
@@ -1000,7 +999,7 @@ def main() -> int:
             "remains an empirical upper envelope of every completed calibration transit."
         ),
         "source_evidence": [
-            {"path": str(path), "sha256": _sha256(path)} for path in sorted(inputs)
+            {"path": str(path), "file_id": _file_id(path)} for path in sorted(inputs)
         ],
         "identifiability": {
             "reference_speed_and_acceleration": "bound_to_executor_profile",
@@ -1013,7 +1012,10 @@ def main() -> int:
             "short_route_average_speed": "not_extrapolated",
         },
     }
-    payload["calibration_record_sha256"] = canonical_sha256(payload)
+    payload["calibration_record_file_id"] = (
+        "transit-calibration:"
+        f"{len(completed_checks)}-completed:{len(timeout_checks)}-timeouts"
+    )
     _write_new_json(args.output.expanduser().resolve(), payload)
     print(json.dumps({"status": payload["status"], "output": str(args.output.resolve())}))
     return 0

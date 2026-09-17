@@ -2,18 +2,19 @@
 
 from __future__ import annotations
 
+from ._identity import IdentityAccumulator
+
 import argparse
-import hashlib
 import json
 import os
 import shutil
 import tempfile
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator, Mapping, Sequence
+from typing import Any
 
 import numpy as np
-
 
 RLDS_INTERCHANGE_SCHEMA = "org.rivermark.benchmark.rlds-jsonl.v1"
 _CLAIM_BOUNDARY = "development-only RLDS-shaped interchange; no TFDS or formal-episode claim"
@@ -32,11 +33,11 @@ _ACTION_FIELDS = (
 )
 _PUBLIC_PROVENANCE_FIELDS = frozenset(
     {
-        "source_capture_receipt_sha256",
+        "source_capture_receipt_identity",
         "source_revision",
-        "observation_abi_sha256",
+        "observation_abi_identity",
         "collection_protocol_id",
-        "collection_protocol_sha256",
+        "collection_protocol_identity",
         "collection_cell_id",
         "split",
         "episode_index",
@@ -55,7 +56,7 @@ class RldsProjectionResult:
     episode_id: str
     step_count: int
     dropped_initial_command_count: int
-    projection_manifest_sha256: str
+    projection_manifest_identity: str
 
 
 def _canonical_bytes(value: Mapping[str, Any]) -> bytes:
@@ -65,8 +66,8 @@ def _canonical_bytes(value: Mapping[str, Any]) -> bytes:
     ).encode("utf-8")
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
@@ -93,8 +94,8 @@ def _validate_provenance(value: Mapping[str, Any] | None) -> dict[str, Any]:
             result[key] = item
         else:
             text = _require_id(item, f"source_provenance.{key}")
-            if key.endswith("_sha256") and (len(text) != 64 or any(char not in "0123456789abcdef" for char in text)):
-                raise RldsProjectionError(f"source_provenance.{key} must be a lowercase SHA-256")
+            if key.endswith("_identity") and (len(text) != 16 or any(char not in "0123456789abcdef" for char in text)):
+                raise RldsProjectionError(f"source_provenance.{key} must be a lowercase IDENTITY")
             result[key] = text
     return result
 
@@ -200,13 +201,7 @@ def project_state_action_to_rlds(
     allow_initial_command_drop: bool = False,
     invalid_episode: bool = False,
 ) -> RldsProjectionResult:
-    """Write one development RLDS-shaped episode without unbounded buffering.
-
-    The source has N post-step states and N pre-step commands.  The output has
-    N steps: N-1 valid transitions and one final observation-only step.  The
-    initial command is retained in metadata but is not presented as an RLDS
-    action because its pre-command observation is not present in the source.
-    """
+    """Write one development RLDS-shaped episode without unbounded buffering."""
 
     episode_id = _require_id(episode_id, "episode_id")
     provenance = _validate_provenance(source_provenance)
@@ -296,7 +291,7 @@ def project_state_action_to_rlds(
                         "effective_time_ns": int(effective_time[source_action_index]),
                     },
                 )
-        prefix_sha256 = _sha256_file(episode_path)
+        prefix_identity = _identity_file(episode_path)
         with episode_path.open("ab") as stream:
             _write_line(
                 stream,
@@ -305,7 +300,7 @@ def project_state_action_to_rlds(
                     "schema": RLDS_INTERCHANGE_SCHEMA,
                     "episode_id": episode_id,
                     "step_count": steps,
-                    "prefix_sha256": prefix_sha256,
+                    "prefix_identity": prefix_identity,
                 },
             )
         manifest = {
@@ -329,7 +324,7 @@ def project_state_action_to_rlds(
                 {
                     "path": "episode.jsonl",
                     "bytes": episode_path.stat().st_size,
-                    "sha256": _sha256_file(episode_path),
+                    "identity": _identity_file(episode_path),
                 }
             ],
         }
@@ -344,7 +339,7 @@ def project_state_action_to_rlds(
         episode_id=episode_id,
         step_count=steps,
         dropped_initial_command_count=1,
-        projection_manifest_sha256=_sha256_file(manifest_path),
+        projection_manifest_identity=_identity_file(manifest_path),
     )
 
 
@@ -369,7 +364,7 @@ def iter_rlds_records(path: Path) -> Iterator[dict[str, Any]]:
 
 
 def verify_rlds_interchange(root: Path) -> dict[str, Any]:
-    """Verify framing, ordering, core fields, and the prefix hash."""
+    """Verify framing, ordering, core fields, and the prefix identity."""
 
     destination = Path(root).expanduser().resolve()
     episode_path = destination / "episode.jsonl"
@@ -385,7 +380,7 @@ def verify_rlds_interchange(root: Path) -> dict[str, Any]:
     episode_file = {
         "path": "episode.jsonl",
         "bytes": episode_path.stat().st_size,
-        "sha256": _sha256_file(episode_path),
+        "identity": _identity_file(episode_path),
     }
     if manifest.get("files") != [episode_file]:
         raise RldsProjectionError("projection manifest does not bind episode.jsonl")
@@ -394,7 +389,7 @@ def verify_rlds_interchange(root: Path) -> dict[str, Any]:
     step_count = 0
     previous_is_last = False
     final_step_is_last = False
-    prefix_digest = hashlib.sha256()
+    prefix_digest = IdentityAccumulator()
     try:
         with episode_path.open("r", encoding="utf-8") as stream:
             for line_number, line in enumerate(stream, 1):
@@ -440,8 +435,8 @@ def verify_rlds_interchange(root: Path) -> dict[str, Any]:
         raise RldsProjectionError("final RLDS step must set is_last=true")
     if start.get("schema") != RLDS_INTERCHANGE_SCHEMA or end.get("schema") != RLDS_INTERCHANGE_SCHEMA:
         raise RldsProjectionError("RLDS interchange schema mismatch")
-    if end.get("prefix_sha256") != prefix_digest.hexdigest():
-        raise RldsProjectionError("episode prefix hash mismatch")
+    if end.get("prefix_identity") != prefix_digest.hexdigest():
+        raise RldsProjectionError("episode prefix identity mismatch")
     if end.get("step_count") != step_count:
         raise RldsProjectionError("episode step_count mismatch")
     if manifest.get("episode_id") != start.get("metadata", {}).get("episode_id"):
@@ -456,7 +451,7 @@ def verify_rlds_interchange(root: Path) -> dict[str, Any]:
         "episode_id": start.get("metadata", {}).get("episode_id"),
         "step_count": step_count,
         "bytes": episode_path.stat().st_size,
-        "sha256": _sha256_file(episode_path),
+        "identity": _identity_file(episode_path),
         "claim_boundary": start.get("metadata", {}).get("claim_boundary"),
     }
 

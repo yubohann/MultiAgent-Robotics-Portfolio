@@ -13,7 +13,12 @@ from launch.actions import (
 )
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import (
+    Command,
+    FindExecutable,
+    LaunchConfiguration,
+    PathJoinSubstitution,
+)
 from launch_ros.actions import Node
 
 
@@ -58,11 +63,11 @@ def generate_launch_description() -> LaunchDescription:
             return [
                 LogInfo(
                     msg=(
-                        "ERROR: Refusing unsafe dual density: lidar_samples=%d with "
-                        "lidar_downsample=%d exceeds the WSL memory profile. "
+                        f"ERROR: Refusing unsafe dual density: lidar_samples={samples} with "
+                        f"lidar_downsample={downsample} exceeds the WSL memory profile. "
                         "Use lidar_downsample:=4 (recommended) or pass "
                         "allow_unsafe_density:=true only after increasing WSL memory."
-                    ) % (samples, downsample)
+                    )
                 ),
                 Shutdown(reason="unsafe dual MID-360 density blocked before ray allocation"),
             ]

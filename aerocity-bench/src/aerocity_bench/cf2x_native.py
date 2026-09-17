@@ -1,9 +1,4 @@
-"""Native-only CF2X multirotor construction helpers.
-
-The imports that require IsaacLab are deliberately local.  Importing this
-module in ordinary tests is safe; calling the builder is only valid after the
-Isaac application has been created.
-"""
+"""Native-only CF2X multirotor construction helpers."""
 
 from __future__ import annotations
 

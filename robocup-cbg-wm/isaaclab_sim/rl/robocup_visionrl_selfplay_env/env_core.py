@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 import math
+from typing import ClassVar
 
+import gymnasium as gym
 import numpy as np
-
-from ._compat import gym, spaces
-from .datatypes import ShotResult, DomainRandomizationParams
+from gymnasium import spaces
+from robocup_visionrl_gym_env import (
+    BLUE_START,
+    LASER_FIRE_COOLDOWN_S,
+    PUSHABLE_OBSTACLE_RANDOM_JITTER,
+    PUSHABLE_OBSTACLE_STARTS,
+    SHOOT_HIT_RADIUS,
+    SHOOT_RANGE,
+    YELLOW_START,
+    RoboCupVisionRLGymEnv,
+    shooting_range_limits,
+)
 
 from .constants import (
     AGENTS,
@@ -17,25 +28,13 @@ from .constants import (
     RECOVERY_CONFIDENCE_THRESHOLD,
     SELFPLAY_OBSERVATION_DIM,
     SHOT_TIME_COST_SCALE,
-    TACTICAL_ACTION_DIM
+    TACTICAL_ACTION_DIM,
 )
-from robocup_visionrl_gym_env import (
-    BLUE_BASE_XY,
-    BLUE_START,
-    LASER_FIRE_COOLDOWN_S,
-    PUSHABLE_OBSTACLE_RANDOM_JITTER,
-    PUSHABLE_OBSTACLE_STARTS,
-    RoboCupVisionRLGymEnv,
-    SHOOT_HIT_RADIUS,
-    SHOOT_RANGE,
-    YELLOW_BASE_XY,
-    YELLOW_START,
-    shooting_range_limits
-)
+from .datatypes import DomainRandomizationParams, ShotResult
 
 
 class RoboCupVisionRLSelfPlayEnvCore(gym.Env):
-    metadata = {"render_modes": []}
+    metadata: ClassVar[dict[str, list[str]]] = {"render_modes": []}
     def __init__(
         self,
         dt: float = 0.10,
@@ -148,14 +147,6 @@ class RoboCupVisionRLSelfPlayEnvCore(gym.Env):
                 "normal_hits": 0,
                 "base_hits": 0,
             }
-            for team in AGENTS
-        }
-        self.previous_base_distance = {
-            "yellow": float(np.linalg.norm(self.poses["yellow"][:2] - BLUE_BASE_XY)),
-            "blue": float(np.linalg.norm(self.poses["blue"][:2] - YELLOW_BASE_XY)),
-        }
-        self.previous_attack_distance = {
-            team: self._nearest_opponent_target_distance(team)
             for team in AGENTS
         }
         return {team: self._obs(team) for team in AGENTS}, {team: {} for team in AGENTS}

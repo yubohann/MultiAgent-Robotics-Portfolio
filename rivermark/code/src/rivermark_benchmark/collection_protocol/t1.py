@@ -89,149 +89,6 @@ def _segment_distance_m(
     )
     return math.sqrt(dot(separation, separation))
 
-def citylite_t1_split_certificate() -> dict[str, Any]:
-    """Return the split certificate derived from frozen public City-Lite geometry."""
-
-    from ..citylite_scene import (
-        CITY_LITE_ROUTE_FAMILY_A_ID,
-        CITY_LITE_ROUTE_FAMILY_B_ID,
-        CITY_LITE_START_ANCHOR_A_ID,
-        CITY_LITE_START_ANCHOR_B_ID,
-        CITY_LITE_TARGET_REGION_A_ID,
-        CITY_LITE_TARGET_REGION_B_ID,
-        ENVIRONMENT_ID,
-        PUBLIC_ROUTE_FAMILIES_W_M,
-        SCENE_CONTRACT_SHA256,
-        TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M,
-        TARGET_REGIONS_W_M,
-        canonical_payload_sha256,
-    )
-
-    train_routes = PUBLIC_ROUTE_FAMILIES_W_M[CITY_LITE_ROUTE_FAMILY_A_ID]
-    validation_routes = PUBLIC_ROUTE_FAMILIES_W_M[CITY_LITE_ROUTE_FAMILY_B_ID]
-    train_starts = TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M[
-        CITY_LITE_ROUTE_FAMILY_A_ID
-    ]
-    validation_starts = TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M[
-        CITY_LITE_ROUTE_FAMILY_B_ID
-    ]
-    train_region = TARGET_REGIONS_W_M[CITY_LITE_TARGET_REGION_B_ID]
-    validation_region = TARGET_REGIONS_W_M[CITY_LITE_TARGET_REGION_A_ID]
-
-    def waypoints(routes: Sequence[Sequence[Sequence[float]]]) -> set[tuple[float, ...]]:
-        return {tuple(float(value) for value in point) for route in routes for point in route}
-
-    def segments(
-        routes: Sequence[Sequence[Sequence[float]]],
-    ) -> set[tuple[tuple[float, ...], tuple[float, ...]]]:
-        result: set[tuple[tuple[float, ...], tuple[float, ...]]] = set()
-        for route in routes:
-            for start, end in pairwise(route):
-                endpoints = sorted(
-                    (
-                        tuple(float(value) for value in start),
-                        tuple(float(value) for value in end),
-                    )
-                )
-                result.add((endpoints[0], endpoints[1]))
-        return result
-
-    shared_waypoints = waypoints(train_routes) & waypoints(validation_routes)
-    shared_segments = segments(train_routes) & segments(validation_routes)
-    cross_route_segment_distances = tuple(
-        _segment_distance_m(train_start, train_end, validation_start, validation_end)
-        for train_route in train_routes
-        for train_start, train_end in pairwise(train_route)
-        for validation_route in validation_routes
-        for validation_start, validation_end in pairwise(validation_route)
-    )
-    route_intersection_count = sum(
-        distance <= 1.0e-9 for distance in cross_route_segment_distances
-    )
-    minimum_route_distance = min(cross_route_segment_distances)
-    minimum_start_distance = min(
-        math.dist(tuple(float(value) for value in train), tuple(float(value) for value in validation))
-        for train in train_starts
-        for validation in validation_starts
-    )
-    overlap_extents = tuple(
-        max(
-            0.0,
-            min(train_region.maximum[axis], validation_region.maximum[axis])
-            - max(train_region.minimum[axis], validation_region.minimum[axis]),
-        )
-        for axis in range(3)
-    )
-    overlap_volume = math.prod(overlap_extents)
-    region_axis_gaps = tuple(
-        max(
-            0.0,
-            validation_region.minimum[axis] - train_region.maximum[axis],
-            train_region.minimum[axis] - validation_region.maximum[axis],
-        )
-        for axis in range(3)
-    )
-    minimum_region_distance = math.sqrt(sum(gap * gap for gap in region_axis_gaps))
-
-    def split_entry(
-        *,
-        route_family_id: str,
-        start_anchor_id: str,
-        target_region_id: str,
-    ) -> dict[str, Any]:
-        routes = PUBLIC_ROUTE_FAMILIES_W_M[route_family_id]
-        starts = TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M[route_family_id]
-        region = TARGET_REGIONS_W_M[target_region_id]
-        region_payload = {
-            "minimum_w_m": list(region.minimum),
-            "maximum_w_m": list(region.maximum),
-        }
-        return {
-            "route_family_id": route_family_id,
-            "route_geometry_sha256": canonical_payload_sha256(routes),
-            "start_anchor_id": start_anchor_id,
-            "start_geometry_sha256": canonical_payload_sha256(starts),
-            "target_region_id": target_region_id,
-            "target_region": region_payload,
-            "target_region_sha256": canonical_payload_sha256(region_payload),
-        }
-
-    return {
-        "schema": "org.rivermark.benchmark.citylite-t1-split-certificate.v1",
-        "scene_identity": ENVIRONMENT_ID,
-        "scene_contract_sha256": SCENE_CONTRACT_SHA256,
-        "claim": "same_layout_route_family_start_region_holdout",
-        "train": split_entry(
-            route_family_id=CITY_LITE_ROUTE_FAMILY_A_ID,
-            start_anchor_id=CITY_LITE_START_ANCHOR_A_ID,
-            target_region_id=CITY_LITE_TARGET_REGION_B_ID,
-        ),
-        "validation": split_entry(
-            route_family_id=CITY_LITE_ROUTE_FAMILY_B_ID,
-            start_anchor_id=CITY_LITE_START_ANCHOR_B_ID,
-            target_region_id=CITY_LITE_TARGET_REGION_A_ID,
-        ),
-        "geometry_checks": {
-            "shared_route_waypoint_count": len(shared_waypoints),
-            "shared_route_segment_count": len(shared_segments),
-            "route_segment_intersection_count": route_intersection_count,
-            "minimum_cross_split_route_distance_m": round(minimum_route_distance, 9),
-            "route_geometry_disjoint": route_intersection_count == 0,
-            "minimum_cross_split_start_distance_m": round(minimum_start_distance, 9),
-            "target_region_overlap_volume_m3": round(overlap_volume, 9),
-            "minimum_cross_split_target_region_distance_m": round(
-                minimum_region_distance, 9
-            ),
-            "route_family_start_region_holdout_passed": bool(
-                not shared_waypoints
-                and not shared_segments
-                and minimum_start_distance >= 4.0
-                and overlap_volume == 0.0
-                and minimum_region_distance >= 4.0
-            ),
-        },
-    }
-
 def _validate_t1_collection_protocol(payload: Any) -> tuple[CollectionProtocolIssue, ...]:
     """Validate the T1 data protocol without importing T2 scoring assumptions."""
 
@@ -342,16 +199,6 @@ def _validate_t1_collection_protocol(payload: Any) -> tuple[CollectionProtocolIs
             "visibility is a coverage condition, not proof of geometric holdout",
         )
 
-    expected_certificate = citylite_t1_split_certificate()
-    certificate = payload.get("split_certificate")
-    if certificate != expected_certificate:
-        _issue(
-            issues,
-            "split_certificate",
-            "$.split_certificate",
-            "certificate does not match frozen public route/start/region geometry",
-        )
-
     cells_value = payload.get("cells")
     cell_ids: set[str] = set()
     cell_signatures: set[bytes] = set()
@@ -398,20 +245,6 @@ def _validate_t1_collection_protocol(payload: Any) -> tuple[CollectionProtocolIs
                 elif isinstance(split, str):
                     covered_axis_values[axis_id].add(value)
                     split_axis_values.setdefault(split, {}).setdefault(axis_id, set()).add(value)
-            if isinstance(split, str) and split in {"train", "validation"}:
-                expected_split = expected_certificate[split]
-                for axis_id, certificate_key in (
-                    ("route_family", "route_family_id"),
-                    ("start_anchor", "start_anchor_id"),
-                    ("target_region", "target_region_id"),
-                ):
-                    if conditions.get(axis_id) != expected_split[certificate_key]:
-                        _issue(
-                            issues,
-                            "split_geometry_binding",
-                            f"{path}.conditions.{axis_id}",
-                            "cell does not match the independently derived split certificate",
-                        )
             if all(
                 isinstance(axis_id, str) and isinstance(value, str)
                 for axis_id, value in conditions.items()

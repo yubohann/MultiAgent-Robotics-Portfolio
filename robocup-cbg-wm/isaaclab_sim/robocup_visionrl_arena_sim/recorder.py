@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from ._bootstrap import args_cli
+
 if args_cli.record_video:
     import cv2
     import numpy as np
@@ -14,16 +15,17 @@ if args_cli.record_video:
 from ._bootstrap import (
     BASE_ARMOR,
     BLUE_ROBOT_PATH,
-    Camera,
-    CameraCfg,
     MATCH_CONTROLLERS,
     MATCH_STATE,
     RECORDING_POV_CAMERA_POSE,
     YELLOW_ROBOT_PATH,
+    Camera,
+    CameraCfg,
     args_cli,
-    sim_utils
+    sim_utils,
 )
 from .rules import opponent_team
+
 
 class MatchVideoRecorder:
     def __init__(self, output_path: str):

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 from single_internal_gate.configs.experiment_config import Exp2MethodConfig
 from single_internal_gate.planners.interfaces import PlannerTask2D

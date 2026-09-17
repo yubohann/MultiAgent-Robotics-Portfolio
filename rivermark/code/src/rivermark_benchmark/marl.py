@@ -3,26 +3,33 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import random
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, ClassVar
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .provenance import detect_source_provenance
-from .runtime import HighLevelAction, PilotRuntimeConfig, PilotSwarmRuntime, PublicMission, PublicObservation
+from .runtime import (
+    HighLevelAction,
+    PilotRuntimeConfig,
+    PilotSwarmRuntime,
+    PublicMission,
+    PublicObservation,
+)
 
 try:
     import gymnasium
     from gymnasium import spaces
     from pettingzoo import ParallelEnv
-except ImportError:  # pragma: no cover - exercised by CLI fail-closed behavior.
+except ImportError:  # pragma: no cover - exercised by CLI strict behavior.
     gymnasium = None
     spaces = None
     ParallelEnv = object
@@ -30,7 +37,7 @@ except ImportError:  # pragma: no cover - exercised by CLI fail-closed behavior.
 try:
     import torch
     from torch import nn
-except ImportError:  # pragma: no cover - exercised by CLI fail-closed behavior.
+except ImportError:  # pragma: no cover - exercised by CLI strict behavior.
     torch = None
     nn = None
 
@@ -41,8 +48,8 @@ ACTION_DIM = 4
 ACTION_SCALE = np.asarray((2.3, 2.3, 1.25, 1.4), dtype=np.float32)
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -96,14 +103,9 @@ def _message_vector(
 
 
 class RivermarkParallelStateEnv(ParallelEnv):
-    """PettingZoo parallel wrapper with decentralized public observations.
+    """PettingZoo parallel wrapper with decentralized public observations."""
 
-    The reward is intentionally built from public trajectory movement, public
-    team separation, public cells, and safety events.  It never scores hidden
-    target matches and it is never attached to a policy observation.
-    """
-
-    metadata = {"name": "rivermark_parallel_state_v1", "is_parallelizable": True}
+    metadata: ClassVar[dict[str, Any]] = {"name": "rivermark_parallel_state_v1", "is_parallelizable": True}
 
     def __init__(self, *, agent_count: int = 4, max_steps: int = 36, seed: int = 20260722) -> None:
         _require_training_dependencies()
@@ -125,14 +127,16 @@ class RivermarkParallelStateEnv(ParallelEnv):
             information_profile="state_only",
         )
 
-    @lru_cache(maxsize=None)
+    # B019: process-lifetime cache; a training run creates a bounded number of envs.
+    @cache  # noqa: B019
     def observation_space(self, agent: str) -> Any:
         if agent not in self.possible_agents:
             raise KeyError(agent)
         assert spaces is not None
         return spaces.Box(low=-2.0, high=2.0, shape=(OBSERVATION_DIM,), dtype=np.float32)
 
-    @lru_cache(maxsize=None)
+    # B019: process-lifetime cache; a training run creates a bounded number of envs.
+    @cache  # noqa: B019
     def action_space(self, agent: str) -> Any:
         if agent not in self.possible_agents:
             raise KeyError(agent)
@@ -412,9 +416,9 @@ def train_shared_marl(
         "seed": seed,
         "final_mean_public_training_reward": reward_history[-1],
         "source_revision": source.source_revision,
-        "source_tree_sha256": source.source_tree_sha256,
+        "source_tree_identity": source.source_tree_identity,
         "source_worktree_dirty": source.source_worktree_dirty,
-        "checkpoint_sha256": sha256_file(checkpoint),
+        "checkpoint_identity": identity_file(checkpoint),
     }
     _atomic_json(metadata_path, metadata)
     return MarlTrainResult(checkpoint, metadata_path, updates, reward_history[-1])
@@ -442,8 +446,8 @@ class SharedMarlCheckpointPolicy:
             raise ValueError("shared MARL checkpoint must declare state_only")
         if self.metadata.get("observation_dim") != OBSERVATION_DIM or self.metadata.get("action_dim") != ACTION_DIM:
             raise ValueError("shared MARL metadata has incompatible tensor dimensions")
-        if self.metadata.get("checkpoint_sha256") != sha256_file(self.checkpoint):
-            raise ValueError("shared MARL checkpoint SHA-256 does not match its metadata")
+        if self.metadata.get("checkpoint_identity") != identity_file(self.checkpoint):
+            raise ValueError("shared MARL checkpoint IDENTITY does not match its metadata")
         try:
             payload = library.load(self.checkpoint, map_location="cpu", weights_only=True)
         except TypeError:  # Older torch releases do not implement weights_only.
@@ -503,9 +507,9 @@ class SharedMarlCheckpointPolicy:
             "implementation_kind": "trained_torch_marl_pilot_checkpoint",
             "external_dependency": "torch,pettingzoo",
             "checkpoint": str(self.checkpoint),
-            "checkpoint_sha256": sha256_file(self.checkpoint),
+            "checkpoint_identity": identity_file(self.checkpoint),
             "adapter_metadata": str(self.metadata_path),
-            "adapter_metadata_sha256": sha256_file(self.metadata_path),
+            "adapter_metadata_identity": identity_file(self.metadata_path),
             "policy_parameter_sharing": self.metadata["policy_parameter_sharing"],
             "centralized_critic": self.metadata["centralized_critic"],
             "reward_uses_evaluator_private_truth": self.metadata["reward_uses_evaluator_private_truth"],

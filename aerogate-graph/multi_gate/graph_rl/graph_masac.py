@@ -7,15 +7,15 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from torch import Tensor, nn
 import torch.nn.functional as F
+from torch import Tensor, nn
 
 from multi_gate.configs.experiment_config import (
     MULTI_EXPERIMENT_CONFIG,
     MultiGraphMASACConfig,
     MultiGraphObservationConfig,
 )
-from multi_gate.graph_rl.graph_policy import GraphPolicy, GraphEncoder, _mlp
+from multi_gate.graph_rl.graph_policy import GraphEncoder, GraphPolicy, _mlp
 from multi_gate.graph_rl.replay_buffer import MultiGraphReplayBuffer
 
 
@@ -193,7 +193,7 @@ class GraphMASACAgent:
         masac_config: MultiGraphMASACConfig | None = None,
         max_agents_soft: int | None = None,
         build_replay_buffer: bool = True,
-    ) -> "GraphMASACAgent":
+    ) -> GraphMASACAgent:
         return cls(
             build_context=GraphMASACBuildContext(
                 obs_config=obs_config or MULTI_EXPERIMENT_CONFIG.observation,
@@ -513,10 +513,10 @@ class GraphMASACAgent:
             (self.critic_1, self.target_critic_1),
             (self.critic_2, self.target_critic_2),
         ):
-            for source_param, target_param in zip(source.parameters(), target.parameters()):
+            for source_param, target_param in zip(source.parameters(), target.parameters(), strict=False):
                 target_param.data.mul_(1.0 - tau).add_(tau * source_param.data)
         if self.safety_critic is not None and self.target_safety_critic is not None:
-            for source_param, target_param in zip(self.safety_critic.parameters(), self.target_safety_critic.parameters()):
+            for source_param, target_param in zip(self.safety_critic.parameters(), self.target_safety_critic.parameters(), strict=False):
                 target_param.data.mul_(1.0 - tau).add_(tau * source_param.data)
 
     def save_checkpoint(self, path: str | Path, metadata: dict[str, object] | None = None) -> Path:

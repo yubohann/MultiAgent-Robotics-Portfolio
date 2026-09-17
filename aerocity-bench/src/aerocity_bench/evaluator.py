@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import math
 from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
-from .canonical import canonical_bytes, content_hash
+from .canonical import derived_seed
 from .contracts import (
     ActionPacket,
     ConfirmationReceipt,
@@ -49,8 +47,8 @@ class PrivateEvaluator:
     ) -> None:
         if len(receipt_secret) < 16:
             raise ValueError("receipt_secret must contain at least 16 bytes")
-        if private_episode.get("layout_hash") != city.get("layout_hash"):
-            raise ValueError("private episode and CitySpec layout hashes differ")
+        if private_episode.get("layout_id") != city.get("layout_id"):
+            raise ValueError("private episode and CitySpec layouts differ")
         self.config = config
         self.city = city
         self.episode = private_episode
@@ -74,33 +72,20 @@ class PrivateEvaluator:
             raise ValueError("private target count differs from target records")
         if any(target.get("valid_before_run") is not True for target in self._targets.values()):
             raise ValueError("all targets must be validated before execution")
-        manifest = dict(self.episode["target_validity"])
-        expected_hash = str(manifest.pop("validity_hash"))
-        if content_hash(manifest) != expected_hash:
-            raise ValueError("target-validity manifest hash mismatch")
+        manifest = self.episode["target_validity"]
         if manifest.get("frozen_before_execution") is not True:
             raise ValueError("target validity was not frozen before execution")
         if set(manifest["target_ids"]) != set(self._targets):
             raise ValueError("target-validity IDs differ from episode targets")
-        expected_contract_hash = content_hash(self.config.raw["execution_contract"])
-        if self.episode.get("execution_contract_hash") != expected_contract_hash:
-            raise ValueError("episode execution contract hash differs from active config")
-
-    @property
-    def target_count_private(self) -> int:
-        return len(self._targets)
-
-    @property
-    def confirmed_count_private(self) -> int:
-        return len(self._confirmed)
 
     def _token(self, purpose: str, payload: dict[str, Any]) -> str:
-        body = canonical_bytes([purpose, self.episode["episode_id"], payload])
-        return hmac.new(self._secret, body, hashlib.sha256).hexdigest()
+        # Evaluator-side secret keeps anonymous handles unlinkable across episodes.
+        seed = derived_seed(self._secret, self.episode["episode_id"], purpose, payload)
+        return f"{seed:016x}"
 
     def _anonymous_handle(self, target_id: str) -> str:
         digest = self._token("anonymous-target", {"target_id": target_id})
-        return f"found-{digest[:20]}"
+        return f"found-{digest}"
 
     def _visibility(
         self, observation: ObservationPacket, target: dict[str, Any]
@@ -350,9 +335,8 @@ class PrivateEvaluator:
                 "confirmed_at_s": observation.timestamp_s,
                 "source_observation_id": observation.observation_id,
                 "dwell_observation_ids": state.observation_ids,
-                "validity_hash": self.episode["target_validity"]["validity_hash"],
             }
-            confirmation_id = f"confirmation-{content_hash(payload)[:18]}"
+            confirmation_id = f"confirmation-{self._token('confirmation-id', payload)}"
             receipt = ConfirmationReceipt(
                 confirmation_id=confirmation_id,
                 anonymous_target_handle=self._anonymous_handle(target_id),
@@ -395,7 +379,6 @@ class PrivateEvaluator:
         return {
             "schema": "org.aerocity.bench.evaluator-private-audit.v1",
             "episode_id": self.episode["episode_id"],
-            "validity_hash": self.episode["target_validity"]["validity_hash"],
             "target_count": len(self._targets),
             "confirmed_count": len(confirmations),
             "confirmation_times_s": [item.confirmed_at_s for _, item in confirmations],

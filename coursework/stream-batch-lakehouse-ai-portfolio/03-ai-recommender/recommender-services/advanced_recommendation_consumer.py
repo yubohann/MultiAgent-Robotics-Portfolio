@@ -58,19 +58,19 @@ class RecommendationMonitor:
         print(f"🎯 推荐策略: {strategy.upper()}")
         
         if data.get('user_history'):
-            print(f"📋 用户画像:")
+            print("📋 用户画像:")
             print(f"      {self.format_user_history(data['user_history'])}")
         
-        print(f"\n📦 推荐结果:")
+        print("\n📦 推荐结果:")
         for i, rec in enumerate(data.get('recommendations', []), 1):
             score = rec.get('score', 0)
             star = "⭐" if score > 1.0 else ""
             print(f"   {i}. {rec['product_name']:20s} | {rec['category']:6s} | ¥{rec['price']:6.0f} | 得分: {score:.4f} {star}")
         
-        print(f"\n📊 统计信息:")
+        print("\n📊 统计信息:")
         print(f"   该用户累计推荐: {self.user_recommendation_count[user_id]} 次")
         print(f"   策略分布: {dict(self.strategy_count)}")
-        print(f"   热门推荐商品 Top 5:")
+        print("   热门推荐商品 Top 5:")
         top_products = sorted(self.product_recommendation_count.items(), 
                               key=lambda x: x[1], reverse=True)[:5]
         for i, (prod, count) in enumerate(top_products, 1):

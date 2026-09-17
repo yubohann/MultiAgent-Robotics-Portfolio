@@ -1,20 +1,13 @@
 from __future__ import annotations
 
-import math
-import random
+from typing import Any
 
-import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
-from ._helpers import (
-    _concat_tensor_dict,
-    _slice_optional_batch
-)
-from ._legacy import (
-    _balance_modality_embedding
-)
+from ..fraud_dataset import _has_lazy_relation_sequence_payload
+from ._helpers import _concat_tensor_dict, _slice_optional_batch
+from ._legacy import _balance_modality_embedding
 
 
 class EncodingMixin:
@@ -79,10 +72,10 @@ class EncodingMixin:
         if self.sequence_encoder is None:
             return None, None
         if "sequence" in graph.ndata:
-            sequence_mask = graph.ndata["sequence_mask"] if "sequence_mask" in graph.ndata else None
-            sequence_token_weights = graph.ndata["sequence_token_weights"] if "sequence_token_weights" in graph.ndata else None
-            sequence_token_types = graph.ndata["sequence_token_types"] if "sequence_token_types" in graph.ndata else None
-            sequence_relation_ids = graph.ndata["sequence_relation_ids"] if "sequence_relation_ids" in graph.ndata else None
+            sequence_mask = graph.ndata.get("sequence_mask", None)
+            sequence_token_weights = graph.ndata.get("sequence_token_weights", None)
+            sequence_token_types = graph.ndata.get("sequence_token_types", None)
+            sequence_relation_ids = graph.ndata.get("sequence_relation_ids", None)
             return self.sequence_encoder(
                 graph.ndata["sequence"],
                 token_mask=sequence_mask,
@@ -127,10 +120,10 @@ class EncodingMixin:
         if self.event_encoder is None:
             return None, None
         if "event_sequence" in graph.ndata:
-            event_mask = graph.ndata["event_mask"] if "event_mask" in graph.ndata else None
-            event_time_deltas = graph.ndata["event_time_deltas"] if "event_time_deltas" in graph.ndata else None
-            event_token_weights = graph.ndata["event_token_weights"] if "event_token_weights" in graph.ndata else None
-            event_token_types = graph.ndata["event_token_types"] if "event_token_types" in graph.ndata else None
+            event_mask = graph.ndata.get("event_mask", None)
+            event_time_deltas = graph.ndata.get("event_time_deltas", None)
+            event_token_weights = graph.ndata.get("event_token_weights", None)
+            event_token_types = graph.ndata.get("event_token_types", None)
             return self.event_encoder(
                 graph.ndata["event_sequence"],
                 anchor_features=anchor_features,
@@ -138,7 +131,7 @@ class EncodingMixin:
                 event_time_deltas=event_time_deltas,
                 token_weights=event_token_weights,
                 token_types=event_token_types,
-                source_ids=graph.ndata["event_source_ids"] if "event_source_ids" in graph.ndata else None,
+                source_ids=graph.ndata.get("event_source_ids", None),
                 temporal_context=temporal_context_embeddings,
             )
         if "event_history_indices" not in graph.ndata:
@@ -346,7 +339,7 @@ class EncodingMixin:
             prototype_outputs = self.prototype_memory(
                 shared_seed=fusion_parts["shared_seed"],
                 relation_summaries=relation_summaries,
-                dataset_ids=graph.ndata["dataset_context_id"] if "dataset_context_id" in graph.ndata else None,
+                dataset_ids=graph.ndata.get("dataset_context_id", None),
             )
             fusion_outputs = self.shared_private_fusion.forward_from_parts(
                 fusion_parts,

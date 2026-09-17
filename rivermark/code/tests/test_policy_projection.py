@@ -20,7 +20,7 @@ from rivermark_benchmark.citylite_task import (
     ONBOARD_IMAGE_HEIGHT,
     ONBOARD_IMAGE_WIDTH,
 )
-from rivermark_benchmark.formal_dataset import sha256_file
+from rivermark_benchmark.formal_dataset import identity_file
 from rivermark_benchmark.frame_archive import write_chunked_frame_archive
 from rivermark_benchmark.policy_projection import (
     POLICY_OBSERVATION_SCHEMA,
@@ -61,10 +61,10 @@ def _arrays(path: Path) -> dict[str, np.ndarray]:
 def _rebind_capture(root: Path) -> None:
     receipt_path = root / "capture_receipt.json"
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    receipt["artifact_hashes"] = {
+    receipt["artifact_identities"] = {
         relative: {
             "bytes": (root / relative).stat().st_size,
-            "sha256": sha256_file(root / relative),
+            "identity": identity_file(root / relative),
         }
         for relative in SOURCE_PATHS
     }
@@ -75,7 +75,7 @@ def _rebind_capture(root: Path) -> None:
             "schema": "org.rivermark.isaac-independent-validation.v1",
             "status": "passed",
             "issues": [],
-            "capture_receipt_sha256": sha256_file(receipt_path),
+            "capture_receipt_identity": identity_file(receipt_path),
         },
     )
 
@@ -182,14 +182,14 @@ def _capture_fixture(
             "physics": {"same_world_agent_count": AGENTS},
             "collection_binding": {
                 "protocol_id": "citylite-t1-projection-v1",
-                "protocol_sha256": "b" * 64,
+                "protocol_identity": "b" * 16,
                 "cell_id": "train-route-a",
                 "split": "train",
                 "episode_index": 0,
                 "episode_seed": 42,
                 "private_evaluator_path": "C:/not-copied/manifest.json",
             },
-            "artifact_hashes": {},
+            "artifact_identities": {},
         },
     )
     _rebind_capture(root)
@@ -309,7 +309,7 @@ class PolicyProjectionTests(unittest.TestCase):
             self.assertEqual(set(inspection.streams), {"onboard_rgbd", "lidar", "imu", "state"})
             self.assertEqual(inspection.source_revision, "a" * 40)
 
-    def test_projection_is_external_hash_bound_and_contains_only_allow_list(self) -> None:
+    def test_projection_is_external_identity_bound_and_contains_only_allow_list(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = _capture_fixture(root / "capture")
@@ -357,7 +357,7 @@ class PolicyProjectionTests(unittest.TestCase):
             for token in ("semantic", "learning_label", "target", "evaluator", "private", "ground_truth", "overview", "camera_pose", "contact"):
                 self.assertNotIn(token, serialized)
 
-    def test_timestamp_and_agent_dimension_mismatches_fail_closed(self) -> None:
+    def test_timestamp_and_agent_dimension_mismatches_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             time_capture = _capture_fixture(root / "time")
@@ -378,7 +378,7 @@ class PolicyProjectionTests(unittest.TestCase):
             with self.assertRaisesRegex(PolicyProjectionError, "must begin with"):
                 project_policy_observations(agent_capture, root / "agent-output")
 
-    def test_sensor_dtypes_and_complete_shapes_fail_closed(self) -> None:
+    def test_sensor_dtypes_and_complete_shapes_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             wrong_rgb_dtype = _capture_fixture(root / "rgb-dtype", rgb_dtype=np.float32)
@@ -414,7 +414,7 @@ class PolicyProjectionTests(unittest.TestCase):
             with self.assertRaisesRegex(PolicyProjectionError, "disagrees with frame 0"):
                 project_policy_observations(capture, root / "output")
 
-    def test_extra_label_like_field_and_stale_validation_fail_closed(self) -> None:
+    def test_extra_label_like_field_and_stale_validation_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = _capture_fixture(root / "field")
@@ -433,7 +433,7 @@ class PolicyProjectionTests(unittest.TestCase):
             with self.assertRaisesRegex(PolicyProjectionError, "validation is absent, failed, or stale"):
                 project_policy_observations(stale, root / "stale-output")
 
-    def test_noncanonical_npz_members_fail_closed(self) -> None:
+    def test_noncanonical_npz_members_strict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             for relative in ("sensors/lidar.npz", "sensors/onboard_rgbd.npz"):
@@ -465,22 +465,22 @@ class PolicyProjectionTests(unittest.TestCase):
             with self.assertRaisesRegex(PolicyProjectionError, "cell_id is not public-safe"):
                 project_policy_observations(capture, root / "output")
 
-    def test_source_binding_changes_observation_and_manifest_hashes(self) -> None:
+    def test_source_binding_changes_observation_and_manifest_identities(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             first = _capture_fixture(root / "first", revision="a" * 40)
             second = _capture_fixture(root / "second", revision="c" * 40)
             first_result = project_policy_observations(first, root / "first-output")
             second_result = project_policy_observations(second, root / "second-output")
-            self.assertNotEqual(first_result.observations_sha256, second_result.observations_sha256)
-            self.assertNotEqual(first_result.manifest_sha256, second_result.manifest_sha256)
+            self.assertNotEqual(first_result.observations_identity, second_result.observations_identity)
+            self.assertNotEqual(first_result.manifest_identity, second_result.manifest_identity)
 
     def test_invalid_source_revision_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = _capture_fixture(root / "capture", revision="not-a-git-revision")
             with self.assertRaisesRegex(
-                PolicyProjectionError, "source revision is not a Git commit hash"
+                PolicyProjectionError, "source revision is not a Git commit identity"
             ):
                 project_policy_observations(capture, root / "output")
 

@@ -6,13 +6,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.provenance import detect_source_provenance, require_clean_source
+from rivermark_benchmark.provenance import (
+    detect_source_provenance,
+    require_clean_source,
+)
 
 
 class SourceProvenanceTests(unittest.TestCase):
@@ -25,7 +27,7 @@ class SourceProvenanceTests(unittest.TestCase):
         subprocess.run(["git", "-C", str(root), "commit", "-q", "-m", "fixture"], check=True)
         return subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
 
-    def test_clean_repository_records_commit_and_tree_hash(self) -> None:
+    def test_clean_repository_records_commit_and_tree_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             revision = self._repository(root)
@@ -33,7 +35,7 @@ class SourceProvenanceTests(unittest.TestCase):
             second = detect_source_provenance(root)
             self.assertEqual(first.source_revision, revision)
             self.assertEqual(first, second)
-            self.assertEqual(len(first.source_tree_sha256), 64)
+            self.assertEqual(len(first.source_tree_identity), 16)
 
     def test_tracked_or_untracked_change_marks_repository_dirty(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -15,7 +15,7 @@ import numpy as np
 
 from .abi import (
     OBSERVATION_ABI_SCHEMA,
-    observation_abi_sha256,
+    observation_abi_identity,
     validate_formal_observation_abi,
 )
 from .policy_projection import (
@@ -295,7 +295,7 @@ def descriptor_for_capture(capture_root: Path) -> dict[str, Any]:
 
 
 def write_descriptor(capture_root: Path, output: Path) -> str:
-    """Atomically write a new external descriptor and return its canonical hash."""
+    """Atomically write a new external descriptor and return its canonical identity."""
 
     destination = output.expanduser().resolve()
     if destination.exists():
@@ -326,7 +326,7 @@ def write_descriptor(capture_root: Path, output: Path) -> str:
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
-    return observation_abi_sha256(payload)
+    return observation_abi_identity(payload)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -345,7 +345,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "status": "written",
                 "formal_benchmark_admission": False,
                 "output": str(args.output.expanduser().resolve()),
-                "observation_abi_sha256": digest,
+                "observation_abi_identity": digest,
             },
             indent=2,
             sort_keys=True,

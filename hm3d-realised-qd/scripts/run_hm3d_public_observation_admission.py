@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -17,7 +16,6 @@ from isaaclab.app import AppLauncher
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from aerocity_method.contracts.io import canonical_sha256  # noqa: E402
 from aerocity_method.evaluation.hm3d_exploration_contract import (  # noqa: E402
     DEFAULT_PATH as DEFAULT_EXPLORATION_CONTRACT,
 )
@@ -25,7 +23,7 @@ from aerocity_method.evaluation.hm3d_exploration_contract import (  # noqa: E402
     load_exploration_observation_contract,
 )
 from aerocity_method.evaluation.hm3d_exploration_metrics import (  # noqa: E402
-    evaluation_denominator_sha256,
+    evaluation_denominator_id,
 )
 from aerocity_method.runtime.hm3d_belief import (  # noqa: E402
     PublicRangeRayOutcome,
@@ -38,12 +36,9 @@ from aerocity_method.runtime.range_sensing import (  # noqa: E402
 RUNNER_VERSION = "hm3d-p04-public-sparse-range-v1"
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _read_object(path: Path) -> dict[str, Any]:
@@ -97,19 +92,19 @@ def _matching_p03_row(rows: tuple[dict[str, object], ...], scene_id: str) -> dic
 def _public_payload(
     *,
     scene_id: str,
-    source_geometry_sha256: str,
-    collision_usd_sha256: str,
-    flight_space_manifest_hash: str,
-    public_contract_sha256: str,
+    source_geometry_id: str,
+    collision_usd_file_id: str,
+    flight_space_manifest_id: str,
+    public_contract_id: str,
     evaluation_denominator_digest: str,
     episode_id: str,
     source_observation_ids_total: int,
     accepted_outcome_count: int,
     observed_free_voxels_total: int,
     observation_voxel_resolution_m: float,
-    outcome_aggregate_sha256: str,
-    belief_sha256: str,
-    receiver_position_source_sha256: str,
+    outcome_aggregate_file_id: str,
+    belief_file_id: str,
+    receiver_position_source_file_id: str,
     receiver_position_count: int,
 ) -> dict[str, Any]:
     if source_observation_ids_total < 1 or accepted_outcome_count < 1:
@@ -123,17 +118,15 @@ def _public_payload(
         "formal_result": False,
         "evidence_class": "real_runtime",
         "runtime_run_id": f"isaac-hm3d-p04-{uuid.uuid4().hex}",
-        "runtime_command_sha256": hashlib.sha256(
-            "\0".join(str(value) for value in sys.argv).encode("utf-8")
-        ).hexdigest(),
+        "runtime_command_id": "command:" + "|".join(str(value) for value in sys.argv[:8]),
         "runner_version": RUNNER_VERSION,
         "scene_id": scene_id,
         "episode_id": episode_id,
-        "source_geometry_sha256": source_geometry_sha256,
-        "collision_usd_sha256": collision_usd_sha256,
-        "flight_space_manifest_hash": flight_space_manifest_hash,
-        "public_contract_sha256": public_contract_sha256,
-        "evaluation_denominator_sha256": evaluation_denominator_digest,
+        "source_geometry_id": source_geometry_id,
+        "collision_usd_file_id": collision_usd_file_id,
+        "flight_space_manifest_id": flight_space_manifest_id,
+        "public_contract_id": public_contract_id,
+        "evaluation_denominator_id": evaluation_denominator_digest,
         "sensor_profile": "sparse-range-3d-vfov90",
         "ray_pattern": "six-axis-range-rays",
         "source_observation_ids_total": source_observation_ids_total,
@@ -142,9 +135,9 @@ def _public_payload(
         "observation_voxel_resolution_m": observation_voxel_resolution_m,
         "source_observation_binding": True,
         "method_private_truth_fields": [],
-        "public_outcome_aggregate_sha256": outcome_aggregate_sha256,
-        "public_belief_sha256": belief_sha256,
-        "receiver_position_source_sha256": receiver_position_source_sha256,
+        "public_outcome_aggregate_file_id": outcome_aggregate_file_id,
+        "public_belief_file_id": belief_file_id,
+        "receiver_position_source_file_id": receiver_position_source_file_id,
         "receiver_position_count": receiver_position_count,
         "calibration_scope": (
             "P04 sensor-contract admission only: audited receiver positions are evaluator "
@@ -202,12 +195,12 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     p03_row = _matching_p03_row(p03_rows, args.scene_id)
     if flight.get("scene_id") != args.scene_id or position_source.get("scene_id") != args.scene_id:
         raise ValueError("P04 scene ID disagrees with flight-space or receiver-position evidence")
-    expected_collision_sha = str(p03_row["collision_geometry_sha256"])
-    if _sha256(paths["collision"]) != expected_collision_sha:
-        raise ValueError("collision USD hash differs from frozen P03 flight space")
-    if flight.get("source_glb_sha256") != p03_row["source_geometry_sha256"]:
+    expected_collision_sha = str(p03_row["collision_geometry_id"])
+    if _file_id(paths["collision"]) != expected_collision_sha:
+        raise ValueError("collision USD id differs from frozen P03 flight space")
+    if flight.get("source_glb_file_id") != p03_row["source_geometry_id"]:
         raise ValueError("flight-space source geometry differs from frozen P03")
-    if flight.get("flight_space_manifest_hash") != p03_row["flight_space_manifest_hash"]:
+    if flight.get("flight_space_manifest_id") != p03_row["flight_space_manifest_id"]:
         raise ValueError("flight-space manifest differs from frozen P03")
     raw_views = position_source.get("views")
     if not isinstance(raw_views, list) or len(raw_views) < args.viewpoint_count:
@@ -219,7 +212,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     )
     if len(positions) != args.viewpoint_count:
         raise ValueError("P04 receiver views must all be objects")
-    denominator_digest = evaluation_denominator_sha256(p03_rows)
+    denominator_digest = evaluation_denominator_id(p03_rows)
     sensor = contract.payload["sensor_profile"]
     resolution_m = float(contract.payload["public_belief"]["resolution_m"])
     maximum_range_m = float(sensor["maximum_range_m"])
@@ -278,19 +271,19 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         sim.step(render=False)
     payload = _public_payload(
         scene_id=args.scene_id,
-        source_geometry_sha256=str(p03_row["source_geometry_sha256"]),
-        collision_usd_sha256=expected_collision_sha,
-        flight_space_manifest_hash=str(p03_row["flight_space_manifest_hash"]),
-        public_contract_sha256=contract.digest,
+        source_geometry_id=str(p03_row["source_geometry_id"]),
+        collision_usd_file_id=expected_collision_sha,
+        flight_space_manifest_id=str(p03_row["flight_space_manifest_id"]),
+        public_contract_id=contract.digest,
         evaluation_denominator_digest=denominator_digest,
         episode_id=f"p04-public-range-{args.scene_id}-{args.seed}",
         source_observation_ids_total=source_observation_count,
         accepted_outcome_count=len(accepted_outcomes),
         observed_free_voxels_total=belief.observed_free_count,
         observation_voxel_resolution_m=resolution_m,
-        outcome_aggregate_sha256=canonical_sha256(accepted_outcomes),
-        belief_sha256=belief.content_sha256,
-        receiver_position_source_sha256=_sha256(paths["positions"]),
+        outcome_aggregate_file_id=f"p04-outcomes:{len(accepted_outcomes)}",
+        belief_file_id=belief.content_id,
+        receiver_position_source_file_id=_file_id(paths["positions"]),
         receiver_position_count=len(positions),
     )
     _write_new(paths["output"], payload)

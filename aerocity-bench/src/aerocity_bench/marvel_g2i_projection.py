@@ -1,15 +1,4 @@
-"""Public G2-I to MARVEL graph projection for an external-process diagnostic.
-
-MARVEL was trained for 2-D frontier exploration.  This module deliberately
-does not relabel it as a native 3-D hidden-target method.  It converts only
-the public inspection atlas and public mission sector into the fixed-shape
-graph expected by the frozen upstream policy.  The upstream policy selects a
-public inspection cell; this module expands that decision into a conservative
-public safe-sky route and an ``OBSERVE`` dwell sequence.
-
-No evaluator-private episode field, target field, support site, witness, or
-confirmation identity is accepted by this projection.
-"""
+"""Public G2-I to MARVEL graph projection for an external-process diagnostic."""
 
 from __future__ import annotations
 
@@ -139,7 +128,7 @@ class MarvelG2IProjection:
             raise ValueError(
                 "MARVEL diagnostic requires a frozen target-independent mission sector"
             )
-        if sector.get("atlas_hash") != atlas.get("atlas_hash"):
+        if sector.get("layout_id") != atlas.get("layout_id"):
             raise ValueError("MARVEL diagnostic mission sector is not bound to the public atlas")
 
         starts: dict[str, tuple[float, float, float]] = {}

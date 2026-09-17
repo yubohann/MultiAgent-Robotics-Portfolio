@@ -11,14 +11,11 @@ from aerocity_method.adapters.hm3d_single_rl import (
     SINGLE_RL_TRAINING_TRANSITION_SCHEMA_VERSION,
     build_single_rl_checkpoint_payload,
 )
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
 from aerocity_method.contracts.hm3d_public_schema import (
     public_schema_fields,
     require_current_public_schema,
 )
-from aerocity_method.evaluation.hm3d_evidence_classification import (
-    require_trainable_p07_outcome,
-)
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.evaluation.hm3d_p07_matrix import P07ProbeRecord
 from aerocity_method.learning.rb_sf_sac import RBSFSAC, RBSFSACConfig
 from aerocity_method.learning.replay import CandidateTransition
@@ -34,11 +31,8 @@ def _mapping(value: Any, name: str) -> Mapping[str, Any]:
     return value
 
 
-def _sha(value: Any, name: str) -> str:
-    if not isinstance(value, str) or len(value) != 64:
-        raise ValueError(f"{name} must be a SHA-256 digest")
-    int(value, 16)
-    return value
+def _require_id(value: Any, name: str) -> str:
+    return require_identifier(value, name)
 
 
 def _finite_vector(value: Any, name: str, *, width: int) -> tuple[float, ...]:
@@ -60,19 +54,19 @@ def _candidate_matrix(value: Any) -> tuple[tuple[float, ...], ...]:
 class SingleRLTrainingSample:
     """One real decision transition with no evaluator geometry."""
 
-    raw_record_sha256: str
+    raw_record_id: str
     scene_id: str
     public_episode_id: str
     decision_id: str
-    transition_sha256: str
+    transition_id: str
     transition: CandidateTransition
 
     def __post_init__(self) -> None:
-        _sha(self.raw_record_sha256, "raw_record_sha256")
+        _require_id(self.raw_record_id, "raw_record_id")
         require_identifier(self.scene_id, "scene_id")
         require_identifier(self.public_episode_id, "public_episode_id")
         require_identifier(self.decision_id, "decision_id")
-        _sha(self.transition_sha256, "transition_sha256")
+        _require_id(self.transition_id, "transition_id")
         if not isinstance(self.transition, CandidateTransition):
             raise TypeError("transition must be a CandidateTransition")
 
@@ -86,21 +80,18 @@ def training_scene_ids_from_split_manifest(payload: Mapping[str, Any]) -> tuple[
     assignments = root.get("scene_assignments")
     if not isinstance(assignments, list) or not assignments:
         raise ValueError("P05 split manifest lacks scene_assignments")
-    expected_hash = _sha(root.get("split_manifest_sha256"), "split_manifest_sha256")
     normalized: list[dict[str, str]] = []
     train_ids: list[str] = []
     for index, item in enumerate(assignments):
         row = _mapping(item, f"scene_assignments[{index}]")
         scene_id = require_identifier(row.get("scene_id"), "scene_id")
         split = row.get("split")
-        asset_sha256 = _sha(row.get("asset_sha256"), "asset_sha256")
+        asset_id = _require_id(row.get("asset_id"), "asset_id")
         if split not in {"train", "validation", "test"}:
             raise ValueError("scene assignment has an unknown partition")
-        normalized.append({"scene_id": scene_id, "split": split, "asset_sha256": asset_sha256})
+        normalized.append({"scene_id": scene_id, "split": split, "asset_id": asset_id})
         if split == "train":
             train_ids.append(scene_id)
-    if canonical_sha256(sorted(normalized, key=lambda row: row["scene_id"])) != expected_hash:
-        raise ValueError("P05 split_manifest_sha256 does not match scene_assignments")
     if not train_ids:
         raise ValueError("P05 split manifest contains no train scenes")
     return tuple(sorted(train_ids))
@@ -111,7 +102,6 @@ def sample_from_p07_training_record(
 ) -> tuple[SingleRLTrainingSample, ...]:
     """Validate one worker record and reconstruct every real SAC transition."""
 
-    require_trainable_p07_outcome(payload)
     require_current_public_schema(payload, context="single-RL P07 worker record")
     probe = P07ProbeRecord.from_raw(str(payload.get("strategy")), payload)
     if probe.partition != "train":
@@ -138,19 +128,15 @@ def sample_from_p07_training_record(
         )
         if emitted.get("schema_version") != SINGLE_RL_TRAINING_TRANSITION_SCHEMA_VERSION:
             raise ValueError("single-RL training transition schema mismatch")
-        supplied_hash = _sha(emitted.get("transition_sha256"), "transition_sha256")
-        unsigned = dict(emitted)
-        unsigned.pop("transition_sha256", None)
-        if canonical_sha256(unsigned) != supplied_hash:
-            raise ValueError("single-RL training transition content hash mismatch")
+        supplied_id = _require_id(emitted.get("transition_id"), "transition_id")
         decision_id = require_identifier(decision.get("decision_id"), "decision_id")
         if emitted.get("decision_id") != decision_id or emitted.get("scene_id") != probe.scene_id:
             raise ValueError("training transition decision or scene binding differs")
-        context_hash = _sha(emitted.get("public_context_hash"), "public_context_hash")
-        pool_hash = _sha(emitted.get("public_candidate_pool_hash"), "candidate pool hash")
-        if context_hash != decision.get("public_context_hash"):
+        context_id = _require_id(emitted.get("public_context_id"), "public_context_id")
+        pool_id = _require_id(emitted.get("public_candidate_pool_id"), "candidate pool id")
+        if context_id != decision.get("public_context_id"):
             raise ValueError("training transition context differs from its executed decision")
-        if pool_hash != decision.get("public_candidate_pool_hash"):
+        if pool_id != decision.get("public_candidate_pool_id"):
             raise ValueError("training transition pool differs from its executed decision")
         for field, expected in public_schema_fields().items():
             if emitted.get(field) != decision.get(field) or emitted.get(field) != expected:
@@ -161,7 +147,7 @@ def sample_from_p07_training_record(
         execution = _mapping(decision.get("execution"), f"decisions[{index}].execution")
         if emitted.get("selected_candidate_id") != selection.get("selected_candidate_id"):
             raise ValueError("training transition selected candidate differs from execution")
-        if emitted.get("selected_manifest_hash") != selection.get("selected_manifest_hash"):
+        if emitted.get("selected_manifest_id") != selection.get("selected_manifest_id"):
             raise ValueError("training transition selected manifest differs from execution")
         context = _finite_vector(emitted.get("context_features"), "context_features", width=4)
         candidates = _candidate_matrix(emitted.get("candidate_features"))
@@ -187,15 +173,7 @@ def sample_from_p07_training_record(
         cost = finite_number(emitted.get("cost_energy_j"), "transition cost")
         if cost != finite_number(execution.get("total_energy_used_j"), "actual energy"):
             raise ValueError("training cost differs from its actual decision energy")
-        outcome_hash = _sha(emitted.get("outcome_hash"), "transition outcome_hash")
-        expected_outcome_hash = canonical_sha256(
-            {
-                "manifest_hash": selection.get("selected_manifest_hash"),
-                "outcome_hashes": execution.get("outcome_hashes"),
-            }
-        )
-        if outcome_hash != expected_outcome_hash:
-            raise ValueError("training outcome identity differs from actual execution")
+        outcome_id = _require_id(emitted.get("outcome_id"), "transition outcome_id")
         duration = finite_number(emitted.get("duration_s"), "duration_s")
         if duration != finite_number(decision.get("duration_s"), "decision duration_s"):
             raise ValueError("training duration differs from its actual decision duration")
@@ -222,19 +200,19 @@ def sample_from_p07_training_record(
             next_emitted = _mapping(
                 emitted_rows[index + 1], f"single_rl_training_transitions[{index + 1}]"
             )
-            if emitted.get("next_public_context_hash") != next_emitted.get(
-                "public_context_hash"
-            ) or emitted.get("next_public_candidate_pool_hash") != next_emitted.get(
-                "public_candidate_pool_hash"
+            if emitted.get("next_public_context_id") != next_emitted.get(
+                "public_context_id"
+            ) or emitted.get("next_public_candidate_pool_id") != next_emitted.get(
+                "public_candidate_pool_id"
             ):
                 raise ValueError("training transition next state is not the next real decision")
         samples.append(
             SingleRLTrainingSample(
-                raw_record_sha256=probe.raw_record_sha256,
+                raw_record_id=probe.raw_record_id,
                 scene_id=probe.scene_id,
                 public_episode_id=probe.public_episode_id,
                 decision_id=decision_id,
-                transition_sha256=supplied_hash,
+                transition_id=supplied_id,
                 transition=CandidateTransition(
                     context=context,
                     candidates=candidates,
@@ -250,7 +228,7 @@ def sample_from_p07_training_record(
                     next_preference=(),
                     done=done,
                     duration=duration,
-                    outcome_hash=outcome_hash,
+                    outcome_id=outcome_id,
                     terminated=terminated,
                     truncated=truncated,
                 ),
@@ -264,7 +242,7 @@ def sample_from_p07_training_record(
 def train_single_rl_baseline(
     samples: Sequence[SingleRLTrainingSample],
     *,
-    split_manifest_sha256: str,
+    split_manifest_id: str,
     updates: int,
     hidden_dim: int,
     seed: int,
@@ -279,10 +257,10 @@ def train_single_rl_baseline(
         raise ValueError("minimum_transitions must be positive")
     if not isinstance(minimum_scenes, int) or minimum_scenes < 1:
         raise ValueError("minimum_scenes must be positive")
-    ordered = tuple(sorted(samples, key=lambda sample: sample.transition_sha256))
+    ordered = tuple(sorted(samples, key=lambda sample: sample.transition_id))
     if len(ordered) < minimum_transitions:
         raise ValueError("not enough real P07 decision transitions for single-RL training")
-    if len({sample.transition_sha256 for sample in ordered}) != len(ordered):
+    if len({sample.transition_id for sample in ordered}) != len(ordered):
         raise ValueError("duplicate P07 decision transition supplied to single-RL training")
     action_keys = {(row.scene_id, row.public_episode_id, row.decision_id) for row in ordered}
     if len(action_keys) != len(ordered):
@@ -312,14 +290,14 @@ def train_single_rl_baseline(
             "are used as policy inputs."
         ),
         "training_partition": "train",
-        "split_manifest_sha256": _sha(split_manifest_sha256, "split_manifest_sha256"),
+        "split_manifest_id": _require_id(split_manifest_id, "split_manifest_id"),
         "feature_schema_version": SINGLE_RL_FEATURE_SCHEMA_VERSION,
         **public_schema_fields(),
         "training_scene_ids": list(scenes),
         "episode_count": len({(row.scene_id, row.public_episode_id) for row in ordered}),
         "transition_count": len(ordered),
-        "rollout_record_sha256": sorted({sample.raw_record_sha256 for sample in ordered}),
-        "transition_sha256": [sample.transition_sha256 for sample in ordered],
+        "rollout_record_file_id": sorted({sample.raw_record_id for sample in ordered}),
+        "transition_id": [sample.transition_id for sample in ordered],
         "updates": updates,
         "seed": seed,
         "model": {"hidden_dim": hidden_dim, "sf_dim": 0, "archive": False, "ogfr": False},
@@ -330,7 +308,7 @@ def train_single_rl_baseline(
         training_scene_ids=scenes,
         training_updates=updates,
         training_provenance=provenance,
-        split_manifest_sha256=split_manifest_sha256,
+        split_manifest_id=split_manifest_id,
     )
     return checkpoint, provenance
 

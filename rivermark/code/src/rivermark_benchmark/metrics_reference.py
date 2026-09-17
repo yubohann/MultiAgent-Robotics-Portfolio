@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import itertools
 import math
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 
 def normalized_confirmed_auc_reference(
@@ -18,12 +20,12 @@ def normalized_confirmed_auc_reference(
     if not isinstance(target_count, int) or isinstance(target_count, bool) or target_count < 1:
         raise ValueError("target_count must be a positive integer")
     if isinstance(time_budget_s, bool) or not isinstance(time_budget_s, (int, float)):
-        raise ValueError("time_budget_s must be positive and finite")
+        raise TypeError("time_budget_s must be positive and finite")
     budget = float(time_budget_s)
     if not math.isfinite(budget) or budget <= 0.0:
         raise ValueError("time_budget_s must be positive and finite")
     if not isinstance(timestamps_s, Sequence) or not isinstance(confirmed_counts, Sequence):
-        raise ValueError("metric traces must be sequences")
+        raise TypeError("metric traces must be sequences")
     if len(timestamps_s) == 0 or len(timestamps_s) != len(confirmed_counts):
         raise ValueError("metric traces must be non-empty and have equal length")
 
@@ -33,11 +35,11 @@ def normalized_confirmed_auc_reference(
         raise ValueError("metric traces must be finite")
     if times[0] < 0.0 or times[-1] > budget:
         raise ValueError("timestamps_s must lie within [0, time_budget_s]")
-    if any(right <= left for left, right in zip(times, times[1:])):
+    if any(right <= left for left, right in itertools.pairwise(times)):
         raise ValueError("timestamps_s must be strictly increasing")
     if any(value < 0.0 or value > target_count or value != math.floor(value) for value in counts):
         raise ValueError("confirmed_counts must be non-decreasing integer counts within target_count")
-    if any(right < left for left, right in zip(counts, counts[1:])):
+    if any(right < left for left, right in itertools.pairwise(counts)):
         raise ValueError("confirmed_counts must be non-decreasing")
     if times[0] > 0.0:
         times.insert(0, 0.0)
@@ -66,7 +68,7 @@ def score_search_episode_reference(
     if not isinstance(false_confirmations, int) or isinstance(false_confirmations, bool) or false_confirmations < 0:
         raise ValueError("false_confirmations must be a non-negative integer")
     if not isinstance(truncated, bool):
-        raise ValueError("truncated must be boolean")
+        raise TypeError("truncated must be boolean")
     auc = normalized_confirmed_auc_reference(
         timestamps_s,
         confirmed_counts,

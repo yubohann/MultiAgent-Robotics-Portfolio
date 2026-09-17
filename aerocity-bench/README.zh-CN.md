@@ -9,7 +9,7 @@
 
 城市中的覆盖指标经常失真。无人机可能飞过建筑却错过屋顶，检查错误立面，被几何遮挡截断视线，或因穿越过快错过有效观测窗口。AeroCityBench 把这些情形变成可计分的任务，程序化三维城市，公开任务合同，计分器私有目标真值，确认必须由飞行中的合法观测取得。
 
-**状态。** `v0.2.0.dev0` 原型。生成器，合同，计分器，审计工具与校准基础设施已经实现，正式盲测在验证门禁通过后开放，见[研究记录](docs/research-notes.md)。
+**状态。** `v0.2.0.dev0` 原型。生成器，合同，计分器，校准工具与发布构建已经实现，正式盲测在验证完成后开放，见[研究记录](docs/research-notes.md)。
 
 ## 检验内容
 
@@ -35,11 +35,11 @@ flowchart LR
 ## 基准内容
 
 - 受约束的程序化城市生成器，版本化发布配置与开放资产许可检查。
-- 公开与私有任务投影，JSON Schema，内容哈希与发布验证。
+- 公开与私有任务投影，JSON Schema 与发布清单。
 - 由几何独立编译的 G2-I 检查图谱与递归泄漏检查。
 - 绑定真实观测的 `OBSERVE` 合同与计分器私有确认。
 - 基线适配器以及外部方法的 CPU 与原生预检工具。
-- 在 CPU 上运行的合同，完整性，主机保护与质量门禁测试。
+- 在 CPU 上运行的合同，生成，几何，指标与适配器测试。
 
 ## 已核验的证据
 
@@ -49,7 +49,7 @@ flowchart LR
 - L2 视觉审查在冻结的 960x640 配置下通过，覆盖训练，校准与验证城市。
 - 十二座开发城市通过静态几何，上下文与完整回合准入审查。
 - CC0 迷你资产集闭合，32 个 USD 层，零远程引用，零未解析路径。
-- mission-sector 证书从公开分配独立重算飞行，观测，爬升与返航下界，任何不一致即失败关闭。
+- mission-sector 证书从公开分配独立重算飞行，观测，爬升与返航下界，任何不一致都会被拒绝。
 
 ## 快速开始
 
@@ -68,11 +68,11 @@ $assetRoot = (Resolve-Path $env:AEROCITY_ASSET_ROOT)
 $outputRoot = Join-Path $env:AEROCITY_OUTPUT_ROOT "ordinary-v1-mini"
 
 python -m aerocity_bench build --release .\configs\releases\ordinary-v1-mini.json `
-  --asset-root $assetRoot --output $outputRoot --task-track G2-I --allow-uncommitted-development
+  --asset-root $assetRoot --output $outputRoot --allow-uncommitted-development
 python -m aerocity_bench validate $outputRoot
 ```
 
-包含原生与外部适配器的完整路径见[运行指南](docs/run-guide.md)。
+包含外部适配器的完整路径见[运行指南](docs/run-guide.md)。
 
 ## 文档
 

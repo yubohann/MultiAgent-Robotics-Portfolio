@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
 import math
 import random
-
+from dataclasses import dataclass, replace
 
 WORLD_X_BOUNDS_M = (-10.0, 10.0)
 WORLD_Y_BOUNDS_M = (-4.0, 4.0)
@@ -128,23 +127,6 @@ def _sample_gate_yaw_minus5_to_5_rad(rng: random.Random) -> float:
     """Sample the formation-facing obstacle yaw band: random -5 to +5 degrees."""
 
     return math.radians(float(rng.uniform(-5.0, 5.0)))
-
-
-def _distance_point_to_segment_local(
-    point_xy: tuple[float, float],
-    seg_start_xy: tuple[float, float],
-    seg_end_xy: tuple[float, float],
-) -> float:
-    px, py = float(point_xy[0]), float(point_xy[1])
-    ax, ay = float(seg_start_xy[0]), float(seg_start_xy[1])
-    bx, by = float(seg_end_xy[0]), float(seg_end_xy[1])
-    abx = bx - ax
-    aby = by - ay
-    ab_sq = abx * abx + aby * aby
-    if ab_sq <= 1.0e-12:
-        return math.hypot(px - ax, py - ay)
-    t = max(0.0, min(1.0, ((px - ax) * abx + (py - ay) * aby) / ab_sq))
-    return math.hypot(px - (ax + t * abx), py - (ay + t * aby))
 
 
 def _moving_points_min_distance(

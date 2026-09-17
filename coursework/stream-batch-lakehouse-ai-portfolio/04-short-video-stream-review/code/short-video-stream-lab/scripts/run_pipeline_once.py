@@ -15,7 +15,7 @@ from app.storage import stats  # noqa: E402
 def main() -> None:
     """Process every demo video once and print compact publication results."""
     pipeline = ShortVideoPipeline()
-    videos = ensure_demo_videos(overwrite=False)
+    videos = ensure_demo_videos()
     for item in videos:
         record = pipeline.process_video(
             Path(item["path"]),

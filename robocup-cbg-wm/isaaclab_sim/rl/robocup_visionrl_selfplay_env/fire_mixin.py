@@ -3,6 +3,24 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from robocup_visionrl_gym_env import (
+    BASE_HIT_RADIUS,
+    BASE_SHOOT_RANGE,
+    BLUE_BASE_XY,
+    HALF_ARENA,
+    PUSHABLE_OBSTACLE_HALF,
+    ROBOT_RADIUS,
+    SHOOT_HIT_RADIUS,
+    SHOOT_RANGE,
+    SHOOTER_FORWARD_OFFSET,
+    YELLOW_BASE_XY,
+    Target,
+    active_base_armor_blockers,
+    base_attack_pose_quality,
+    base_hit_success_cap,
+    shooting_range_limits,
+    wrap_angle,
+)
 
 from .constants import (
     BASE_AIM_MICRO_SCAN_RAD,
@@ -18,29 +36,9 @@ from .constants import (
     NORMAL_TARGET_CONTACT_RADIUS,
     SHOT_CLOSE_DISTANCE,
     TACTICAL_STANDOFF_MAX,
-    TACTICAL_STANDOFF_MIN
+    TACTICAL_STANDOFF_MIN,
 )
-from .geometry import (
-    laser_origin_from_pose
-)
-from robocup_visionrl_gym_env import (
-    BASE_HIT_RADIUS,
-    BASE_SHOOT_RANGE,
-    BLUE_BASE_XY,
-    HALF_ARENA,
-    PUSHABLE_OBSTACLE_HALF,
-    ROBOT_RADIUS,
-    SHOOTER_FORWARD_OFFSET,
-    SHOOT_HIT_RADIUS,
-    SHOOT_RANGE,
-    Target,
-    YELLOW_BASE_XY,
-    active_base_armor_blockers,
-    base_attack_pose_quality,
-    base_hit_success_cap,
-    shooting_range_limits,
-    wrap_angle
-)
+from .geometry import laser_origin_from_pose
 
 
 class FireMixin:
@@ -180,10 +178,12 @@ class FireMixin:
             normal_hits = self._normal_hits_against(team)
             if normal_hits < BASE_RUSH_EARLY_NORMAL_HITS:
                 return []
-            if normal_hits < int(self.base_retry_min_normal_hits.get(team, 0)):
-                if normal_hits < BASE_RUSH_BALANCED_NORMAL_HITS or self._has_available_normal_retry_target(team):
-                    return []
-        risk_bucket = int(round(float(np.clip(risk, 0.0, 1.0)) * 4.0))
+            if normal_hits < int(self.base_retry_min_normal_hits.get(team, 0)) and (
+                normal_hits < BASE_RUSH_BALANCED_NORMAL_HITS
+                or self._has_available_normal_retry_target(team)
+            ):
+                return []
+        risk_bucket = round(float(np.clip(risk, 0.0, 1.0)) * 4.0)
         cache_key = (target.name, risk_bucket, int(self.armor[target.owner]))
         cached = self._fire_pose_cache.get(cache_key)
         if cached is not None:

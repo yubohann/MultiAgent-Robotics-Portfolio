@@ -11,7 +11,7 @@ from aerocity_method.contracts.exploration import (
     FrontierCluster,
     TeamExplorationCandidate,
 )
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.runtime.hm3d_trajectory import (
     Point3,
     TrajectoryTimingConfig,
@@ -178,8 +178,8 @@ def _plan_for_frontier(
 
 def build_exploration_candidate_pool(
     *,
-    context_payload: dict[str, object],
-    belief_version_sha256s: Sequence[str],
+    context_id: str,
+    belief_version_ids: Sequence[str],
     agents: Sequence[PublicExplorationAgentState],
     frontiers: Sequence[FrontierCluster],
     budget: ExplorationCandidateBudget,
@@ -201,7 +201,7 @@ def build_exploration_candidate_pool(
         or candidate_limit < 1
     ):
         raise ValueError("candidate_limit must be a positive integer")
-    context_sha256 = canonical_sha256(context_payload)
+    require_identifier(context_id, "context_id")
     candidates: list[TeamExplorationCandidate] = []
     for offset in range(min(candidate_limit, len(clusters))):
         plans: list[AgentExplorationPlan] = []
@@ -235,8 +235,8 @@ def build_exploration_candidate_pool(
         candidates.append(
             TeamExplorationCandidate(
                 candidate_id=f"hm3d-exploration-candidate-{offset}",
-                context_sha256=context_sha256,
-                belief_version_sha256s=tuple(belief_version_sha256s),
+                context_id=context_id,
+                belief_version_ids=tuple(belief_version_ids),
                 agent_plans=tuple(plans),
                 planned_descriptor=descriptor,
                 feasible=feasible,

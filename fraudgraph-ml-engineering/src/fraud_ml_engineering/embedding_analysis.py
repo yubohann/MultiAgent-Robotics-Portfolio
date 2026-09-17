@@ -28,7 +28,7 @@ def _subsample_indices(labels: np.ndarray, max_points: int, seed: int = 42) -> n
         label_indices = indices[labels == label]
         if len(label_indices) == 0:
             continue
-        take = max(1, int(round(max_points * (len(label_indices) / total))))
+        take = max(1, round(max_points * (len(label_indices) / total)))
         take = min(take, len(label_indices))
         selected.append(rng.choice(label_indices, size=take, replace=False))
     merged = np.unique(np.concatenate(selected)) if selected else indices[:max_points]
@@ -51,8 +51,8 @@ def _project_embeddings(embeddings: np.ndarray) -> tuple[np.ndarray, list[float]
 def _separation_metrics(embeddings: np.ndarray, labels: np.ndarray) -> dict:
     unique_labels = np.unique(labels)
     metrics = {
-        "num_samples": int(len(labels)),
-        "num_classes": int(len(unique_labels)),
+        "num_samples": len(labels),
+        "num_classes": len(unique_labels),
         "positive_count": int((labels == 1).sum()) if len(unique_labels) > 0 else 0,
         "negative_count": int((labels == 0).sum()) if len(unique_labels) > 0 else 0,
         "centroid_distance": 0.0,
@@ -72,7 +72,7 @@ def _separation_metrics(embeddings: np.ndarray, labels: np.ndarray) -> dict:
         sample_indices = _subsample_indices(labels, max_points=min(2000, len(labels)))
         if len(np.unique(labels[sample_indices])) >= 2 and len(sample_indices) > 2:
             metrics["silhouette"] = float(silhouette_score(embeddings[sample_indices], labels[sample_indices]))
-    except Exception:
+    except (TypeError, ValueError):
         metrics["silhouette"] = 0.0
     return metrics
 
@@ -143,7 +143,7 @@ def _export_single_embedding_family(
 
     metrics = _separation_metrics(embeddings, labels)
     metrics["pca_explained_variance_ratio"] = explained_variance
-    metrics["plot_points"] = int(len(sample_indices))
+    metrics["plot_points"] = len(sample_indices)
     metrics["plot_file"] = str(plot_path)
     metrics["embeddings_file"] = str(family_prefix.with_name(family_prefix.name + "_embeddings.npy"))
     metrics["node_ids_file"] = str(family_prefix.with_name(family_prefix.name + "_node_ids.npy"))

@@ -42,7 +42,7 @@ def _belief() -> SparseVoxelBelief:
 
 def test_sparse_belief_ray_replay_is_idempotent_and_occupied_wins():
     belief = _belief()
-    before = belief.content_sha256
+    before = belief.content_id
     assert (
         belief.integrate_ray(
             PublicRangeRayOutcome(
@@ -56,7 +56,7 @@ def test_sparse_belief_ray_replay_is_idempotent_and_occupied_wins():
         )
         is False
     )
-    assert belief.content_sha256 == before
+    assert belief.content_id == before
     assert belief.state((0, 0, 0)) == FREE
     assert belief.state((3, 0, 0)) == OCCUPIED
 
@@ -127,8 +127,8 @@ def test_exploration_candidates_use_public_frontiers_and_reject_private_shortcut
     belief = _belief()
     clusters = extract_frontier_clusters(belief)
     pool = build_exploration_candidate_pool(
-        context_payload={"episode_id": "episode0", "decision_id": "decision0"},
-        belief_version_sha256s=(belief.version().digest,),
+        context_id="episode0:decision0",
+        belief_version_ids=(belief.version().content_id,),
         agents=(
             PublicExplorationAgentState("uav0", (0.0, 0.0, 1.0), 100.0, 1),
             PublicExplorationAgentState("uav1", (1.0, 0.0, 1.0), 100.0, 1),
@@ -149,8 +149,8 @@ def test_candidate_generation_fails_closed_when_all_guards_reject():
     clusters = extract_frontier_clusters(belief)
     with pytest.raises(ValueError, match="no feasible"):
         build_exploration_candidate_pool(
-            context_payload={"episode_id": "episode0", "decision_id": "decision0"},
-            belief_version_sha256s=(belief.version().digest,),
+            context_id="episode0:decision0",
+            belief_version_ids=(belief.version().content_id,),
             agents=(PublicExplorationAgentState("uav0", (0.0, 0.0, 1.0), 100.0, 1),),
             frontiers=clusters,
             budget=ExplorationCandidateBudget(0.0, 30.0),

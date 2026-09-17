@@ -10,7 +10,6 @@ from aerocity_method.archives.emitters import (
     RandomEmitter,
 )
 from aerocity_method.archives.qd import ArchiveSpec, DescriptorAxis, Elite, QDArchive
-from aerocity_method.contracts.io import canonical_sha256
 
 
 @pytest.fixture
@@ -28,8 +27,8 @@ def archive():
 def elite(manifest, descriptor, quality=1.0, cost=0.2, behavior=None, feasible=True):
     return Elite(
         candidate_id=manifest.candidate_id,
-        manifest_hash=manifest.manifest_hash,
-        behavior_hash=behavior or canonical_sha256({"behavior": manifest.candidate_id}),
+        manifest_id=manifest.manifest_id,
+        behavior_id=behavior or f"behavior-{manifest.candidate_id}",
         realised_descriptor=descriptor,
         quality=quality,
         cost=cost,
@@ -64,21 +63,21 @@ def test_quality_replacement_and_cost_tie_break(archive, manifests):
     archive.add_or_update(first)
     decision = archive.add_or_update(second)
     assert decision.admitted
-    assert archive.best().manifest_hash == second.manifest_hash
+    assert archive.best().manifest_id == second.manifest_id
 
 
-def test_manifest_hash_is_final_deterministic_tie_break(archive, manifests):
+def test_manifest_id_is_final_deterministic_tie_break(archive, manifests):
     candidates = [
-        elite(manifest, (0.1, 0.1), behavior=canonical_sha256({"b": i}))
+        elite(manifest, (0.1, 0.1), behavior=f"behavior-{i}")
         for i, manifest in enumerate(manifests[:2])
     ]
-    for row in sorted(candidates, key=lambda item: item.manifest_hash, reverse=True):
+    for row in sorted(candidates, key=lambda item: item.manifest_id, reverse=True):
         archive.add_or_update(row)
-    assert archive.best().manifest_hash == min(item.manifest_hash for item in candidates)
+    assert archive.best().manifest_id == min(item.manifest_id for item in candidates)
 
 
 def test_duplicate_behavior_cannot_occupy_two_candidates(archive, manifests):
-    behavior = canonical_sha256({"same": True})
+    behavior = "behavior-same"
     archive.add_or_update(elite(manifests[0], (0.1, 0.1), behavior=behavior))
     decision = archive.add_or_update(elite(manifests[1], (0.9, 0.9), behavior=behavior))
     assert decision.reason == "DUPLICATE_BEHAVIOR"
@@ -101,13 +100,13 @@ def test_realised_descriptor_migration_removes_old_cell(archive, manifests):
     archive.add_or_update(row)
     archive.add_or_update(replace(row, realised_descriptor=(0.9, 0.9), quality=2.0))
     assert archive.get((0, 0)) is None
-    assert archive.get((1, 1)).manifest_hash == row.manifest_hash
+    assert archive.get((1, 1)).manifest_id == row.manifest_id
 
 
 def test_archive_checkpoint_round_trip(archive, manifests):
     archive.add_or_update(elite(manifests[0], (0.1, 0.1)))
     restored = QDArchive.from_state_dict(archive.state_dict())
-    assert restored.digest == archive.digest
+    assert restored.state_dict() == archive.state_dict()
     assert restored.revision == archive.revision
 
 
@@ -122,8 +121,8 @@ def test_checkpoint_rejects_cell_descriptor_mismatch(archive, manifests):
 def test_deterministic_emitter_cursor_is_reproducible(manifests):
     left = DeterministicEmitter()
     right = DeterministicEmitter()
-    assert [x.manifest.manifest_hash for x in left.ask(manifests, 5)] == [
-        x.manifest.manifest_hash for x in right.ask(tuple(reversed(manifests)), 5)
+    assert [x.manifest.manifest_id for x in left.ask(manifests, 5)] == [
+        x.manifest.manifest_id for x in right.ask(tuple(reversed(manifests)), 5)
     ]
 
 
@@ -133,15 +132,15 @@ def test_random_emitter_state_restores(manifests):
     first = emitter.ask(manifests, 4)
     emitter.restore(state)
     second = emitter.ask(manifests, 4)
-    assert [row.manifest.manifest_hash for row in first] == [
-        row.manifest.manifest_hash for row in second
+    assert [row.manifest.manifest_id for row in first] == [
+        row.manifest.manifest_id for row in second
     ]
 
 
 def test_archive_aware_emitter_prefers_empty_cell(archive, manifests):
     archive.add_or_update(elite(manifests[0], manifests[0].planned_descriptor))
     emitted = ArchiveAwareEmitter(archive).ask(manifests, 1)[0]
-    assert emitted.manifest.manifest_hash != manifests[0].manifest_hash
+    assert emitted.manifest.manifest_id != manifests[0].manifest_id
 
 
 def test_archive_metrics_have_five_evidence_groups_core(archive, manifests):

@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from assets.five_in_drone import DEFAULT_DRONE_USD, spawn_real_drones
 from assets.gate_scene_layouts import DEFAULT_GATE_USD, GateCourseLayout2D, gate_visual_instances
-
 
 DEFAULT_GATE_CAMERA_EYE = (0.0, -78.0, 26.0)
 DEFAULT_GATE_CAMERA_TARGET = (0.0, 0.0, 3.0)

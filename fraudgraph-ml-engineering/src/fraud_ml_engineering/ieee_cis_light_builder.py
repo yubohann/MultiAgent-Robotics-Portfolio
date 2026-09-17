@@ -1,7 +1,9 @@
-﻿from __future__ import annotations
+﻿"""Build and cache IEEE-CIS light asset tables for graph experiments."""
 
-import hashlib
+from __future__ import annotations
+
 import json
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -31,7 +33,6 @@ class IEEEAssetLayout:
     transactions_subset_path: Path
     identity_subset_path: Path
     merged_subset_path: Path
-    views_dir: Path
     typed_static_path: Path
     sequence_view_path: Path
     graph_view_path: Path
@@ -51,7 +52,6 @@ def _preferred_layout(root_dir: Path) -> IEEEAssetLayout:
         transactions_subset_path=root_dir / "transactions_subset.parquet",
         identity_subset_path=root_dir / "identity_subset.parquet",
         merged_subset_path=root_dir / "merged_subset.parquet",
-        views_dir=views_dir,
         typed_static_path=views_dir / "typed_static.npz",
         sequence_view_path=views_dir / "sequence_view.npz",
         graph_view_path=graph_cache_dir / "graph_view.dgl",
@@ -62,9 +62,9 @@ def _preferred_layout(root_dir: Path) -> IEEEAssetLayout:
     )
 
 
-def _stable_digest(payload: dict[str, Any]) -> str:
+def _stable_cache_tag(payload: dict[str, Any]) -> str:
     data = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
-    return hashlib.sha1(data).hexdigest()[:12]
+    return f"{zlib.crc32(data) & 0xFFFFFFFF:08x}"
 
 
 def _source_paths(data_root: str | Path) -> tuple[Path, Path]:
@@ -126,7 +126,7 @@ def resolve_ieee_asset_layout(
     asset_root = ieee_cache_asset_root(
         data_root,
         asset_family=str(runtime_summary["asset_family"]),
-    ) / _stable_digest(signature_payload)
+    ) / _stable_cache_tag(signature_payload)
     return _preferred_layout(asset_root)
 
 
@@ -135,7 +135,7 @@ def _write_dataframe_cache(path: Path, frame: pd.DataFrame) -> dict[str, Any]:
     try:
         frame.to_parquet(path, index=False)
         return {"path": str(path), "format": "parquet"}
-    except Exception:
+    except (ImportError, OSError, ValueError):
         csv_path = path.with_suffix(".csv.gz")
         frame.to_csv(csv_path, index=False, compression="gzip")
         return {"path": str(csv_path), "format": "csv.gz"}
@@ -235,9 +235,9 @@ def _compute_hard_negative_scores(frame: pd.DataFrame, relation_columns: tuple[s
 
 
 def _assign_split_names(frame: pd.DataFrame, *, train_ratio: float, valid_ratio: float) -> np.ndarray:
-    num_rows = int(len(frame))
-    train_end = int(round(num_rows * float(train_ratio)))
-    valid_end = int(round(num_rows * float(train_ratio + valid_ratio)))
+    num_rows = len(frame)
+    train_end = round(num_rows * float(train_ratio))
+    valid_end = round(num_rows * float(train_ratio + valid_ratio))
     train_end = min(max(train_end, 1), max(num_rows - 2, 1))
     valid_end = min(max(valid_end, train_end + 1), max(num_rows - 1, 1))
     split_names = np.full(num_rows, "test", dtype=object)
@@ -282,7 +282,7 @@ def _sample_one_split(
                 chosen_parts.append(np.sort(rng.choice(bin_members, size=take, replace=False)).astype(np.int64))
         chosen_positive = np.sort(np.concatenate(chosen_parts, axis=0)) if chosen_parts else np.empty(0, dtype=np.int64)
 
-    remaining_budget = max(int(target_size) - int(len(chosen_positive)), 0)
+    remaining_budget = max(int(target_size) - len(chosen_positive), 0)
     if remaining_budget >= len(negative_index):
         chosen_negative = negative_index
     else:
@@ -330,8 +330,8 @@ def _sample_manifest(
         return manifest, {
             "sampling_applied": False,
             "sampling_strategy": "chrono_full",
-            "original_rows": int(len(frame)),
-            "sampled_rows": int(len(frame)),
+            "original_rows": len(frame),
+            "sampled_rows": len(frame),
             "requested_max_transactions": None if max_transactions is None else int(max_transactions),
         }
 
@@ -358,8 +358,8 @@ def _sample_manifest(
     return sampled, {
         "sampling_applied": True,
         "sampling_strategy": str(sampling_profile),
-        "original_rows": int(len(frame)),
-        "sampled_rows": int(len(sampled)),
+        "original_rows": len(frame),
+        "sampled_rows": len(sampled),
         "requested_max_transactions": int(max_transactions),
         "split_sizes_before": {split_names[index]: int(split_sizes[index]) for index in range(len(split_names))},
         "split_sizes_after": {
@@ -439,15 +439,6 @@ def _load_subset_from_csv(
         if bool(mask.any()):
             chunks.append(chunk.loc[mask].copy())
     return pd.concat(chunks, axis=0, ignore_index=True) if chunks else pd.DataFrame(columns=usecols)
-
-
-def _manifest_hash(manifest: pd.DataFrame) -> str:
-    payload = {
-        "transaction_ids": manifest["TransactionID"].astype(str).tolist(),
-        "split_name": manifest["split_name"].astype(str).tolist(),
-        "isFraud": manifest["isFraud"].fillna(0).astype(int).tolist(),
-    }
-    return _stable_digest(payload)
 
 
 def ensure_ieee_light_assets(
@@ -601,7 +592,6 @@ def ensure_ieee_light_assets(
         "selected_relation_columns": [str(item) for item in resolved_relation_columns],
         "sampling_strategy": str(manifest_info["sampling_strategy"]),
         "sampling_applied": bool(manifest_info["sampling_applied"]),
-        "manifest_hash": _manifest_hash(manifest),
         "split_policy": "chronological_transactiondt_holdout",
         "feature_block_summary": {
             "transaction_columns": [str(item) for item in pass2_transaction_columns],
@@ -629,11 +619,3 @@ def load_merged_subset_frame(layout: IEEEAssetLayout, metadata: dict[str, Any]) 
     if not merged_info:
         raise FileNotFoundError(f"IEEE merged subset metadata missing under {layout.metadata_path}")
     return read_dataframe_cache(merged_info)
-
-
-def load_manifest_frame(layout: IEEEAssetLayout, metadata: dict[str, Any]) -> pd.DataFrame:
-    tables = dict(metadata.get("tables", {}) or {})
-    manifest_info = dict(tables.get("manifest", {}) or {})
-    if not manifest_info:
-        raise FileNotFoundError(f"IEEE manifest metadata missing under {layout.metadata_path}")
-    return read_dataframe_cache(manifest_info)

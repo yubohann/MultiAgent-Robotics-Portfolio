@@ -1,4 +1,4 @@
-"""Fail-closed audits for artifacts that must never enter Git history."""
+"""Strict audits for artifacts that must never enter Git history."""
 
 from __future__ import annotations
 
@@ -6,10 +6,9 @@ import argparse
 import json
 import subprocess
 import tarfile
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
-from pathlib import Path
-from pathlib import PurePosixPath
-from typing import Sequence
+from pathlib import Path, PurePosixPath
 
 REPOSITORY_AUDIT_SCHEMA = "org.rivermark.benchmark.repository-audit.v1"
 DEFAULT_MAX_FILE_BYTES = 5 * 1024 * 1024
@@ -144,13 +143,7 @@ def audit_repository(root: Path, *, max_file_bytes: int = DEFAULT_MAX_FILE_BYTES
 
 
 def _reachable_history_entries(root: Path) -> tuple[tuple[str, str, int], ...]:
-    """Return ``(object_id, path, size)`` for ref-reachable file objects.
-
-    ``git rev-list --objects --all`` includes objects from older commits that
-    are still reachable through a branch or tag, which is exactly the history
-    surface a maintainer must inspect before claiming an artifact was removed.
-    Object sizes come from ``cat-file`` instead of reading blobs into memory.
-    """
+    """Return ``(object_id, path, size)`` for ref-reachable file objects."""
 
     try:
         listing = subprocess.check_output(
@@ -191,12 +184,7 @@ def _reachable_history_entries(root: Path) -> tuple[tuple[str, str, int], ...]:
 
 
 def audit_git_history(root: Path, *, max_file_bytes: int = DEFAULT_MAX_FILE_BYTES) -> GitHistoryAuditReport:
-    """Audit ref-reachable history, including files removed in later commits.
-
-    This is intentionally opt-in because an existing repository may have
-    historical evidence that requires an owner-approved history rewrite.  A
-    blocked result is diagnostic evidence; it never mutates refs or objects.
-    """
+    """Audit ref-reachable history, including files removed in later commits."""
 
     if isinstance(max_file_bytes, bool) or not isinstance(max_file_bytes, int) or max_file_bytes <= 0:
         raise ValueError("max_file_bytes must be a positive integer")
@@ -239,13 +227,7 @@ def audit_source_distribution(
     *,
     max_file_bytes: int = DEFAULT_MAX_FILE_BYTES,
 ) -> SourceDistributionAuditReport:
-    """Audit the actual sdist payload rather than only its source Git index.
-
-    Setuptools can reuse a local ``SOURCES.txt`` from an ignored ``egg-info``
-    directory.  A clean index is therefore insufficient evidence that an sdist
-    does not contain historical video, evidence, prompts, or other excluded
-    payloads.  This function never extracts the archive.
-    """
+    """Audit the actual sdist payload rather than only its source Git index."""
 
     if isinstance(max_file_bytes, bool) or not isinstance(max_file_bytes, int) or max_file_bytes <= 0:
         raise ValueError("max_file_bytes must be a positive integer")
@@ -347,12 +329,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 __all__ = [
     "DEFAULT_MAX_FILE_BYTES",
     "REPOSITORY_AUDIT_SCHEMA",
+    "GitHistoryAuditReport",
     "RepositoryAuditIssue",
     "RepositoryAuditReport",
-    "GitHistoryAuditReport",
     "SourceDistributionAuditReport",
-    "audit_repository",
     "audit_git_history",
+    "audit_repository",
     "audit_source_distribution",
 ]
 

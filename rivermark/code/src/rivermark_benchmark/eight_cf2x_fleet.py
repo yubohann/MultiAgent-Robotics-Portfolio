@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import importlib
+from collections.abc import Sequence
 from types import SimpleNamespace
-from typing import Any, Sequence
+from typing import Any
 
 
 class _FleetData:
@@ -121,13 +122,7 @@ class EightCF2XFleet:
         thruster_ids: Any = None,
         env_ids: Any = None,
     ) -> None:
-        """Delegate one complete [8, 4] force command in stable agent order.
-
-        The named optional parameters match ``Multirotor.set_thrust_target`` so
-        callers can pass its default values explicitly. Partial selections have
-        no safe batch meaning across eight independent PhysX views, so reject
-        them rather than silently changing the command's agent ordering.
-        """
+        """Delegate one complete [8, 4] force command in stable agent order."""
         if thruster_ids is not None or env_ids is not None:
             raise NotImplementedError("City-Lite fleet accepts only full-batch thrust commands")
         if tuple(target.shape) != (8, 4):

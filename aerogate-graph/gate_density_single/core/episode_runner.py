@@ -3,46 +3,40 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
 import csv
 import json
 import math
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-
-_RUNTIME_NAMES = (
-    "DRONE_RADIUS_M",
-    "GATE_BOTTOM_HEIGHT_M",
-    "GATE_CENTER_HEIGHT_M",
-    "GATE_LAYOUT_VERSION",
-    "GATE_REGION_X",
-    "GATE_REGION_Y",
-    "GATE_TOP_HEIGHT_M",
-    "GOAL_XYZ",
-    "START_XYZ",
-    "GateDensityController",
-    "LocalGateGuidanceClient",
-    "_build_gate_obstacle_map",
-    "_gate_gate_clearance_stats",
-    "_gate_gate_frame_clearance_stats",
-    "_moving_gate_centers",
-    "_moving_gate_swept_clearance_m",
-    "_path_length",
-    "_percentile",
-    "_resolve_moving_gate_speed_hz",
-    "_write_json",
+from gate_density_single.core.controller import GateDensityController
+from gate_density_single.core.eval_support import (
+    DRONE_RADIUS_M,
+    build_gate_obstacle_map,
+    path_length,
+    percentile,
+    write_json,
 )
-
-
-def bind_episode_runner_runtime(namespace: dict[str, Any]) -> None:
-    """Bind helpers that remain in the CLI module during incremental refactors."""
-
-    for name in _RUNTIME_NAMES:
-        if name in namespace:
-            globals()[name] = namespace[name]
+from gate_density_single.core.gate_layout import (
+    GATE_BOTTOM_HEIGHT_M,
+    GATE_CENTER_HEIGHT_M,
+    GATE_LAYOUT_VERSION,
+    GATE_POST_RADIUS_M,
+    GATE_REGION_X,
+    GATE_REGION_Y,
+    GATE_TOP_HEIGHT_M,
+    GOAL_XYZ,
+    START_XYZ,
+    _gate_gate_clearance_stats,
+    _gate_gate_frame_clearance_stats,
+    _moving_gate_centers,
+    _moving_gate_swept_clearance_m,
+    _resolve_moving_gate_speed_hz,
+)
+from gate_density_single.core.guidance_client import LocalGateGuidanceClient
 
 
 def run_episode(
@@ -68,8 +62,9 @@ def run_episode(
     )
     episode_dir = output_dir / f"episode_{episode_index:03d}"
     episode_dir.mkdir(parents=True, exist_ok=True)
-    _write_json(episode_dir / "task.json", task_payload | {"episode_index": int(episode_index)})
+    write_json(episode_dir / "task.json", task_payload | {"episode_index": int(episode_index)})
     layout_version = str(task_payload.get("gate_layout_version", GATE_LAYOUT_VERSION))
+    gate_post_radius_m = float(task_payload.get("gate_post_radius_m", GATE_POST_RADIUS_M))
     base_gate_centers_xy = tuple(tuple(map(float, center)) for center in task_payload.get("gate_centers_xy", ()))
     gate_yaws = tuple(float(value) for value in task_payload.get("gate_yaws_rad", ()))
     moving_gates_enabled = bool(getattr(args, "moving_gates", False))
@@ -136,7 +131,9 @@ def run_episode(
                 speed_hz=moving_gate_speed_hz,
                 layout_version=layout_version,
             )
-            env.obstacle_map = _build_gate_obstacle_map(moved_centers, gate_yaws)
+            env.obstacle_map = build_gate_obstacle_map(
+                moved_centers, gate_yaws, post_radius_m=gate_post_radius_m
+            )
             observation = env._build_observation()
             dynamic_obstacle_updates += 1
         else:
@@ -240,7 +237,9 @@ def run_episode(
                 drone_radius_m=DRONE_RADIUS_M,
             )
             endpoint_clearance_next_m = float(
-                _build_gate_obstacle_map(next_moved_centers, gate_yaws).min_signed_distance(
+                build_gate_obstacle_map(
+                    next_moved_centers, gate_yaws, post_radius_m=gate_post_radius_m
+                ).min_signed_distance(
                     next_position_xy,
                     drone_radius_m=DRONE_RADIUS_M,
                 )
@@ -383,7 +382,7 @@ def run_episode(
         ),
         "steps": len(rows),
         "episode_reward": float(sum(rewards)),
-        "path_length_m": _path_length(points_xy),
+        "path_length_m": path_length(points_xy),
         "initial_goal_distance_m": float(initial_goal_distance_m),
         "final_goal_distance_m": float(final_goal_distance_m),
         "progress_distance_m": float(progress_distance_m),
@@ -400,10 +399,10 @@ def run_episode(
         "planner_call_count": int(controller.planner_call_count),
         "planner_failure_count": int(controller.planner_failure_count),
         "planner_latency_ms_mean": float(np.mean(controller.planner_latencies_ms) if controller.planner_latencies_ms else 0.0),
-        "planner_latency_ms_p95": _percentile(controller.planner_latencies_ms, 95.0),
+        "planner_latency_ms_p95": percentile(controller.planner_latencies_ms, 95.0),
         "global_planner_trigger_count": int(controller.global_planner_trigger_count),
         "global_planner_latency_ms_mean": float(np.mean(controller.global_planner_latencies_ms) if controller.global_planner_latencies_ms else 0.0),
-        "global_planner_latency_ms_p95": _percentile(controller.global_planner_latencies_ms, 95.0),
+        "global_planner_latency_ms_p95": percentile(controller.global_planner_latencies_ms, 95.0),
         "route_guidance_enabled": bool(args.enable_route_guidance),
         "guidance_shadow_mode": bool(args.guidance_shadow_mode),
         "guidance_visible": bool(args.guidance_visible),
@@ -422,7 +421,7 @@ def run_episode(
             if guidance_client is not None and guidance_client.latencies_ms[guidance_base_latency_count:]
             else 0.0
         ),
-        "guidance_latency_ms_p95": _percentile(
+        "guidance_latency_ms_p95": percentile(
             guidance_client.latencies_ms[guidance_base_latency_count:] if guidance_client is not None else [], 95.0
         ),
         "guidance_cache_hit_rate": float(
@@ -497,13 +496,13 @@ def run_episode(
                     )
                     + "\n"
                 )
-    _write_json(episode_dir / "metrics.json", metrics)
+    write_json(episode_dir / "metrics.json", metrics)
     if guidance_client is not None:
         guidance_jsonl_path = episode_dir / "route_guidance_timeseries.jsonl"
         with guidance_jsonl_path.open("w", encoding="utf-8") as stream:
             for record in guidance_client.guidance_records[guidance_base_record_count:]:
                 stream.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
-    _write_json(
+    write_json(
         episode_dir / "replay_summary.json",
         {
             "replay_type": "2d_gate_density_rollout",

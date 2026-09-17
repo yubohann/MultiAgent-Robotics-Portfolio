@@ -11,7 +11,6 @@ from experiments.scenario_protocol import SCENARIOS, apply_scenario, tracker_ove
 from expert_policy import compose_policy_action
 from robocup_visionrl_selfplay_env import (
     AGENTS,
-    DomainRandomizationParams,
     RoboCupVisionRLSelfPlayEnv,
 )
 from train_world_model_sacflow_selfplay import MultiAgentFlowActors
@@ -28,6 +27,7 @@ from world_model.belief_graph import (
     build_typed_edges,
     canonical_node_types_torch,
 )
+
 
 def expected_calibration_error(probabilities: torch.Tensor, labels: torch.Tensor, bins: int = 10) -> float:
     probabilities = probabilities.detach().reshape(-1).clamp(0.0, 1.0)
@@ -60,10 +60,6 @@ def upper_tail_mean(values: torch.Tensor, alpha: float, dim: int = 0) -> torch.T
     count = max(1, int(np.ceil(values.shape[dim] * float(np.clip(alpha, 1e-6, 1.0)))))
     sorted_values = torch.sort(values, dim=dim, descending=True).values
     return sorted_values.narrow(dim, 0, count).mean(dim=dim)
-
-
-def apply_ood_scenario(env: RoboCupVisionRLSelfPlayEnv, scenario: str) -> None:
-    apply_scenario(env, scenario, 0)
 
 
 def environment_counterfactual_geometry(seed: int, scenario: str) -> dict[str, object]:

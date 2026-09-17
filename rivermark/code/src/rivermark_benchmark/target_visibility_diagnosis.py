@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .citylite_scene import segment_intersects_aabb
 from .citylite_task import (
     ONBOARD_FOCAL_LENGTH_MM,
@@ -25,9 +26,8 @@ from .citylite_task import (
     TARGET_VISIBILITY_MIN_DISTANCE_M,
     TARGET_VISIBILITY_MIN_PROJECTED_INSTANCE_PIXELS,
 )
-from .private_evaluator_manifest import load_native_geometry_catalog
 from .frame_archive import ChunkedFrameArchive, FrameArchiveError
-
+from .private_evaluator_manifest import load_native_geometry_catalog
 
 DIAGNOSIS_SCHEMA = "org.rivermark.private-target-visibility-diagnosis.v3"
 _SEMANTIC_SLOT_PREFIX = "search_target_slot_"
@@ -54,8 +54,8 @@ class _PixelCalibration:
     positive_pixel_count: int
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -138,14 +138,7 @@ def _load_pose_stream(capture_root: Path) -> tuple[np.ndarray, np.ndarray]:
 
 
 def _observed_pose_provenance(capture_root: Path) -> dict[str, str]:
-    """Identify the retained camera-pose authority without guessing for old runs.
-
-    Recent captures bind ``camera_observed_*`` to the render-facing USD
-    hierarchy after the render/read fence. Historical failed captures used the
-    same array names for Camera Fabric values. The spool alone cannot
-    distinguish the two, so absence of a matching receipt is explicitly
-    reported as unknown rather than upgrading historical data by implication.
-    """
+    """Identify the retained camera-pose authority without guessing for old runs."""
 
     receipt_path = capture_root / "capture_receipt.json"
     try:
@@ -165,7 +158,7 @@ def _observed_pose_provenance(capture_root: Path) -> dict[str, str]:
         and fabric.get("acceptance_authority") == "render_facing_usd_hierarchy"
         and isinstance(usd, Mapping)
     ):
-        artifacts = receipt.get("artifact_hashes")
+        artifacts = receipt.get("artifact_identities")
         relative_paths = (
             ".sensor_spool_v1/camera_observed_pos_w_m.npy",
             ".sensor_spool_v1/camera_observed_quat_wxyz.npy",
@@ -173,23 +166,23 @@ def _observed_pose_provenance(capture_root: Path) -> dict[str, str]:
         if not isinstance(artifacts, Mapping):
             return {
                 "source": "unknown_unverified_camera_observed_stream",
-                "evidence": "matching_capture_receipt_has_no_spool_hash_binding",
+                "evidence": "matching_capture_receipt_has_no_spool_identity_binding",
             }
         for relative in relative_paths:
             binding = artifacts.get(relative)
             path = capture_root / Path(relative)
             if (
                 not isinstance(binding, Mapping)
-                or binding.get("sha256") != _sha256_file(path)
+                or binding.get("identity") != _identity_file(path)
                 or binding.get("bytes") != path.stat().st_size
             ):
                 return {
                     "source": "unknown_unverified_camera_observed_stream",
-                    "evidence": "matching_capture_receipt_spool_hash_binding_failed",
+                    "evidence": "matching_capture_receipt_spool_identity_binding_failed",
                 }
         return {
             "source": "verified_render_facing_usd_hierarchy_pose_in_isaaclab_world_convention",
-            "evidence": "capture_receipt.usd_pose_closure_and_spool_hash_binding",
+            "evidence": "capture_receipt.usd_pose_closure_and_spool_identity_binding",
         }
     return {
         "source": "unknown_unverified_camera_observed_stream",
@@ -217,17 +210,7 @@ def _rotate_wxyz(quaternion: Sequence[float], vector: Sequence[float]) -> tuple[
 def _camera_frustum_membership(
     camera_w_m: Sequence[float], camera_quat_wxyz: Sequence[float], target_w_m: Sequence[float]
 ) -> tuple[bool, bool, float]:
-    """Return complete-FOV, conservative-FOV membership and target distance.
-
-    IsaacLab's Camera world convention maps its optical axis to camera +X.
-    The paired USD closure in ``isaac_capture`` verifies this same basis, so
-    this replay is tied to the render-facing pose instead of an ideal route yaw.
-
-    The conservative margin is a target-sampling safety gate, not a claim that
-    the renderer has a narrower camera model.  Keeping both memberships lets a
-    private failure diagnosis distinguish a genuine off-camera target from a
-    target that appeared only in the outer rendered FOV.
-    """
+    """Return complete-FOV, conservative-FOV membership and target distance."""
 
     delta = tuple(float(target_w_m[axis]) - float(camera_w_m[axis]) for axis in range(3))
     distance = math.sqrt(sum(value * value for value in delta))
@@ -261,13 +244,7 @@ def _camera_frustum_membership(
 def _camera_witness(
     camera_w_m: Sequence[float], camera_quat_wxyz: Sequence[float], target_w_m: Sequence[float]
 ) -> tuple[bool, float]:
-    """Return conservative recorded-pose frustum membership and distance.
-
-    This compatibility helper deliberately retains the historical conservative
-    contract.  New diagnostic code should use ``_camera_frustum_membership``
-    when it must distinguish the rendered field of view from the sampling
-    safety margin.
-    """
+    """Return conservative recorded-pose frustum membership and distance."""
 
     _, conservative, distance = _camera_frustum_membership(
         camera_w_m, camera_quat_wxyz, target_w_m
@@ -278,12 +255,7 @@ def _camera_witness(
 def _project_target_center_px(
     camera_w_m: Sequence[float], camera_quat_wxyz: Sequence[float], target_w_m: Sequence[float]
 ) -> tuple[float, float, float] | None:
-    """Project private target truth only inside the local diagnostic process.
-
-    The implementation deliberately mirrors the recorded-pose camera axes used
-    by ``_camera_witness``.  Callers receive only aggregate residuals and probe
-    counts; neither projected coordinates nor target truth enter JSON output.
-    """
+    """Project private target truth only inside the local diagnostic process."""
 
     delta = tuple(float(target_w_m[axis]) - float(camera_w_m[axis]) for axis in range(3))
     forward = _rotate_wxyz(camera_quat_wxyz, (1.0, 0.0, 0.0))
@@ -364,13 +336,7 @@ def _semantic_ids_by_frame(
     frame_count: int,
     target_count: int,
 ) -> tuple[dict[str, tuple[tuple[int, ...], ...]], ...]:
-    """Read the public per-frame semantic ID namespaces for a reference capture.
-
-    Replicator IDs are render-product local and may change between frames.  A
-    diagnostic calibrated from a single static mapping can therefore report a
-    false absence.  The v2 index points at the JSONL stream; each row is kept
-    local and reduced to anonymous target-slot -> camera-local IDs before use.
-    """
+    """Read the public per-frame semantic ID namespaces for a reference capture."""
 
     metadata_path = reference_capture_root / "learning_labels" / "semantic_metadata.json"
     frame_path = reference_capture_root / "learning_labels" / "semantic_frame_metadata.jsonl"
@@ -513,12 +479,7 @@ def _probe_failed_semantic_neighborhoods(
     quaternions: np.ndarray,
     calibration: _PixelCalibration,
 ) -> dict[str, dict[str, int]]:
-    """Search calibrated private projections in retained raw failed-capture frames.
-
-    The probe is diagnostic only.  It neither changes a gate nor makes a
-    visibility claim: it counts evidence categories inside a radius learned
-    from a separate native-positive capture.
-    """
+    """Search calibrated private projections in retained raw failed-capture frames."""
 
     spool = capture_root / ".sensor_spool_v1"
     try:
@@ -536,7 +497,7 @@ def _probe_failed_semantic_neighborhoods(
         or semantic.shape[2:4] != (ONBOARD_IMAGE_HEIGHT, ONBOARD_IMAGE_WIDTH)
     ):
         raise TargetVisibilityDiagnosisError("failed capture raw sensor spool disagrees with camera poses")
-    radius_px = max(2, int(math.ceil(calibration.centroid_residual_q99_px + 2.0)))
+    radius_px = max(2, math.ceil(calibration.centroid_residual_q99_px + 2.0))
     color_threshold = calibration.color_residual_q99 + 1.0
     depth_threshold = calibration.depth_residual_q99_m + 0.05
     result: dict[str, dict[str, int]] = {}
@@ -556,8 +517,8 @@ def _probe_failed_semantic_neighborhoods(
                     continue
                 row, column, optical_depth = projected
                 projected_windows += 1
-                row0, row1 = max(0, int(math.floor(row - radius_px))), min(ONBOARD_IMAGE_HEIGHT, int(math.ceil(row + radius_px + 1)))
-                column0, column1 = max(0, int(math.floor(column - radius_px))), min(ONBOARD_IMAGE_WIDTH, int(math.ceil(column + radius_px + 1)))
+                row0, row1 = max(0, math.floor(row - radius_px)), min(ONBOARD_IMAGE_HEIGHT, math.ceil(row + radius_px + 1))
+                column0, column1 = max(0, math.floor(column - radius_px)), min(ONBOARD_IMAGE_WIDTH, math.ceil(column + radius_px + 1))
                 if row0 >= row1 or column0 >= column1:
                     continue
                 in_image_windows += 1
@@ -639,13 +600,7 @@ def diagnose_failed_target_visibility(
     calibration_reference_capture: Path | None = None,
     calibration_reference_private_manifest: Path | None = None,
 ) -> dict[str, Any]:
-    """Diagnose a terminal visibility failure without emitting evaluator truth.
-
-    ``private_manifest`` is read locally and its coordinates stay in process.
-    The returned JSON contains only anonymous slot identifiers and aggregate
-    counts.  It is therefore useful for deciding whether a sampler needs a
-    measured camera trajectory without turning target truth into public data.
-    """
+    """Diagnose a terminal visibility failure without emitting evaluator truth."""
 
     capture_root = Path(capture_root).expanduser().resolve()
     private_manifest = Path(private_manifest).expanduser().resolve()
@@ -737,9 +692,9 @@ def diagnose_failed_target_visibility(
         "schema": DIAGNOSIS_SCHEMA,
         "claim_boundary": "aggregate_private_diagnosis_not_dataset_evidence",
         "capture": {
-            "camera_pose_sha256": {
-                "positions": _sha256_file(spool / "camera_observed_pos_w_m.npy"),
-                "quaternions": _sha256_file(spool / "camera_observed_quat_wxyz.npy"),
+            "camera_pose_identity": {
+                "positions": _identity_file(spool / "camera_observed_pos_w_m.npy"),
+                "quaternions": _identity_file(spool / "camera_observed_quat_wxyz.npy"),
             },
             "semantic_spool_present": (spool / "semantic.npy").is_file(),
             "native_semantic_summary_source": (
@@ -747,12 +702,12 @@ def diagnose_failed_target_visibility(
             ),
         },
         "private_inputs": {
-            "manifest_sha256": _sha256_file(private_manifest),
+            "manifest_identity": _identity_file(private_manifest),
             "target_count": len(targets),
         },
         "geometry": {
-            "aabb_geometry_sha256": catalog.aabb_geometry_sha256,
-            "native_scan_sha256": catalog.scan_sha256,
+            "aabb_geometry_identity": catalog.aabb_geometry_identity,
+            "native_scan_identity": catalog.scan_identity,
             "structural_aabb_count": len(catalog.structural_aabbs),
         },
         "camera_contract": {
@@ -794,8 +749,8 @@ def diagnose_failed_target_visibility(
         "schema": _CALIBRATED_PIXEL_PROBE_SCHEMA,
         "claim_boundary": "aggregate_diagnostic_not_visibility_or_rendering_evidence",
         "reference": {
-            "capture_receipt_sha256": _sha256_file(reference_capture / "capture_receipt.json"),
-            "private_manifest_sha256": _sha256_file(reference_private),
+            "capture_receipt_identity": _identity_file(reference_capture / "capture_receipt.json"),
+            "private_manifest_identity": _identity_file(reference_private),
         },
         "calibration": {
             "native_positive_observation_count": calibration.positive_observation_count,
@@ -803,7 +758,7 @@ def diagnose_failed_target_visibility(
             "centroid_residual_q99_px": calibration.centroid_residual_q99_px,
             "color_residual_q99": calibration.color_residual_q99,
             "depth_residual_q99_m": calibration.depth_residual_q99_m,
-            "probe_radius_px": max(2, int(math.ceil(calibration.centroid_residual_q99_px + 2.0))),
+            "probe_radius_px": max(2, math.ceil(calibration.centroid_residual_q99_px + 2.0)),
         },
         "per_target_slot": probe,
     }

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import math
+from typing import ClassVar
 
+import gymnasium as gym
 import numpy as np
-
-from ._compat import gym, spaces
-from .datatypes import Target
+from gymnasium import spaces
 
 from .constants import (
     ARENA_SIZE,
@@ -37,19 +37,29 @@ from .constants import (
     YELLOW_BASE_TARGET_XY,
     YELLOW_BASE_TARGET_YAW,
     YELLOW_BASE_XY,
-    YELLOW_START
+    YELLOW_START,
 )
-from .geometry import active_base_armor_blockers, base_attack_pose_quality, base_hit_success_cap, inward_45deg_target_yaws, laser_accuracy_from_geometry, laser_origin_from_pose, normalized_laser_dwell_factor, robot_pushable_collision, route_pose, segment_intersects_aabb, shooting_range_limits, wrap_angle
+from .datatypes import Target
+from .geometry import (
+    active_base_armor_blockers,
+    base_attack_pose_quality,
+    base_hit_success_cap,
+    inward_45deg_target_yaws,
+    laser_accuracy_from_geometry,
+    laser_origin_from_pose,
+    normalized_laser_dwell_factor,
+    robot_pushable_collision,
+    route_pose,
+    segment_intersects_aabb,
+    shooting_range_limits,
+    wrap_angle,
+)
+
 
 class RoboCupVisionRLGymEnv(gym.Env):
-    """2D rule environment for validating tactics before IsaacLab replay.
+    """2D rule environment for validating tactics before IsaacLab replay."""
 
-    Action is [linear_velocity, angular_velocity, fire_gate], each in [-1, 1].
-    Observation is normalized robot states, armor counts, target flags, the
-    nearest target vector and the base vector.
-    """
-
-    metadata = {"render_modes": []}
+    metadata: ClassVar[dict[str, list[str]]] = {"render_modes": []}
 
     def __init__(self, dt: float = 0.10, max_time_s: float = 180.0):
         super().__init__()
@@ -120,7 +130,6 @@ class RoboCupVisionRLGymEnv(gym.Env):
         self.last_shot_attempt: dict[str, dict[str, object]] = {"yellow": {}, "blue": {}}
         self.localization_confidence = 1.0
         self.rng = np.random.default_rng(seed)
-        self._previous_blue_base_distance = float(np.linalg.norm(self.yellow[:2] - BLUE_BASE_XY))
         return self._get_obs(), {}
 
     def step(self, action: np.ndarray):

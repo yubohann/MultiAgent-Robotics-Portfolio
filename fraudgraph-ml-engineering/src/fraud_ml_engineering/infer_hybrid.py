@@ -7,7 +7,6 @@ import csv
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, List
 
 import numpy as np
 import torch
@@ -24,10 +23,10 @@ try:
         HybridFraudModel,
         _novelty_scores,
         checkpoint_legacy_fusion_only,
-        seed_legacy_hybrid_compatibility,
         sanitize_legacy_hybrid_state_dict,
+        seed_legacy_hybrid_compatibility,
     )
-except Exception as error:  # pragma: no cover - runtime env dependent
+except (ImportError, OSError) as error:  # pragma: no cover - runtime env dependent
     IMPORT_ERROR = error
 
 DEFAULT_DATA_DIR = DATA_ROOT / "splitgnn"
@@ -105,7 +104,7 @@ def _checkpoint_feedback_path_for_reload(checkpoint_args: dict) -> str:
     return ""
 
 
-def _bucketize_probs(probs: np.ndarray, bins: int = 10) -> List[dict]:
+def _bucketize_probs(probs: np.ndarray, bins: int = 10) -> list[dict]:
     if probs.size == 0:
         return []
     edges = np.linspace(0.0, 1.0, bins + 1)
@@ -195,7 +194,7 @@ def _sweep_calibration_threshold(
     return best_threshold, best_detail
 
 
-def _write_topk_csv(path: Path, records: List[dict]) -> None:
+def _write_topk_csv(path: Path, records: list[dict]) -> None:
     with open(path, "w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(
             file,
@@ -206,7 +205,7 @@ def _write_topk_csv(path: Path, records: List[dict]) -> None:
             writer.writerow(row)
 
 
-def _write_uncertain_csv(path: Path, records: List[dict]) -> None:
+def _write_uncertain_csv(path: Path, records: list[dict]) -> None:
     with open(path, "w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(
             file,
@@ -217,7 +216,7 @@ def _write_uncertain_csv(path: Path, records: List[dict]) -> None:
             writer.writerow(row)
 
 
-def _write_novelty_csv(path: Path, records: List[dict]) -> None:
+def _write_novelty_csv(path: Path, records: list[dict]) -> None:
     with open(path, "w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(
             file,
@@ -228,7 +227,7 @@ def _write_novelty_csv(path: Path, records: List[dict]) -> None:
             writer.writerow(row)
 
 
-def _write_feedback_template(path: Path, records: List[dict]) -> None:
+def _write_feedback_template(path: Path, records: list[dict]) -> None:
     with open(path, "w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=["rank", "node_id", "review_label", "prob", "margin", "pred"])
         writer.writeheader()
@@ -246,13 +245,13 @@ def _write_feedback_template(path: Path, records: List[dict]) -> None:
 
 
 def _build_closed_loop_feedback_records(
-    uncertain_records: List[dict],
-    novelty_records: List[dict],
+    uncertain_records: list[dict],
+    novelty_records: list[dict],
     max_records: int,
-) -> List[dict]:
-    merged: Dict[int, dict] = {}
+) -> list[dict]:
+    merged: dict[int, dict] = {}
 
-    def _merge_ranked_records(records: List[dict], source_name: str) -> None:
+    def _merge_ranked_records(records: list[dict], source_name: str) -> None:
         for rank, record in enumerate(records, start=1):
             node_id = int(record["node_id"])
             item = merged.setdefault(
@@ -284,7 +283,7 @@ def _build_closed_loop_feedback_records(
     return ranked[: max(int(max_records), 1)]
 
 
-def _write_feedback_json(path: Path, dataset: str, split: str, records: List[dict]) -> None:
+def _write_feedback_json(path: Path, dataset: str, split: str, records: list[dict]) -> None:
     payload = {
         "dataset": dataset,
         "split": split,
@@ -626,7 +625,7 @@ def run_inference_for_dataset(
         "model_path": str(model_path),
         "split": split,
         "threshold_used": threshold_used,
-        "num_samples": int(len(labels)),
+        "num_samples": len(labels),
         "metrics": {key: float(value) for key, value in metrics.items()},
         "checkpoint_best_valid_auc": float(checkpoint.get("best_valid_auc", -1.0)),
         "checkpoint_best_round": int(checkpoint.get("best_round", -1)),
@@ -682,7 +681,7 @@ def run_inference_for_dataset(
             records=closed_loop_feedback_records,
         )
         summary["active_learning_feedback_oracle_file"] = str(closed_loop_feedback_file)
-        summary["active_learning_feedback_oracle_count"] = int(len(closed_loop_feedback_records))
+        summary["active_learning_feedback_oracle_count"] = len(closed_loop_feedback_records)
         summary["closed_loop_offline_oracle_only"] = bool(split != "train")
         if closed_loop_retrain_rounds > 0:
             if split != "train":
@@ -838,7 +837,7 @@ def main() -> None:
     output_root.mkdir(parents=True, exist_ok=True)
     graph_path = Path(args.graph_path).resolve() if args.graph_path else None
 
-    run_report: Dict[str, dict] = {}
+    run_report: dict[str, dict] = {}
     for dataset in datasets:
         if graph_path is not None and len(datasets) > 1:
             raise ValueError("When --graph_path is provided, please run a single dataset at a time.")

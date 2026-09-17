@@ -7,7 +7,6 @@
   "required": [
     "schema",
     "layout_id",
-    "layout_hash",
     "episode_index",
     "episode_seed",
     "condition_group_id",
@@ -20,13 +19,11 @@
     "fault_spec",
     "smoke",
     "communication",
-    "energy_budget_j",
-    "episode_hash"
+    "energy_budget_j"
   ],
   "properties": {
     "schema": {"const": "org.aerocity.bench.episode-private.v2"},
     "layout_id": {"type": "string"},
-    "layout_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "episode_index": {"type": "integer", "minimum": 0},
     "episode_seed": {"type": "integer", "minimum": 0},
     "condition_group_id": {"type": "string", "minLength": 1},
@@ -44,7 +41,7 @@
         "properties": {
           "target_id": {"type": "string"},
           "site_id": {"type": "string"},
-          "support_class": {"enum": ["roof", "opening", "entrance", "rubble"]},
+          "support_class": {"enum": ["roof", "facade_marker_site", "entrance", "rubble"]},
           "altitude_band": {"enum": ["near_ground", "lower", "mid", "elevated", "highrise"]},
           "position": {"$ref": "#/$defs/vector3"},
           "normal": {"$ref": "#/$defs/vector3"}
@@ -65,8 +62,7 @@
     "fault_spec": {"$ref": "fault_spec_v1.schema.json"},
     "smoke": {"type": "object"},
     "communication": {"type": "object"},
-    "energy_budget_j": {"type": "number", "exclusiveMinimum": 0},
-    "episode_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "energy_budget_j": {"type": "number", "exclusiveMinimum": 0}
   },
   "$defs": {
     "vector3": {

@@ -64,7 +64,7 @@ def _manifest(
     )
     return CandidateFragmentManifest(
         candidate_id=candidate_id,
-        context_hash=context.digest,
+        context_id=context.context_id,
         fragments=(transit, observation),
         planned_descriptor=descriptor,
         feasible=True,
@@ -112,12 +112,12 @@ def outcomes(manifests, token):
         rows.append(
             FragmentOutcome(
                 outcome_id=f"outcome-A-{index}",
-                token_hash=token.digest,
-                manifest_hash=manifest.manifest_hash,
+                token_id=token.token_id,
+                manifest_id=manifest.manifest_id,
                 episode_id=planned.episode_id,
                 decision_id=planned.decision_id,
                 agent_id=planned.agent_id,
-                planned_fragment_hash=planned.digest,
+                planned_fragment_id=planned.instance_fragment_id,
                 executed=True,
                 actual_start=planned.planned_start,
                 actual_end=planned.planned_end,

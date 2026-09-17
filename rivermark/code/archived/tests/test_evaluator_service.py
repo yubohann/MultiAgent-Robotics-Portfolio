@@ -20,6 +20,7 @@ from rivermark_benchmark.evaluator_service import (
     LocalEvaluatorService,
     verify_signed_result,
 )
+
 from tests.test_evaluator import _submission
 
 
@@ -53,7 +54,7 @@ class EvaluatorServiceTests(unittest.TestCase):
             self.assertNotIn("local-secret", serialized_audit)
             self.assertNotIn("episodes", serialized_audit)
 
-    def test_authentication_rate_and_replay_capacity_fail_closed(self) -> None:
+    def test_authentication_rate_and_replay_capacity_strict(self) -> None:
         service = LocalEvaluatorService(auth_token="secret", max_requests=1, window_seconds=60)
         raw = json.dumps(_submission()).encode("utf-8")
         with self.assertRaises(EvaluatorAuthenticationError):
@@ -76,15 +77,15 @@ class EvaluatorServiceTests(unittest.TestCase):
         with self.assertRaises(EvaluatorServiceError):
             bounded.submit(json.dumps(changed).encode("utf-8"), authorization="Bearer secret")
 
-    def test_invalid_json_is_signed_and_tampering_is_rejected(self) -> None:
+    def test_invalid_json_is_signed_and_alteration_is_rejected(self) -> None:
         service = LocalEvaluatorService(auth_token="secret")
         invalid = service.submit(b"not-json", authorization="Bearer secret")
         self.assertEqual(invalid["report"]["status"], "invalid")
         verify_signed_result(invalid, service.public_key_bytes)
-        tampered = copy.deepcopy(invalid)
-        tampered["report"]["status"] = "valid"
+        altered = copy.deepcopy(invalid)
+        altered["report"]["status"] = "valid"
         with self.assertRaises(EvaluatorServiceError):
-            verify_signed_result(tampered, service.public_key_bytes)
+            verify_signed_result(altered, service.public_key_bytes)
 
 
 if __name__ == "__main__":

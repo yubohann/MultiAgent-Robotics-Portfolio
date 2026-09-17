@@ -10,7 +10,11 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from aerocity_method.contracts.io import canonical_sha256, read_json_object, write_json_atomic
+from aerocity_method.contracts.io import (  # noqa: E402 -- sys.path bootstrap
+    payload_label,
+    read_json_object,
+    write_json_atomic,
+)
 
 
 def audit_training_admission(
@@ -29,15 +33,15 @@ def audit_training_admission(
         reasons.append("TRAINING_MANIFEST_CONTAINS_TEST_SCENES")
     if training_manifest.get("synthetic") is True or training_manifest.get("mock") is True:
         reasons.append("SYNTHETIC_OR_MOCK_TRAINING_MANIFEST_FORBIDDEN")
-    if not training_manifest.get("scene_hashes"):
-        reasons.append("MISSING_TRAIN_SCENE_HASHES")
+    if not training_manifest.get("scene_ids"):
+        reasons.append("MISSING_TRAIN_SCENE_IDS")
     return {
         "schema_version": "hm3d-exploration-selector-training-admission-v1",
         "status": "READY_TO_TRAIN_SELECTOR" if not reasons else "TRAINING_NOT_READY",
         "reasons": reasons,
-        "protocol_hash": canonical_sha256(protocol),
-        "p07_summary_hash": canonical_sha256(p07_summary),
-        "training_manifest_hash": canonical_sha256(training_manifest),
+        "protocol_id": payload_label(protocol, prefix="p09-protocol"),
+        "p07_summary_id": payload_label(p07_summary, prefix="p07-summary"),
+        "training_manifest_id": payload_label(training_manifest, prefix="training-manifest"),
         "formal_result": False,
     }
 

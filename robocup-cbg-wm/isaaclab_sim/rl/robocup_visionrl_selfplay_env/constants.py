@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 
-
 from robocup_visionrl_gym_env import (
     BASE_SHOOT_IDEAL_DISTANCE,
     BASE_SHOOT_MIN_RANGE,
@@ -10,10 +9,10 @@ from robocup_visionrl_gym_env import (
     ROBOT_PUSHABLE_CLEARANCE_RADIUS,
     ROBOT_RADIUS,
     ROBOT_WIDTH,
-    SHOOTER_FORWARD_OFFSET,
     SHOOT_IDEAL_DISTANCE,
     SHOOT_MIN_RANGE,
-    SHOOT_RANGE
+    SHOOT_RANGE,
+    SHOOTER_FORWARD_OFFSET,
 )
 
 AGENTS = ("yellow", "blue")

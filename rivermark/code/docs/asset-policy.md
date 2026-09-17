@@ -1,10 +1,10 @@
 # Asset Policy
 
 `rivermark-benchmark` is the single source of truth for Rivermark benchmark
-code, schemas, task specifications, releases, and demo manifests. NVIDIA Isaac
-Sim, Isaac Lab, NVIDIA Rivermark USD and material content, CF2X USD,
-third-party checkpoints, private target manifests, and raw rendered recordings
-stay user-installed.
+code, schemas, task specifications, releases, and demo manifests. Users must
+vendor NVIDIA Isaac Sim and Isaac Lab under their own terms; NVIDIA Rivermark
+USD and material content, CF2X USD, third-party checkpoints, private target
+manifests, and raw rendered recordings stay user-installed.
 
 Local assets are resolved in this order.
 
@@ -18,7 +18,7 @@ benchmark admission and release demos require a fingerprint and a recorded
 license.
 
 The repository includes `rivermark_benchmark.asset_provenance` for a bounded,
-Isaac-free scan of USD metadata. It records file hashes and recognizable
+Isaac-free scan of USD metadata. It records file identities and recognizable
 external references, and leaves redistribution decisions to a human. A scan of
 the official Rivermark wrapper or the current CF2X binary exposes an external
 Nucleus or content marker, so both remain user-installed runtime dependencies.

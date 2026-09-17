@@ -51,18 +51,18 @@ python .\tools\encode_native_video.py `
   --fps 20
 ```
 
-Use `--view onboard` for the multi-camera onboard archive. The encoder rejects missing archives, wrong RGB shape or dtype, a missing FFmpeg, and partial output, and writes a SHA-256-bound `.manifest.json` beside the MP4.
+Use `--view onboard` for the multi-camera onboard archive. The encoder rejects missing archives, wrong RGB shape or dtype, a missing FFmpeg, and partial output, and writes a content identity-bound `.manifest.json` beside the MP4.
 
 ## Acceptance
 
 A video is accepted when its episode receipt and native payload pass these checks.
 
-- `route_family_id`, cell, seed, and eight initial poses are hash-bound.
+- `route_family_id`, cell, seed, and eight initial poses are identity-bound.
 - the first retained frame shows the City-Lite scene and all visible swarm members as native renders.
 - the waypoint route is executed by the physical CF2X runtime.
 - timestamps are monotonic and frame count agrees with the native capture.
 - camera pose closure, RGB, depth, and semantic freshness, LiDAR and IMU synchronization, and collision and clearance gates pass.
-- the final MP4 hash is recorded alongside the capture receipt and Git commit.
+- the final MP4 identity is recorded alongside the capture receipt and Git commit.
 - family A and family B videos are labelled separately, and private targets and scorer coordinates stay out of the public video and manifest.
 
 The local NVIDIA assets, private manifests, and generated videos live in the operator's local evidence store under the applicable NVIDIA and asset-package terms.

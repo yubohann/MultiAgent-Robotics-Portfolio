@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import math
 import random
 from collections import Counter
 from typing import Any
 
-from .canonical import content_hash, derived_seed
+from .canonical import derived_seed
 from .config import ReleaseConfig
 from .errors import GenerationRejected
 
@@ -344,7 +345,7 @@ def generate_city(
         ],
         "road_offsets": [round(float(road[road["axis"]]) / size_m, 2) for road in roads],
     }
-    asset_set_hash = content_hash(sorted(asset_ids))
+    asset_set_id = ",".join(sorted(asset_ids))
     geometry = {
         "generator_version": config.generator_version,
         "family": family,
@@ -363,14 +364,12 @@ def generate_city(
                 max(90.0, max(item["height_m"] for item in buildings) + 15.0),
             ],
         },
-        "asset_set_hash": asset_set_hash,
+        "asset_set_id": asset_set_id,
     }
-    layout_hash = content_hash(geometry)
     return {
         "schema": "org.aerocity.bench.cityspec-internal.v2",
         "generator_version": config.generator_version,
-        "layout_id": f"city-{layout_hash[:16]}",
-        "layout_hash": layout_hash,
+        "layout_id": f"city-{split}-{index:03d}-a{attempt}",
         "generation_seed": seed,
         "split": split,
         "family": family,
@@ -381,8 +380,8 @@ def generate_city(
         "obstacles": obstacles,
         "decorations": decorations,
         "flight_bounds": geometry["flight_bounds"],
-        "topology_signature": content_hash(topology_payload),
-        "asset_set_hash": asset_set_hash,
+        "topology_signature": json.dumps(topology_payload, sort_keys=True),
+        "asset_set_id": asset_set_id,
         "support_site_rules": {
             "roof_spacing_m": 4.0,
             "opening_spacing_m": 4.0,

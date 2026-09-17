@@ -10,19 +10,17 @@ from pathlib import Path
 import imageio.v2 as imageio
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-
 from robocup_visionrl_gym_env import (
-    BLUE_BASE_TARGET_YAW,
     BLUE_BASE_TARGET_XY,
+    BLUE_BASE_TARGET_YAW,
     NORTH_MIDDLE_TARGET_X,
     SIDE_GATE_TARGET_Y,
     SOUTH_MIDDLE_TARGET_X,
     TARGET_WALL_INSET,
-    YELLOW_BASE_TARGET_YAW,
     YELLOW_BASE_TARGET_XY,
+    YELLOW_BASE_TARGET_YAW,
     inward_45deg_target_yaws,
 )
-
 
 ROOT = Path(__file__).resolve().parents[2]
 TARGET_EDGE = 1.50 - TARGET_WALL_INSET

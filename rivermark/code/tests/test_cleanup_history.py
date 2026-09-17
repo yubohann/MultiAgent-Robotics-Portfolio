@@ -7,7 +7,6 @@ import time
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
@@ -106,7 +105,7 @@ class CleanupHistoryTests(unittest.TestCase):
                         "attempt_id": "attempt-" + "a" * 32,
                         "started_wall_time_ns": 1,
                         "source_revision": "a" * 40,
-                        "source_tree_sha256": "b" * 64,
+                        "source_tree_identity": "b" * 16,
                         "source_worktree_dirty": False,
                         "task_kind": "search3d",
                         "control_mode": "fixed_public_route",

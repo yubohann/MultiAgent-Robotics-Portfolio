@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import math
+import random
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .assets import AssetLock
-from .canonical import content_hash, write_json
+from .canonical import derived_seed, write_json
 from .inspection_atlas import (
     ATLAS_PRIOR_COARSE,
     ATLAS_PRIOR_FULL,
@@ -320,7 +320,6 @@ def compile_public_catalogue(city: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema": "org.aerocity.bench.public-catalogue.v1",
         "layout_id": city["layout_id"],
-        "layout_hash": city["layout_hash"],
         "view_poses": poses,
     }
 
@@ -331,7 +330,6 @@ def public_cityspec(city: dict[str, Any]) -> dict[str, Any]:
     public_fields = (
         "generator_version",
         "layout_id",
-        "layout_hash",
         "size_m",
         "roads",
         "blocks",
@@ -340,7 +338,7 @@ def public_cityspec(city: dict[str, Any]) -> dict[str, Any]:
         "decorations",
         "flight_bounds",
         "topology_signature",
-        "asset_set_hash",
+        "asset_set_id",
         "metrics",
     )
     return {
@@ -355,8 +353,7 @@ def public_cityspec_v3(city: dict[str, Any]) -> dict[str, Any]:
     public_fields = (
         "generator_version",
         "layout_id",
-        "layout_hash",
-        "task_geometry_hash",
+        "task_geometry_id",
         "size_m",
         "road_graph",
         "roads",
@@ -365,7 +362,7 @@ def public_cityspec_v3(city: dict[str, Any]) -> dict[str, Any]:
         "decorations",
         "flight_bounds",
         "topology_signature",
-        "asset_set_hash",
+        "asset_set_id",
         "metrics",
     )
     return {
@@ -375,12 +372,8 @@ def public_cityspec_v3(city: dict[str, Any]) -> dict[str, Any]:
 
 
 def compile_coarse_prior(city: dict[str, Any]) -> dict[str, Any]:
-    task_geometry_hash = str(city.get("task_geometry_hash", city["layout_hash"]))
-    seed = int(task_geometry_hash[:16], 16) ^ 0xA3C0_17
-    # A local deterministic generator avoids coupling public corruption or
-    # visual-only scene variants to coarse task geometry.
-    import random
-
+    # Independent stream keyed on the private task geometry identity.
+    seed = derived_seed(city["layout_id"], city.get("task_geometry_id", ""), "coarse-prior")
     rng = random.Random(seed)
     omission = 0.09
     coordinate_error = 1.5
@@ -424,7 +417,6 @@ def compile_coarse_prior(city: dict[str, Any]) -> dict[str, Any]:
         "buildings": buildings,
         "false_obstacles": false_obstacles,
     }
-    prior["prior_hash"] = content_hash(prior)
     return prior
 
 
@@ -483,7 +475,6 @@ def compile_method_task_spec(
         "flight_bounds": city["flight_bounds"],
         "fleet_profile": fleet_profile,
         "execution_contract": public_contract,
-        "public_execution_contract_hash": content_hash(public_contract),
         "coarse_prior": compile_coarse_prior(city),
         "task_track": TASK_TRACK_G1_U,
         "public_transit_contract": {
@@ -513,7 +504,6 @@ def compile_method_task_spec(
             task_spec["inspection_atlas_projection"] = projection
         else:
             raise ValueError(f"unsupported G2-I inspection prior: {inspection_prior_level}")
-    task_spec["task_spec_hash"] = content_hash(task_spec)
     validate_public_task_spec(task_spec)
     return task_spec
 
@@ -553,17 +543,3 @@ def write_compiled_public_v3(city: dict[str, Any], public_dir: Path, lock: Asset
     # Diagnostic/training metadata; a formal G1 container never mounts it.
     write_json(public_dir / "developer_view_catalogue.json", compile_public_catalogue(city))
     compile_scene(city, public_dir, lock)
-
-
-def usda_metadata(path: Path) -> dict[str, Any]:
-    text = path.read_text(encoding="utf-8")
-    return {
-        "path": path.name,
-        "nonblank": bool(text.strip()),
-        "line_count": len(text.splitlines()),
-        "default_prim_declared": 'defaultPrim = "World"' in text,
-        "world_declared": 'def Xform "World"' in text or path.name != "scene.usda",
-        "json_debug": json.dumps(
-            {"bytes": path.stat().st_size, "finite": math.isfinite(path.stat().st_size)}
-        ),
-    }

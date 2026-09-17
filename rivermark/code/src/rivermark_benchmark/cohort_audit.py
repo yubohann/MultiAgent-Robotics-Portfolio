@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -15,23 +14,24 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from ._identity import IdentityAccumulator
 from .collection_protocol import (
     COLLECTION_BINDING_KEYS,
     COLLECTION_SPLITS,
     CollectionProtocolError,
     coverage_report,
     load_collection_protocol,
-    protocol_sha256,
+    protocol_identity,
     resolve_collection_binding,
 )
 from .failure_ledger import FailureLedgerError, load_failure_ledger
-from .formal_dataset import sha256_file
+from .formal_dataset import identity_file
 
 COHORT_AUDIT_SCHEMA = "org.rivermark.benchmark.development-cohort-audit.v1"
 _CAPTURE_SCHEMA = "org.rivermark.isaac-swarm-capture.v1"
 _VALIDATION_SCHEMA = "org.rivermark.isaac-independent-validation.v1"
 _TASK_OUTCOME_SCHEMA = "org.rivermark.t1-target-observability.v1"
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _PUBLIC_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
 _WINDOWS_PATH = re.compile(r"(?:^[A-Za-z]:[\\/]|^\\\\)")
 _REPORT_KEYS = frozenset(
@@ -47,29 +47,29 @@ _REPORT_KEYS = frozenset(
         "candidates",
         "aggregate",
         "admission_readiness",
-        "report_payload_sha256",
+        "report_payload_identity",
     }
 )
 _PROTOCOL_KEYS = frozenset(
     {
         "protocol_id",
-        "protocol_sha256",
+        "protocol_identity",
         "candidate_index_start",
         "expected_candidate_count",
         "target_quota_by_cell",
     }
 )
-_SOURCE_KEYS = frozenset({"revision", "all_worktrees_clean", "source_tree_sha256_values"})
+_SOURCE_KEYS = frozenset({"revision", "all_worktrees_clean", "source_tree_identity_values"})
 _ACCOUNTING_KEYS = frozenset(
     {
-        "failure_ledger_sha256",
+        "failure_ledger_identity",
         "ledger_record_count",
         "protocol_attempt_count",
         "candidate_attempt_count",
         "noncandidate_protocol_attempt_count",
         "candidate_outcomes",
         "candidate_reason_codes",
-        "candidate_selection_sha256",
+        "candidate_selection_identity",
         "coverage",
     }
 )
@@ -78,10 +78,10 @@ _CANDIDATE_KEYS = frozenset(
         "capture_attempt_id",
         "binding",
         "source_revision",
-        "source_tree_sha256",
-        "capture_receipt_sha256",
-        "independent_validation_sha256",
-        "task_outcome_sha256",
+        "source_tree_identity",
+        "capture_receipt_identity",
+        "independent_validation_identity",
+        "task_outcome_identity",
         "quality_gates",
         "target_visibility",
         "contact_free",
@@ -134,13 +134,13 @@ _COVERAGE_BASE_KEYS = frozenset(
     {
         "schema",
         "protocol_id",
-        "protocol_sha256",
+        "protocol_identity",
         "failure_ledger_schema",
         "ledger_record_count",
         "excluded_ledger_record_count",
         "excluded_protocol_id_count",
-        "excluded_protocol_hash_count",
-        "attempts_sha256",
+        "excluded_protocol_identity_count",
+        "attempts_identity",
         "attempt_count",
         "admitted_count",
         "quarantined_count",
@@ -226,7 +226,7 @@ _QUALITY_GATE_CHECKS = {
         "trajectory_segment_clearance_verified",
     ),
     "condition_realization_passed": ("condition_realization_verified",),
-    "artifact_hash_binding_passed": (),
+    "artifact_identity_binding_passed": (),
 }
 _DEVELOPMENT_LEDGER_STATE = {
     "outcome": "quarantined",
@@ -316,18 +316,18 @@ def _verify_embedded_coverage(
         raise CohortAuditError("cohort coverage schema is unsupported")
     if (
         coverage.get("protocol_id") != protocol_id
-        or coverage.get("protocol_sha256") != protocol_digest
+        or coverage.get("protocol_identity") != protocol_digest
         or coverage.get("failure_ledger_schema")
         != "org.rivermark.benchmark.failure-ledger.v1"
-        or not isinstance(coverage.get("attempts_sha256"), str)
-        or not _SHA256.fullmatch(str(coverage["attempts_sha256"]))
+        or not isinstance(coverage.get("attempts_identity"), str)
+        or not _IDENTITY.fullmatch(str(coverage["attempts_identity"]))
     ):
         raise CohortAuditError("cohort coverage identity is inconsistent")
     count_keys = (
         "ledger_record_count",
         "excluded_ledger_record_count",
         "excluded_protocol_id_count",
-        "excluded_protocol_hash_count",
+        "excluded_protocol_identity_count",
         "attempt_count",
         "admitted_count",
         "quarantined_count",
@@ -339,7 +339,7 @@ def _verify_embedded_coverage(
     }
     if (
         counts["excluded_ledger_record_count"]
-        != counts["excluded_protocol_id_count"] + counts["excluded_protocol_hash_count"]
+        != counts["excluded_protocol_id_count"] + counts["excluded_protocol_identity_count"]
         or counts["ledger_record_count"]
         != counts["attempt_count"] + counts["excluded_ledger_record_count"]
         or counts["attempt_count"]
@@ -505,8 +505,8 @@ def _canonical_bytes(value: Any) -> bytes:
     ).encode("utf-8")
 
 
-def _canonical_sha256(value: Any) -> str:
-    return hashlib.sha256(_canonical_bytes(value)).hexdigest()
+def _canonical_identity(value: Any) -> str:
+    return IdentityAccumulator(_canonical_bytes(value)).hexdigest()
 
 
 def _finite_number(value: Any, *, label: str, minimum: float = 0.0) -> float:
@@ -541,13 +541,13 @@ def _distribution(values: Sequence[int | float]) -> dict[str, int | float]:
     }
 
 
-def _verify_receipt_sidecar(root: Path, receipt_sha256: str) -> None:
-    sidecar = root / "capture_receipt.sha256"
+def _verify_receipt_sidecar(root: Path, receipt_identity: str) -> None:
+    sidecar = root / "capture_receipt.identity"
     try:
         content = sidecar.read_text(encoding="ascii").strip()
     except (OSError, UnicodeDecodeError) as exc:
         raise CohortAuditError(f"capture receipt sidecar is missing or unreadable: {root.name}") from exc
-    if content != f"{receipt_sha256}  capture_receipt.json":
+    if content != f"{receipt_identity}  capture_receipt.json":
         raise CohortAuditError(f"capture receipt sidecar is stale: {root.name}")
 
 
@@ -555,7 +555,7 @@ def _verify_receipt_artifacts(
     root: Path,
     receipt: Mapping[str, Any],
 ) -> dict[str, dict[str, int | str]]:
-    inventory = receipt.get("artifact_hashes")
+    inventory = receipt.get("artifact_identities")
     if not isinstance(inventory, Mapping) or not inventory:
         raise CohortAuditError(f"capture receipt artifact inventory is missing: {root.name}")
     verified: dict[str, dict[str, int | str]] = {}
@@ -577,11 +577,11 @@ def _verify_receipt_artifacts(
             raise CohortAuditError(f"capture receipt artifact path is unsafe: {relative}")
         if not isinstance(binding, Mapping):
             raise CohortAuditError(f"{relative} is not bound by the capture receipt: {root.name}")
-        expected_sha256 = binding.get("sha256")
+        expected_identity = binding.get("identity")
         expected_bytes = binding.get("bytes")
         if (
-            not isinstance(expected_sha256, str)
-            or not _SHA256.fullmatch(expected_sha256)
+            not isinstance(expected_identity, str)
+            or not _IDENTITY.fullmatch(expected_identity)
             or isinstance(expected_bytes, bool)
             or not isinstance(expected_bytes, int)
             or expected_bytes < 0
@@ -605,16 +605,16 @@ def _verify_receipt_artifacts(
         if normalized_path in resolved_inventory_paths:
             raise CohortAuditError(f"capture receipt has a duplicate artifact path: {relative}")
         resolved_inventory_paths.add(normalized_path)
-        actual_sha256 = sha256_file(path)
+        actual_identity = identity_file(path)
         actual_bytes = path.stat().st_size
-        if expected_sha256 != actual_sha256 or expected_bytes != actual_bytes:
+        if expected_identity != actual_identity or expected_bytes != actual_bytes:
             raise CohortAuditError(f"{relative} disagrees with the capture receipt: {root.name}")
-        verified[relative] = {"sha256": actual_sha256, "bytes": actual_bytes}
+        verified[relative] = {"identity": actual_identity, "bytes": actual_bytes}
     return verified
 
 
 def _quality_gates(
-    validation: Mapping[str, Any], *, artifact_hash_binding_passed: bool
+    validation: Mapping[str, Any], *, artifact_identity_binding_passed: bool
 ) -> dict[str, bool]:
     checks = validation.get("checks")
     if not isinstance(checks, Mapping):
@@ -623,8 +623,8 @@ def _quality_gates(
     for gate, check_names in _QUALITY_GATE_CHECKS.items():
         if gate == "independent_validation_passed":
             gates[gate] = validation.get("status") == "passed" and validation.get("issues") == []
-        elif gate == "artifact_hash_binding_passed":
-            gates[gate] = artifact_hash_binding_passed
+        elif gate == "artifact_identity_binding_passed":
+            gates[gate] = artifact_identity_binding_passed
         else:
             gates[gate] = all(checks.get(name) is True for name in check_names)
     return gates
@@ -736,9 +736,9 @@ def _load_candidate(
     receipt = _load_json(receipt_path, label="capture receipt")
     validation = _load_json(validation_path, label="independent validation")
     outcome = _load_json(outcome_path, label="task outcome")
-    receipt_sha256 = sha256_file(receipt_path)
-    validation_sha256 = sha256_file(validation_path)
-    _verify_receipt_sidecar(capture_root, receipt_sha256)
+    receipt_identity = identity_file(receipt_path)
+    validation_identity = identity_file(validation_path)
+    _verify_receipt_sidecar(capture_root, receipt_identity)
     if (
         receipt.get("schema") != _CAPTURE_SCHEMA
         or receipt.get("status") != "captured"
@@ -751,7 +751,7 @@ def _load_candidate(
         raise CohortAuditError(
             f"task_outcome.json is not bound by the capture receipt: {capture_root.name}"
         )
-    outcome_sha256 = str(verified_artifacts["task_outcome.json"]["sha256"])
+    outcome_identity = str(verified_artifacts["task_outcome.json"]["identity"])
     if (
         outcome.get("schema") != _TASK_OUTCOME_SCHEMA
         or outcome.get("scoring_status") != "not_scored"
@@ -776,8 +776,8 @@ def _load_candidate(
     )
     if dict(binding) != expected_binding:
         raise CohortAuditError(f"capture collection binding is stale: {capture_root.name}")
-    artifact_binding = validation.get("capture_receipt_sha256") == receipt_sha256
-    gates = _quality_gates(validation, artifact_hash_binding_passed=artifact_binding)
+    artifact_binding = validation.get("capture_receipt_identity") == receipt_identity
+    gates = _quality_gates(validation, artifact_identity_binding_passed=artifact_binding)
     if not all(gates.values()):
         failed = ", ".join(sorted(name for name, passed in gates.items() if not passed))
         raise CohortAuditError(f"capture quality gates failed for {capture_root.name}: {failed}")
@@ -788,7 +788,7 @@ def _load_candidate(
     if (
         not isinstance(outcome_visibility, Mapping)
         or not isinstance(validation_visibility, Mapping)
-        or _canonical_sha256(outcome_visibility) != _canonical_sha256(validation_visibility)
+        or _canonical_identity(outcome_visibility) != _canonical_identity(validation_visibility)
     ):
         raise CohortAuditError(
             f"task outcome target observability disagrees with independent validation: "
@@ -796,23 +796,23 @@ def _load_candidate(
         )
     attempt_id = receipt.get("capture_attempt_id")
     source_revision = receipt.get("source_revision")
-    source_tree_sha256 = receipt.get("source_tree_sha256")
+    source_tree_identity = receipt.get("source_tree_identity")
     if not isinstance(attempt_id, str) or attempt_id not in ledger_by_attempt:
         raise CohortAuditError(f"capture attempt is absent from the failure ledger: {capture_root.name}")
     if not isinstance(source_revision, str) or not re.fullmatch(r"[0-9a-f]{40}", source_revision):
-        raise CohortAuditError(f"capture source revision is not a full Git hash: {capture_root.name}")
-    if not isinstance(source_tree_sha256, str) or not _SHA256.fullmatch(source_tree_sha256):
-        raise CohortAuditError(f"capture source-tree hash is malformed: {capture_root.name}")
+        raise CohortAuditError(f"capture source revision is not a full Git identity: {capture_root.name}")
+    if not isinstance(source_tree_identity, str) or not _IDENTITY.fullmatch(source_tree_identity):
+        raise CohortAuditError(f"capture source-tree identity is malformed: {capture_root.name}")
     record = ledger_by_attempt[attempt_id]
     expected_record_fields = {
         "collection_protocol_id": binding["protocol_id"],
-        "collection_protocol_sha256": binding["protocol_sha256"],
+        "collection_protocol_identity": binding["protocol_identity"],
         "collection_cell_id": binding["cell_id"],
         "collection_episode_index": binding["episode_index"],
         "episode_seed": binding["episode_seed"],
         "split": binding["split"],
-        "receipt_sha256": receipt_sha256,
-        "source_capture_sha256": receipt_sha256,
+        "receipt_identity": receipt_identity,
+        "source_capture_identity": receipt_identity,
     }
     mismatches = [
         key for key, expected in expected_record_fields.items() if record.get(key) != expected
@@ -849,10 +849,10 @@ def _load_candidate(
         "capture_attempt_id": attempt_id,
         "binding": expected_binding,
         "source_revision": source_revision,
-        "source_tree_sha256": source_tree_sha256,
-        "capture_receipt_sha256": receipt_sha256,
-        "independent_validation_sha256": validation_sha256,
-        "task_outcome_sha256": outcome_sha256,
+        "source_tree_identity": source_tree_identity,
+        "capture_receipt_identity": receipt_identity,
+        "independent_validation_identity": validation_identity,
+        "task_outcome_identity": outcome_identity,
         "quality_gates": gates,
         "target_visibility": visibility,
         "contact_free": checks.get("contact_free") is True,
@@ -897,8 +897,8 @@ def build_development_cohort_audit(
     if not candidates:
         raise CohortAuditError("at least one capture is required")
     attempt_ids = [str(item["capture_attempt_id"]) for item in candidates]
-    receipt_hashes = [str(item["capture_receipt_sha256"]) for item in candidates]
-    if len(set(attempt_ids)) != len(attempt_ids) or len(set(receipt_hashes)) != len(receipt_hashes):
+    receipt_identities = [str(item["capture_receipt_identity"]) for item in candidates]
+    if len(set(attempt_ids)) != len(attempt_ids) or len(set(receipt_identities)) != len(receipt_identities):
         raise CohortAuditError("candidate captures must have unique attempts and receipts")
     cells = {str(cell["cell_id"]): cell for cell in protocol["cells"]}
     target_quotas = _protocol_target_quotas(protocol)
@@ -945,7 +945,7 @@ def build_development_cohort_audit(
             "capture_attempt_id": item["capture_attempt_id"],
             "cell_id": item["binding"]["cell_id"],
             "episode_index": item["binding"]["episode_index"],
-            "capture_receipt_sha256": item["capture_receipt_sha256"],
+            "capture_receipt_identity": item["capture_receipt_identity"],
         }
         for item in candidates
     ]
@@ -956,13 +956,13 @@ def build_development_cohort_audit(
         "policy_ranking": False,
         "audit_provenance": {
             "analyzer_module": "rivermark_benchmark.cohort_audit",
-            "analyzer_source_sha256": sha256_file(Path(__file__).resolve()),
+            "analyzer_source_identity": identity_file(Path(__file__).resolve()),
             "construction_scope": "source_protocol_ledger_and_capture_artifacts",
             "offline_verification_scope": "internal_structure_and_unkeyed_digest_only",
         },
         "protocol": {
             "protocol_id": protocol["protocol_id"],
-            "protocol_sha256": protocol_sha256(protocol),
+            "protocol_identity": protocol_identity(protocol),
             "candidate_index_start": candidate_index_start,
             "expected_candidate_count": len(expected_bindings),
             "target_quota_by_cell": target_quotas,
@@ -970,19 +970,19 @@ def build_development_cohort_audit(
         "source": {
             "revision": revisions[0],
             "all_worktrees_clean": True,
-            "source_tree_sha256_values": sorted(
-                {str(item["source_tree_sha256"]) for item in candidates}
+            "source_tree_identity_values": sorted(
+                {str(item["source_tree_identity"]) for item in candidates}
             ),
         },
         "accounting": {
-            "failure_ledger_sha256": sha256_file(failure_ledger_path),
+            "failure_ledger_identity": identity_file(failure_ledger_path),
             "ledger_record_count": len(ledger_records),
             "protocol_attempt_count": int(coverage["attempt_count"]),
             "candidate_attempt_count": len(candidates),
             "noncandidate_protocol_attempt_count": int(coverage["attempt_count"]) - len(candidates),
             "candidate_outcomes": dict(sorted(outcomes.items())),
             "candidate_reason_codes": dict(sorted(reasons.items())),
-            "candidate_selection_sha256": _canonical_sha256(candidate_selection_payload),
+            "candidate_selection_identity": _canonical_identity(candidate_selection_payload),
             "coverage": coverage,
         },
         "candidates": candidates,
@@ -1032,9 +1032,9 @@ def build_development_cohort_audit(
                 "release_supply_chain",
             ],
         },
-        "report_payload_sha256": "",
+        "report_payload_identity": "",
     }
-    report["report_payload_sha256"] = _canonical_sha256(report)
+    report["report_payload_identity"] = _canonical_identity(report)
     _assert_public_report(report)
     return report
 
@@ -1050,10 +1050,10 @@ def _verify_development_cohort_audit_payload(
         or report.get("policy_ranking") is not False
     ):
         raise CohortAuditError("cohort audit identity or claim boundary is invalid")
-    declared_digest = report.get("report_payload_sha256")
-    if not isinstance(declared_digest, str) or not _SHA256.fullmatch(declared_digest):
+    declared_digest = report.get("report_payload_identity")
+    if not isinstance(declared_digest, str) or not _IDENTITY.fullmatch(declared_digest):
         raise CohortAuditError("cohort audit payload digest is missing or malformed")
-    if _canonical_sha256({**report, "report_payload_sha256": ""}) != declared_digest:
+    if _canonical_identity({**report, "report_payload_identity": ""}) != declared_digest:
         raise CohortAuditError("cohort audit payload digest is stale")
     _assert_public_report(report)
     candidates = report.get("candidates")
@@ -1077,13 +1077,13 @@ def _verify_development_cohort_audit_payload(
         set(provenance)
         != {
             "analyzer_module",
-            "analyzer_source_sha256",
+            "analyzer_source_identity",
             "construction_scope",
             "offline_verification_scope",
         }
         or provenance.get("analyzer_module") != "rivermark_benchmark.cohort_audit"
-        or not isinstance(provenance.get("analyzer_source_sha256"), str)
-        or not _SHA256.fullmatch(str(provenance["analyzer_source_sha256"]))
+        or not isinstance(provenance.get("analyzer_source_identity"), str)
+        or not _IDENTITY.fullmatch(str(provenance["analyzer_source_identity"]))
         or provenance.get("construction_scope")
         != "source_protocol_ledger_and_capture_artifacts"
         or provenance.get("offline_verification_scope")
@@ -1102,21 +1102,21 @@ def _verify_development_cohort_audit_payload(
     ):
         raise CohortAuditError("cohort candidate counts are inconsistent")
     attempt_ids = [item.get("capture_attempt_id") for item in candidates]
-    receipt_hashes = [item.get("capture_receipt_sha256") for item in candidates]
+    receipt_identities = [item.get("capture_receipt_identity") for item in candidates]
     bindings = [item.get("binding") for item in candidates]
     if (
         len(set(attempt_ids)) != len(candidates)
-        or len(set(receipt_hashes)) != len(candidates)
+        or len(set(receipt_identities)) != len(candidates)
         or any(not isinstance(binding, Mapping) for binding in bindings)
     ):
         raise CohortAuditError("cohort candidate identities are not unique")
     protocol_id = protocol.get("protocol_id")
-    protocol_digest = protocol.get("protocol_sha256")
+    protocol_digest = protocol.get("protocol_identity")
     if (
         not isinstance(protocol_id, str)
         or not _PUBLIC_ID.fullmatch(protocol_id)
         or not isinstance(protocol_digest, str)
-        or not _SHA256.fullmatch(protocol_digest)
+        or not _IDENTITY.fullmatch(protocol_digest)
     ):
         raise CohortAuditError("cohort protocol identity is malformed")
     candidate_index_start = protocol.get("candidate_index_start")
@@ -1149,7 +1149,7 @@ def _verify_development_cohort_audit_payload(
         if (
             set(binding) != COLLECTION_BINDING_KEYS
             or binding.get("protocol_id") != protocol_id
-            or binding.get("protocol_sha256") != protocol_digest
+            or binding.get("protocol_identity") != protocol_digest
             or not isinstance(binding.get("cell_id"), str)
             or not _PUBLIC_ID.fullmatch(str(binding.get("cell_id")))
             or isinstance(binding.get("episode_index"), bool)
@@ -1170,13 +1170,13 @@ def _verify_development_cohort_audit_payload(
         if item.get("source_revision") != source_revision:
             raise CohortAuditError("cohort candidate source revision is inconsistent")
         for key in (
-            "source_tree_sha256",
-            "capture_receipt_sha256",
-            "independent_validation_sha256",
-            "task_outcome_sha256",
+            "source_tree_identity",
+            "capture_receipt_identity",
+            "independent_validation_identity",
+            "task_outcome_identity",
         ):
             value = item.get(key)
-            if not isinstance(value, str) or not _SHA256.fullmatch(value):
+            if not isinstance(value, str) or not _IDENTITY.fullmatch(value):
                 raise CohortAuditError(f"cohort candidate {key} is malformed")
         gates = item.get("quality_gates")
         if (
@@ -1265,11 +1265,11 @@ def _verify_development_cohort_audit_payload(
             "capture_attempt_id": item["capture_attempt_id"],
             "cell_id": item["binding"]["cell_id"],
             "episode_index": item["binding"]["episode_index"],
-            "capture_receipt_sha256": item["capture_receipt_sha256"],
+            "capture_receipt_identity": item["capture_receipt_identity"],
         }
         for item in candidates
     ]
-    if accounting.get("candidate_selection_sha256") != _canonical_sha256(selection):
+    if accounting.get("candidate_selection_identity") != _canonical_identity(selection):
         raise CohortAuditError("cohort candidate selection digest is stale")
     split_counts = dict(
         sorted(Counter(str(item["binding"]["split"]) for item in candidates).items())
@@ -1331,11 +1331,11 @@ def _verify_development_cohort_audit_payload(
     coverage = accounting.get("coverage")
     if not isinstance(coverage, Mapping):
         raise CohortAuditError("cohort coverage report is missing")
-    failure_ledger_sha256 = accounting.get("failure_ledger_sha256")
+    failure_ledger_identity = accounting.get("failure_ledger_identity")
     ledger_record_count = accounting.get("ledger_record_count")
     if (
-        not isinstance(failure_ledger_sha256, str)
-        or not _SHA256.fullmatch(failure_ledger_sha256)
+        not isinstance(failure_ledger_identity, str)
+        or not _IDENTITY.fullmatch(failure_ledger_identity)
         or isinstance(ledger_record_count, bool)
         or not isinstance(ledger_record_count, int)
         or ledger_record_count < 0
@@ -1362,10 +1362,10 @@ def _verify_development_cohort_audit_payload(
     ):
         raise CohortAuditError("cohort attempt accounting is inconsistent")
     source_revisions = {item.get("source_revision") for item in candidates}
-    source_tree_hashes = sorted({str(item["source_tree_sha256"]) for item in candidates})
+    source_tree_identities = sorted({str(item["source_tree_identity"]) for item in candidates})
     if (
         source_revisions != {source_revision}
-        or source.get("source_tree_sha256_values") != source_tree_hashes
+        or source.get("source_tree_identity_values") != source_tree_identities
         or source.get("all_worktrees_clean") is not True
     ):
         raise CohortAuditError("cohort source revision summary is inconsistent")
@@ -1398,8 +1398,8 @@ def _write_new_report(path: Path, report: Mapping[str, Any]) -> None:
     destination = path.expanduser().resolve()
     if destination.exists():
         raise CohortAuditError(f"refusing to overwrite cohort audit: {destination}")
-    expected = _canonical_sha256({**report, "report_payload_sha256": ""})
-    if report.get("report_payload_sha256") != expected:
+    expected = _canonical_identity({**report, "report_payload_identity": ""})
+    if report.get("report_payload_identity") != expected:
         raise CohortAuditError("cohort audit payload digest is stale")
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
@@ -1443,10 +1443,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "schema": COHORT_AUDIT_SCHEMA,
                         "status": "internally_consistent",
                         "analyzer_source_matches_current": report["audit_provenance"]
-                        ["analyzer_source_sha256"]
-                        == sha256_file(Path(__file__).resolve()),
+                        ["analyzer_source_identity"]
+                        == identity_file(Path(__file__).resolve()),
                         "candidate_count": report["aggregate"]["candidate_count"],
-                        "report_payload_sha256": report["report_payload_sha256"],
+                        "report_payload_identity": report["report_payload_identity"],
                     },
                     indent=2,
                     sort_keys=True,
@@ -1480,7 +1480,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "candidate_count": report["aggregate"]["candidate_count"],
                 "protocol_attempt_count": report["accounting"]["protocol_attempt_count"],
                 "formal_admission_complete": report["admission_readiness"]["formal_admission_complete"],
-                "report_payload_sha256": report["report_payload_sha256"],
+                "report_payload_identity": report["report_payload_identity"],
             },
             indent=2,
             sort_keys=True,

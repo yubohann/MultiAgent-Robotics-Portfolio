@@ -52,7 +52,7 @@ def _manifest() -> CandidateFragmentManifest:
         )
     return CandidateFragmentManifest(
         candidate_id="timeout-probe",
-        context_hash=context.digest,
+        context_id=context.context_id,
         fragments=tuple(fragments),
         planned_descriptor=(0.5, 0.5, 0.5),
         feasible=True,

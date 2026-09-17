@@ -22,8 +22,8 @@ from aerocity_method.adapters.hm3d_marvel import (
     public_marvel_graph_observation,
     select_marvel_supplementary_reference,
 )
-from aerocity_method.contracts.models import PublicMethodContext
 from aerocity_method.contracts.hm3d_public_schema import public_schema_fields
+from aerocity_method.contracts.models import PublicMethodContext
 
 try:
     import torch
@@ -31,7 +31,7 @@ except ModuleNotFoundError:
     pytest.fail("PyTorch is required for MARVEL supplementary reference tests", pytrace=False)
 
 
-SPLIT_HASH = "b" * 64
+SPLIT_ID = "b" * 64
 
 
 def _state() -> PublicSearchState:
@@ -62,41 +62,48 @@ def _state() -> PublicSearchState:
 
 
 def _checkpoint(tmp_path) -> object:
-    model = MarvelSupplementaryReferencePolicy(MarvelSupplementaryReferenceConfig(hidden_dim=8), seed=12)
+    model = MarvelSupplementaryReferencePolicy(
+        MarvelSupplementaryReferenceConfig(hidden_dim=8), seed=12
+    )
     payload = build_marvel_checkpoint_payload(
         model,
         training_scene_ids=("00244-E64sjs3Dyfd",),
         training_updates=1,
         training_provenance={
             "real_runtime_outcomes": ["a" * 64],
-            "split_manifest_sha256": SPLIT_HASH,
+            "split_manifest_id": SPLIT_ID,
             **public_schema_fields(),
         },
-        split_manifest_sha256=SPLIT_HASH,
+        split_manifest_id=SPLIT_ID,
     )
     path = tmp_path / "marvel-supplementary-reference.pt"
     torch.save(payload, path)
     return path
 
 
-def test_marvel_supplementary_reference_masks_illegal_actions_and_records_train_provenance(tmp_path) -> None:
+def test_marvel_supplementary_reference_masks_illegal_actions_and_records_train_provenance(
+    tmp_path,
+) -> None:
     state = _state()
     pool = build_public_candidate_pool(state, identity_path_guard, candidate_limit=3)
     selected, selection = select_marvel_supplementary_reference(
         state,
         pool,
         checkpoint_path=_checkpoint(tmp_path),
-        expected_split_manifest_sha256=SPLIT_HASH,
+        expected_split_manifest_id=SPLIT_ID,
     )
     assert selected.feasible
     assert selection.to_dict()["strategy"] == "marvel_supplementary_reference"
     assert sum(score for _, score in selection.scores) == pytest.approx(1.0)
 
 
-def test_marvel_supplementary_reference_executes_a_real_gradient_update_on_public_graph_rows() -> None:
+def test_marvel_supplementary_reference_executes_a_real_gradient_update_on_public_graph_rows(
+) -> None:
     state = _state()
     pool = build_public_candidate_pool(state, identity_path_guard, candidate_limit=3)
-    model = MarvelSupplementaryReferencePolicy(MarvelSupplementaryReferenceConfig(hidden_dim=8), seed=3)
+    model = MarvelSupplementaryReferencePolicy(
+        MarvelSupplementaryReferenceConfig(hidden_dim=8), seed=3
+    )
     observation = public_marvel_graph_observation(state, pool)
     row = MarvelSupplementaryReferenceTrainingRow(
         observation=observation,
@@ -132,13 +139,17 @@ def test_marvel_author_graph_and_policy_respond_to_vertical_candidate_change() -
     base_graph = public_marvel_graph_observation(state, pool)
     lifted_graph = public_marvel_graph_observation(state, lifted_pool)
     assert base_graph.node_inputs[1] != lifted_graph.node_inputs[1]
-    model = MarvelSupplementaryReferencePolicy(MarvelSupplementaryReferenceConfig(hidden_dim=8), seed=9)
+    model = MarvelSupplementaryReferencePolicy(
+        MarvelSupplementaryReferenceConfig(hidden_dim=8), seed=9
+    )
     assert model.action_probabilities(base_graph) != pytest.approx(
         model.action_probabilities(lifted_graph)
     )
 
 
-def test_marvel_supplementary_reference_rejects_a_checkpoint_from_another_frozen_split(tmp_path) -> None:
+def test_marvel_supplementary_reference_rejects_a_checkpoint_from_another_frozen_split(
+    tmp_path,
+) -> None:
     state = _state()
     pool = build_public_candidate_pool(state, identity_path_guard, candidate_limit=3)
     with pytest.raises(ValueError, match="different frozen scene split"):
@@ -146,22 +157,24 @@ def test_marvel_supplementary_reference_rejects_a_checkpoint_from_another_frozen
             state,
             pool,
             checkpoint_path=_checkpoint(tmp_path),
-            expected_split_manifest_sha256="c" * 64,
+            expected_split_manifest_id="c" * 64,
         )
 
 
 def test_marvel_supplementary_reference_loads_legacy_checkpoint_state_key(tmp_path) -> None:
-    model = MarvelSupplementaryReferencePolicy(MarvelSupplementaryReferenceConfig(hidden_dim=8), seed=14)
+    model = MarvelSupplementaryReferencePolicy(
+        MarvelSupplementaryReferenceConfig(hidden_dim=8), seed=14
+    )
     payload = build_marvel_checkpoint_payload(
         model,
         training_scene_ids=("00244-E64sjs3Dyfd",),
         training_updates=1,
         training_provenance={
             "real_runtime_outcomes": ["a" * 64],
-            "split_manifest_sha256": SPLIT_HASH,
+            "split_manifest_id": SPLIT_ID,
             **public_schema_fields(),
         },
-        split_manifest_sha256=SPLIT_HASH,
+        split_manifest_id=SPLIT_ID,
     )
     payload[MARVEL_SUPPLEMENTARY_REFERENCE_LEGACY_STATE_KEY] = payload.pop(
         MARVEL_SUPPLEMENTARY_REFERENCE_STATE_KEY
@@ -175,7 +188,7 @@ def test_marvel_supplementary_reference_loads_legacy_checkpoint_state_key(tmp_pa
         state,
         pool,
         checkpoint_path=path,
-        expected_split_manifest_sha256=SPLIT_HASH,
+        expected_split_manifest_id=SPLIT_ID,
     )
 
     assert selected.feasible

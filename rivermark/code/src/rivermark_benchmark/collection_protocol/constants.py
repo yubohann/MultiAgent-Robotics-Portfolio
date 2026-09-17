@@ -17,10 +17,10 @@ NATIVE_T2_CANARY_V3_PROTOCOL_SCHEMA = (
 )
 COVERAGE_REPORT_SCHEMA = "org.rivermark.benchmark.coverage-report.v1"
 T1_COVERAGE_REPORT_SCHEMA = "org.rivermark.benchmark.t1-coverage-report.v2"
-SEED_DERIVATION = "sha256_utf8_lines_uint32_v1"
+SEED_DERIVATION = "identity_utf8_lines_uint32_v1"
 POWER_METHOD = "paired_normal_approximation_bonferroni"
 COLLECTION_BINDING_KEYS = frozenset(
-    {"protocol_id", "protocol_sha256", "cell_id", "split", "episode_index", "episode_seed"}
+    {"protocol_id", "protocol_identity", "cell_id", "split", "episode_index", "episode_seed"}
 )
 COLLECTION_SPLITS = frozenset({"train", "inner_dev", "validation", "blind_test", "ood_test"})
 _SEMVER = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")
@@ -103,7 +103,6 @@ _T1_PROTOCOL_KEYS = frozenset(
         "cells",
         "randomization",
         "analysis_plan",
-        "split_certificate",
         "overview_retention",
         "quality_acceptance",
         "exclusion_rules",
@@ -139,7 +138,7 @@ _T1_QUALITY_GATES = frozenset(
         "visual_intrusion_absent",
         "physical_safety_passed",
         "condition_realization_passed",
-        "artifact_hash_binding_passed",
+        "artifact_identity_binding_passed",
     }
 )
 _T2_CANARY_PROTOCOL_KEYS = frozenset(

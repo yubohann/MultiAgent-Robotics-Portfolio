@@ -192,7 +192,7 @@ for directory in ("gui_gazebo", "gui_rviz_pointcloud", "gui_rviz_map2d", "gui_rv
     if not metadata_path.is_file(): failures.append(f"missing {directory}/capture_metadata.json")
     else:
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-        if metadata.get("unique_frame_hashes", 0) < 20: failures.append(f"unstable/empty {directory}: {metadata}")
+        if metadata.get("changed_frames", 0) < 20: failures.append(f"static or empty capture {directory}: {metadata}")
 report = {"status": "PASS" if not failures else "FAIL", "summary": summary, "videos": video_info, "failures": failures, "synthetic_view_panels": False}
 (run / "validation_report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 if failures: raise SystemExit("REAL GUI VALIDATION FAILED: " + "; ".join(failures))

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from ._core import HybridFraudModelCore as _Core
+from .encoding_mixin import EncodingMixin
+from .forward_mixin import ForwardMixin
+from .loss_mixin import LossMixin
+from .sequence_mixin import SequenceMixin
+from .ssl_mixin import SslMixin
 
-from ._encoding_mixin import EncodingMixin
-from ._sequence_mixin import SequenceMixin
-from ._forward_mixin import ForwardMixin
-from ._ssl_mixin import SslMixin
-from ._loss_mixin import LossMixin
 
 class HybridFraudModel(_Core, EncodingMixin, SequenceMixin, ForwardMixin, SslMixin, LossMixin):
     """Hybrid graph+sequence fraud model (multi-mixin split)."""
-    pass
 
+from ._encoders import SinusoidalPositionalEncoding, TransformerSequenceEncoder
 from ._helpers import (
     TRANSFORMER_BATCH_CHUNK_SIZE,
     _align_module_input,
@@ -40,24 +40,20 @@ from ._helpers import (
     _slice_optional_batch,
     _transformer_chunk_size,
     _uniform_target_kl_loss,
-    seed_legacy_hybrid_compatibility
-)
-from ._encoders import (
-    SinusoidalPositionalEncoding,
-    TransformerSequenceEncoder
+    seed_legacy_hybrid_compatibility,
 )
 from ._legacy import (
     _balance_modality_embedding,
     _detached_uncertainty_target_from_supervision,
     checkpoint_legacy_fusion_only,
     sanitize_legacy_hybrid_state_dict,
-    uses_legacy_raw_fusion_checkpoint
+    uses_legacy_raw_fusion_checkpoint,
 )
 
 __all__ = [
+    'TRANSFORMER_BATCH_CHUNK_SIZE',
     'HybridFraudModel',
     'SinusoidalPositionalEncoding',
-    'TRANSFORMER_BATCH_CHUNK_SIZE',
     'TransformerSequenceEncoder',
     '_align_module_input',
     '_autocast_dtype_for_device',

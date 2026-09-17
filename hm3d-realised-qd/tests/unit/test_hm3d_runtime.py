@@ -43,7 +43,7 @@ def test_example_cannot_impersonate_formal_split() -> None:
             asset_tier=OFFICIAL_EXAMPLE_TIER,
             asset_kind="render_glb",
             path="scene.glb",
-            sha256="a" * 64,
+            asset_id="scene.glb:1",
             bytes=1,
         )
 
@@ -56,7 +56,7 @@ def test_formal_scope_needs_all_three_splits() -> None:
             asset_tier=FORMAL_SPLIT_TIER,
             asset_kind="render_glb",
             path=f"{split}.glb",
-            sha256=character * 64,
+            asset_id=f"{split}.glb:1",
             bytes=1,
         )
         for split, character in (("train", "a"), ("validation", "b"))
@@ -69,7 +69,7 @@ def test_formal_scope_needs_all_three_splits() -> None:
             asset_tier=FORMAL_SPLIT_TIER,
             asset_kind="render_glb",
             path="test.glb",
-            sha256="c" * 64,
+            asset_id="test.glb:1",
             bytes=1,
         )
     )
@@ -122,8 +122,8 @@ def test_reachable_denominator_uses_the_union_of_start_components_only() -> None
     assert metadata["component_voxel_counts"] == {"1": 2, "2": 1}
     assert metadata["reachable_voxel_count"] == 3
     assert metadata["reachable_volume_m3"] == pytest.approx(3.0)
-    assert len(metadata["mask_sha256"]) == 64
-    assert len(metadata["metadata_sha256"]) == 64
+    assert metadata["mask_id"].startswith("reachable-mask:")
+    assert metadata["metadata_id"].startswith("reachable-denominator:")
 
 
 def test_reachable_denominator_rejects_a_start_outside_retained_free_space() -> None:

@@ -8,7 +8,6 @@ import csv
 import json
 from pathlib import Path
 
-
 FIELDS = [
     "run_id", "evidence_level", "profile", "scene", "duration_sec",
     "lidar_raw_points_min", "lidar_raw_points_median", "lidar_finite_points_min",
@@ -19,10 +18,6 @@ FIELDS = [
 
 def _ns_to_ms(value: object) -> object:
     return "unknown" if value is None else float(value) / 1_000_000.0
-
-
-def _sec_to_ms(value: object) -> object:
-    return "unknown" if value is None else float(value) * 1_000.0
 
 
 def _pose_age_metrics(value: object) -> tuple[object, str]:

@@ -5,10 +5,8 @@ from typing import Any
 
 import numpy as np
 
-from .config import (
-    BattleConfig,
-    policy_params
-)
+from .config import BattleConfig, policy_params
+
 
 class LargeScaleBattle50v50:
     def __init__(self, config: BattleConfig | None = None):
@@ -28,7 +26,7 @@ class LargeScaleBattle50v50:
     def _initial_positions(self, team: str, rng: np.random.Generator) -> np.ndarray:
         n = self.cfg.agents_per_team
         rows = min(5, n)
-        cols = int(math.ceil(n / rows))
+        cols = math.ceil(n / rows)
         grid = []
         for r in range(rows):
             for c in range(cols):
@@ -144,7 +142,7 @@ class LargeScaleBattle50v50:
         base_targets[:, 0] -= side * 3.5
         base_targets[:, 1] += flank_dir * p["flank_bias_m"]
 
-        idx, nearest_dist, nearest_vec = self._nearest_enemy(pos, alive, enemy_pos, enemy_alive)
+        _idx, nearest_dist, nearest_vec = self._nearest_enemy(pos, alive, enemy_pos, enemy_alive)
         enemy_dir = nearest_vec / (nearest_dist[:, None] + 1e-6)
         enemy_active = nearest_dist < self.cfg.sensor_range_m
 
@@ -215,7 +213,7 @@ class LargeScaleBattle50v50:
                 base_hp = max(0.0, base_hp - base_damage)
                 shooter_cd[base_hits] = self.cfg.fire_cooldown_s
             else:
-                shielded = int(len(base_legal))
+                shielded = len(base_legal)
                 shooter_cd[base_legal] = self.cfg.fire_cooldown_s
 
         idx, nearest_dist, _ = self._nearest_enemy(shooter_pos, shooter_alive, target_pos, target_alive)

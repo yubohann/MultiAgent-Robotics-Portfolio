@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from robocon_game_supervisor.protocol import Deduplicator, MessageEnvelope
-from robocon_game_supervisor.supervisor import GameSupervisor, SafetySnapshot, SupervisorState
+from robocon_game_supervisor.supervisor import (
+    GameSupervisor,
+    SafetySnapshot,
+    SupervisorState,
+)
 
 
 def _fresh_supervisor() -> GameSupervisor:

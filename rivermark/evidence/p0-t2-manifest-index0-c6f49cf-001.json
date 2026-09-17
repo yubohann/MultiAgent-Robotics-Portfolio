@@ -1,18 +1,13 @@
 {
-  "city_lite_scene_contract_sha256": "f7837d248b4797592c66d4b8b8bd48380de444eca305b8ef03d297dcf32051ea",
-  "city_lite_scene_payload_sha256": "1d5838d90c9920a849fd68d4051c81ad519ce0b79fb3cb3ffa2bcb643ac8544d",
   "collection_binding": {
     "cell_id": "native-t2-canary-inner-dev-v1",
     "episode_index": 0,
     "episode_seed": 1856519805,
     "protocol_id": "citylite-native-t2-canary-v1",
-    "protocol_sha256": "cb13b245c03af5c709254919c7b32f0a478e04b3e93c28d2d744e000e938f398",
     "split": "inner_dev"
   },
   "environment_id": "RIVERMARK_CITY_LITE_v1",
   "geometry_evidence": {
-    "aabb_geometry_sha256": "bd2415466953c92865f06ae00a96ab60e9836b9b6efe7ac547f387a785fe6bad",
-    "native_scan_sha256": "6221258002a011672b9bedf46f8c33844780630cca6366224562b87a24c1b1fc",
     "schema": "org.rivermark.private-manifest-generator.v1"
   },
   "route_conditioning": "public_only",
@@ -31,7 +26,6 @@
     "schema": "org.rivermark.private-target-placement.v1"
   },
   "target_visibility_contract": {
-    "aabb_geometry_sha256": "bd2415466953c92865f06ae00a96ab60e9836b9b6efe7ac547f387a785fe6bad",
     "camera": {
       "focal_length_mm": 24.0,
       "horizontal_aperture_mm": 20.955,
@@ -67,7 +61,6 @@
     },
     "route_family_id": "citylite-route-family-a-v1",
     "route_samples_per_segment": 5,
-    "routes_sha256": "2b4f709fc1662f846f054dce2b39974cf4d292757830e79dadb184e057ee085d",
     "schema": "org.rivermark.private-target-visibility-geometry.v3",
     "target_region_id": "citylite-target-region-b-v1",
     "tracking_envelope_m": 1.5,

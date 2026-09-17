@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-
+from itertools import pairwise
 
 from ._bootstrap import (
     ARENA_SIZE,
@@ -14,17 +14,18 @@ from ._bootstrap import (
     MATCH_STATE,
     NAV_BLOCKERS,
     PLANNER_GRID_RESOLUTION,
-    PUSHABLE_OBSTACLES,
     PUSH_OBSTACLE_STEP_M,
+    PUSHABLE_OBSTACLES,
     ROBOT_COLLISION_RADIUS,
     ROBOT_PUSHABLE_RENDER_CLEARANCE_RADIUS,
     ROBOT_PUSHABLE_VISUAL_HALF_EXTENTS,
     ROUTE_CLEARANCE,
     TARGET_CONTACT_RADIUS,
-    TARGET_REGISTRY
+    TARGET_REGISTRY,
 )
 from .replay import point_blocked, pushable_position_valid, segment_blocked
 from .transforms import quat_from_euler, set_xform
+
 
 def circle_aabb_collision(
     point: tuple[float, float],
@@ -459,7 +460,7 @@ def interpolate_path(
         return (path[0][0], path[0][1], 0.0), 0.0, True
 
     walked = 0.0
-    for p0, p1 in zip(path, path[1:]):
+    for p0, p1 in pairwise(path):
         segment_length = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
         if distance <= walked + segment_length:
             alpha = 0.0 if segment_length <= 1e-9 else (distance - walked) / segment_length
@@ -476,16 +477,11 @@ def interpolate_path(
 
 
 def path_length(path: list[tuple[float, float]]) -> float:
-    return sum(math.hypot(p1[0] - p0[0], p1[1] - p0[1]) for p0, p1 in zip(path, path[1:]))
+    return sum(math.hypot(p1[0] - p0[0], p1[1] - p0[1]) for p0, p1 in pairwise(path))
 
 
 def demo_policy_corridor(team: str, start_xy: tuple[float, float], goal_xy: tuple[float, float]) -> list[tuple[float, float]]:
-    """Wide staging waypoints for the portfolio self-play replay.
-
-    The high-level policy decides which opponent target to attack, and these
-    waypoints emulate the Nav2 corridor preference that keeps the base clear of
-    start rails, inner fences and armor.
-    """
+    """Wide staging waypoints for the portfolio self-play replay."""
     sx, sy = start_xy
     gx, gy = goal_xy
     if team == "yellow":

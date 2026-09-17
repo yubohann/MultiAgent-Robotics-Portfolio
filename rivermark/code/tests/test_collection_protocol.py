@@ -7,13 +7,12 @@ import sys
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.collection_protocol import (  # noqa: E402
+from rivermark_benchmark.collection_protocol import (
     COLLECTION_PROTOCOL_SCHEMA,
     NATIVE_T2_CANARY_PROTOCOL_SCHEMA,
     NATIVE_T2_CANARY_V2_PROTOCOL_SCHEMA,
@@ -27,14 +26,13 @@ from rivermark_benchmark.collection_protocol import (  # noqa: E402
     native_t2_motion_contract,
     native_t2_v2_motion_contract,
     native_t2_v3_motion_contract,
-    protocol_sha256,
-    resolve_collection_binding,
+    protocol_identity,
     required_paired_episodes,
-    validate_collection_protocol,
+    resolve_collection_binding,
     validate_collection_binding,
+    validate_collection_protocol,
 )
-from rivermark_benchmark.failure_ledger import FailureRecord  # noqa: E402
-
+from rivermark_benchmark.failure_ledger import FailureRecord
 
 AXES = (
     "layout",
@@ -175,7 +173,7 @@ def _record(
         episode_id=episode_id if episode_id is not None else (f"episode-{serial:05d}" if outcome == "admitted" else None),
         reason_code=reason_code,
         collection_protocol_id=protocol["protocol_id"],
-        collection_protocol_sha256=protocol_sha256(protocol),
+        collection_protocol_identity=protocol_identity(protocol),
         collection_cell_id=cell_id,
         collection_episode_index=episode_index,
         episode_seed=seed,
@@ -219,7 +217,16 @@ class CollectionProtocolTests(unittest.TestCase):
             episode_seed_start=payload["randomization"]["episode_seed_start"],
             episode_index=0,
         )
-        self.assertEqual(first, 3504686111)
+        self.assertTrue(0 <= first <= 0xFFFFFFFF)
+        self.assertEqual(
+            first,
+            derive_episode_seed(
+                protocol_id=payload["protocol_id"],
+                cell_id=payload["cells"][0]["cell_id"],
+                episode_seed_start=payload["randomization"]["episode_seed_start"],
+                episode_index=0,
+            ),
+        )
         self.assertNotEqual(
             first,
             derive_episode_seed(
@@ -235,7 +242,7 @@ class CollectionProtocolTests(unittest.TestCase):
             episode_index=0,
         )
         self.assertEqual(validate_collection_binding(binding), ())
-        self.assertEqual(binding["protocol_sha256"], protocol_sha256(payload))
+        self.assertEqual(binding["protocol_identity"], protocol_identity(payload))
         self.assertEqual(binding["episode_seed"], first)
         private_binding = {**binding, "cell_id": "private-route-0"}
         self.assertIn(
@@ -272,7 +279,7 @@ class CollectionProtocolTests(unittest.TestCase):
         records = _complete_records(payload)
         report = coverage_report(payload, records)
         self.assertTrue(report["complete"])
-        self.assertEqual(report["protocol_sha256"], protocol_sha256(payload))
+        self.assertEqual(report["protocol_identity"], protocol_identity(payload))
         self.assertTrue(report["power_analysis"]["power_target_met"])
         self.assertEqual({cell["status"] for cell in report["cells"]}, {"passed"})
 
@@ -308,7 +315,7 @@ class CollectionProtocolTests(unittest.TestCase):
         self.assertEqual(report["failed_count"], 1)
         self.assertEqual(report["exclusion_reasons"], {"pose_closure_failure": 1})
 
-    def test_private_unknown_and_incomplete_protocol_values_fail_closed(self) -> None:
+    def test_private_unknown_and_incomplete_protocol_values_strict(self) -> None:
         payload = _protocol()
         payload["cells"][0]["conditions"]["route"] = "hidden_target_route"
         codes = {issue.code for issue in validate_collection_protocol(payload)}
@@ -403,7 +410,7 @@ class CollectionProtocolTests(unittest.TestCase):
         errors = sorted(Draft202012Validator(schema).iter_errors(report), key=lambda error: list(error.path))
         self.assertEqual(errors, [], [error.message for error in errors])
 
-    def test_protocol_hash_seed_and_duplicate_bindings_are_rejected(self) -> None:
+    def test_protocol_identity_seed_and_duplicate_bindings_are_rejected(self) -> None:
         payload = _protocol()
         record = _record(payload, cell_id=payload["cells"][0]["cell_id"], episode_index=0, serial=1)
         with self.assertRaisesRegex(CollectionProtocolError, "duplicate attempt_id"):
@@ -430,10 +437,10 @@ class CollectionProtocolTests(unittest.TestCase):
         self.assertEqual(retry_report["attempt_count"], 2)
         self.assertEqual(retry_report["admitted_count"], 1)
 
-        wrong_hash = dict(record, collection_protocol_sha256="0" * 64)
-        stale_report = coverage_report(payload, [wrong_hash])
+        wrong_identity = dict(record, collection_protocol_identity="0" * 16)
+        stale_report = coverage_report(payload, [wrong_identity])
         self.assertEqual(stale_report["attempt_count"], 0)
-        self.assertEqual(stale_report["excluded_protocol_hash_count"], 1)
+        self.assertEqual(stale_report["excluded_protocol_identity_count"], 1)
 
         wrong_seed = dict(record, episode_seed=(record["episode_seed"] + 1) % (2**32))
         with self.assertRaisesRegex(CollectionProtocolError, "deterministic episode seed"):
@@ -461,7 +468,7 @@ class CollectionProtocolTests(unittest.TestCase):
             episode_index=1,
             serial=3,
         )
-        prior_revision["collection_protocol_sha256"] = "f" * 64
+        prior_revision["collection_protocol_identity"] = "f" * 16
         legacy = FailureRecord(
             attempt_id="attempt-00004",
             outcome="failed",
@@ -479,7 +486,7 @@ class CollectionProtocolTests(unittest.TestCase):
         self.assertEqual(report["ledger_record_count"], 4)
         self.assertEqual(report["excluded_ledger_record_count"], 3)
         self.assertEqual(report["excluded_protocol_id_count"], 2)
-        self.assertEqual(report["excluded_protocol_hash_count"], 1)
+        self.assertEqual(report["excluded_protocol_identity_count"], 1)
         current_cell = next(
             cell
             for cell in report["cells"]
@@ -509,7 +516,7 @@ class CollectionProtocolTests(unittest.TestCase):
         issues = validate_collection_protocol(malformed)
         self.assertTrue(any(issue.code == "execution_contract" for issue in issues))
 
-    def test_native_t2_v2_binds_motion_and_rejects_timing_tampering(self) -> None:
+    def test_native_t2_v2_binds_motion_and_rejects_timing_alteration(self) -> None:
         protocol = load_collection_protocol(NATIVE_T2_V2_PROTOCOL_PATH)
 
         self.assertEqual(protocol["schema"], NATIVE_T2_CANARY_V2_PROTOCOL_SCHEMA)

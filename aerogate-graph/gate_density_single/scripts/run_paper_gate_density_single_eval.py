@@ -6,14 +6,13 @@ from __future__ import annotations
 
 import argparse
 import csv
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 import json
-from pathlib import Path
 import subprocess
 import sys
 import time
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from pathlib import Path
 from typing import Any
-
 
 GATE_AXIS: tuple[int, ...] = (0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60)
 DEFAULT_SINGLE_DRONE_SPEED_MPS = 3.50

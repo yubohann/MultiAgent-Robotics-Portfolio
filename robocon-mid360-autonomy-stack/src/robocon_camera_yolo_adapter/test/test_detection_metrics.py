@@ -1,5 +1,4 @@
 import pytest
-
 from robocon_camera_yolo_adapter.metrics import evaluate_records, iou
 
 

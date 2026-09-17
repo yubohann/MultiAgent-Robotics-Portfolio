@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -15,7 +16,6 @@ from .frame_archive import (
     is_chunked_frame_archive,
     oversized_legacy_frame_members,
 )
-
 
 _CHUNKED_MODALITIES = {
     "overview": Path("sensors/overview_rgb.npz"),
@@ -48,13 +48,7 @@ class FrameRecord:
 
 
 class IsaacCapture:
-    """Metadata-checked, lazy reader for a native Isaac capture directory.
-
-    By default a capture must have a successful capture receipt and an
-    independent validator receipt.  ``require_validated=False`` is useful for
-    diagnosing a failed development run, but must not be used for benchmark
-    training or publication.
-    """
+    """Metadata-checked, lazy reader for a native Isaac capture directory."""
 
     def __init__(
         self,
@@ -93,7 +87,7 @@ class IsaacCapture:
         except FileNotFoundError:
             raise FileNotFoundError(f"capture metadata is missing: {path}") from None
         if not isinstance(value, dict):
-            raise ValueError(f"capture metadata must be a JSON object: {path}")
+            raise ValueError(f"capture metadata must be a JSON object: {path}")  # noqa: TRY004 - file-content shape, not a caller type
         return value
 
     @property
@@ -233,13 +227,7 @@ class IsaacCapture:
         stop: int | None = None,
         stride: int = 1,
     ) -> Iterator[FrameRecord]:
-        """Yield selected frames without materializing a sequence-sized copy.
-
-        ``fields`` defaults to frame fields for chunked camera archives and to
-        all non-timestamp arrays for small legacy NPZ payloads.  The yielded
-        arrays are valid until the next iteration; callers that retain them
-        should explicitly copy only those frames they need.
-        """
+        """Yield selected frames without materializing a sequence-sized copy."""
 
         if modality in _CHUNKED_MODALITIES:
             yield from self._iter_chunked(

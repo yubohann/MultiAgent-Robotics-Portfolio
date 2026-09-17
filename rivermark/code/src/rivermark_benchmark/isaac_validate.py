@@ -3,37 +3,55 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .citylite_scene import (
-    AUTHORITY_SHA256,
+    AABB,
+    AUTHORITY_IDENTITY,
     CITY_LITE_COMMAND_VOLUME_W_M,
     CITY_LITE_FLIGHT_VOLUME_W_M,
-    CityLiteAuthorityError,
     ENVIRONMENT_ID,
     EXPECTED_NATIVE_COLLISION_COUNTS,
     EXPECTED_UPSTREAM_PERMISSIONS,
     ROUTE_CLEARANCE_M,
     SCENE_CONTRACT_GATE_STATUS,
-    SCENE_CONTRACT_PAYLOAD_SHA256,
+    SCENE_CONTRACT_PAYLOAD_IDENTITY,
     SCENE_CONTRACT_SCHEMA,
-    SCENE_CONTRACT_SHA256,
+    SCENE_CONTRACT_IDENTITY,
     SELECTIVE_REFERENCES,
     TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M,
-    AABB,
-    aabb_geometry_sha256,
+    CityLiteAuthorityError,
+    aabb_geometry_identity,
     segment_intersects_aabb,
     validate_city_task_obstacle_material_closure_receipt,
     validate_rivermark_layer_inventory_receipt,
+)
+from .citylite_task import (
+    PUBLIC_ROUTE_WAYPOINT_SEGMENT_SECONDS,
+    target_visibility_execution_window,
+)
+from .collection_protocol import validate_collection_binding
+from .condition_realization import (
+    CONDITION_REALIZATION_SCHEMA,
+    evaluate_condition_realization,
+    validate_condition_request,
+)
+from .frame_archive import (
+    LEGACY_FRAME_MEMBER_MAX_UNCOMPRESSED_BYTES,
+    ChunkedFrameArchive,
+    FrameArchiveError,
+    is_chunked_frame_archive,
+    oversized_legacy_frame_members,
 )
 from .isaac_capture import (
     HOVER_THRUST_PER_ROTOR_N,
@@ -57,12 +75,6 @@ from .isaac_capture import (
     OVERVIEW_WITNESS_MIN_TRACKED_AGENT_PIXELS,
     OVERVIEW_WITNESS_POSITION_TOLERANCE_M,
     OVERVIEW_WITNESS_TRACKED_AGENT_ID,
-    PrivateEvaluatorManifestError,
-    SWARM_AGENT_LITERAL_PRIM_PATHS,
-    T1_DATA_TRACK_ID,
-    T1_OBSERVABILITY_OUTCOME_SCHEMA,
-    TARGET_COUNT,
-    TARGET_SEMANTIC_INSTANCE_PREFIX,
     PRIVATE_TARGET_MIN_VISIBLE_INSTANCE_PIXELS,
     PRIVATE_TARGET_MIN_VISIBLE_SENSOR_FRAMES,
     RUNTIME_TARGET_USD_BOUND_EXTENT_TOLERANCE_M,
@@ -71,14 +83,20 @@ from .isaac_capture import (
     SEMANTIC_FRAME_METADATA_RELATIVE_PATH,
     SEMANTIC_FRAME_METADATA_SCHEMA,
     SEMANTIC_METADATA_SCHEMA,
+    SWARM_AGENT_LITERAL_PRIM_PATHS,
+    T1_DATA_TRACK_ID,
+    T1_OBSERVABILITY_OUTCOME_SCHEMA,
+    TARGET_COUNT,
+    TARGET_SEMANTIC_INSTANCE_PREFIX,
     TASK_VARIANT_ID,
     VISUAL_INTRUSION_GATE_SCHEMA,
-    _city_lite_spawn_states,
+    PrivateEvaluatorManifestError,
     _captured_frame_indices,
-    _overview_archive_frame_indices,
-    _onboard_visual_intrusion_evidence,
+    _city_lite_spawn_states,
     _onboard_content_gate_contract,
     _onboard_scene_content_evidence,
+    _onboard_visual_intrusion_evidence,
+    _overview_archive_frame_indices,
     _overview_tracked_agent_visibility_evidence,
     _public_route_witness_schedule,
     _public_route_witness_view_at_time_ns,
@@ -87,38 +105,17 @@ from .isaac_capture import (
     validate_private_target_execution_window,
     validate_private_target_geometry,
 )
-from .citylite_task import (
-    PUBLIC_ROUTE_WAYPOINT_SEGMENT_SECONDS,
-    target_visibility_execution_window,
-)
-from .frame_archive import (
-    LEGACY_FRAME_MEMBER_MAX_UNCOMPRESSED_BYTES,
-    ChunkedFrameArchive,
-    FrameArchiveError,
-    is_chunked_frame_archive,
-    oversized_legacy_frame_members,
-)
-from .collection_protocol import validate_collection_binding
-from .condition_realization import (
-    CONDITION_REALIZATION_SCHEMA,
-    evaluate_condition_realization,
-    validate_condition_request,
-)
-from .private_evaluator_manifest import (
-    PRIVATE_MANIFEST_RETENTION_KIND,
-    PRIVATE_MANIFEST_RETENTION_MAX_BYTES,
-)
 from .isaac_runtime_safety import (
     CF2X_RUNTIME_GUARD_RADIUS_M,
-    CONTACT_ABORT_FORCE_N,
     CONTACT_ABORT_FORCE_FLOAT32_CUTOFF_N,
+    CONTACT_ABORT_FORCE_N,
     INTER_AGENT_BODY_ENVELOPE_SEPARATION_M,
     INTER_AGENT_MINIMUM_CENTER_SEPARATION_M,
     INTER_AGENT_PAIR_COUNT,
     INTER_AGENT_SAFETY_PROVENANCE,
-    RUNTIME_SAFETY_SCHEMA,
     RUNTIME_SAFETY_FRAME_OUTCOME_CODES,
     RUNTIME_SAFETY_PHASE_CODES,
+    RUNTIME_SAFETY_SCHEMA,
     RUNTIME_SAFETY_TRACE_RELATIVE_PATH,
     RUNTIME_SAFETY_TRACE_SCHEMA,
     SENSOR_PHASE_EVENT_CODES,
@@ -129,21 +126,24 @@ from .isaac_runtime_safety import (
     physics_time_ns,
     sensor_phase_array_digest,
 )
+from .private_evaluator_manifest import (
+    PRIVATE_MANIFEST_RETENTION_KIND,
+    PRIVATE_MANIFEST_RETENTION_MAX_BYTES,
+)
 from .runtime_lock import (
     RuntimeLockError,
     compare_live_simulation,
     load_runtime_lock,
-    runtime_lock_sha256,
+    runtime_lock_identity,
 )
 from .schema import (
     forbidden_policy_key,
     forbidden_policy_value_token,
-    is_sha256,
+    is_identity,
     iter_tree,
     normalized_key,
 )
-from .video import sha256_file
-
+from .video import identity_file
 
 VALIDATION_SCHEMA = "org.rivermark.isaac-independent-validation.v1"
 CAPTURE_SCHEMA = "org.rivermark.isaac-swarm-capture.v1"
@@ -189,10 +189,10 @@ OVERVIEW_STRUCTURAL_LABEL_TOKENS = (
 )
 _SAFE_COMMITMENT_KEYS = frozenset(
     {
-        "evaluator_manifest_sha256",
+        "evaluator_manifest_identity",
         "evaluator_manifest_retention",
-        "private_evaluator_manifest_sha256",
-        "private_manifest_commitment_sha256",
+        "private_evaluator_manifest_identity",
+        "private_manifest_commitment_identity",
     }
 )
 _PUBLIC_PRIVATE_TRUTH_KEYS = frozenset(
@@ -279,7 +279,7 @@ class ValidationIssue:
 @dataclass(frozen=True)
 class IsaacValidationReport:
     root: Path
-    receipt_sha256: str | None
+    receipt_identity: str | None
     checks: Mapping[str, Any]
     issues: tuple[ValidationIssue, ...]
 
@@ -792,12 +792,7 @@ def _calibrated_overview_evidence_archive(
     calibration: Mapping[str, Any] | None,
     issues: list[ValidationIssue],
 ) -> Mapping[str, Any] | None:
-    """Validate the new low-rate overview declaration without accepting selection.
-
-    Legacy full-rate captures have no declaration and remain readable.  A new
-    archive must name its deterministic frame-index rule and explicitly state
-    that overview depth was checked live but not retained.
-    """
+    """Validate the new low-rate overview declaration without accepting selection."""
 
     overview = calibration.get("overview_camera") if isinstance(calibration, Mapping) else None
     archive = overview.get("evidence_archive") if isinstance(overview, Mapping) else None
@@ -858,13 +853,7 @@ def _target_slots(target_count: int) -> tuple[str, ...]:
 def _target_visibility_rollout_summary(
     target_slots: Sequence[str], evidence_samples: Sequence[Mapping[str, Any]]
 ) -> dict[str, Any]:
-    """Build the capture v2 public summary without reading its declaration.
-
-    This deliberately duplicates the small public ABI reducer in the capture
-    process.  The independent validator must be able to produce an identical
-    result from reopened raw frames even if the capture process or its outcome
-    writer is wrong.
-    """
+    """Build the capture v2 public summary without reading its declaration."""
 
     observed: dict[str, dict[str, int]] = {
         target_slot: {"max_pixels": 0, "visible_frames": 0}
@@ -949,20 +938,11 @@ def _recompute_target_observability(
     *,
     target_count: int,
 ) -> dict[str, Any]:
-    """Recompute the public T1 visibility summary from raw semantic frames.
-
-    Replicator allocates numeric semantic IDs independently for each camera and
-    may reassign them after a camera update.  The validator therefore resolves
-    every slot inside each camera namespace for the matching retained frame,
-    then builds the same public v2 rollout ABI from reopened sensor bytes.  It
-    never consumes the capture's declared outcome while doing so.
-    """
+    """Recompute the public T1 visibility summary from raw semantic frames."""
 
     slots = _target_slots(target_count)
     evidence_samples: list[dict[str, Any]] = []
-    if semantic is None or "semantic_segmentation" not in semantic.fields:
-        return _target_visibility_rollout_summary(slots, evidence_samples)
-    elif semantic_frame_metadata is None or len(semantic_frame_metadata) != len(semantic.timestamps_ns):
+    if semantic is None or "semantic_segmentation" not in semantic.fields or semantic_frame_metadata is None or len(semantic_frame_metadata) != len(semantic.timestamps_ns):
         return _target_visibility_rollout_summary(slots, evidence_samples)
     else:
         dtype, shape = semantic.descriptor("semantic_segmentation")
@@ -1145,12 +1125,7 @@ def _overview_archived_visual_evidence(
     semantic: np.ndarray,
     semantic_metadata: Any,
 ) -> dict[str, Any]:
-    """Check only evidence that is intentionally retained in a low-rate overview.
-
-    Overview depth is checked live at every retained main sensor frame, but it
-    is not stored in the evidence archive.  This function must therefore not
-    manufacture a geometry/depth claim from RGB or semantic labels.
-    """
+    """Check only evidence that is intentionally retained in a low-rate overview."""
 
     luma = (
         0.2126 * rgb[..., 0].astype(np.float32)
@@ -1371,14 +1346,7 @@ def _scan_public_private_artifact_json(
     private_target_ids: Sequence[str] = (),
     private_target_positions: Sequence[Sequence[float]] = (),
 ) -> None:
-    """Reject private IDs, target geometry and evaluator paths in public JSON.
-
-    Policy-key scanning intentionally permits aggregate counts and opaque
-    commitment hashes.  This second boundary scan covers control-plane files
-    such as ``capture_progress.json`` where a future checkpoint could otherwise
-    copy a private object identifier or coordinate without becoming a policy
-    input.
-    """
+    """Reject private IDs, target geometry and evaluator paths in public JSON."""
 
     if payload is None:
         return
@@ -1397,13 +1365,16 @@ def _scan_public_private_artifact_json(
     for tree_path, key, value in iter_tree(payload):
         path = f"{relative}{tree_path[1:]}"
         normalized_key_name = normalized_key(key) if key is not None else ""
-        if key is not None and normalized_key_name in _PUBLIC_PRIVATE_ARTIFACT_KEYS:
-            # A public overview camera uses a key named target_w_m for its
-            # fixed witness pose, so only reject it when the value exactly
-            # equals evaluator geometry below; the field-name check still
-            # rejects all other target-coordinate-shaped fields.
-            if normalized_key_name != "target_w_m":
-                _issue(issues, "public_private_leakage", path, "private target field is not public")
+        # A public overview camera uses a key named target_w_m for its
+        # fixed witness pose, so only reject it when the value exactly
+        # equals evaluator geometry below; the field-name check still
+        # rejects all other target-coordinate-shaped fields.
+        if (
+            key is not None
+            and normalized_key_name in _PUBLIC_PRIVATE_ARTIFACT_KEYS
+            and normalized_key_name != "target_w_m"
+        ):
+            _issue(issues, "public_private_leakage", path, "private target field is not public")
         if isinstance(value, str):
             lowered = value.casefold()
             if any(token in lowered for token in _PUBLIC_PRIVATE_ARTIFACT_PATH_TOKENS):
@@ -1432,25 +1403,18 @@ def _validate_post_validation_video_artifacts(
     root: Path,
     *,
     receipt: Mapping[str, Any],
-    receipt_sha256: str,
+    receipt_identity: str,
     bound_artifacts: Mapping[str, Any],
     issues: list[ValidationIssue],
 ) -> frozenset[str]:
-    """Validate the small post-validation video evidence extension.
-
-    Video encoding intentionally happens after the independent validator, so
-    videos cannot be part of the raw capture artifact hash inventory.  Once
-    present, however, they are not arbitrary extra files: each MP4 must have
-    the receipt emitted by the encoder, bind this capture receipt, and bind
-    only source artifacts already covered by the capture receipt.
-    """
+    """Validate the small post-validation video evidence extension."""
 
     video_root = root / VIDEO_ARTIFACT_ROOT
     if not video_root.is_dir():
         return frozenset()
     allowed: set[str] = set()
     validation_path = root / "independent_validation.json"
-    validation_sha256: str | None = None
+    validation_identity: str | None = None
     validation_bound = False
     if validation_path.is_file():
         try:
@@ -1461,9 +1425,9 @@ def _validate_post_validation_video_artifacts(
             validation_bound = (
                 validation_payload.get("schema") == VALIDATION_SCHEMA
                 and validation_payload.get("status") == "passed"
-                and validation_payload.get("capture_receipt_sha256") == receipt_sha256
+                and validation_payload.get("capture_receipt_identity") == receipt_identity
             )
-            validation_sha256 = sha256_file(validation_path)
+            validation_identity = identity_file(validation_path)
     for path in sorted(video_root.rglob("*")):
         if not path.is_file():
             _issue(issues, "video_artifact", str(path.relative_to(root)), "video directory may contain regular files only")
@@ -1495,15 +1459,15 @@ def _validate_post_validation_video_artifacts(
             _issue(issues, "video_artifact", receipt_relative, "video receipt schema is not supported")
         if video_receipt.get("ok") is not True:
             _issue(issues, "video_artifact", receipt_relative, "video receipt must declare ok=true")
-        if video_receipt.get("capture_receipt_sha256") != receipt_sha256:
+        if video_receipt.get("capture_receipt_identity") != receipt_identity:
             _issue(issues, "video_artifact", receipt_relative, "video receipt is bound to a different capture receipt")
-        if not validation_bound or video_receipt.get("independent_validation_sha256") != validation_sha256:
+        if not validation_bound or video_receipt.get("independent_validation_identity") != validation_identity:
             _issue(issues, "video_artifact", receipt_relative, "video receipt is not bound to the passing independent validation receipt")
-        actual_sha256 = sha256_file(path)
-        if video_receipt.get("video_sha256") != actual_sha256:
-            _issue(issues, "video_artifact", relative, "video SHA-256 does not match its receipt")
+        actual_identity = identity_file(path)
+        if video_receipt.get("video_identity") != actual_identity:
+            _issue(issues, "video_artifact", relative, "video IDENTITY does not match its receipt")
         audit = video_receipt.get("audit")
-        if not isinstance(audit, Mapping) or audit.get("sha256") != actual_sha256 or audit.get("bytes") != path.stat().st_size:
+        if not isinstance(audit, Mapping) or audit.get("identity") != actual_identity or audit.get("bytes") != path.stat().st_size:
             _issue(issues, "video_artifact", receipt_relative, "video audit does not match the MP4")
         input_artifacts = video_receipt.get("input_artifacts")
         if not isinstance(input_artifacts, Mapping) or not input_artifacts:
@@ -1517,7 +1481,7 @@ def _validate_post_validation_video_artifacts(
                 if not source.is_file() or not isinstance(input_binding, Mapping):
                     _issue(issues, "video_artifact", f"{receipt_relative}.input_artifacts.{input_relative}", "video input binding is missing")
                     continue
-                if input_binding.get("sha256") != bound_artifacts[input_relative].get("sha256") or input_binding.get("bytes") != bound_artifacts[input_relative].get("bytes"):
+                if input_binding.get("identity") != bound_artifacts[input_relative].get("identity") or input_binding.get("bytes") != bound_artifacts[input_relative].get("bytes"):
                     _issue(issues, "video_artifact", f"{receipt_relative}.input_artifacts.{input_relative}", "video input binding disagrees with capture receipt")
         _scan_public_private_artifact_json(video_receipt, receipt_relative, issues)
     for path in sorted(video_root.rglob("*")):
@@ -1643,7 +1607,7 @@ def _parse_structural_aabbs(
 def _validate_city_lite_scene(
     scene: Mapping[str, Any],
     *,
-    evaluator_sha256: object,
+    evaluator_identity: object,
     issues: list[ValidationIssue],
     checks: dict[str, Any],
 ) -> tuple[AABB, ...]:
@@ -1682,8 +1646,8 @@ def _validate_city_lite_scene(
 
     contract = scene.get("scene_contract")
     expected_contract = {
-        "sha256": SCENE_CONTRACT_SHA256,
-        "payload_sha256": SCENE_CONTRACT_PAYLOAD_SHA256,
+        "identity": SCENE_CONTRACT_IDENTITY,
+        "payload_identity": SCENE_CONTRACT_PAYLOAD_IDENTITY,
         "schema": SCENE_CONTRACT_SCHEMA,
         "gate_status": SCENE_CONTRACT_GATE_STATUS,
         "permissions": dict(EXPECTED_UPSTREAM_PERMISSIONS),
@@ -1702,13 +1666,13 @@ def _validate_city_lite_scene(
         _issue(issues, "scene_authority", "scene.json.scene_contract", "scene contract does not bind exact md_qd_swarm v1_r2 authority")
 
     assets = scene.get("authority_assets")
-    if not isinstance(assets, Mapping) or set(assets) != set(AUTHORITY_SHA256):
+    if not isinstance(assets, Mapping) or set(assets) != set(AUTHORITY_IDENTITY):
         _issue(issues, "authority_assets", "scene.json.authority_assets", "authority asset inventory must be exact")
     else:
-        for filename, expected_sha256 in AUTHORITY_SHA256.items():
+        for filename, expected_identity in AUTHORITY_IDENTITY.items():
             item = assets.get(filename)
-            if not isinstance(item, Mapping) or item.get("sha256") != expected_sha256:
-                _issue(issues, "authority_assets", f"scene.json.authority_assets.{filename}", "authority SHA-256 mismatch")
+            if not isinstance(item, Mapping) or item.get("identity") != expected_identity:
+                _issue(issues, "authority_assets", f"scene.json.authority_assets.{filename}", "authority IDENTITY mismatch")
 
     expected_references = [
         {"source_prim": source, "destination_prim": destination}
@@ -1724,7 +1688,7 @@ def _validate_city_lite_scene(
             issues,
             "rivermark_layer_inventory",
             "scene.json.rivermark_layer_inventory",
-            "a hash-bound RivermarkSrc51 layer inventory receipt is required",
+            "an identity-bound RivermarkSrc51 layer inventory receipt is required",
         )
     else:
         try:
@@ -1750,13 +1714,13 @@ def _validate_city_lite_scene(
     clearance = scene.get("route_clearance_m")
     if isinstance(clearance, bool) or not isinstance(clearance, (int, float)) or float(clearance) != ROUTE_CLEARANCE_M:
         _issue(issues, "route_clearance_contract", "scene.json.route_clearance_m", f"must remain {ROUTE_CLEARANCE_M} m")
-    if scene.get("private_evaluator_manifest_sha256") != evaluator_sha256:
-        _issue(issues, "evaluator_binding", "scene.json.private_evaluator_manifest_sha256", "scene does not bind capture evaluator commitment")
+    if scene.get("private_evaluator_manifest_identity") != evaluator_identity:
+        _issue(issues, "evaluator_binding", "scene.json.private_evaluator_manifest_identity", "scene does not bind capture evaluator commitment")
     if scene.get("formal_benchmark_admission") is not False:
         _issue(issues, "scene_claim_boundary", "scene.json.formal_benchmark_admission", "raw City-Lite capture must not self-admit")
 
     boxes = _parse_structural_aabbs(scene, issues)
-    geometry_sha256 = aabb_geometry_sha256(boxes) if boxes else None
+    geometry_identity = aabb_geometry_identity(boxes) if boxes else None
     proxies = scene.get("collision_proxies")
     proxy_ok = isinstance(proxies, Mapping)
     if proxy_ok:
@@ -1766,8 +1730,8 @@ def _validate_city_lite_scene(
             and not isinstance(proxies.get("count"), bool)
             and proxies.get("count") == len(boxes)
             and len(boxes) > 0
-            and proxies.get("aabb_geometry_sha256") == geometry_sha256
-            and proxies.get("source_aabb_geometry_sha256") == geometry_sha256
+            and proxies.get("aabb_geometry_identity") == geometry_identity
+            and proxies.get("source_aabb_geometry_identity") == geometry_identity
             and proxies.get("representation") == COLLISION_PROXY_REPRESENTATION
             and proxies.get("prim_root") == COLLISION_PROXY_PRIM_ROOT
             and proxies.get("collision_enabled") is True
@@ -1783,7 +1747,7 @@ def _validate_city_lite_scene(
     )
     if lidar_ok:
         assert isinstance(lidar_coverage, Mapping)
-        lidar_ok = lidar_coverage.get("geometry_aabb_sha256") == geometry_sha256
+        lidar_ok = lidar_coverage.get("geometry_aabb_identity") == geometry_identity
     if not lidar_ok:
         _issue(issues, "lidar_geometry_coverage", "scene.json.lidar_geometry_coverage", "LiDAR must cover City-Lite, task obstacles, and the exact proxy geometry")
 
@@ -1803,7 +1767,7 @@ def _validate_city_lite_scene(
     )
     checks["selective_reference_count"] = len(expected_references) if scene.get("selective_references") == expected_references else 0
     checks["structural_aabb_count"] = len(boxes)
-    checks["structural_aabb_geometry_sha256"] = geometry_sha256
+    checks["structural_aabb_geometry_identity"] = geometry_identity
     checks["collision_proxy_count"] = proxies.get("count") if isinstance(proxies, Mapping) else 0
     checks["collision_proxy_geometry_verified"] = proxy_ok
     checks["lidar_geometry_coverage_verified"] = lidar_ok
@@ -1825,13 +1789,7 @@ def _validate_runtime_target_usd_closure(
     issues: list[ValidationIssue],
     checks: dict[str, Any],
 ) -> bool:
-    """Audit the public aggregate for pre/post-reset target USD closure.
-
-    The capture-side USD query sees evaluator-private geometry, but its public
-    receipt is restricted to this fixed aggregate schema.  A validator must
-    reject missing, weakened, or expanded records rather than trusting that a
-    capture process performed the query.
-    """
+    """Audit the public aggregate for pre/post-reset target USD closure."""
 
     expected_keys = {
         "schema",
@@ -1933,13 +1891,7 @@ def _validate_literal_city_lite_fleet_spawn(
     *,
     routes_w_m: Sequence[Sequence[Sequence[float]]] | None = None,
 ) -> bool:
-    """Require auditable literal-CF2X authoring and reset evidence.
-
-    The live state immediately after ``sim.reset()`` is allowed to contain a
-    recorded, bounded physical settling velocity.  It cannot substitute for
-    the separate USD-transform and resolved-default-state proofs, and it never
-    replaces the post-reset runtime safety trace checked elsewhere.
-    """
+    """Require auditable literal-CF2X authoring and reset evidence."""
 
     physics = receipt.get("physics")
     ok = isinstance(physics, Mapping)
@@ -2131,7 +2083,7 @@ def _validate_literal_city_lite_fleet_spawn(
         )
     except (TypeError, ValueError, RuntimeError):
         # Route validation reports malformed public tasks separately. Keep
-        # this evidence gate deterministic and fail closed on the default
+        # this evidence gate deterministic and stop the run on the default
         # route family rather than masking the root issue with an exception.
         expected_states = _city_lite_spawn_states()
     expected_root_poses = np.asarray(
@@ -2605,7 +2557,7 @@ def _validate_sensor_phase_trace(
         "physics_step",
         "physics_time_ns",
         "event_codes",
-        "retained_contact_sha256",
+        "retained_contact_identity",
         "archive_frame_index",
     }
     if set(trace) != expected_fields:
@@ -2643,7 +2595,7 @@ def _validate_sensor_phase_trace(
     physics_step = trace["physics_step"]
     physics_time = trace["physics_time_ns"]
     event_codes = trace["event_codes"]
-    digests = trace["retained_contact_sha256"]
+    digests = trace["retained_contact_identity"]
     archive_indices = trace["archive_frame_index"]
     count = len(timestamps) if timestamps is not None else 0
     shape_ok = (
@@ -2656,7 +2608,7 @@ def _validate_sensor_phase_trace(
         and event_codes.dtype == np.uint8
         and event_codes.shape == (count, len(SENSOR_PHASE_EVENT_SEQUENCE))
         and digests.dtype == np.uint8
-        and digests.shape == (count, 32)
+        and digests.shape == (count, 8)
     )
     if not shape_ok:
         _issue(
@@ -2767,16 +2719,16 @@ def _validate_sensor_phase_trace(
         and binding.get("frame_count") == count
         and binding.get("sensor_names") == list(SENSOR_PHASE_SENSOR_NAMES)
         and binding.get("event_codes") == list(SENSOR_PHASE_EVENT_SEQUENCE)
-        and is_sha256(binding.get("sha256"))
+        and is_identity(binding.get("identity"))
         and (root / SENSOR_PHASE_TRACE_RELATIVE_PATH).is_file()
-        and binding.get("sha256") == sha256_file(root / SENSOR_PHASE_TRACE_RELATIVE_PATH)
+        and binding.get("identity") == identity_file(root / SENSOR_PHASE_TRACE_RELATIVE_PATH)
     )
     if not binding_ok:
         _issue(
             issues,
             "sensor_phase_binding",
             "capture_receipt.json.sensor_phase_trace",
-            "receipt does not bind the phase trace path, hash, schema, and frame count",
+            "receipt does not bind the phase trace path, identity, schema, and frame count",
         )
     verified = bool(schema_ok and names_ok and shape_ok and timing_ok and events_ok and archive_ok and contact_ok and binding_ok)
     checks["sensor_phase_trace_verified"] = verified
@@ -2806,19 +2758,19 @@ def _validate_runtime_safety_guard(
             issues,
             "runtime_safety_guard",
             "capture_receipt.json.runtime_safety_guard",
-            "every City-Lite capture requires a fail-closed runtime safety receipt",
+            "every City-Lite capture requires a strict runtime safety receipt",
         )
         checks["runtime_safety_guard_verified"] = False
         return False
     expected_keys = {
         "schema",
         "enabled",
-        "fail_closed",
+        "strict",
         "status",
         "agent_center_radius_m",
         "flight_volume_m",
         "structural_aabb_count",
-        "structural_aabb_geometry_sha256",
+        "structural_aabb_geometry_identity",
         "swept_aabb_clearance_m",
         "inter_agent",
         "contact",
@@ -2829,7 +2781,7 @@ def _validate_runtime_safety_guard(
     ok = set(guard) == expected_keys
     if guard.get("schema") != RUNTIME_SAFETY_SCHEMA:
         ok = False
-    if guard.get("enabled") is not True or guard.get("fail_closed") is not True:
+    if guard.get("enabled") is not True or guard.get("strict") is not True:
         ok = False
     if guard.get("status") != "passed" or guard.get("first_violation") is not None:
         ok = False
@@ -2837,10 +2789,10 @@ def _validate_runtime_safety_guard(
         ok = False
     if not _exact_axis_volume(guard.get("flight_volume_m"), EXPECTED_FLIGHT_VOLUME):
         ok = False
-    geometry_sha256 = aabb_geometry_sha256(structural_aabbs) if structural_aabbs else None
+    geometry_identity = aabb_geometry_identity(structural_aabbs) if structural_aabbs else None
     if (
         guard.get("structural_aabb_count") != len(structural_aabbs)
-        or guard.get("structural_aabb_geometry_sha256") != geometry_sha256
+        or guard.get("structural_aabb_geometry_identity") != geometry_identity
         or _finite_float_or_none(guard.get("swept_aabb_clearance_m")) != ROUTE_CLEARANCE_M
     ):
         ok = False
@@ -2851,9 +2803,7 @@ def _validate_runtime_safety_guard(
         "minimum_swept_center_separation_m",
         "provenance",
     }
-    if not isinstance(inter_agent, Mapping) or set(inter_agent) != expected_inter_agent_keys:
-        ok = False
-    elif (
+    if not isinstance(inter_agent, Mapping) or set(inter_agent) != expected_inter_agent_keys or (
         inter_agent.get("pair_count") != INTER_AGENT_PAIR_COUNT
         or _finite_float_or_none(inter_agent.get("body_envelope_separation_m"))
         != INTER_AGENT_BODY_ENVELOPE_SEPARATION_M
@@ -2913,7 +2863,7 @@ def _validate_runtime_safety_guard(
             ok = False
 
     evidence = guard.get("evidence")
-    expected_evidence_keys = {"schema", "path", "sha256", "physics_frame_count"}
+    expected_evidence_keys = {"schema", "path", "identity", "physics_frame_count"}
     if not isinstance(evidence, Mapping) or set(evidence) != expected_evidence_keys:
         ok = False
     else:
@@ -2921,9 +2871,9 @@ def _validate_runtime_safety_guard(
         if (
             evidence.get("schema") != RUNTIME_SAFETY_TRACE_SCHEMA
             or evidence.get("path") != RUNTIME_SAFETY_TRACE_RELATIVE_PATH
-            or not is_sha256(evidence.get("sha256"))
+            or not is_identity(evidence.get("identity"))
             or not trace_path.is_file()
-            or evidence.get("sha256") != sha256_file(trace_path)
+            or evidence.get("identity") != identity_file(trace_path)
             or evidence.get("physics_frame_count") != runtime_trace_frame_count
         ):
             ok = False
@@ -3022,12 +2972,12 @@ def _validate_runtime_safety_guard(
 def _validate_private_manifest(
     root: Path,
     manifest_path: Path | None,
-    expected_sha256: object,
+    expected_identity: object,
     issues: list[ValidationIssue],
     expected_task_variant_id: str = TASK_VARIANT_ID,
 ) -> tuple[bool, Mapping[str, Any] | None]:
-    if not is_sha256(expected_sha256):
-        _issue(issues, "evaluator_commitment", "capture_receipt.json", "missing evaluator SHA-256 commitment")
+    if not is_identity(expected_identity):
+        _issue(issues, "evaluator_commitment", "capture_receipt.json", "missing evaluator IDENTITY commitment")
         return False, None
     if manifest_path is None:
         _issue(
@@ -3044,8 +2994,8 @@ def _validate_private_manifest(
     if not resolved.is_file():
         _issue(issues, "evaluator_manifest_missing", str(resolved), "external private manifest is missing")
         return False, None
-    if sha256_file(resolved) != expected_sha256:
-        _issue(issues, "evaluator_manifest_hash", str(resolved), "private manifest does not match capture commitment")
+    if identity_file(resolved) != expected_identity:
+        _issue(issues, "evaluator_manifest_identity", str(resolved), "private manifest does not match capture commitment")
         return False, None
     payload = _read_json(resolved, issues)
     if payload is None:
@@ -3053,8 +3003,8 @@ def _validate_private_manifest(
     try:
         validate_external_private_evaluator_manifest(
             payload,
-            city_lite_scene_contract_sha256=SCENE_CONTRACT_SHA256,
-            city_lite_scene_payload_sha256=SCENE_CONTRACT_PAYLOAD_SHA256,
+            city_lite_scene_contract_identity=SCENE_CONTRACT_IDENTITY,
+            city_lite_scene_payload_identity=SCENE_CONTRACT_PAYLOAD_IDENTITY,
             expected_task_variant_id=expected_task_variant_id,
         )
     except PrivateEvaluatorManifestError as error:
@@ -3081,7 +3031,7 @@ def _validate_runtime_lock_binding(
         _issue(issues, "runtime_lock", "capture_receipt.json.runtime_lock", "runtime lock binding must be an object")
         checks["runtime_lock_verified"] = False
         return False
-    expected_fields = {"path", "profile_id", "sha256"}
+    expected_fields = {"path", "profile_id", "identity"}
     if set(binding) != expected_fields:
         _issue(issues, "runtime_lock", "capture_receipt.json.runtime_lock", "runtime lock binding fields are incomplete")
     bound_path = runtime_lock_path.expanduser().resolve() if runtime_lock_path else None
@@ -3107,9 +3057,9 @@ def _validate_runtime_lock_binding(
         _issue(issues, "runtime_lock", str(bound_path), f"runtime lock cannot be loaded: {error}")
         checks["runtime_lock_verified"] = False
         return False
-    digest = runtime_lock_sha256(lock)
-    if binding.get("sha256") != digest:
-        _issue(issues, "runtime_lock", "capture_receipt.json.runtime_lock.sha256", "runtime lock hash does not match the external lock")
+    digest = runtime_lock_identity(lock)
+    if binding.get("identity") != digest:
+        _issue(issues, "runtime_lock", "capture_receipt.json.runtime_lock.identity", "runtime lock identity does not match the external lock")
     if binding.get("profile_id") != lock.get("profile_id"):
         _issue(issues, "runtime_lock", "capture_receipt.json.runtime_lock.profile_id", "runtime lock profile does not match the external lock")
 
@@ -3125,11 +3075,11 @@ def _validate_runtime_lock_binding(
         and runtime_check.get("passed") is True
         and isinstance(runtime_check.get("value"), Mapping)
         and runtime_check["value"].get("status") == "passed"
-        and runtime_check["value"].get("runtime_lock_sha256") == digest
+        and runtime_check["value"].get("runtime_lock_identity") == digest
         and runtime_check["value"].get("profile_id") == lock.get("profile_id")
     )
     if not preflight_ok:
-        _issue(issues, "runtime_lock_preflight", "capture_receipt.json.preflight", "preflight does not contain a passed hash-bound runtime lock audit")
+        _issue(issues, "runtime_lock_preflight", "capture_receipt.json.preflight", "preflight does not contain a passed identity-bound runtime lock audit")
 
     runtime_live = receipt.get("runtime_live")
     live_issues: tuple[Any, ...] = ()
@@ -3148,7 +3098,7 @@ def _validate_runtime_lock_binding(
             _issue(issues, "runtime_lock_live", "capture_receipt.json.runtime_live.configuration_observation", "live runtime observation provenance is missing")
     verified = bool(
         set(binding) == expected_fields
-        and binding.get("sha256") == digest
+        and binding.get("identity") == digest
         and binding.get("profile_id") == lock.get("profile_id")
         and preflight_ok
         and live_shape_ok
@@ -3156,7 +3106,7 @@ def _validate_runtime_lock_binding(
     )
     checks["runtime_lock_verified"] = verified
     checks["runtime_lock_profile_id"] = lock.get("profile_id")
-    checks["runtime_lock_sha256"] = digest
+    checks["runtime_lock_identity"] = digest
     checks["runtime_lock_preflight_verified"] = preflight_ok
     checks["runtime_lock_live_verified"] = live_shape_ok and not live_issues
     return verified
@@ -3179,9 +3129,9 @@ def validate_isaac_capture(
     checks: dict[str, Any] = {}
     receipt_path = root / "capture_receipt.json"
     receipt = _read_json(receipt_path, issues)
-    receipt_hash = sha256_file(receipt_path) if receipt_path.is_file() else None
+    receipt_identity = identity_file(receipt_path) if receipt_path.is_file() else None
     if receipt is None:
-        return IsaacValidationReport(root, receipt_hash, checks, tuple(issues))
+        return IsaacValidationReport(root, receipt_identity, checks, tuple(issues))
 
     # Native T2 has a deliberately different closed-world artifact inventory
     # and replays the command-to-actuator and RGB-D event chains.  Dispatch
@@ -3208,7 +3158,7 @@ def validate_isaac_capture(
         }
         return IsaacValidationReport(
             root,
-            receipt_hash,
+            receipt_identity,
             checks,
             tuple(ValidationIssue(issue.code, issue.path, issue.message) for issue in native.issues),
         )
@@ -3225,8 +3175,8 @@ def validate_isaac_capture(
     revision = receipt.get("source_revision")
     if not isinstance(revision, str) or not 7 <= len(revision) <= 64 or any(char not in "0123456789abcdef" for char in revision):
         _issue(issues, "source_revision", "capture_receipt.json", "source revision must be a Git hex object ID")
-    if not is_sha256(receipt.get("source_tree_sha256")):
-        _issue(issues, "source_tree", "capture_receipt.json", "tracked source-tree SHA-256 is required")
+    if not is_identity(receipt.get("source_tree_identity")):
+        _issue(issues, "source_tree", "capture_receipt.json", "tracked source-tree IDENTITY is required")
     collection_binding = receipt.get("collection_binding")
     collection_binding_ok = False
     condition_request = receipt.get("condition_request")
@@ -3278,15 +3228,15 @@ def validate_isaac_capture(
     checks["collection_binding_verified"] = collection_binding_ok
     checks["condition_request_present"] = condition_request is not None
     checks["condition_request_verified"] = condition_request_ok
-    evaluator_sha256 = receipt.get("evaluator_manifest_sha256")
+    evaluator_identity = receipt.get("evaluator_manifest_identity")
     retention = receipt.get("evaluator_manifest_retention")
     if retention is not None:
         retention_ok = (
             isinstance(retention, Mapping)
             and set(retention)
-            == {"kind", "sha256", "bytes", "path_released", "payload_released"}
+            == {"kind", "identity", "bytes", "path_released", "payload_released"}
             and retention.get("kind") == PRIVATE_MANIFEST_RETENTION_KIND
-            and retention.get("sha256") == evaluator_sha256
+            and retention.get("identity") == evaluator_identity
             and isinstance(retention.get("bytes"), int)
             and not isinstance(retention.get("bytes"), bool)
             and 0 < retention["bytes"] <= PRIVATE_MANIFEST_RETENTION_MAX_BYTES
@@ -3298,12 +3248,12 @@ def validate_isaac_capture(
                 issues,
                 "evaluator_manifest_retention",
                 "capture_receipt.json.evaluator_manifest_retention",
-                "retention commitment must be exact, hash-bound, bounded, and path/payload-free",
+                "retention commitment must be exact, identity-bound, bounded, and path/payload-free",
             )
     evaluator_verified, private_evaluator_payload = _validate_private_manifest(
-        root, evaluator_manifest, evaluator_sha256, issues
+        root, evaluator_manifest, evaluator_identity, issues
     )
-    checks["evaluator_manifest_sha256"] = evaluator_sha256
+    checks["evaluator_manifest_identity"] = evaluator_identity
     checks["evaluator_manifest_verified"] = evaluator_verified
     checks["private_target_geometry_verified"] = False
     checks["private_target_region_verified"] = False
@@ -3389,14 +3339,14 @@ def validate_isaac_capture(
         if claim_boundary.get(key) is not False:
             _issue(issues, "claim_boundary", f"capture_receipt.json.claim_boundary.{key}", "must remain false")
 
-    bound = receipt.get("artifact_hashes")
+    bound = receipt.get("artifact_identities")
     if not isinstance(bound, Mapping) or set(bound) not in (EXPECTED_ARTIFACTS, EXPECTED_ARTIFACTS | CONTROL_ARTIFACTS):
         _issue(issues, "artifact_inventory", "capture_receipt.json", "capture artifact inventory is not exact")
         bound = {}
     video_artifacts = _validate_post_validation_video_artifacts(
         root,
         receipt=receipt,
-        receipt_sha256=receipt_hash,
+        receipt_identity=receipt_identity,
         bound_artifacts=bound,
         issues=issues,
     )
@@ -3409,7 +3359,7 @@ def validate_isaac_capture(
     present = {
         path.relative_to(root).as_posix()
         for path in root.rglob("*")
-        if path.is_file() and path.name not in {"capture_receipt.json", "capture_receipt.sha256", "independent_validation.json"}
+        if path.is_file() and path.name not in {"capture_receipt.json", "capture_receipt.identity", "independent_validation.json"}
     }
     if present not in expected_artifact_sets:
         expected_for_diff = EXPECTED_ARTIFACTS | (
@@ -3422,11 +3372,11 @@ def validate_isaac_capture(
         if not path.is_file() or not isinstance(item, Mapping):
             _issue(issues, "missing_artifact", relative, "bound artifact is missing")
             continue
-        if item.get("bytes") != path.stat().st_size or item.get("sha256") != sha256_file(path):
-            _issue(issues, "artifact_hash", relative, "size or SHA-256 does not match capture receipt")
-    checksum_path = root / "capture_receipt.sha256"
-    if not checksum_path.is_file() or checksum_path.read_text(encoding="ascii", errors="replace") != f"{receipt_hash}  capture_receipt.json\n":
-        _issue(issues, "receipt_checksum", "capture_receipt.sha256", "receipt checksum file is missing or stale")
+        if item.get("bytes") != path.stat().st_size or item.get("identity") != identity_file(path):
+            _issue(issues, "artifact_identity", relative, "size or IDENTITY does not match capture receipt")
+    checksum_path = root / "capture_receipt.identity"
+    if not checksum_path.is_file() or checksum_path.read_text(encoding="ascii", errors="replace") != f"{receipt_identity}  capture_receipt.json\n":
+        _issue(issues, "receipt_checksum", "capture_receipt.identity", "receipt checksum file is missing or stale")
 
     scene = _read_json(root / "scene.json", issues)
     public_task = _read_json(root / "public_task.json", issues)
@@ -3462,7 +3412,7 @@ def validate_isaac_capture(
     if scene is not None:
         structural_aabbs = _validate_city_lite_scene(
             scene,
-            evaluator_sha256=evaluator_sha256,
+            evaluator_identity=evaluator_identity,
             issues=issues,
             checks=checks,
         )
@@ -3523,7 +3473,7 @@ def validate_isaac_capture(
                 "scene.json.overview_route_witness_schedule",
                 "scene must bind the exact public fixed route-witness schedule",
             )
-        if scene.get("public_task_sha256") != sha256_file(root / "public_task.json"):
+        if scene.get("public_task_identity") != identity_file(root / "public_task.json"):
             _issue(issues, "public_task_binding", "scene.json", "scene does not bind public task")
     routes: np.ndarray | None = None
     if public_task is not None:
@@ -3620,12 +3570,12 @@ def validate_isaac_capture(
                         f"agent {agent_id} segment {segment_id} violates {ROUTE_CLEARANCE_M} m clearance from {source}",
                     )
 
-            geometry_sha256 = aabb_geometry_sha256(structural_aabbs) if structural_aabbs else None
+            geometry_identity = aabb_geometry_identity(structural_aabbs) if structural_aabbs else None
             route_contract = public_task.get("route_contract")
             route_contract_ok = isinstance(route_contract, Mapping) and (
                 route_contract.get("geometry_source") == "citylite_structural_aabb_v1"
                 and route_contract.get("clearance_m") == ROUTE_CLEARANCE_M
-                and route_contract.get("aabb_geometry_sha256") == geometry_sha256
+                and route_contract.get("aabb_geometry_identity") == geometry_identity
                 and route_contract.get("all_waypoints_in_command_volume") is True
                 and route_contract.get("all_segments_clear") is True
             )
@@ -3674,8 +3624,8 @@ def validate_isaac_capture(
                 private_evaluator_payload,
                 structural_aabbs=structural_aabbs,
                 public_routes_w_m=routes.tolist(),
-                city_lite_scene_contract_sha256=SCENE_CONTRACT_SHA256,
-                city_lite_scene_payload_sha256=SCENE_CONTRACT_PAYLOAD_SHA256,
+                city_lite_scene_contract_identity=SCENE_CONTRACT_IDENTITY,
+                city_lite_scene_payload_identity=SCENE_CONTRACT_PAYLOAD_IDENTITY,
                 execution_window=execution_window,
             )
         except (KeyError, TypeError, ValueError, PrivateEvaluatorManifestError) as error:
@@ -3721,13 +3671,13 @@ def validate_isaac_capture(
                 "task_outcome.json",
                 "T1 outcome must record observability and remain explicitly unscored",
             )
-        if outcome.get("private_manifest_commitment_sha256") != evaluator_sha256:
+        if outcome.get("private_manifest_commitment_identity") != evaluator_identity:
             _issue(issues, "evaluator_binding", "task_outcome.json", "outcome does not bind capture evaluator commitment")
-        if outcome.get("state_action_sha256") != sha256_file(root / "streams/state_action.npz"):
+        if outcome.get("state_action_identity") != identity_file(root / "streams/state_action.npz"):
             _issue(issues, "outcome_binding", "task_outcome.json", "outcome does not bind state/action stream")
     if calibration is not None:
         radar = calibration.get("radar")
-        if not isinstance(radar, Mapping) or radar.get("status") != "not_captured" or radar.get("fail_closed") is not True:
+        if not isinstance(radar, Mapping) or radar.get("status") != "not_captured" or radar.get("strict") is not True:
             _issue(issues, "radar_calibration", "calibration.json", "radar must remain explicitly unavailable")
     lidar_max_distance_m = _calibrated_lidar_max_distance_m(calibration, issues)
     checks["lidar_max_distance_m"] = lidar_max_distance_m
@@ -3934,7 +3884,7 @@ def validate_isaac_capture(
             coverage_ok = np.array_equal(coverage, expected_agents)
         if not coverage_ok:
             _issue(issues, "coverage_identity", "public_task.coverage_cell_id", "coverage cells must remain agent-partitioned")
-        checks["waypoint_indices_observed"] = int(len(np.unique(waypoint_index)))
+        checks["waypoint_indices_observed"] = len(np.unique(waypoint_index))
 
     messages = payloads["messages"]
     expected_messages = {
@@ -3960,9 +3910,14 @@ def validate_isaac_capture(
         flags = messages["message_flags"]
         if flags.shape != (sample_count, AGENT_COUNT) or not np.issubdtype(flags.dtype, np.integer) or not np.all(flags == 1):
             _issue(issues, "message_flags", "streams/public_messages.npz", "every synchronous broadcast must be marked delivered")
-        if task_stream is not None and "waypoint_index" in task_stream:
-            if not np.array_equal(messages["message_waypoint_index"], task_stream["waypoint_index"]):
-                _issue(issues, "message_task_alignment", "streams/public_messages.npz", "messages do not bind current public waypoint")
+        if (
+            task_stream is not None
+            and "waypoint_index" in task_stream
+            and not np.array_equal(
+                messages["message_waypoint_index"], task_stream["waypoint_index"]
+            )
+        ):
+            _issue(issues, "message_task_alignment", "streams/public_messages.npz", "messages do not bind current public waypoint")
         if state is not None and "effective_time_ns" in state and state["effective_time_ns"].ndim == 1:
             indices = np.searchsorted(state["effective_time_ns"], timestamps)
             aligned = indices.shape == timestamps.shape and np.all(indices < len(state["effective_time_ns"]))
@@ -4477,8 +4432,8 @@ def validate_isaac_capture(
                     "sensors/overview_rgb.npz.timestamps_ns",
                     "overview frames must be the exact first/stride/final subset of retained sensor timestamps",
                 )
-            checks["overview_archive_frame_count"] = int(len(overview_timestamps))
-            checks["overview_archive_source_frame_count"] = int(len(timestamps))
+            checks["overview_archive_frame_count"] = len(overview_timestamps)
+            checks["overview_archive_source_frame_count"] = len(timestamps)
             checks["overview_archive_frame_indices"] = list(expected_indices)
         elif not np.array_equal(overview_timestamps, timestamps):
             _issue(
@@ -4527,9 +4482,10 @@ def validate_isaac_capture(
                 "sensors/overview_rgb.npz",
                 "overview depth must be floating [T,H,W,1] aligned to RGB",
             )
-        elif not low_rate_overview:
-            if not _frame_field_is_finite(overview, "distance_to_image_plane_m"):
-                _issue(issues, "nonfinite", "overview.distance_to_image_plane_m", "numeric array must contain only finite values")
+        elif not low_rate_overview and not _frame_field_is_finite(
+            overview, "distance_to_image_plane_m"
+        ):
+            _issue(issues, "nonfinite", "overview.distance_to_image_plane_m", "numeric array must contain only finite values")
         semantic_shape_valid = bool(
             rgb_shape_valid
             and np.issubdtype(semantic_dtype, np.integer)
@@ -4827,7 +4783,7 @@ def validate_isaac_capture(
             )
             checks["route_witness_visibility_evidence"] = route_witness_visibility
             checks["route_witness_visibility_verified"] = not route_witness_visibility_failures
-    checks["sensor_samples"] = int(len(timestamps)) if timestamps is not None else 0
+    checks["sensor_samples"] = len(timestamps) if timestamps is not None else 0
     checks["agent_count"] = AGENT_COUNT
     checks["radar_captured"] = False
     checks["real_flight_captured"] = False
@@ -4913,50 +4869,44 @@ def validate_isaac_capture(
     for frame_payload in frame_payloads.values():
         if frame_payload is not None:
             frame_payload.close()
-    return IsaacValidationReport(root, receipt_hash, checks, tuple(issues))
+    return IsaacValidationReport(root, receipt_identity, checks, tuple(issues))
 
 
-def _validator_sha256() -> str:
-    return sha256_file(Path(__file__).resolve())
+def _validator_identity() -> str:
+    return identity_file(Path(__file__).resolve())
 
 
-def _native_t2_validator_sha256() -> str:
-    """Hash the complete native-T2 validation implementation bundle.
-
-    A native validation receipt is only meaningful when both the CLI dispatch
-    and CPU replay implementation are fixed.  Keep the legacy single-file
-    hash for normal T1 receipts so downstream formal-pack compatibility stays
-    unchanged.
-    """
+def _native_t2_validator_identity() -> str:
+    """Identity the complete native-T2 validation implementation bundle."""
 
     bundle = {
-        "isaac_validate.py": _validator_sha256(),
-        "native_t2_validate.py": sha256_file(
+        "isaac_validate.py": _validator_identity(),
+        "native_t2_validate.py": identity_file(
             Path(__file__).with_name("native_t2_validate.py")
         ),
     }
     encoded = json.dumps(
         bundle, ensure_ascii=True, allow_nan=False, sort_keys=True, separators=(",", ":")
     ).encode("ascii")
-    return hashlib.sha256(encoded).hexdigest()
+    return IdentityAccumulator(encoded).hexdigest()
 
 
 def write_validation_receipt(report: IsaacValidationReport, destination: Path) -> Path:
-    if not report.valid or report.receipt_sha256 is None:
+    if not report.valid or report.receipt_identity is None:
         raise RuntimeError("cannot write a passing validation receipt for an invalid capture")
     is_native_t2 = report.checks.get("validation_profile") == "native_t2_canary"
     payload = {
         "schema": VALIDATION_SCHEMA,
         "status": "passed",
         "formal_benchmark_admission": False,
-        "capture_receipt_sha256": report.receipt_sha256,
+        "capture_receipt_identity": report.receipt_identity,
         "validator_id": (
             "rivermark-independent-native-t2-canary-validator-v1"
             if is_native_t2
             else "rivermark-independent-isaac-validator-v1"
         ),
-        "validator_source_sha256": (
-            _native_t2_validator_sha256() if is_native_t2 else _validator_sha256()
+        "validator_source_identity": (
+            _native_t2_validator_identity() if is_native_t2 else _validator_identity()
         ),
         "checks": dict(report.checks),
         "issues": [],
@@ -5004,7 +4954,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     payload: dict[str, Any] = {
         "valid": report.valid,
-        "capture_receipt_sha256": report.receipt_sha256,
+        "capture_receipt_identity": report.receipt_identity,
         "checks": dict(report.checks),
         "issues": [asdict(issue) for issue in report.issues],
     }

@@ -3,7 +3,6 @@ from __future__ import annotations
 import csv
 import math
 from pathlib import Path
-from typing import Optional
 
 import rclpy
 from geometry_msgs.msg import Twist
@@ -24,11 +23,7 @@ def wrap_angle(angle: float) -> float:
 
 
 class MotionDriftRecorder(Node):
-    """Write motion commands and fused sensor residuals to CSV for drift calibration.
-
-    The topic contract mirrors the source ROS1 Mini stack, and the CSV feeds the
-    acceleration-to-localization-drift model used by the IsaacLab and RL paths.
-    """
+    """Write motion commands and fused sensor residuals to CSV for drift calibration."""
 
     def __init__(self) -> None:
         super().__init__("motion_drift_recorder")
@@ -43,12 +38,12 @@ class MotionDriftRecorder(Node):
         self.angular_accel_warn = float(self.declare_parameter("angular_accel_warn", 4.20).value)
         self.scan_front_window_rad = float(self.declare_parameter("scan_front_window_rad", 0.52).value)
 
-        self.latest_cmd: Optional[Twist] = None
-        self.latest_wheel: Optional[Odometry] = None
-        self.latest_filtered: Optional[Odometry] = None
-        self.latest_imu: Optional[Imu] = None
-        self.latest_scan: Optional[LaserScan] = None
-        self.prev_cmd: Optional[tuple[float, float, float]] = None
+        self.latest_cmd: Twist | None = None
+        self.latest_wheel: Odometry | None = None
+        self.latest_filtered: Odometry | None = None
+        self.latest_imu: Imu | None = None
+        self.latest_scan: LaserScan | None = None
+        self.prev_cmd: tuple[float, float, float] | None = None
 
         self.output_csv.parent.mkdir(parents=True, exist_ok=True)
         self.csv_handle = self.output_csv.open("w", newline="", encoding="utf-8")

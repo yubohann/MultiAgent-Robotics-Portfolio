@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import math
+import random
 from collections import deque
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
+from aerocity_method.contracts.io import finite_number, require_identifier
 
 Point3 = tuple[float, float, float]
 LineOfSight = Callable[[Point3, Point3], bool]
@@ -177,23 +178,21 @@ def build_range_los_relay_graph(
 
 @dataclass(frozen=True, slots=True)
 class RelayMessage:
-    """One public, source-timestamped shared-state update carried as a payload digest."""
+    """One public, source-timestamped shared-state update carried as a payload ID."""
 
     message_id: str
     sender_id: str
     source_timestamp_s: float
-    payload_digest: str
+    payload_id: str
     time_to_live_s: float
 
     def __post_init__(self) -> None:
-        for name in ("message_id", "sender_id"):
+        for name in ("message_id", "sender_id", "payload_id"):
             require_identifier(getattr(self, name), name)
         issued = finite_number(self.source_timestamp_s, "source_timestamp_s")
         ttl = finite_number(self.time_to_live_s, "time_to_live_s")
         if issued < 0.0 or ttl <= 0.0:
             raise ValueError("message timestamps must be non-negative and TTL positive")
-        if len(self.payload_digest) != 64:
-            raise ValueError("payload_digest must be a SHA-256 digest")
         object.__setattr__(self, "source_timestamp_s", issued)
         object.__setattr__(self, "time_to_live_s", ttl)
 
@@ -208,10 +207,10 @@ class RelayDelivery:
     source_timestamp_s: float
     delivered_timestamp_s: float
     relay_path_agent_indices: tuple[int, ...]
-    payload_digest: str
+    payload_id: str
 
     def __post_init__(self) -> None:
-        for name in ("message_id", "sender_id", "receiver_id"):
+        for name in ("message_id", "sender_id", "receiver_id", "payload_id"):
             require_identifier(getattr(self, name), name)
         source = finite_number(self.source_timestamp_s, "source_timestamp_s")
         delivered = finite_number(self.delivered_timestamp_s, "delivered_timestamp_s")
@@ -222,8 +221,6 @@ class RelayDelivery:
             not isinstance(index, int) or isinstance(index, bool) or index < 0 for index in path
         ):
             raise ValueError("relay delivery requires a non-empty integer path")
-        if len(self.payload_digest) != 64:
-            raise ValueError("payload_digest must be a SHA-256 digest")
         object.__setattr__(self, "source_timestamp_s", source)
         object.__setattr__(self, "delivered_timestamp_s", delivered)
         object.__setattr__(self, "relay_path_agent_indices", path)
@@ -241,7 +238,7 @@ class RelayDelivery:
             "delivered_timestamp_s": self.delivered_timestamp_s,
             "age_seconds": self.age_seconds,
             "relay_path_agent_indices": list(self.relay_path_agent_indices),
-            "payload_digest": self.payload_digest,
+            "payload_id": self.payload_id,
         }
 
 
@@ -316,15 +313,9 @@ class RelayMessageQueue:
         self._pending.append(message)
 
     def _is_dropped(self, message: RelayMessage, receiver_id: str) -> bool:
-        digest = canonical_sha256(
-            {
-                "message_id": message.message_id,
-                "receiver_id": receiver_id,
-                "payload_digest": message.payload_digest,
-            }
-        )
-        draw = int(digest[:16], 16) / float(0xFFFFFFFFFFFFFFFF)
-        return draw < self.loss_probability
+        # Reproducible loss draw keyed by message, payload and receiver.
+        key = f"{message.message_id}:{message.payload_id}:{receiver_id}"
+        return random.Random(key).random() < self.loss_probability
 
     def advance(
         self, *, timestamp_s: float, graph: RelayGraphSnapshot
@@ -387,7 +378,7 @@ class RelayMessageQueue:
                         message.source_timestamp_s,
                         timestamp,
                         path,
-                        message.payload_digest,
+                        message.payload_id,
                     )
                     outcome = RelayMessageOutcome(
                         message.message_id,
@@ -456,14 +447,13 @@ class RelayMessageQueue:
         self._outcomes.extend(emitted)
         return tuple(emitted)
 
-    def stale_age_seconds(
-        self, *, receiver_id: str, payload_digest: str, now_s: float
-    ) -> float | None:
+    def stale_age_seconds(self, *, receiver_id: str, payload_id: str, now_s: float) -> float | None:
         """Return the age of the newest delivered public payload at ``now_s``."""
 
         require_identifier(receiver_id, "receiver_id")
+        require_identifier(payload_id, "payload_id")
         now = finite_number(now_s, "now_s")
-        if receiver_id not in self.agent_ids or now < 0.0 or len(payload_digest) != 64:
+        if receiver_id not in self.agent_ids or now < 0.0:
             raise ValueError("invalid stale-belief query")
         source_times = [
             row.delivery.source_timestamp_s
@@ -471,7 +461,7 @@ class RelayMessageQueue:
             if row.status == "DELIVERED"
             and row.delivery is not None
             and row.receiver_id == receiver_id
-            and row.delivery.payload_digest == payload_digest
+            and row.delivery.payload_id == payload_id
         ]
         return None if not source_times else now - max(source_times)
 

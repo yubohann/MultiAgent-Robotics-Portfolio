@@ -2,11 +2,11 @@
 
 """IEEE-CIS fraud dataset loader with strict chronological sampling and graph construction."""
 
-import hashlib
+import copy
 import json
 import math
-import copy
 import re
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,14 +21,12 @@ except Exception as error:  # pragma: no cover - runtime env dependent
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn.functional as F
 
 from .fraud_dataset import (
+    IEEE_FULL_SEQUENCE_COMPACT_DIM,
+    SEQUENCE_BUILDER_VERSION,
     ClientShard,
     DatasetBundle,
-    IEEE_FULL_SEQUENCE_COMPACT_DIM,
-    IEEE_FULL_SEQUENCE_NODE_THRESHOLD,
-    SEQUENCE_BUILDER_VERSION,
     _apply_active_learning_feedback,
     _apply_label_scarcity,
     _attach_dataset_context_defaults,
@@ -37,13 +35,13 @@ from .fraud_dataset import (
     _memory_log,
     _merge_partitions,
     _random_partition,
-    _start_memory_log_session,
-    _stratified_partition,
     _sequence_quality_summary,
+    _start_memory_log_session,
     _stop_memory_log_session,
+    _stratified_partition,
 )
-from .runtime_dataset_policy import ensure_dataset_enabled
 from .paths import DATA_ROOT, GRAPH_ROOT
+from .runtime_dataset_policy import ensure_dataset_enabled
 
 IEEE_DEFAULT_ROOT = DATA_ROOT / "ieee_cis"
 IEEE_RAW_ROOT = IEEE_DEFAULT_ROOT / "raw"
@@ -264,7 +262,7 @@ def _allocate_targets(
         return allocation
 
     raw = [size / reduced_total * target for size in reduced_sizes]
-    extra = [int(math.floor(value)) for value in raw]
+    extra = [math.floor(value) for value in raw]
     allocation = [allocation[index] + extra[index] for index in range(len(group_sizes))]
     remainder = target - int(sum(extra))
     fractions = sorted(
@@ -291,8 +289,8 @@ def _time_stratified_sample(
     if max_transactions is None or len(frame) <= int(max_transactions):
         return frame.reset_index(drop=True).copy(), {
             "sampling_applied": False,
-            "original_rows": int(len(frame)),
-            "sampled_rows": int(len(frame)),
+            "original_rows": len(frame),
+            "sampled_rows": len(frame),
             "time_bins": int(max(1, min(int(time_bins), len(frame)))) if len(frame) > 0 else 0,
             "sampling_strategy": "full_chronological_train_set",
         }
@@ -315,7 +313,7 @@ def _time_stratified_sample(
         neg_index = bin_index[labels[bin_index] == 0]
         pos_index = bin_index[labels[bin_index] == 1]
         label_targets = _allocate_targets(
-            [int(len(neg_index)), int(len(pos_index))],
+            [len(neg_index), len(pos_index)],
             int(bin_target),
             preserve_present_groups=True,
         )
@@ -327,7 +325,7 @@ def _time_stratified_sample(
         chosen = np.sort(np.concatenate(chosen_parts, axis=0)) if chosen_parts else np.empty(0, dtype=np.int64)
         if len(chosen) < bin_target:
             remaining_candidates = np.setdiff1d(bin_index.astype(np.int64), chosen, assume_unique=False)
-            extra_needed = min(int(bin_target) - int(len(chosen)), int(len(remaining_candidates)))
+            extra_needed = min(int(bin_target) - len(chosen), len(remaining_candidates))
             if extra_needed > 0:
                 extra = np.sort(rng.choice(remaining_candidates, size=extra_needed, replace=False)).astype(np.int64)
                 chosen = np.sort(np.concatenate([chosen, extra], axis=0))
@@ -347,8 +345,8 @@ def _time_stratified_sample(
     sampled = frame.iloc[merged_indices].copy().reset_index(drop=True)
     return sampled, {
         "sampling_applied": True,
-        "original_rows": int(len(frame)),
-        "sampled_rows": int(len(sampled)),
+        "original_rows": len(frame),
+        "sampled_rows": len(sampled),
         "time_bins": int(bin_ids.max() + 1),
         "sampling_strategy": "chronological_time_bin_stratified_sample",
     }
@@ -360,11 +358,11 @@ def _chronological_split_masks(
     train_ratio: float,
     valid_ratio: float,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    num_rows = int(len(frame))
+    num_rows = len(frame)
     if num_rows < 10:
         raise ValueError("IEEE-CIS sample is too small to build chronological train/valid/test splits.")
-    train_end = int(round(num_rows * float(train_ratio)))
-    valid_end = int(round(num_rows * float(train_ratio + valid_ratio)))
+    train_end = round(num_rows * float(train_ratio))
+    valid_end = round(num_rows * float(train_ratio + valid_ratio))
     train_end = min(max(train_end, 1), num_rows - 2)
     valid_end = min(max(valid_end, train_end + 1), num_rows - 1)
 
@@ -450,7 +448,7 @@ def _fit_feature_preprocessor(
         dense_columns.append(missing_mask.reshape(-1, 1))
         dense_feature_names.append(f"cat_freq::{column}")
         dense_feature_names.append(f"cat_missing::{column}")
-        category_sizes[column] = int(len(mapping))
+        category_sizes[column] = len(mapping)
         categorical_frequency_means[column] = freq_mean
         categorical_frequency_stds[column] = freq_std
 
@@ -610,7 +608,7 @@ def _relation_edges_from_series(
     stats = {
         "coverage_ratio": coverage,
         "non_missing_nodes": int(total_observed),
-        "unique_values": int(len(value_to_nodes)),
+        "unique_values": len(value_to_nodes),
         "multi_occurrence_values": int(sum(1 for nodes in value_to_nodes.values() if len(nodes) >= 2)),
         "label_purity_reference": _label_purity_from_groups(value_to_nodes, labels),
         "selected": False,
@@ -641,7 +639,7 @@ def _relation_edges_from_series(
         "relation_rarity": relation_rarity.astype(np.float32),
         "missing_relation_flag": np.zeros(len(src), dtype=np.float32),
     }
-    stats["edge_count"] = int(len(src))
+    stats["edge_count"] = len(src)
     stats["avg_in_degree"] = float(len(src) / max(1, total_observed))
     stats["selected"] = bool(
         coverage >= IEEE_MIN_RELATION_COVERAGE and stats["multi_occurrence_values"] > 0 and len(src) > 0
@@ -706,10 +704,6 @@ def _temporal_past_edges(
 
 def _event_storage_dtype(events: torch.Tensor) -> torch.dtype:
     return torch.float16 if events.numel() >= 25_000_000 else torch.float32
-
-
-def _use_ieee_full_event_compact_mode(graph: dgl.DGLHeteroGraph) -> bool:
-    return int(graph.num_nodes(NODE_TYPE)) >= int(IEEE_FULL_SEQUENCE_NODE_THRESHOLD)
 
 
 def _attach_event_base_feature_bank(
@@ -872,7 +866,7 @@ def _build_ieee_event_tensors(
             recent_history = candidate_history[-channel_capacity:]
             if recent_history:
                 channel_nonempty_counts[source_name] = int(channel_nonempty_counts.get(source_name, 0)) + 1
-            total_history_count += int(len(recent_history))
+            total_history_count += len(recent_history)
             insert_start = end - len(recent_history)
             for position, history_index in enumerate(recent_history, start=insert_start):
                 event_history_indices[node_index, position] = int(history_index)
@@ -979,7 +973,7 @@ def _attach_ieee_event_sequence(
     _memory_log(
         "event_sequence: attached "
         f"indices_dtype={str(graph.nodes[NODE_TYPE].data['event_history_indices'].dtype).replace('torch.', '')} "
-        f"base_feature_storage_dtype={str(event_base_feature_stats['event_base_feature_storage_dtype'])}"
+        f"base_feature_storage_dtype={event_base_feature_stats['event_base_feature_storage_dtype']!s}"
     )
     return event_metadata["sequence_stats"]
 
@@ -995,7 +989,7 @@ def _build_temporal_context_features(
         if "TransactionAmt" in frame.columns
         else np.zeros(len(frame), dtype=np.float64)
     )
-    num_rows = int(len(frame))
+    num_rows = len(frame)
     if num_rows == 0:
         return torch.zeros((0, 0), dtype=torch.float32), [], {
             "temporal_windows": list(windows),
@@ -1117,11 +1111,8 @@ def _fit_ieee_tabular_teacher(
     negative_count = float(max(float(len(train_y) - train_y.sum()), 1.0))
     sample_weight = np.where(train_y > 0, negative_count / positive_count, 1.0).astype(np.float32)
 
-    model = None
-    teacher_name = "unknown"
-    last_error = ""
-    try:
-        import xgboost as xgb  # type: ignore
+    def _fit_xgboost() -> object:
+        import xgboost as xgb
 
         model = xgb.XGBClassifier(
             n_estimators=320,
@@ -1138,51 +1129,58 @@ def _fit_ieee_tabular_teacher(
             n_jobs=8,
             random_state=42,
         )
-        teacher_name = "xgboost_hist"
         model.fit(train_x, train_y, sample_weight=sample_weight)
-    except Exception as error:
-        last_error = str(error)
+        return model
+
+    def _fit_lightgbm() -> object:
+        import lightgbm as lgb
+
+        model = lgb.LGBMClassifier(
+            n_estimators=320,
+            learning_rate=0.05,
+            num_leaves=128,
+            max_depth=-1,
+            min_child_samples=40,
+            subsample=0.85,
+            colsample_bytree=0.85,
+            objective="binary",
+            random_state=42,
+            n_jobs=8,
+            verbose=-1,
+        )
+        model.fit(train_x, train_y, sample_weight=sample_weight)
+        return model
+
+    def _fit_sklearn_hist() -> object:
+        from sklearn.ensemble import HistGradientBoostingClassifier
+
+        model = HistGradientBoostingClassifier(
+            learning_rate=0.05,
+            max_depth=8,
+            max_iter=280,
+            min_samples_leaf=40,
+            max_bins=255,
+            l2_regularization=0.0,
+            random_state=42,
+        )
+        model.fit(train_x, train_y, sample_weight=sample_weight)
+        return model
+
+    model: object = None
+    teacher_name = "unknown"
+    last_error = ""
+    for candidate_name, fit_candidate in (
+        ("xgboost_hist", _fit_xgboost),
+        ("lightgbm_gbdt", _fit_lightgbm),
+        ("sklearn_hist_gradient_boosting", _fit_sklearn_hist),
+    ):
         try:
-            import lightgbm as lgb  # type: ignore
-
-            model = lgb.LGBMClassifier(
-                n_estimators=320,
-                learning_rate=0.05,
-                num_leaves=128,
-                max_depth=-1,
-                min_child_samples=40,
-                subsample=0.85,
-                colsample_bytree=0.85,
-                objective="binary",
-                random_state=42,
-                n_jobs=8,
-                verbose=-1,
-            )
-            teacher_name = "lightgbm_gbdt"
-            model.fit(train_x, train_y, sample_weight=sample_weight)
-        except Exception as fallback_error:
-            last_error = f"{last_error} | {fallback_error}".strip(" |")
-            try:
-                from sklearn.ensemble import HistGradientBoostingClassifier  # type: ignore
-
-                model = HistGradientBoostingClassifier(
-                    learning_rate=0.05,
-                    max_depth=8,
-                    max_iter=280,
-                    min_samples_leaf=40,
-                    max_bins=255,
-                    l2_regularization=0.0,
-                    random_state=42,
-                )
-                teacher_name = "sklearn_hist_gradient_boosting"
-                model.fit(train_x, train_y, sample_weight=sample_weight)
-            except Exception as final_error:
-                return None, {
-                    "enabled": False,
-                    "teacher_name": "disabled",
-                    "reason": "teacher_fit_failed",
-                    "error": f"{last_error} | {final_error}".strip(" |"),
-                }
+            model = fit_candidate()
+        except ImportError as error:
+            last_error = f"{last_error} | {error}".strip(" |")
+            continue
+        teacher_name = candidate_name
+        break
 
     if model is None:
         return None, {
@@ -1212,16 +1210,14 @@ def _fit_ieee_tabular_teacher(
         "train_nodes": int(train_mask.sum()),
         "valid_nodes": int(valid_mask.sum()),
     }
-    try:
-        from sklearn.metrics import average_precision_score, roc_auc_score  # type: ignore
+    from sklearn.metrics import average_precision_score, roc_auc_score
 
+    if len(np.unique(labels[train_mask])) > 1:
         summary["train_auc"] = float(roc_auc_score(labels[train_mask], positive_prob[train_mask]))
         summary["train_pr_auc"] = float(average_precision_score(labels[train_mask], positive_prob[train_mask]))
-        if bool(np.any(valid_mask)) and len(np.unique(labels[valid_mask])) > 1:
-            summary["valid_auc"] = float(roc_auc_score(labels[valid_mask], positive_prob[valid_mask]))
-            summary["valid_pr_auc"] = float(average_precision_score(labels[valid_mask], positive_prob[valid_mask]))
-    except Exception:
-        pass
+    if bool(np.any(valid_mask)) and len(np.unique(labels[valid_mask])) > 1:
+        summary["valid_auc"] = float(roc_auc_score(labels[valid_mask], positive_prob[valid_mask]))
+        summary["valid_pr_auc"] = float(average_precision_score(labels[valid_mask], positive_prob[valid_mask]))
     return teacher_logits, summary
 
 
@@ -1285,7 +1281,7 @@ def _build_edge_dict(
             torch.from_numpy(src.astype(np.int64)),
             torch.from_numpy(dst.astype(np.int64)),
         )
-        relation_edge_counts[relation] = int(len(src))
+        relation_edge_counts[relation] = len(src)
         edge_feature_dict[relation] = {
             key: torch.from_numpy(value.copy())
             for key, value in edge_features.items()
@@ -1317,7 +1313,7 @@ def _build_edge_dict(
             torch.from_numpy(temporal_src.astype(np.int64)),
             torch.from_numpy(temporal_dst.astype(np.int64)),
         )
-        relation_edge_counts["temporal_past"] = int(len(temporal_src))
+        relation_edge_counts["temporal_past"] = len(temporal_src)
         edge_feature_dict["temporal_past"] = {
             key: torch.from_numpy(value.copy())
             for key, value in temporal_features.items()
@@ -1333,13 +1329,13 @@ def _build_edge_dict(
         relation_sequence_order.append("temporal_past")
         relation_stats["temporal_past"] = {
             "coverage_ratio": 1.0,
-            "non_missing_nodes": int(len(frame)),
-            "unique_values": int(len(frame)),
-            "multi_occurrence_values": int(len(frame)),
+            "non_missing_nodes": len(frame),
+            "unique_values": len(frame),
+            "multi_occurrence_values": len(frame),
             "label_purity_reference": 0.0,
             "selected": True,
             "selection_reason": "always_on_temporal_backbone",
-            "edge_count": int(len(temporal_src)),
+            "edge_count": len(temporal_src),
             "avg_in_degree": float(len(temporal_src) / max(1, len(frame))),
             "mean_delta_t": float(temporal_features["delta_t"].mean()) if len(temporal_src) > 0 else 0.0,
             "mean_delta_amt": float(temporal_features["delta_amt"].mean()) if len(temporal_src) > 0 else 0.0,
@@ -1371,20 +1367,20 @@ def _build_edge_dict(
         torch.from_numpy(homo_src.astype(np.int64)),
         torch.from_numpy(homo_dst.astype(np.int64)),
     )
-    relation_edge_counts["homo"] = int(len(homo_src))
+    relation_edge_counts["homo"] = len(homo_src)
     edge_feature_dict["homo"] = {
         key: torch.from_numpy(value.copy())
         for key, value in homo_features.items()
     }
     relation_stats["homo"] = {
         "coverage_ratio": 1.0,
-        "non_missing_nodes": int(len(frame)),
-        "unique_values": int(len(frame)),
-        "multi_occurrence_values": int(len(frame)),
+        "non_missing_nodes": len(frame),
+        "unique_values": len(frame),
+        "multi_occurrence_values": len(frame),
         "label_purity_reference": 0.0,
         "selected": True,
         "selection_reason": "aggregated_relation_graph",
-        "edge_count": int(len(homo_src)),
+        "edge_count": len(homo_src),
         "avg_in_degree": float(len(homo_src) / max(1, len(frame))),
         "mean_delta_t": float(homo_features["delta_t"].mean()) if len(homo_src) > 0 else 0.0,
         "mean_delta_amt": float(homo_features["delta_amt"].mean()) if len(homo_src) > 0 else 0.0,
@@ -1470,12 +1466,12 @@ def _resolve_cache_paths(signature: dict[str, Any]) -> IEEECachedPaths:
             artifact_dir=IEEE_CACHE_GRAPH_PATH.parent / "ieee_artifacts",
         )
 
-    digest = hashlib.sha1(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
+    tag = zlib.crc32(json.dumps(signature, sort_keys=True, ensure_ascii=False).encode("utf-8")) & 0xFFFFFFFF
     cache_dir = IEEE_CACHE_GRAPH_PATH.parent / "cache"
     return IEEECachedPaths(
-        graph_path=cache_dir / f"ieee_{digest}.dgl",
-        metadata_path=cache_dir / f"ieee_{digest}.json",
-        artifact_dir=cache_dir / f"ieee_{digest}_artifacts",
+        graph_path=cache_dir / f"ieee_{tag:08x}.dgl",
+        metadata_path=cache_dir / f"ieee_{tag:08x}.json",
+        artifact_dir=cache_dir / f"ieee_{tag:08x}_artifacts",
     )
 
 
@@ -1524,7 +1520,7 @@ def _save_ieee_artifact_shards(
         shard_path = artifact_dir / f"{shard_name}.pt"
         _memory_log(
             "cache_write: saving_artifact_shard "
-            f"name={shard_name} file={shard_path.name} tensors={int(len(shard_payload))}"
+            f"name={shard_name} file={shard_path.name} tensors={len(shard_payload)}"
         )
         torch.save(shard_payload, shard_path)
         tensor_summaries = {
@@ -1534,8 +1530,8 @@ def _save_ieee_artifact_shards(
         shard_summary = {
             "name": str(shard_name),
             "file_name": str(shard_path.name),
-            "tensor_count": int(len(shard_payload)),
-            "fields": [str(field_name) for field_name in shard_payload.keys()],
+            "tensor_count": len(shard_payload),
+            "fields": [str(field_name) for field_name in shard_payload],
             "total_numel": int(sum(int(item["numel"]) for item in tensor_summaries.values())),
             "total_bytes": int(sum(int(item["bytes"]) for item in tensor_summaries.values())),
             "tensors": tensor_summaries,
@@ -1550,7 +1546,7 @@ def _save_ieee_artifact_shards(
         "layout": IEEE_CACHE_LAYOUT_VERSION,
         "storage_mode": "torch_shards",
         "artifact_dir": str(artifact_dir),
-        "shard_count": int(len(shard_summaries)),
+        "shard_count": len(shard_summaries),
         "shards": shard_summaries,
     }
 
@@ -1593,7 +1589,7 @@ def _load_ieee_artifact_shards(
         }
         _memory_log(
             "cache_read: artifact_shard_loaded "
-            f"name={shard_name} tensors={int(len(loaded_payloads[shard_name]))}"
+            f"name={shard_name} tensors={len(loaded_payloads[shard_name])}"
         )
 
     if not loaded_payloads:
@@ -1603,7 +1599,7 @@ def _load_ieee_artifact_shards(
     _restore_ieee_artifact_payloads(graph, loaded_payloads)
     _memory_log(
         "cache_read: artifacts_attached "
-        f"shards={int(len(loaded_payloads))} "
+        f"shards={len(loaded_payloads)} "
         f"fields={int(sum(len(payload) for payload in loaded_payloads.values()))}"
     )
     return True
@@ -1712,12 +1708,12 @@ def _load_sampled_ieee_frame(
 
     _memory_log("build_graph_payload: reading_transaction_csv")
     transactions = pd.read_csv(transaction_path, low_memory=False)
-    _memory_log(f"build_graph_payload: transaction_csv_loaded rows={int(len(transactions))}")
+    _memory_log(f"build_graph_payload: transaction_csv_loaded rows={len(transactions)}")
     _memory_log("build_graph_payload: reading_identity_csv")
     identities = pd.read_csv(identity_path, low_memory=False)
-    _memory_log(f"build_graph_payload: identity_csv_loaded rows={int(len(identities))}")
+    _memory_log(f"build_graph_payload: identity_csv_loaded rows={len(identities)}")
     frame = transactions.merge(identities, on="TransactionID", how="left", sort=False)
-    _memory_log(f"build_graph_payload: merged_raw_frame rows={int(len(frame))} cols={int(len(frame.columns))}")
+    _memory_log(f"build_graph_payload: merged_raw_frame rows={len(frame)} cols={len(frame.columns)}")
     frame = frame.sort_values(["TransactionDT", "TransactionID"], kind="mergesort").reset_index(drop=True)
     _memory_log("build_graph_payload: sorted_merged_frame")
     sampled_frame, sampling_info = _time_stratified_sample(
@@ -1729,7 +1725,7 @@ def _load_sampled_ieee_frame(
     sampled_frame = sampled_frame.sort_values(["TransactionDT", "TransactionID"], kind="mergesort").reset_index(drop=True)
     _memory_log(
         "build_graph_payload: sampled_frame_ready "
-        f"rows={int(len(sampled_frame))} sampling_applied={bool(sampling_info['sampling_applied'])}"
+        f"rows={len(sampled_frame)} sampling_applied={bool(sampling_info['sampling_applied'])}"
     )
     return sampled_frame, sampling_info, transaction_path, identity_path
 
@@ -1760,10 +1756,10 @@ def _refresh_ieee_artifact_metadata(
     metadata["data_summary"] = data_summary
     _memory_log(
         "artifact_metadata: refreshed "
-        f"selected_relations={int(len(relation_order))} "
+        f"selected_relations={len(relation_order)} "
         f"sequence_length={int(relation_sequence_quality.get('sequence_length', 0))} "
         f"sequence_dim={int(relation_sequence_quality.get('sequence_feature_dim', 0))} "
-        f"sequence_storage_mode={str(relation_sequence_quality.get('storage_mode', ''))} "
+        f"sequence_storage_mode={relation_sequence_quality.get('storage_mode', '')!s} "
         f"sequence_compact_dim={int(ieee_sequence_feature_dim)} "
         f"event_compact_dim={int(ieee_event_feature_dim)} "
         f"event_length={int(IEEE_EVENT_SEQUENCE_LENGTH)}"
@@ -1790,10 +1786,10 @@ def _rebuild_ieee_artifacts_only(
         time_bins=time_bins,
         seed=seed,
     )
-    if int(len(sampled_frame)) != int(graph.num_nodes(NODE_TYPE)):
+    if len(sampled_frame) != int(graph.num_nodes(NODE_TYPE)):
         raise RuntimeError(
             "IEEE artifact rebuild sampled frame size mismatch: "
-            f"frame_rows={int(len(sampled_frame))} graph_nodes={int(graph.num_nodes(NODE_TYPE))}"
+            f"frame_rows={len(sampled_frame)} graph_nodes={int(graph.num_nodes(NODE_TYPE))}"
         )
     event_stats = _attach_ieee_event_sequence(
         graph,
@@ -1819,7 +1815,7 @@ def _rebuild_ieee_artifacts_only(
     )
     _memory_log(
         "artifact_rebuild: complete "
-        f"selected_relations={int(len(relation_order))} "
+        f"selected_relations={len(relation_order)} "
         f"event_history_shape={tuple(int(item) for item in graph.nodes[NODE_TYPE].data['event_history_indices'].shape)}"
     )
     return relation_order
@@ -1936,7 +1932,7 @@ def _build_graph_payload(
     _memory_log(
         "build_graph_payload: tabular_teacher_ready "
         f"enabled={bool(teacher_summary.get('enabled', False))} "
-        f"name={str(teacher_summary.get('teacher_name', 'disabled'))}"
+        f"name={teacher_summary.get('teacher_name', 'disabled')!s}"
     )
 
     homo_src, homo_dst = graph.edges(etype="homo")
@@ -1970,7 +1966,7 @@ def _build_graph_payload(
         delta_t_tensor = feature_payload.get("delta_t")
         delta_t_array = delta_t_tensor.cpu().numpy() if delta_t_tensor is not None else np.empty(0, dtype=np.float32)
         causal_edge_summary[relation_name] = {
-            "edge_count": int(len(delta_t_array)),
+            "edge_count": len(delta_t_array),
             "non_negative_delta_t": bool(np.all(delta_t_array >= 0.0)) if len(delta_t_array) > 0 else True,
             "mean_delta_t": float(delta_t_array.mean()) if len(delta_t_array) > 0 else 0.0,
             "max_delta_t": float(delta_t_array.max()) if len(delta_t_array) > 0 else 0.0,
@@ -2002,8 +1998,8 @@ def _build_graph_payload(
             "feature_columns": feature_columns,
             "raw_feature_columns": feature_metadata["raw_feature_columns"],
             "feature_dim": int(feature_matrix.shape[1]),
-            "numeric_feature_count": int(len(feature_metadata["numeric_columns"])),
-            "categorical_feature_count": int(len(feature_metadata["categorical_columns"])),
+            "numeric_feature_count": len(feature_metadata["numeric_columns"]),
+            "categorical_feature_count": len(feature_metadata["categorical_columns"]),
             "category_sizes": {key: int(value) for key, value in feature_metadata["category_sizes"].items()},
             "typed_numeric_dim": int(feature_metadata["typed_numeric_dim"]),
             "typed_categorical_dim": int(feature_metadata["typed_categorical_dim"]),
@@ -2136,9 +2132,9 @@ def load_ieee_cis_dataset(
 
         _memory_log(
             "load_ieee_cis_dataset: delegated_light_asset_loader "
-            f"data_profile={str(data_profile)} loader_view={resolved_loader_view} "
-            f"relation_profile={str(relation_profile)} feature_profile={str(feature_profile)} "
-            f"history_len={str(history_len)} sampling_profile={str(sampling_profile)} "
+            f"data_profile={data_profile!s} loader_view={resolved_loader_view} "
+            f"relation_profile={relation_profile!s} feature_profile={feature_profile!s} "
+            f"history_len={history_len!s} sampling_profile={sampling_profile!s} "
             f"build_light_cache_only={bool(build_light_cache_only)} rebuild_light_cache={bool(rebuild_light_cache or rebuild_cache)}"
         )
         view_kwargs = {
@@ -2334,7 +2330,6 @@ def load_ieee_cis_dataset(
             clients.append(
                 ClientShard(
                     client_id=0,
-                    owned_global_nodes=owned_nodes,
                     subgraph=graph,
                     train_nodes=int(owned_nodes.numel()),
                 )
@@ -2358,14 +2353,13 @@ def load_ieee_cis_dataset(
                 clients.append(
                     ClientShard(
                         client_id=client_id,
-                        owned_global_nodes=owned_nodes,
                         subgraph=subgraph,
                         train_nodes=local_train_nodes,
                     )
                 )
         _memory_log(
             "load_ieee_cis_dataset: client_shards_ready "
-            f"num_clients={int(len(clients))} mode={client_subgraph_mode}"
+            f"num_clients={len(clients)} mode={client_subgraph_mode}"
         )
 
         class_labels = graph.nodes[NODE_TYPE].data["label"][graph.nodes[NODE_TYPE].data["train_supervised_mask"].bool()]
@@ -2389,7 +2383,7 @@ def load_ieee_cis_dataset(
         data_summary["cache_graph_path"] = str(cache_paths.graph_path)
         data_summary["cache_metadata_path"] = str(cache_paths.metadata_path)
         data_summary["cache_artifact_dir"] = str(cache_paths.artifact_dir)
-        data_summary["num_clients"] = int(len(clients))
+        data_summary["num_clients"] = len(clients)
         data_summary["client_subgraph_mode"] = str(client_subgraph_mode)
         data_summary["label_fraction"] = float(label_fraction)
         data_summary["active_learning_feedback_path"] = str(active_learning_feedback_path or "")

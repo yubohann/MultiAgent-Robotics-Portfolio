@@ -1,6 +1,5 @@
 ﻿from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
 from typing import Any
 
 import torch
@@ -13,16 +12,6 @@ ETHEREUM_PHISHING_LITE_MAX_USERS = 12000
 ETHEREUM_PHISHING_LITE_MAX_TRANSACTIONS = 150000
 ETHEREUM_PHISHING_MIN_AUTO_MAX_USERS = 4000
 ETHEREUM_PHISHING_MIN_AUTO_MAX_TRANSACTIONS = 50000
-DEFAULT_ONCHAIN_NODE_BUDGETS = {
-    "ethereum_phishing": ETHEREUM_PHISHING_SAFE_FULL_MAX_USERS,
-    "ethereum_ponzi": 6000,
-    "defi_rug_pull": 5000,
-}
-DEFAULT_ONCHAIN_TRANSACTION_BUDGETS = {
-    "ethereum_phishing": ETHEREUM_PHISHING_SAFE_FULL_MAX_TRANSACTIONS,
-    "ethereum_ponzi": 80000,
-    "defi_rug_pull": 60000,
-}
 
 
 def _normalize_device_index(device: Any) -> int:
@@ -49,80 +38,6 @@ def resolve_device_budget_gib(
     device_index = _normalize_device_index(device)
     properties = torch.cuda.get_device_properties(device_index)
     return float(properties.total_memory) * float(utilization_budget) / BYTES_PER_GIB
-
-
-def safe_ethereum_phishing_limits(
-    *,
-    lite: bool,
-    requested_max_users: int | None,
-    requested_max_transactions: int | None,
-) -> tuple[int, int, list[str]]:
-    safe_users = (
-        ETHEREUM_PHISHING_LITE_MAX_USERS if lite else ETHEREUM_PHISHING_SAFE_FULL_MAX_USERS
-    )
-    safe_transactions = (
-        ETHEREUM_PHISHING_LITE_MAX_TRANSACTIONS if lite else ETHEREUM_PHISHING_SAFE_FULL_MAX_TRANSACTIONS
-    )
-    notes: list[str] = []
-    if requested_max_users is None:
-        max_users = safe_users
-        notes.append(f"Applied default max_users={safe_users} for ethereum_phishing.")
-    else:
-        max_users = int(requested_max_users)
-    if requested_max_transactions is None:
-        max_transactions = safe_transactions
-        notes.append(f"Applied default max_transactions={safe_transactions} for ethereum_phishing.")
-    else:
-        max_transactions = int(requested_max_transactions)
-    return max_users, max_transactions, notes
-
-
-def clamp_ethereum_phishing_to_lite(
-    max_users: int | None,
-    max_transactions: int | None,
-) -> tuple[int, int]:
-    resolved_users = ETHEREUM_PHISHING_LITE_MAX_USERS if max_users is None else min(int(max_users), ETHEREUM_PHISHING_LITE_MAX_USERS)
-    resolved_transactions = (
-        ETHEREUM_PHISHING_LITE_MAX_TRANSACTIONS
-        if max_transactions is None
-        else min(int(max_transactions), ETHEREUM_PHISHING_LITE_MAX_TRANSACTIONS)
-    )
-    return max(int(resolved_users), ETHEREUM_PHISHING_MIN_AUTO_MAX_USERS), max(
-        int(resolved_transactions),
-        ETHEREUM_PHISHING_MIN_AUTO_MAX_TRANSACTIONS,
-    )
-
-
-def estimate_onchain_candidate_vram_gib(
-    dataset_name: str,
-    profile: Mapping[str, Any],
-    *,
-    max_users: int | None = None,
-    max_transactions: int | None = None,
-) -> float:
-    dataset_key = str(dataset_name).lower()
-    nodes = int(
-        max_users
-        if max_users is not None
-        else DEFAULT_ONCHAIN_NODE_BUDGETS.get(dataset_key, ETHEREUM_PHISHING_SAFE_FULL_MAX_USERS)
-    )
-    transactions = int(
-        max_transactions
-        if max_transactions is not None
-        else DEFAULT_ONCHAIN_TRANSACTION_BUDGETS.get(dataset_key, ETHEREUM_PHISHING_SAFE_FULL_MAX_TRANSACTIONS)
-    )
-    hidden_dim = max(
-        int(profile.get("transformer_hidden_dim", 64)),
-        int(profile.get("fusion_hidden_dim", 64)),
-        int(profile.get("seq_hidden_dim", 64)),
-    )
-    layers = max(int(profile.get("transformer_num_layers", 1)), 1)
-    width_scale = float(hidden_dim) / 64.0
-    layer_scale = 1.0 + 0.12 * float(layers - 1)
-    graph_bytes = (nodes * 170_000.0) + (transactions * 12_000.0)
-    fixed_overhead_bytes = 1.1 * BYTES_PER_GIB
-    estimated_bytes = (fixed_overhead_bytes + graph_bytes) * width_scale * layer_scale
-    return float(estimated_bytes / BYTES_PER_GIB)
 
 
 def _tensor_bytes(value: Any) -> int:

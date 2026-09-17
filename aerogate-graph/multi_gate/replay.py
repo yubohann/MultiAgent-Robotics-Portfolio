@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass, replace
 import json
-from pathlib import Path
 import subprocess
 import sys
+from dataclasses import asdict, is_dataclass, replace
+from pathlib import Path
 
 import numpy as np
 
@@ -23,7 +23,6 @@ from multi_gate.training import (
 from shared.configs.global_config import GLOBAL_CONFIG
 from shared.runtime.artifacts import allocate_replay_artifacts, default_run_name, write_json
 
-
 DYNAMIC_GATE_POST_VISUAL_REPULSION_MARGIN_M = 0.76
 
 
@@ -35,7 +34,6 @@ class HeuristicFormationReplayController:
         self.compact_gate_mode = bool(compact_gate_mode)
         self._safe_gate_phase = "align"
         self._safe_gate_offsets_xy: np.ndarray | None = None
-        self._safe_gate_reset_step: int | None = None
         self._safe_gate_last_gate_idx: int | None = None
         self._compact_gate_slot_template_xy: np.ndarray | None = None
 
@@ -392,7 +390,6 @@ class HeuristicFormationReplayController:
         if self._safe_gate_offsets_xy is None or self._safe_gate_offsets_xy.shape[0] != num_agents or step_count <= 0:
             self._safe_gate_offsets_xy = self._initial_safe_gate_offsets(positions_xy[:num_agents])
             self._safe_gate_phase = "align"
-            self._safe_gate_reset_step = step_count
 
         offsets_xy = self._safe_gate_offsets_xy[:num_agents]
         align_center_x_m = gate_x_m - 6.4

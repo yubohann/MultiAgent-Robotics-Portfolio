@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
+from ._identity import IdentityAccumulator
 from .dataset import collect_episode, load_pilot_episode
 from .provenance import detect_source_provenance
 from .schema import is_safe_relative_path
-
 
 FIXTURE_SCHEMA = "org.rivermark.benchmark.cpu-fixture.v1"
 FIXTURE_BACKEND = "rivermark-kinematic-pilot-v1"
@@ -31,7 +31,7 @@ class CpuFixture:
     manifest_path: Path
     fixture_manifest_path: Path
     fixture_id: str
-    episode_manifest_sha256: str
+    episode_manifest_identity: str
     frame_count: int
     agent_count: int
 
@@ -40,14 +40,14 @@ class CpuFixture:
 class CpuFixtureVerification:
     valid: bool
     fixture_manifest_path: Path
-    episode_manifest_sha256: str | None
+    episode_manifest_identity: str | None
     frame_count: int | None
     agent_count: int | None
     issues: tuple[str, ...]
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
@@ -66,11 +66,7 @@ def create_cpu_fixture(
     max_steps: int = 4,
     seed: int = 0,
 ) -> CpuFixture:
-    """Create one small pilot episode and a binding fixture receipt.
-
-    ``output_root`` must be absent or empty.  Existing files are never removed
-    or overwritten, including failed or partially generated fixture artifacts.
-    """
+    """Create one small pilot episode and a binding fixture receipt."""
 
     if not isinstance(fixture_id, str) or not _ID.fullmatch(fixture_id):
         raise FixtureError("fixture_id must be a lowercase safe identifier")
@@ -94,7 +90,7 @@ def create_cpu_fixture(
         seed=seed,
     )
     episode = load_pilot_episode(manifest_path)
-    manifest_hash = _sha256_file(manifest_path)
+    manifest_identity = _identity_file(manifest_path)
     provenance = detect_source_provenance()
     fixture_manifest_path = root / "fixture_manifest.json"
     _write_json(
@@ -107,17 +103,17 @@ def create_cpu_fixture(
             "derived_sample": True,
             "formal_benchmark_admission": False,
             "episode_manifest": manifest_path.relative_to(root).as_posix(),
-            "episode_manifest_sha256": manifest_hash,
+            "episode_manifest_identity": manifest_identity,
             "agent_count": episode.agent_count,
             "frame_count": episode.frame_count,
             "seed": seed,
             "claim_boundary": CLAIM_BOUNDARY,
             "source_revision": provenance.source_revision,
-            "source_tree_sha256": provenance.source_tree_sha256,
+            "source_tree_identity": provenance.source_tree_identity,
             "source_worktree_dirty": provenance.source_worktree_dirty,
         },
     )
-    return CpuFixture(root, manifest_path, fixture_manifest_path, fixture_id, manifest_hash, episode.frame_count, episode.agent_count)
+    return CpuFixture(root, manifest_path, fixture_manifest_path, fixture_id, manifest_identity, episode.frame_count, episode.agent_count)
 
 
 def verify_cpu_fixture(fixture_manifest_path: Path) -> CpuFixtureVerification:
@@ -134,8 +130,8 @@ def verify_cpu_fixture(fixture_manifest_path: Path) -> CpuFixtureVerification:
     allowed = {
         "schema", "fixture_id", "dataset_version", "backend",
         "derived_sample", "formal_benchmark_admission", "episode_manifest",
-        "episode_manifest_sha256", "agent_count", "frame_count", "seed",
-        "claim_boundary", "source_revision", "source_tree_sha256",
+        "episode_manifest_identity", "agent_count", "frame_count", "seed",
+        "claim_boundary", "source_revision", "source_tree_identity",
         "source_worktree_dirty",
     }
     unknown = sorted(set(payload) - allowed)
@@ -155,9 +151,9 @@ def verify_cpu_fixture(fixture_manifest_path: Path) -> CpuFixtureVerification:
     fixture_id = payload.get("fixture_id")
     if not isinstance(fixture_id, str) or not _ID.fullmatch(fixture_id):
         issues.append("fixture_id:invalid")
-    for key in ("episode_manifest_sha256", "source_tree_sha256"):
+    for key in ("episode_manifest_identity", "source_tree_identity"):
         value = payload.get(key)
-        if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+        if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{16}", value):
             issues.append(f"{key}:invalid")
     revision = payload.get("source_revision")
     if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{7,64}", revision):
@@ -169,7 +165,7 @@ def verify_cpu_fixture(fixture_manifest_path: Path) -> CpuFixtureVerification:
         if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
             issues.append(f"{key}:invalid")
     relative = payload.get("episode_manifest")
-    episode_hash: str | None = None
+    episode_identity: str | None = None
     frame_count: int | None = None
     agent_count: int | None = None
     if not is_safe_relative_path(relative):
@@ -179,9 +175,9 @@ def verify_cpu_fixture(fixture_manifest_path: Path) -> CpuFixtureVerification:
         if not episode_path.is_relative_to(path.parent.resolve()) or not episode_path.is_file():
             issues.append("episode_manifest:missing")
         else:
-            episode_hash = _sha256_file(episode_path)
-            if episode_hash != payload.get("episode_manifest_sha256"):
-                issues.append("episode_manifest_sha256:mismatch")
+            episode_identity = _identity_file(episode_path)
+            if episode_identity != payload.get("episode_manifest_identity"):
+                issues.append("episode_manifest_identity:mismatch")
             try:
                 episode = load_pilot_episode(episode_path)
             except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
@@ -195,7 +191,7 @@ def verify_cpu_fixture(fixture_manifest_path: Path) -> CpuFixtureVerification:
                     issues.append("agent_count:mismatch")
                 if episode.manifest.get("split") != "pilot":
                     issues.append("episode_split:not_pilot")
-    return CpuFixtureVerification(not issues, path, episode_hash, frame_count, agent_count, tuple(issues))
+    return CpuFixtureVerification(not issues, path, episode_identity, frame_count, agent_count, tuple(issues))
 
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -220,7 +216,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "schema": FIXTURE_SCHEMA,
             "status": "valid" if result.valid else "invalid",
             "fixture_manifest": str(result.fixture_manifest_path),
-            "episode_manifest_sha256": result.episode_manifest_sha256,
+            "episode_manifest_identity": result.episode_manifest_identity,
             "frame_count": result.frame_count,
             "agent_count": result.agent_count,
             "issues": list(result.issues),
@@ -243,7 +239,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "status": "created",
         "root": str(result.root),
         "fixture_manifest": str(result.fixture_manifest_path),
-        "episode_manifest_sha256": result.episode_manifest_sha256,
+        "episode_manifest_identity": result.episode_manifest_identity,
         "frame_count": result.frame_count,
         "agent_count": result.agent_count,
         "formal_benchmark_admission": False,

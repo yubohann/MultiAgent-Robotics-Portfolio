@@ -1,12 +1,13 @@
 ﻿from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Callable
+from typing import Any
 
-from .archive_dataset import ARCHIVE_DEFAULT_ROOT, load_archive_dataset
 from .amlsim_dataset import AMLSIM_DEFAULT_ROOT, load_amlsim_dataset
+from .archive_dataset import ARCHIVE_DEFAULT_ROOT, load_archive_dataset
 from .ccfd_dataset import CCFD_DEFAULT_ROOT, load_ccfd_dataset
 from .defi_rug_pull_dataset import DEFI_RUG_PULL_DEFAULT_ROOT, load_defi_rug_pull_dataset
 from .elliptic_dataset import ELLIPTIC_DEFAULT_ROOT, load_elliptic_dataset
@@ -14,8 +15,8 @@ from .ethereum_phishing_dataset import ETHEREUM_PHISHING_DEFAULT_ROOT, load_ethe
 from .ethereum_ponzi_dataset import ETHEREUM_PONZI_DEFAULT_ROOT, load_ethereum_ponzi_dataset
 from .fraud_dataset import DatasetBundle, load_splitgnn_dataset
 from .ieee_cis_dataset import IEEE_DEFAULT_ROOT, load_ieee_cis_dataset
-from .runtime_dataset_policy import active_runtime_datasets, ensure_dataset_enabled
 from .paths import GRAPH_ROOT
+from .runtime_dataset_policy import ensure_dataset_enabled
 
 SPLITGNN_DATA_DIR = GRAPH_ROOT
 
@@ -161,10 +162,6 @@ DATASET_REGISTRY: dict[str, DatasetDescriptor] = {
 }
 
 
-def registered_dataset_names() -> tuple[str, ...]:
-    return tuple(name for name in active_runtime_datasets() if name in DATASET_REGISTRY)
-
-
 def get_dataset_descriptor(dataset_name: str) -> DatasetDescriptor:
     normalized_name = str(dataset_name).lower()
     if normalized_name not in DATASET_REGISTRY:
@@ -192,10 +189,10 @@ def bundle_protocol_summary(bundle: DatasetBundle, dataset_name: str | None = No
         "node_type": node_type,
         "feature_dim": int(feature_dim),
         "num_nodes": int(graph.num_nodes(node_type)),
-        "relation_count": int(len(bundle.relation_order)),
+        "relation_count": len(bundle.relation_order),
         "relation_order": list(bundle.relation_order),
         "mask_names": mask_names,
-        "num_clients": int(len(bundle.clients)),
+        "num_clients": len(bundle.clients),
         "client_train_nodes": [int(client.train_nodes) for client in bundle.clients],
         "time_features_available": bool(descriptor.resource_hints.time_features_available),
         "resource_hints": {
@@ -264,7 +261,7 @@ def load_registered_dataset_bundle(
                 None
                 if getattr(args, "ieee_max_transactions", None) is None
                 or int(getattr(args, "ieee_max_transactions", 0)) <= 0
-                else int(getattr(args, "ieee_max_transactions"))
+                else int(args.ieee_max_transactions)
             ),
             time_bins=int(getattr(args, "ieee_time_bins", 24)),
             relation_window_neighbors=int(getattr(args, "ieee_relation_window_neighbors", 2)),

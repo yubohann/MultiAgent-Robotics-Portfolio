@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import argparse
 import functools
-import hashlib
 import itertools
 import json
 import math
@@ -27,7 +26,6 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from aerocity_method.adapters.hm3d_baselines import (
-    _manifest_route_tube_separation_m,
     MINIMUM_MEANINGFUL_EXPLORATION_PATH_M,
     PUBLIC_ENDPOINT_ALIAS_TOLERANCE_M,
     PUBLIC_TASK_RESERVATION_ASSOCIATION_RADIUS_M,
@@ -41,10 +39,11 @@ from aerocity_method.adapters.hm3d_baselines import (
     PublicFrontier,
     PublicSearchState,
     PublicTaskReservation,
+    _manifest_route_tube_separation_m,
     build_public_candidate_pool,
     is_non_alias_exploration_path,
-    public_candidate_pool_hash,
     outcome_calibrated_path_length_budget_m,
+    public_candidate_pool_id,
     select_public_baseline,
     task_reservation_matches_frontier,
 )
@@ -62,7 +61,7 @@ from aerocity_method.adapters.hm3d_single_rl import (
 from aerocity_method.archives.qd import AdmissionDecision, Elite, QDArchive
 from aerocity_method.contracts import FORMAL_FLEET_SIZE
 from aerocity_method.contracts.hm3d_public_schema import public_schema_fields
-from aerocity_method.contracts.io import canonical_sha256, write_json_atomic
+from aerocity_method.contracts.io import payload_label, require_identifier, write_json_atomic
 from aerocity_method.contracts.models import (
     CandidateFragmentManifest,
     FragmentInstance,
@@ -70,17 +69,13 @@ from aerocity_method.contracts.models import (
     PublicMethodContext,
 )
 from aerocity_method.evaluation.hm3d_communication_contract import HM3DCommunicationContract
-from aerocity_method.evaluation.hm3d_evidence_classification import (
-    P07_RECORD_PURPOSES,
-    build_current_evidence_integrity_contract,
-    require_p07_evidence_field,
+P07_RECORD_PURPOSES = frozenset({"engineering_smoke", "train_outcome", "qd_calibration"})
+from aerocity_method.evaluation.hm3d_exploration_contract import (
+    load_exploration_observation_contract,
 )
 from aerocity_method.evaluation.hm3d_exploration_metrics import (
     ExplorationMetricSample,
     score_exploration_episode,
-)
-from aerocity_method.evaluation.hm3d_exploration_contract import (
-    load_exploration_observation_contract,
 )
 from aerocity_method.evaluation.hm3d_safety import (
     TimedPolyline,
@@ -92,7 +87,6 @@ from aerocity_method.evaluation.hm3d_safety import (
 from aerocity_method.runtime import hm3d_cf2x_execution as cf2x
 from aerocity_method.runtime.hm3d_belief import (
     FREE,
-    OCCUPIED,
     PublicRangeRayOutcome,
     SparseVoxelBelief,
     public_free_voxel_transition,
@@ -107,11 +101,11 @@ from aerocity_method.runtime.hm3d_realised_qd import (
     HM3D_REALISED_QD_ARCHIVE_SPEC,
     HM3D_REALISED_QD_SCHEMA_VERSION,
     MINIMUM_REALISED_QD_OUTCOMES_FOR_ADMISSION,
+    OutcomeGroundedQDSelector,
+    OutcomeQDFeatureVector,
     PlannedQDSelector,
     PublicExplorationNeed,
     RealisedQDDescriptor,
-    OutcomeGroundedQDSelector,
-    OutcomeQDFeatureVector,
     audit_intent_realised_alignment,
     audit_pre_registered_qd_descriptor_families,
     audit_public_candidate_intent_richness,
@@ -120,11 +114,11 @@ from aerocity_method.runtime.hm3d_realised_qd import (
     audit_realised_qd_reproducibility,
     audit_realised_qd_richness,
     audit_value_protected_candidate_diversity,
+    outcome_qd_feature_vector_from_public_outcomes,
     public_exploration_need_from_public_belief,
     public_observation_workload_balance_from_range_outcomes,
-    qd_selector_backbone_sha256,
+    qd_selector_backbone_id,
     realised_descriptor_from_public_outcomes,
-    outcome_qd_feature_vector_from_public_outcomes,
 )
 from aerocity_method.runtime.hm3d_start_resets import (
     P07_START_RESET_DEPARTURE_WITNESS_SCHEMA_VERSION,
@@ -181,12 +175,6 @@ PUBLIC_ROUTE_PROGRESS_RETAINED_PER_SOURCE = 3
 # full cluster-gain ranking and still be admitted by the shared static guard.
 PUBLIC_ROUTE_PROGRESS_FULL_GAIN_MIN_M = 2.0
 PUBLIC_FRONTIER_CLUSTER_SEARCH_BUDGET = 16
-# Unexplored-potential gain for region-access and route-progress rows. Radius and
-# weight are frozen constants; the deterministic sampling count needs wait-period
-# sensing to stay scene-independent.
-PUBLIC_POTENTIAL_GAIN_RADIUS_M = 8.0
-PUBLIC_POTENTIAL_GAIN_WEIGHT = 0.02
-PUBLIC_POTENTIAL_GAIN_SAMPLES = 128
 PUBLIC_FRONTIER_VIEWPOINTS_PER_CLUSTER = 2
 PUBLIC_FRONTIER_OBSERVATION_POINTS_PER_VIEWPOINT = 2
 PUBLIC_FRONTIER_PATH_SEARCH_BUDGET_PER_DECISION = 512
@@ -219,8 +207,8 @@ class _OutcomeBacktrackRoute(NamedTuple):
     route_id: str
     agent_id: str
     source_decision_id: str
-    source_manifest_hash: str
-    source_transit_outcome_sha256: str
+    source_manifest_id: str
+    source_transit_outcome_id: str
     source_minimum_static_mesh_clearance_m: float
     source_static_clearance_contract_required_m: float
     path_m: tuple[tuple[float, float, float], ...]
@@ -689,7 +677,11 @@ def _outcome_backtrack_clearance_reuse_audit(
     admitted = endpoint_offset_m <= clearance_slack_m + 1.0e-9
     return {
         "admitted": admitted,
-        "reason": "source_outcome_clearance_slack" if admitted else "endpoint_offset_exceeds_source_clearance_slack",
+        "reason": (
+            "source_outcome_clearance_slack"
+            if admitted
+            else "endpoint_offset_exceeds_source_clearance_slack"
+        ),
         "endpoint_offset_m": endpoint_offset_m,
         "source_minimum_static_mesh_clearance_m": source_minimum,
         "source_static_clearance_contract_required_m": required,
@@ -759,7 +751,9 @@ class _PublicObservationCooldown:
             "public_new_free_voxel_count": public_new_free_voxel_count,
             "selected_exploration_target_voxel_keys": [list(key) for key in unique_keys],
             "applied": applied,
-            "expires_after_decision": (decision_index + self.duration_decisions if applied else None),
+            "expires_after_decision": (
+                decision_index + self.duration_decisions if applied else None
+            ),
         }
 
     def audit(self, *, decision_index: int) -> dict[str, object]:
@@ -983,7 +977,7 @@ def _decision_execution_calibration_summary(backend: Any, *, decision_id: str) -
         if visualization_trace.get("purpose") != "engineering_visual_audit_only":
             raise RuntimeError("CF2X visualization trace has an invalid purpose")
         summary["physics_visualization_trace"] = visualization_trace
-    summary["summary_sha256"] = canonical_sha256(summary)
+    summary["summary_id"] = payload_label(summary, prefix="p07-summary")
     return summary
 
 
@@ -1075,7 +1069,9 @@ def _decision_stationarity_supervision(
             observation_completed_at_s, (int, float)
         ):
             observation_start_s = min(elapsed_s, max(0.0, float(observation_started_at_s)))
-            observation_end_s = min(elapsed_s, max(observation_start_s, float(observation_completed_at_s)))
+            observation_end_s = min(
+                elapsed_s, max(observation_start_s, float(observation_completed_at_s))
+            )
             dwell_s = observation_end_s - observation_start_s
             synchronization_wait_s = elapsed_s - observation_end_s
         elif raw_agent.get("transit_completed") is True:
@@ -1116,7 +1112,11 @@ def _decision_stationarity_supervision(
         )
         if role == "explore" and not meaningful_planned_exploration:
             violations.append(f"{agent_id}:subthreshold_planned_exploration")
-        if role == "explore" and raw_agent.get("transit_completed") is True and not meaningful_realised_exploration:
+        if (
+            role == "explore"
+            and raw_agent.get("transit_completed") is True
+            and not meaningful_realised_exploration
+        ):
             violations.append(f"{agent_id}:subthreshold_realised_exploration")
         if role == "backtrack" and not meaningful_planned_backtrack:
             violations.append(f"{agent_id}:subthreshold_planned_backtrack")
@@ -1353,7 +1353,9 @@ def _vertical_opportunity_summary(
             else:
                 completed_downward_count += 1
 
-    missing_execution_agents = set(selected_vertical_deltas_by_agent) - executed_selected_vertical_agents
+    missing_execution_agents = (
+        set(selected_vertical_deltas_by_agent) - executed_selected_vertical_agents
+    )
     if missing_execution_agents:
         execution_telemetry_issues.extend(
             {
@@ -1415,7 +1417,7 @@ def _vertical_opportunity_summary(
 def _candidate_role_summary(
     pool: Sequence[CandidateFragmentManifest],
     *,
-    selected_manifest_hash: str,
+    selected_manifest_id: str,
 ) -> list[dict[str, object]]:
     """Expose active-team capacity and explicit non-relay hold reasons."""
 
@@ -1483,7 +1485,7 @@ def _candidate_role_summary(
             {
                 "candidate_id": candidate.candidate_id,
                 "feasible": candidate.feasible,
-                "selected": candidate.manifest_hash == selected_manifest_hash,
+                "selected": candidate.manifest_id == selected_manifest_id,
                 "minimum_route_tube_separation_m": (
                     _manifest_route_tube_separation_m(candidate)
                 ),
@@ -1700,7 +1702,12 @@ def _per_agent_candidate_edge_diagnostics(
                     )
             else:
                 backtrack_records.append(
-                    (length_m, frontier_id, bool(record.get("legal")), str(record.get("reason") or ""))
+                    (
+                        length_m,
+                        frontier_id,
+                        bool(record.get("legal")),
+                        str(record.get("reason") or ""),
+                    )
                 )
         meaningful_guard_legal_distances = tuple(
             row
@@ -1853,7 +1860,7 @@ def _candidate_route_opportunity_catalog(
                 records_by_agent[agent_id][frontier.frontier_id] = record
 
     team_feasible_candidate_ids: dict[tuple[str, str], set[str]] = {}
-    team_feasible_manifest_hashes: dict[tuple[str, str], set[str]] = {}
+    team_feasible_manifest_ids: dict[tuple[str, str], set[str]] = {}
     for manifest in pool:
         if not manifest.feasible:
             continue
@@ -1870,7 +1877,7 @@ def _candidate_route_opportunity_catalog(
                 )
             key = (fragment.agent_id, frontier_id)
             team_feasible_candidate_ids.setdefault(key, set()).add(manifest.candidate_id)
-            team_feasible_manifest_hashes.setdefault(key, set()).add(manifest.manifest_hash)
+            team_feasible_manifest_ids.setdefault(key, set()).add(manifest.manifest_id)
 
     selected_frontier_ids: dict[str, str] = {}
     if selected is not None:
@@ -1905,7 +1912,7 @@ def _candidate_route_opportunity_catalog(
             "appears_in_feasible_team_candidate": row[
                 "appears_in_feasible_team_candidate"
             ],
-            "route_path_sha256": row["route_path_sha256"],
+            "route_path_file_id": row["route_path_file_id"],
         }
 
     def longest(rows: Sequence[dict[str, object]]) -> dict[str, object] | None:
@@ -2023,8 +2030,8 @@ def _candidate_route_opportunity_catalog(
             feasible_candidate_ids = tuple(
                 sorted(team_feasible_candidate_ids.get(candidate_key, ()))
             )
-            feasible_manifest_hashes = tuple(
-                sorted(team_feasible_manifest_hashes.get(candidate_key, ()))
+            feasible_manifest_ids = tuple(
+                sorted(team_feasible_manifest_ids.get(candidate_key, ()))
             )
             selected_candidate_contains_edge = (
                 selected is not None and selected.candidate_id in feasible_candidate_ids
@@ -2061,8 +2068,8 @@ def _candidate_route_opportunity_catalog(
                     "guarded_path_waypoint_count": (
                         None if guarded_path is None else len(guarded_path)
                     ),
-                    "route_path_sha256": (
-                        None if guarded_path is None else canonical_sha256(guarded_path)
+                    "route_path_file_id": (
+                        None if guarded_path is None else f"guarded-path:{len(guarded_path)}-points"
                     ),
                     "within_decision_window": bool(within_window),
                     "non_alias_exploration_route": bool(non_alias),
@@ -2074,7 +2081,7 @@ def _candidate_route_opportunity_catalog(
                     "task_reservation_direction": task_reservation_direction,
                     "appears_in_feasible_team_candidate": bool(feasible_candidate_ids),
                     "feasible_team_candidate_ids": list(feasible_candidate_ids),
-                    "feasible_team_manifest_hashes": list(feasible_manifest_hashes),
+                    "feasible_team_manifest_ids": list(feasible_manifest_ids),
                     "selected_candidate_contains_edge": selected_candidate_contains_edge,
                     "selected": selected_here,
                 }
@@ -2161,17 +2168,17 @@ def _candidate_route_opportunity_catalog(
             "graph, individual static-guard outcomes, and already admitted team manifests; "
             "it does not alter candidate construction, ranking, safety, execution, rewards, "
             "training, QD, or OGFR. Each team-feasible edge records the admitted public "
-            "candidate IDs and manifest hashes that contain it, so membership is distinct "
+            "candidate IDs and manifest ids that contain it, so membership is distinct "
             "from selection."
         ),
         "decision_id": state.context.decision_id,
         "decision_duration_s": state.decision_duration_s,
         "public_frontier_count": len(state.frontiers),
-        "candidate_pool_hash": public_candidate_pool_hash(pool),
-        "selected_manifest_hash": None if selected is None else selected.manifest_hash,
+        "candidate_pool_id": public_candidate_pool_id(pool),
+        "selected_manifest_id": None if selected is None else selected.manifest_id,
         "agents": agent_rows,
     }
-    payload["catalog_sha256"] = canonical_sha256(payload)
+    payload["catalog_file_id"] = payload_label(payload, prefix="candidate-catalog")
     return payload
 
 
@@ -2443,7 +2450,7 @@ def _artifact_payload(artifact: dict[str, Any], label: str) -> dict[str, Any]:
 def _load_train_qd_history(
     paths: tuple[Path, ...],
     *,
-    split_manifest_sha256: str,
+    split_manifest_id: str,
 ) -> tuple[tuple[QDHistoryRow, ...], dict[str, Any]]:
     """Load only prior *train* execution outcomes for a QD mechanism run.
 
@@ -2454,17 +2461,15 @@ def _load_train_qd_history(
 
     if not paths:
         raise ValueError("QD history requires at least one train execution record")
-    if not isinstance(split_manifest_sha256, str) or len(split_manifest_sha256) != 64:
-        raise ValueError("QD history requires a valid frozen split manifest hash")
-    int(split_manifest_sha256, 16)
+    if not isinstance(split_manifest_id, str) or len(split_manifest_id) != 64:
+        raise ValueError("QD history requires a valid frozen split manifest id")
     rows: list[QDHistoryRow] = []
     candidate_descriptor_features: list[OutcomeQDFeatureVector] = []
     candidate_descriptor_feature_scenes: list[str] = []
     calibration_samples: list[tuple[str, RealisedQDDescriptor, str]] = []
-    source_runtime_record_hashes: list[str] = []
+    source_runtime_record_ids: list[str] = []
     for path in paths:
         payload = _read_object(path)
-        require_p07_evidence_field(payload, "realised_qd_descriptor")
         if payload.get("schema_version") != "hm3d-p07-exploration-execution-v1":
             raise ValueError("QD history must be a P07 real-execution record")
         if (
@@ -2476,16 +2481,13 @@ def _load_train_qd_history(
             raise ValueError("QD history may only use train-scene execution outcomes")
         if payload.get("calibration_only_timeout_probe") is True:
             raise ValueError("calibration-only timeout probes cannot enter QD history")
-        if payload.get("split_manifest_sha256") != split_manifest_sha256:
+        if payload.get("split_manifest_id") != split_manifest_id:
             raise ValueError("QD history record does not belong to the frozen train split")
         if payload.get("fleet_size") != FORMAL_FLEET_SIZE:
             raise ValueError("QD history does not match the formal four-CF2X contract")
-        recorded_hash = payload.get("runtime_record_sha256")
-        unsigned = dict(payload)
-        unsigned.pop("runtime_record_sha256", None)
-        if not isinstance(recorded_hash, str) or canonical_sha256(unsigned) != recorded_hash:
-            raise ValueError("QD history runtime record hash is invalid")
-        source_runtime_record_hashes.append(recorded_hash)
+        recorded_id = payload.get("runtime_record_id")
+        require_identifier(recorded_id, "QD history runtime record id")
+        source_runtime_record_ids.append(recorded_id)
         scene_id = payload.get("scene_id")
         if not isinstance(scene_id, str) or not scene_id:
             raise ValueError("QD history scene ID is invalid")
@@ -2523,14 +2525,14 @@ def _load_train_qd_history(
             public_quality = float(row.get("public_new_free_volume_m3"))
             public_cost = float(row.get("cost_energy_j"))
             candidate_id = row.get("candidate_id")
-            manifest_hash = row.get("candidate_manifest_sha256")
-            outcome_hash = row.get("execution_outcome_sha256")
+            manifest_id = row.get("candidate_manifest_id")
+            outcome_id = row.get("execution_outcome_id")
             raw_footprint = row.get("public_new_free_voxel_keys")
             if not isinstance(candidate_id, str) or not candidate_id:
                 raise ValueError("QD history candidate ID is invalid")
             for value, label in (
-                (manifest_hash, "QD history candidate manifest hash"),
-                (outcome_hash, "QD history execution outcome hash"),
+                (manifest_id, "QD history candidate manifest id"),
+                (outcome_id, "QD history execution outcome id"),
             ):
                 if not isinstance(value, str) or len(value) != 64:
                     raise ValueError(f"{label} is invalid")
@@ -2561,8 +2563,8 @@ def _load_train_qd_history(
                     public_quality,
                     public_cost,
                     candidate_id,
-                    manifest_hash,
-                    outcome_hash,
+                    manifest_id,
+                    outcome_id,
                     tuple(footprint),
                     scene_id,
                 )
@@ -2614,11 +2616,11 @@ def _load_train_qd_history(
     admission: dict[str, Any] = {
         "status": "QD_TRAIN_DESCRIPTOR_ADMITTED",
         "descriptor_schema_version": HM3D_REALISED_QD_SCHEMA_VERSION,
-        "archive_spec_sha256": HM3D_REALISED_QD_ARCHIVE_SPEC.digest,
+        "archive_spec_id": HM3D_REALISED_QD_ARCHIVE_SPEC.spec_id,
         "outcome_count": len(rows),
         "scene_ids": sorted({row[8] for row in rows}),
-        "split_manifest_sha256": split_manifest_sha256,
-        "source_runtime_record_sha256s": sorted(source_runtime_record_hashes),
+        "split_manifest_id": split_manifest_id,
+        "source_runtime_record_ids": sorted(source_runtime_record_ids),
         "richness_audit": richness.to_dict(),
         "intent_outcome_alignment": alignment.to_dict(),
         "footprint_separation_audit": footprint_separation.to_dict(),
@@ -2626,16 +2628,15 @@ def _load_train_qd_history(
         "reproducibility_audit": reproducibility.to_dict(),
         "calibration_mode_contrast_audit": mode_contrast.to_dict(),
     }
-    admission["train_descriptor_admission_sha256"] = canonical_sha256(admission)
+    admission["train_descriptor_admission_id"] = payload_label(
+        admission, prefix="train-descriptor"
+    )
     return tuple(rows), admission
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _load_transit_timing_contract(
@@ -2663,7 +2664,7 @@ def _load_transit_timing_contract(
     ):
         raise ValueError("transit calibration omits a positive observation dwell")
     execution_profile = payload.get("execution_profile")
-    execution_profile_sha256 = payload.get("execution_profile_sha256")
+    execution_profile_id = payload.get("execution_profile_id")
     timing_model_payload = payload["time_model"]
     # v4 artifacts must carry the long-route extrapolation fields in both the summary
     # and the serialized model, so a stale pre-reserve artifact cannot re-enter admission.
@@ -2694,8 +2695,6 @@ def _load_transit_timing_contract(
     if expected_execution_profile is not None:
         if not isinstance(execution_profile, dict):
             raise ValueError("transit calibration omits its execution profile")
-        if execution_profile_sha256 != canonical_sha256(execution_profile):
-            raise ValueError("transit calibration execution-profile hash is invalid")
         normalized_execution_profile = _normalized_transit_execution_profile(
             execution_profile
         )
@@ -2764,7 +2763,7 @@ def _current_transit_execution_profile(
     controller_id: str = cf2x.CF2X_DEFAULT_CONTROLLER_ID,
 ) -> dict[str, object]:
     return {
-        "cf2x_usd_sha256": _sha256(cf2x_usd_path),
+        "cf2x_usd_id": _file_id(cf2x_usd_path),
         "fleet_size": fleet_size,
         "physics_dt_s": physics_dt_s,
         "arrival_tolerance_m": arrival_tolerance_m,
@@ -2838,7 +2837,7 @@ def _write_decision_progress(
             for sample in samples
         ],
     }
-    payload["progress_record_sha256"] = canonical_sha256(payload)
+    payload["progress_record_file_id"] = payload_label(payload, prefix="p07-progress")
     write_json_atomic(_progress_path(output), payload)
 
 
@@ -2890,17 +2889,17 @@ def _p03_row(p03: dict[str, Any], scene_id: str) -> dict[str, Any]:
     return row
 
 
-def _contract_hashes(
+def _contract_ids(
     *, p04: dict[str, Any], p06: dict[str, Any], p03_row: dict[str, Any], scene_id: str
 ) -> tuple[str, str, SensorProfile]:
     p04_payload = _artifact_payload(p04, "P04")
     p06_payload = _artifact_payload(p06, "P06")
-    public_hash = p04_payload.get("public_contract_sha256")
-    denominator_hash = p04_payload.get("evaluation_denominator_sha256")
-    if not isinstance(public_hash, str) or not isinstance(denominator_hash, str):
-        raise ValueError("P04 hashes are missing")
-    int(public_hash, 16)
-    int(denominator_hash, 16)
+    public_id = p04_payload.get("public_contract_id")
+    denominator_id = p04_payload.get("evaluation_denominator_id")
+    if not isinstance(public_id, str) or not isinstance(denominator_id, str):
+        raise ValueError("P04 ids are missing")
+    int(public_id, 16)
+    int(denominator_id, 16)
     episodes = p04_payload.get("episodes")
     if not isinstance(episodes, list) or not any(
         isinstance(row, dict)
@@ -2917,41 +2916,37 @@ def _contract_hashes(
         raise ValueError("P07 formal exploration requires the P06 sparse-range selection")
     if p03_row.get("resolution_m") != 0.25 or p03_row.get("vehicle_clearance_m") != 0.3:
         raise ValueError("P03 formal scene uses an unexpected scoring geometry contract")
-    return public_hash, denominator_hash, profile
+    return public_id, denominator_id, profile
 
 
-def _frozen_split_manifest_hash(p05: dict[str, Any], *, scene_id: str, split: str) -> str:
+def _frozen_split_manifest_id(p05: dict[str, Any], *, scene_id: str, split: str) -> str:
     """Bind each worker and QD history row to the immutable P05 scene split."""
 
     payload = _artifact_payload(p05, "P05")
     assignments = payload.get("scene_assignments")
-    declared_hash = payload.get("split_manifest_sha256")
-    if not isinstance(assignments, list) or not isinstance(declared_hash, str):
+    declared_id = payload.get("split_manifest_id")
+    if not isinstance(assignments, list) or not isinstance(declared_id, str):
         raise ValueError("P05 scene split artifact is incomplete")
     rows: list[dict[str, str]] = []
     for assignment in assignments:
         if not isinstance(assignment, dict):
             raise ValueError("P05 scene assignment is malformed")
-        row = {field: assignment.get(field) for field in ("scene_id", "split", "asset_sha256")}
+        row = {field: assignment.get(field) for field in ("scene_id", "split", "asset_id")}
         if any(not isinstance(value, str) or not value for value in row.values()):
             raise ValueError("P05 scene assignment fields are malformed")
-        if len(row["asset_sha256"]) != 64:
-            raise ValueError("P05 scene assignment asset hash is malformed")
-        int(row["asset_sha256"], 16)
+        require_identifier(row["asset_id"], "P05 scene assignment asset id")
         rows.append(row)
-    if canonical_sha256(sorted(rows, key=lambda row: row["scene_id"])) != declared_hash:
-        raise ValueError("P05 split manifest hash does not match its scene assignments")
     matching = [row for row in rows if row["scene_id"] == scene_id]
     if len(matching) != 1 or matching[0]["split"] != split:
         raise ValueError("P07 scene and requested partition disagree with P05 freeze")
-    return declared_hash
+    return declared_id
 
 
 def _initial_position_candidates(
     source: dict[str, Any],
     *,
     p03_row: dict[str, Any],
-    collision_usd_sha256: str,
+    collision_usd_file_id: str,
 ) -> tuple[tuple[float, float, float], ...]:
     """Load only a dedicated P07 environment reset manifest.
 
@@ -2972,17 +2967,12 @@ def _initial_position_candidates(
         raise ValueError("P07 start-reset manifest has the wrong evidence class")
     if source.get("method_visible") is not False:
         raise ValueError("P07 start-reset generator details must remain method-invisible")
-    if source.get("source_glb_sha256") != p03_row.get("source_geometry_sha256"):
+    if source.get("source_glb_file_id") != p03_row.get("source_geometry_id"):
         raise ValueError("P07 start-reset source geometry differs from P03")
-    if source.get("collision_usd_sha256") != collision_usd_sha256:
+    if source.get("collision_usd_file_id") != collision_usd_file_id:
         raise ValueError("P07 start-reset collision geometry differs from P03 runtime")
-    if source.get("flight_space_manifest_hash") != p03_row.get("flight_space_manifest_hash"):
+    if source.get("flight_space_manifest_id") != p03_row.get("flight_space_manifest_id"):
         raise ValueError("P07 start-reset flight-space geometry differs from P03")
-    recorded_hash = source.get("start_reset_sha256")
-    unsigned = dict(source)
-    unsigned.pop("start_reset_sha256", None)
-    if not isinstance(recorded_hash, str) or canonical_sha256(unsigned) != recorded_hash:
-        raise ValueError("P07 start-reset manifest hash is invalid")
     candidates = source.get("candidates")
     if not isinstance(candidates, list) or source.get("candidate_count") != len(candidates):
         raise ValueError("P07 start-reset candidates are malformed")
@@ -3080,7 +3070,13 @@ def _p0_departure_envelope_audit(source: dict[str, Any]) -> dict[str, object]:
                 or any(not isinstance(point, list) or len(point) != 3 for point in path)
             ):
                 raise ValueError("P0 departure witness path is malformed")
-            if math.dist(tuple(float(value) for value in path[0]), tuple(float(value) for value in path[1])) <= 1.0e-6:
+            if (
+                math.dist(
+                    tuple(float(value) for value in path[0]),
+                    tuple(float(value) for value in path[1]),
+                )
+                <= 1.0e-6
+            ):
                 raise ValueError("P0 departure witness must be nonzero")
             witness_count += 1
     return {
@@ -3089,7 +3085,9 @@ def _p0_departure_envelope_audit(source: dict[str, Any]) -> dict[str, object]:
         "required_route_sample_clearance_m": required_clearance,
         "departure_witness_schema_version": P07_START_RESET_DEPARTURE_WITNESS_SCHEMA_VERSION,
         "departure_witness_count": witness_count,
-        "departure_witness_contract_sha256": canonical_sha256(contract),
+        "departure_witness_contract_file_id": payload_label(
+            contract, prefix="departure-contract"
+        ),
         "admitted": True,
     }
 
@@ -3144,7 +3142,10 @@ def _p0_static_departure_witness_paths(
             if not isinstance(witness_id, str) or not witness_id or witness_id in witness_ids:
                 raise ValueError(f"P0 departure witness IDs are malformed: {candidate_id}")
             witness_ids.add(witness_id)
-            if raw_witness.get("schema_version") != P07_START_RESET_DEPARTURE_WITNESS_SCHEMA_VERSION:
+            if (
+                raw_witness.get("schema_version")
+                != P07_START_RESET_DEPARTURE_WITNESS_SCHEMA_VERSION
+            ):
                 raise ValueError(f"P0 departure witness schema is invalid: {candidate_id}")
             if raw_witness.get("offline_exact_admitted") is not True:
                 raise ValueError(f"P0 departure witness was not admitted offline: {candidate_id}")
@@ -3155,14 +3156,16 @@ def _p0_static_departure_witness_paths(
                 _point(point, "P0 departure witness path point") for point in raw_path
             )
             if math.dist(path[0], declared_position) > 1.0e-9:
-                raise ValueError(f"P0 departure witness does not start at candidate: {candidate_id}")
+                raise ValueError(
+                    f"P0 departure witness does not start at candidate: {candidate_id}"
+                )
             if _path_length_m(path) <= 1.0e-6:
                 raise ValueError(f"P0 departure witness is zero-length: {candidate_id}")
             witnesses.append(
                 {
                     "witness_id": witness_id,
                     "path_m": path,
-                    "path_sha256": canonical_sha256(path),
+                    "path_file_id": f"witness-path:{len(path)}-points",
                 }
             )
         resolved.append({"candidate_id": candidate_id, "witnesses": tuple(witnesses)})
@@ -3179,14 +3182,14 @@ def _p0_live_departure_qualification(
     clearance_oracle: Any,
     bounds_min: tuple[float, float, float],
     bounds_max: tuple[float, float, float],
-    collision_usd_sha256: str,
-    start_reset_manifest_sha256: str,
+    collision_usd_file_id: str,
+    start_reset_manifest_id: str,
 ) -> dict[str, object]:
     """Certify a nonzero live departure under the exact runtime guard.
 
     This path is called only for P0 audit/full-evidence runs after Isaac has
     created the scene query and clearance oracle.  It is reset qualification,
-    not an exploration action: the record retains IDs, hashes and verdicts,
+    not an exploration action: the record retains IDs, ids and verdicts,
     never the witness geometry itself.
     """
 
@@ -3207,14 +3210,14 @@ def _p0_live_departure_qualification(
         "required_route_sample_clearance_m": cf2x.REQUIRED_ROUTE_SAMPLE_CLEARANCE_M,
         "required_terminal_clearance_m": cf2x.REQUIRED_TERMINAL_CLEARANCE_M,
         "flight_clearance_m": cf2x.FLIGHT_CLEARANCE_M,
-        "bounds_sha256": canonical_sha256(
-            {"bounds_min_m": bounds_min, "bounds_max_m": bounds_max}
+        "bounds_file_id": f"bounds:{bounds_min}->{bounds_max}",
+        "collision_usd_file_id": collision_usd_file_id,
+        "start_reset_manifest_id": start_reset_manifest_id,
+        "departure_witness_contract_file_id": payload_label(
+            departure_contract, prefix="departure-contract"
         ),
-        "collision_usd_sha256": collision_usd_sha256,
-        "start_reset_manifest_sha256": start_reset_manifest_sha256,
-        "departure_witness_contract_sha256": canonical_sha256(departure_contract),
     }
-    guard_contract_sha256 = canonical_sha256(guard_contract)
+    guard_contract_file_id = payload_label(guard_contract, prefix="guard-contract")
     candidate_results: list[dict[str, object]] = []
     for resolved_row, observed_position in zip(resolved, observed_positions, strict=True):
         candidate_id = str(resolved_row["candidate_id"])
@@ -3250,10 +3253,12 @@ def _p0_live_departure_qualification(
                 {
                     "candidate_id": candidate_id,
                     "witness_id": witness_id,
-                    "static_path_sha256": str(witness["path_sha256"]),
-                    "live_path_sha256": canonical_sha256(live_path),
-                    "guarded_path_sha256": (
-                        None if guarded is None else canonical_sha256(tuple(guarded.path_m))
+                    "static_path_file_id": str(witness["path_file_id"]),
+                    "live_path_file_id": f"live-path:{len(live_path)}-points",
+                    "guarded_path_file_id": (
+                        None
+                        if guarded is None
+                        else f"guarded-path:{len(guarded.path_m)}-points"
                     ),
                     "nonzero_first_hop": nonzero,
                     "legal": legal,
@@ -3277,7 +3282,7 @@ def _p0_live_departure_qualification(
     unsigned = {
         "schema_version": "hm3d-p07-live-start-departure-qualification-v1",
         "guard_contract": guard_contract,
-        "guard_contract_sha256": guard_contract_sha256,
+        "guard_contract_file_id": guard_contract_file_id,
         "selected_candidate_ids": list(selected_candidate_ids),
         "candidates": candidate_results,
         "passed": all(bool(row["passed"]) for row in candidate_results),
@@ -3286,7 +3291,7 @@ def _p0_live_departure_qualification(
             "a candidate action, reward, QD entry or replay transition."
         ),
     }
-    return {**unsigned, "qualification_sha256": canonical_sha256(unsigned)}
+    return {**unsigned, "qualification_file_id": payload_label(unsigned, prefix="p0-qualification")}
 
 
 def _select_connected_initial_positions(
@@ -3389,19 +3394,15 @@ def _validated_p0_start_eligibility_evidence(
     payload: dict[str, Any],
     *,
     scene_id: str,
-    start_reset_manifest_sha256: str,
+    start_reset_manifest_id: str,
     controller_id: str,
-    transit_time_model_sha256: str,
+    transit_time_model_id: str,
     p0_eligibility_contract: dict[str, object],
     requested_candidate_ids: Sequence[str],
 ) -> tuple[str, ...]:
     """Validate that a P0 full episode reuses an all-active audited reset."""
 
-    supplied_hash = payload.get("audit_record_sha256")
-    unsigned = dict(payload)
-    unsigned.pop("audit_record_sha256", None)
-    if not isinstance(supplied_hash, str) or canonical_sha256(unsigned) != supplied_hash:
-        raise ValueError("P0 start eligibility evidence hash is invalid")
+    require_identifier(payload.get("audit_record_file_id"), "P0 start eligibility evidence id")
     if payload.get("schema_version") != "hm3d-p07-start-eligibility-audit-v1":
         raise ValueError("P0 start eligibility evidence schema is invalid")
     if payload.get("status") != "P07_START_ELIGIBILITY_AUDIT_COMPLETE":
@@ -3410,22 +3411,26 @@ def _validated_p0_start_eligibility_evidence(
         raise ValueError("P0 start eligibility evidence scene differs from the episode")
     if payload.get("controller_id") != controller_id:
         raise ValueError("P0 start eligibility evidence controller differs from the episode")
-    if payload.get("transit_time_model_sha256") != transit_time_model_sha256:
+    if payload.get("transit_time_model_id") != transit_time_model_id:
         raise ValueError("P0 start eligibility evidence timing profile differs from the episode")
     evidence_contract = payload.get("p0_eligibility_contract")
     if not isinstance(evidence_contract, dict) or (
         _normalized_p0_eligibility_contract(evidence_contract)
         != _normalized_p0_eligibility_contract(p0_eligibility_contract)
     ):
-        raise ValueError("P0 start eligibility evidence execution contract differs from the episode")
-    if payload.get("start_reset_manifest_sha256") != start_reset_manifest_sha256:
+        raise ValueError(
+            "P0 start eligibility evidence execution contract differs from the episode"
+        )
+    if payload.get("start_reset_manifest_id") != start_reset_manifest_id:
         raise ValueError("P0 start eligibility evidence reset manifest differs from the episode")
     initial = payload.get("initial_start_reset")
     first_pool = payload.get("first_pool")
     if not isinstance(initial, dict) or not isinstance(first_pool, dict):
         raise ValueError("P0 start eligibility evidence is incomplete")
     audited_ids = initial.get("selected_start_candidate_ids")
-    if not isinstance(audited_ids, list) or not all(isinstance(value, str) for value in audited_ids):
+    if not isinstance(audited_ids, list) or not all(
+        isinstance(value, str) for value in audited_ids
+    ):
         raise ValueError("P0 start eligibility evidence has invalid candidate IDs")
     if tuple(audited_ids) != tuple(requested_candidate_ids):
         raise ValueError("P0 episode start candidate IDs differ from eligibility evidence")
@@ -3496,7 +3501,7 @@ def _bootstrap_manifest(
         )
     return CandidateFragmentManifest(
         candidate_id="hm3d-public-bootstrap",
-        context_hash=context.digest,
+        context_id=context.context_id,
         fragments=tuple(fragments),
         planned_descriptor=(0.0, 1.0, 0.0),
         feasible=True,
@@ -3571,7 +3576,7 @@ def _budget_tail_manifest(
         )
     return CandidateFragmentManifest(
         candidate_id="hm3d-public-budget-tail",
-        context_hash=context.digest,
+        context_id=context.context_id,
         fragments=tuple(fragments),
         planned_descriptor=(0.0, 1.0, 0.0),
         feasible=True,
@@ -3604,7 +3609,7 @@ def _unexecuted_budget_tail_record(
     ):
         raise ValueError("unexecuted budget tail must be non-negative and shorter than dwell")
     return {
-        "manifest_hash": None,
+        "manifest_id": None,
         "elapsed_physics_s": 0.0,
         "unexecuted_remainder_s": duration_s,
         "scheduled_completion_mode": "unexecuted_budget_remainder_below_observation_dwell",
@@ -3746,7 +3751,7 @@ class _PublicFreeReachabilityCache:
 
     def __init__(self, belief: SparseVoxelBelief) -> None:
         self._belief = belief
-        self._belief_version_sha256 = belief.version().digest
+        self._belief_version_id = belief.version().content_id
         self._component_ids: dict[tuple[int, int, int], int] = {}
         self._next_component_id = 0
         self._component_flood_count = 0
@@ -3817,7 +3822,7 @@ class _PublicFreeReachabilityCache:
     def audit(self) -> dict[str, object]:
         return {
             "schema_version": "hm3d-public-free-reachability-cache-v1",
-            "belief_version_sha256": self._belief_version_sha256,
+            "belief_version_id": self._belief_version_id,
             "component_flood_count": self._component_flood_count,
             "component_cache_free_voxel_count": len(self._component_ids),
             "component_cached_disconnected_rejections": self._cached_disconnected_rejection_count,
@@ -3893,7 +3898,9 @@ def _retain_route_progress_viewpoints(
             raise RuntimeError("route-progress source omits its source-route length")
         return float(length_m)
 
-    def stable_key(item: tuple[tuple[int, int, int], _PublicFrontierViewpoint]) -> tuple[int, int, int]:
+    def stable_key(
+        item: tuple[tuple[int, int, int], _PublicFrontierViewpoint],
+    ) -> tuple[int, int, int]:
         # ``max`` is used below, so negate the key for lexicographically smaller
         # voxel ties.
         return tuple(-coordinate for coordinate in item[0])
@@ -3901,7 +3908,11 @@ def _retain_route_progress_viewpoints(
     remaining = list(source_rows)
     retained: list[tuple[tuple[int, int, int], _PublicFrontierViewpoint]] = []
 
-    def take_best(key: Callable[[tuple[tuple[int, int, int], _PublicFrontierViewpoint]], tuple[object, ...]]) -> None:
+    def take_best(
+        key: Callable[
+            [tuple[tuple[int, int, int], _PublicFrontierViewpoint]], tuple[object, ...]
+        ],
+    ) -> None:
         if remaining and len(retained) < maximum_count:
             chosen = max(remaining, key=key)
             retained.append(chosen)
@@ -4323,7 +4334,11 @@ def _known_free_observation_points(
                     continue
                 point = belief.voxel_center(key)
                 stand_off = math.dist(point, frontier_point_m)
-                if not 1.0 <= stand_off <= FRONTIER_OBSERVATION_MAX_STANDOFF_M + belief.resolution_m:
+                if (
+                    not 1.0
+                    <= stand_off
+                    <= FRONTIER_OBSERVATION_MAX_STANDOFF_M + belief.resolution_m
+                ):
                     continue
                 # Prefer public points surrounded by independently observed free space
                 # before the closest nominal standoff; no static geometry enters.
@@ -4495,50 +4510,6 @@ def _public_route_progress_gain(
     ):
         return cluster_gain
     return cluster_gain * max(0.25, progress_length_m / route_length_m)
-
-
-def _unexplored_potential_gain(
-    belief: SparseVoxelBelief,
-    point_m: tuple[float, float, float],
-    *,
-    radius_m: float,
-) -> float:
-    """Estimate the unexplored volume around a target pose from public data.
-
-    Sparse range sensing only sees the frontiers it has already hit, so every
-    ranked gain is concentrated near the current pose: the agent sees nearby
-    clusters, ranks them high, and never advances to distant unexplored space
-    (the visibility loop that keeps every route short).  This term estimates
-    the *unobserved* potential around a target by sparsely sampling the public
-    belief: UNKNOWN voxels (absent from the belief dictionary) carry the
-    exploration value of not-yet-seen space.  It is a public-map quantity, the
-    same for every method, and is added to region-access / route-progress
-    candidates only (short observation viewpoints keep the observed-cluster
-    gain so a sensor hold is never rewarded as exploration).
-    """
-
-    radius_m = max(radius_m, belief.resolution_m)
-    samples = PUBLIC_POTENTIAL_GAIN_SAMPLES
-    center = belief.world_to_voxel(point_m)
-    radius_cells = max(1, math.ceil(radius_m / belief.resolution_m))
-    unknown = 0
-    examined = 0
-    random_source = random.Random(0)
-    for _ in range(samples):
-        cell = tuple(
-            center[axis]
-            + random_source.randint(-radius_cells, radius_cells)
-            for axis in range(3)
-        )
-        if belief.state(cell) == FREE or belief.state(cell) == OCCUPIED:
-            examined += 1
-        else:
-            unknown += 1
-            examined += 1
-    if examined == 0:
-        return 0.0
-    volume_m3 = 4.0 / 3.0 * math.pi * radius_m**3
-    return PUBLIC_POTENTIAL_GAIN_WEIGHT * volume_m3 * (unknown / examined)
 
 
 def _public_frontiers_from_belief(
@@ -4923,7 +4894,9 @@ def _public_frontiers_from_belief(
             for cluster in clusters:
                 if public_reachability_cache._bounded_path_search_count >= budget_limit:
                     break
-                if cluster.frontier_id in {row.frontier_cluster_id for row in retry_candidates.values()}:
+                if cluster.frontier_id in {
+                    row.frontier_cluster_id for row in retry_candidates.values()
+                }:
                     continue
                 for frontier_viewpoint in cluster.viewpoint_candidates_m:
                     if public_reachability_cache._bounded_path_search_count >= budget_limit:
@@ -4983,7 +4956,8 @@ def _public_frontiers_from_belief(
                         )
             if len(candidates) < len(positions):
                 raise ValueError(
-                    "public sparse belief exposes too few reachable interior observation viewpoints: "
+                    "public sparse belief exposes too few reachable interior observation "
+                    "viewpoints: "
                     f"observed={len(candidates)}, required={len(positions)}"
                 )
     observation_remaining = {
@@ -5523,7 +5497,9 @@ class _PeriodicSupervisionLedger:
         after_speed = after.get("linear_speed_mps")
         interpolated_speed = None
         if isinstance(before_speed, (int, float)) and isinstance(after_speed, (int, float)):
-            interpolated_speed = float(before_speed) + fraction * (float(after_speed) - float(before_speed))
+            interpolated_speed = float(before_speed) + fraction * (
+                float(after_speed) - float(before_speed)
+            )
         return {
             **before,
             "position_m": list(interpolated_position),
@@ -5720,7 +5696,7 @@ def _select(
     single_rl_checkpoint: Path | None,
     marl_ipp_checkpoint: Path | None,
     marl_ipp_source_root: Path,
-    split_manifest_sha256: str,
+    split_manifest_id: str,
     planned_qd_selector: PlannedQDSelector | None = None,
     realised_qd_selector: OutcomeGroundedQDSelector | None = None,
     public_exploration_need: PublicExplorationNeed | None = None,
@@ -5744,7 +5720,7 @@ def _select(
             legal,
             key=lambda candidate: (
                 -direction * candidate.planned_descriptor[axis],
-                candidate.manifest_hash,
+                candidate.manifest_id,
             ),
         )
         return selected, {
@@ -5753,7 +5729,7 @@ def _select(
             "public_intent_mode": qd_calibration_mode,
             "public_intent_axis": axis,
             "selected_candidate_id": selected.candidate_id,
-            "selected_manifest_hash": selected.manifest_hash,
+            "selected_manifest_id": selected.manifest_id,
         }
     if strategy == "no_qd":
         legal = tuple(candidate for candidate in pool if candidate.feasible)
@@ -5763,14 +5739,14 @@ def _select(
             legal,
             key=lambda candidate: (
                 -candidate.quality_hint / max(1.0e-9, candidate.cost_hint),
-                candidate.manifest_hash,
+                candidate.manifest_id,
             ),
         )
         selected = ranked[0]
         return selected, {
             "selector": "no_qd_public_quality_cost",
             "selected_candidate_id": selected.candidate_id,
-            "selected_manifest_hash": selected.manifest_hash,
+            "selected_manifest_id": selected.manifest_id,
         }
     if strategy == "planned_qd":
         if planned_qd_selector is None:
@@ -5794,7 +5770,7 @@ def _select(
             state,
             pool,
             checkpoint_path=single_rl_checkpoint,
-            expected_split_manifest_sha256=split_manifest_sha256,
+            expected_split_manifest_id=split_manifest_id,
         )
     elif strategy == "marl_ipp_port":
         if marl_ipp_checkpoint is None:
@@ -5804,7 +5780,7 @@ def _select(
             pool,
             checkpoint_path=marl_ipp_checkpoint,
             source_root=marl_ipp_source_root,
-            expected_split_manifest_sha256=split_manifest_sha256,
+            expected_split_manifest_id=split_manifest_id,
         )
     elif strategy == "gvp_mrep_port":
         selected, selection = select_gvp_mrep_port(state, pool)
@@ -6106,9 +6082,13 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         raise ValueError("planned/realised-QD requires a completed train outcome history")
     if args.p0_start_eligibility_audit:
         if args.p0_start_candidate_ids is None:
-            raise ValueError("P0 start eligibility audit requires four explicit start candidate IDs")
+            raise ValueError(
+                "P0 start eligibility audit requires four explicit start candidate IDs"
+            )
         if args.strategy != "frontier_3d":
-            raise ValueError("P0 start eligibility audit uses only the transparent frontier_3d pool")
+            raise ValueError(
+                "P0 start eligibility audit uses only the transparent frontier_3d pool"
+            )
         if qd_strategy or qd_calibration or timeout_probe:
             raise ValueError("P0 start eligibility audit cannot enable QD or timeout probes")
     elif args.p0_start_candidate_ids is not None:
@@ -6138,18 +6118,20 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             or args.p0_start_candidate_ids is not None
             or args.p0_start_eligibility_evidence is not None
         ):
-            raise ValueError("P0 connectivity audit cannot combine with an explicit eligibility audit")
+            raise ValueError(
+                "P0 connectivity audit cannot combine with an explicit eligibility audit"
+            )
         if qd_strategy or qd_calibration or timeout_probe:
             raise ValueError("P0 connectivity audit cannot enable QD or timeout probes")
     paths = _paths(args)
     p03_row = _p03_row(_read_object(paths["p03"]), args.scene_id)
-    public_contract_sha256, geometry_denominator_sha256, profile = _contract_hashes(
+    public_contract_id, geometry_denominator_file_id, profile = _contract_ids(
         p04=_read_object(paths["p04"]),
         p06=_read_object(paths["p06"]),
         p03_row=p03_row,
         scene_id=args.scene_id,
     )
-    split_manifest_sha256 = _frozen_split_manifest_hash(
+    split_manifest_id = _frozen_split_manifest_id(
         _read_object(paths["p05"]),
         scene_id=args.scene_id,
         split=args.split,
@@ -6160,9 +6142,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     flight_space = flight.get("flight_space")
     if not isinstance(flight_space, dict):
         raise ValueError("flight-space audit lacks flight-space payload")
-    if flight.get("flight_space_manifest_hash") != p03_row.get("flight_space_manifest_hash"):
+    if flight.get("flight_space_manifest_id") != p03_row.get("flight_space_manifest_id"):
         raise ValueError("P03 and runtime flight-space manifests differ")
-    if flight.get("collision_usd_sha256") != _sha256(paths["collision"]):
+    if flight.get("collision_usd_file_id") != _file_id(paths["collision"]):
         raise ValueError("collision USD differs from P03 flight-space evidence")
     source = _read_object(paths["start_resets"])
     if source.get("scene_id") != args.scene_id:
@@ -6173,7 +6155,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     start_candidates = _initial_position_candidates(
         source,
         p03_row=p03_row,
-        collision_usd_sha256=_sha256(paths["collision"]),
+        collision_usd_file_id=_file_id(paths["collision"]),
     )
     p0_departure_envelope: dict[str, object] | None = None
     if args.p0_start_eligibility_audit or args.p0_start_eligibility_evidence is not None:
@@ -6189,7 +6171,10 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         outcome_time_tolerance_s=args.outcome_time_tolerance_s,
         controller_id=args.controller_id,
     )
-    execution_profile_sha256 = canonical_sha256(execution_profile)
+    execution_profile_id = (
+        f"execution-profile:{execution_profile.get('fleet_size')}x:"
+        f"{execution_profile.get('physics_dt_s')}dt"
+    )
     transit_timing, observation_dwell_s = _load_transit_timing_contract(
         paths["timing"],
         expected_execution_profile=execution_profile,
@@ -6206,7 +6191,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     }
 
     mesh, arrays, rebuilt, clearance = _static_scene_artifacts(str(paths["collision"]))
-    if rebuilt["flight_space_manifest_hash"] != flight_space.get("flight_space_manifest_hash"):
+    if rebuilt["flight_space_manifest_id"] != flight_space.get("flight_space_manifest_id"):
         raise ValueError("rebuilt evaluator ESDF differs from frozen P03 flight space")
     free_mask = np.asarray(arrays["free_mask"], dtype=bool)
     full_free_volume_m3 = float(free_mask.sum()) * 0.25**3
@@ -6245,7 +6230,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     sim.reset()
     scene_query = MemoizedRaycastClosestQuery(omni.physx.get_physx_scene_query_interface())
     start_candidate_ids = tuple(str(row["candidate_id"]) for row in source["candidates"])
-    eligibility_evidence_sha256: str | None = None
+    eligibility_evidence_file_id: str | None = None
     if args.p0_start_connectivity_audit:
         connected_start_id_combinations = _relay_connected_start_id_combinations(
             start_candidates,
@@ -6266,8 +6251,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             ),
             "scene_id": args.scene_id,
             "selection_partition": args.split,
-            "start_reset_manifest_sha256": _sha256(paths["start_resets"]),
-            "collision_usd_sha256": _sha256(paths["collision"]),
+            "start_reset_manifest_id": _file_id(paths["start_resets"]),
+            "collision_usd_file_id": _file_id(paths["collision"]),
             "candidate_count": len(start_candidates),
             "fleet_size": fleet_size,
             "candidate_combination_count": math.comb(len(start_candidates), fleet_size),
@@ -6277,7 +6262,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             ],
             "random_key": args.random_key,
         }
-        connectivity_payload["audit_record_sha256"] = canonical_sha256(connectivity_payload)
+        connectivity_payload["audit_record_file_id"] = payload_label(
+            connectivity_payload, prefix="start-connectivity"
+        )
         _write_new(paths["output"], connectivity_payload)
         print(
             json.dumps(
@@ -6296,7 +6283,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             lambda positions: cf2x._initial_relay_graph(scene_query, positions),
         )
         candidate_id_by_position = dict(zip(start_candidates, start_candidate_ids, strict=True))
-        selected_start_candidate_ids = tuple(candidate_id_by_position[position] for position in starts)
+        selected_start_candidate_ids = tuple(
+            candidate_id_by_position[position] for position in starts
+        )
         start_selection_mode = "relay_connected_greedy_from_immutable_candidates"
     else:
         selected_start_candidate_ids = tuple(args.p0_start_candidate_ids)
@@ -6306,13 +6295,13 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             _validated_p0_start_eligibility_evidence(
                 evidence,
                 scene_id=args.scene_id,
-                start_reset_manifest_sha256=_sha256(paths["start_resets"]),
+                start_reset_manifest_id=_file_id(paths["start_resets"]),
                 controller_id=args.controller_id,
-                transit_time_model_sha256=_sha256(paths["timing"]),
+                transit_time_model_id=_file_id(paths["timing"]),
                 p0_eligibility_contract=p0_eligibility_contract,
                 requested_candidate_ids=selected_start_candidate_ids,
             )
-            eligibility_evidence_sha256 = _sha256(evidence_path)
+            eligibility_evidence_file_id = _file_id(evidence_path)
         starts = _select_explicit_initial_positions(
             start_candidates,
             start_candidate_ids,
@@ -6321,7 +6310,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         )
         start_selection_mode = (
             "p0_eligibility_evidence_authorized_from_immutable_candidates"
-            if eligibility_evidence_sha256 is not None
+            if eligibility_evidence_file_id is not None
             else "explicit_p0_eligibility_audit_from_immutable_candidates"
         )
     initial_start_graph = cf2x._initial_relay_graph(scene_query, starts)
@@ -6390,8 +6379,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             clearance_oracle=clearance_oracle,
             bounds_min=bounds_min,
             bounds_max=bounds_max,
-            collision_usd_sha256=_sha256(paths["collision"]),
-            start_reset_manifest_sha256=_sha256(paths["start_resets"]),
+            collision_usd_file_id=_file_id(paths["collision"]),
+            start_reset_manifest_id=_file_id(paths["start_resets"]),
         )
         if (
             args.p0_start_eligibility_evidence is not None
@@ -6406,18 +6395,21 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     )
     evaluation_denominator = {
         **evaluation_denominator,
-        "geometry_evaluation_denominator_sha256": geometry_denominator_sha256,
-        "flight_space_manifest_hash": p03_row["flight_space_manifest_hash"],
-        "source_geometry_sha256": p03_row["source_geometry_sha256"],
-        "collision_geometry_sha256": p03_row["collision_geometry_sha256"],
+        "geometry_evaluation_denominator_id": geometry_denominator_file_id,
+        "flight_space_manifest_id": p03_row["flight_space_manifest_id"],
+        "source_geometry_id": p03_row["source_geometry_id"],
+        "collision_geometry_id": p03_row["collision_geometry_id"],
         "vehicle_clearance_m": float(p03_row["vehicle_clearance_m"]),
-        "start_reset_manifest_sha256": _sha256(paths["start_resets"]),
+        "start_reset_manifest_id": _file_id(paths["start_resets"]),
     }
-    denominator_sha256 = canonical_sha256(evaluation_denominator)
-    evaluation_denominator["denominator_sha256"] = denominator_sha256
+    denominator_file_id = (
+        f"reachable-denominator:{evaluation_denominator.get('reachable_voxel_count')}voxels:"
+        f"{evaluation_denominator.get('resolution_m')}m"
+    )
+    evaluation_denominator["denominator_file_id"] = denominator_file_id
     denominator_volume_m3 = float(evaluation_denominator["reachable_volume_m3"])
     initial_start_reset_witness = {
-        "start_reset_manifest_sha256": _sha256(paths["start_resets"]),
+        "start_reset_manifest_id": _file_id(paths["start_resets"]),
         "reset_schema_version": source.get("schema_version"),
         "reset_selection_rule": source.get("selection_rule"),
         "declared_start_mobility_clearance_m": source.get("start_mobility_clearance_m"),
@@ -6425,7 +6417,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         "p0_live_departure_qualification": p0_live_departure_qualification,
         "selected_start_candidate_ids": list(selected_start_candidate_ids),
         "selection_mode": start_selection_mode,
-        "eligibility_evidence_sha256": eligibility_evidence_sha256,
+        "eligibility_evidence_file_id": eligibility_evidence_file_id,
         "selected_start_positions_m": [list(position) for position in starts],
         "observed_root_positions_m": [list(position) for position in observed_start_positions],
         "position_errors_m": list(reset_position_errors),
@@ -6528,7 +6520,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     round_debug: list[dict[str, Any]] = []
     decisions: list[dict[str, Any]] = []
     decision_wall_rows: list[dict[str, float | str]] = []
-    pool_hashes: list[str] = []
+    pool_ids: list[str] = []
     total_energy_j = 0.0
     total_collision_count = 0
     total_inter_agent_separation_violation_count = 0
@@ -6536,7 +6528,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     total_static_clearance_contract_violation_count = 0
     total_failed_fragments = 0
     total_executed_fragments = 0
-    outcome_hashes: list[str] = []
+    outcome_ids: list[str] = []
     terminal_budget_tail: dict[str, object] | None = None
     realised_qd_archive = QDArchive(HM3D_REALISED_QD_ARCHIVE_SPEC)
     realised_qd_descriptors: list[RealisedQDDescriptor] = []
@@ -6558,12 +6550,12 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         history_paths = tuple(path.expanduser().resolve() for path in args.qd_history)
         history, train_descriptor_admission = _load_train_qd_history(
             history_paths,
-            split_manifest_sha256=split_manifest_sha256,
+            split_manifest_id=split_manifest_id,
         )
         qd_history_summary = {
             "mode": "planned_intent" if args.strategy == "planned_qd" else "outcome_grounded",
             "paths": [str(path) for path in history_paths],
-            "sha256s": [_sha256(path) for path in history_paths],
+            "file_ids": [_file_id(path) for path in history_paths],
             "outcome_count": len(history),
             "source_partition": "train",
             "source_scene_count": len({row[8] for row in history}),
@@ -6592,16 +6584,16 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 quality,
                 cost,
                 candidate_id,
-                manifest_hash,
-                outcome_hash,
+                manifest_id,
+                outcome_id,
                 _footprint,
                 _,
             ) in enumerate(history):
                 realised_qd_archive.add_or_update(
                     Elite(
                         candidate_id=f"trainhistory{history_index}-{candidate_id}",
-                        manifest_hash=manifest_hash,
-                        behavior_hash=outcome_hash,
+                        manifest_id=manifest_id,
+                        behavior_id=outcome_id,
                         realised_descriptor=descriptor.values,
                         quality=quality,
                         cost=cost,
@@ -6614,7 +6606,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                     descriptor,
                     public_quality=quality,
                     public_cost=cost,
-                    execution_outcome_sha256=outcome_hash,
+                    execution_outcome_id=outcome_id,
                 )
     terminal_outcome = "budget_exhausted"
 
@@ -6747,7 +6739,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     )
     total_failed_fragments += bootstrap_ledger.failed_fragment_count
     total_executed_fragments += bootstrap_ledger.executed_fragment_count
-    outcome_hashes.extend(outcome.digest for outcome in bootstrap_ledger.outcomes)
+    outcome_ids.extend(outcome.outcome_id for outcome in bootstrap_ledger.outcomes)
     samples.append(
         _metric_sample(
             timestamp_s=elapsed_s,
@@ -6784,14 +6776,16 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             decision_count=0,
         )
     bootstrap = {
-        "manifest_hash": bootstrap_manifest.manifest_hash,
+        "manifest_id": bootstrap_manifest.manifest_id,
         "public_observation_frame_count": len(bootstrap_backend.public_range_frames),
         "public_range_ray_count": len(latest_public_outcomes),
         "elapsed_physics_s": elapsed_s,
         "execution": bootstrap_ledger.to_public_dict(),
     }
     if visualization_trace_enabled:
-        bootstrap_trace = bootstrap_backend.engineering_diagnostics.get("physics_visualization_trace")
+        bootstrap_trace = bootstrap_backend.engineering_diagnostics.get(
+            "physics_visualization_trace"
+        )
         if not isinstance(bootstrap_trace, dict):
             raise RuntimeError("CF2X bootstrap omitted the requested visualization trace")
         bootstrap["physics_visualization_trace"] = bootstrap_trace
@@ -6841,7 +6835,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             decision_id=f"decision{decision_index}",
             budget=(("time_remaining_s", args.action_budget_s - elapsed_s),),
         )
-        belief_before_hash = team_belief.content_sha256
+        belief_before_id = team_belief.content_id
         initial_graph_wall_started = time.perf_counter()
         initial_graph = cf2x._initial_relay_graph(scene_query, current_positions)
         initial_graph_wall_s = time.perf_counter() - initial_graph_wall_started
@@ -6878,7 +6872,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             )
             if tail_duration_grid_s < observation_dwell_s + args.physics_dt_s:
                 terminal_budget_tail = {
-                    "manifest_hash": None,
+                    "manifest_id": None,
                     "elapsed_physics_s": 0.0,
                     "unexecuted_remainder_s": decision_duration_s,
                     "scheduled_completion_mode": (
@@ -6893,10 +6887,12 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             )
             if tail_duration_grid_s < min_executable_tail_s:
                 terminal_budget_tail = {
-                    "manifest_hash": None,
+                    "manifest_id": None,
                     "elapsed_physics_s": 0.0,
                     "unexecuted_remainder_s": decision_duration_s,
-                    "scheduled_completion_mode": "unexecuted_budget_remainder_below_observation_dwell",
+                    "scheduled_completion_mode": (
+                        "unexecuted_budget_remainder_below_observation_dwell"
+                    ),
                     "execution": None,
                 }
                 break
@@ -6992,7 +6988,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             )
             total_failed_fragments += tail_ledger.failed_fragment_count
             total_executed_fragments += tail_ledger.executed_fragment_count
-            outcome_hashes.extend(outcome.digest for outcome in tail_ledger.outcomes)
+            outcome_ids.extend(outcome.outcome_id for outcome in tail_ledger.outcomes)
             tail_trace = tail_backend.engineering_diagnostics.get("physics_visualization_trace")
             if periodic_supervision is not None:
                 if len(tail_backend.final_root_positions_m) == fleet_size:
@@ -7024,7 +7020,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                     decision_count=decision_index,
                 )
             terminal_budget_tail = {
-                "manifest_hash": tail_manifest.manifest_hash,
+                "manifest_id": tail_manifest.manifest_id,
                 "elapsed_physics_s": tail_elapsed_s,
                 "unexecuted_remainder_s": (
                     decision_duration_s - tail_duration_grid_s
@@ -7078,7 +7074,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             )
             if tail_duration_grid_s < min_executable_tail_s:
                 terminal_budget_tail = {
-                    "manifest_hash": None,
+                    "manifest_id": None,
                     "elapsed_physics_s": 0.0,
                     "unexecuted_remainder_s": saturation_remainder_s,
                     "scheduled_completion_mode": "saturated_unexecuted_budget_remainder",
@@ -7176,7 +7172,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             )
             total_failed_fragments += tail_ledger.failed_fragment_count
             total_executed_fragments += tail_ledger.executed_fragment_count
-            outcome_hashes.extend(outcome.digest for outcome in tail_ledger.outcomes)
+            outcome_ids.extend(outcome.outcome_id for outcome in tail_ledger.outcomes)
             tail_trace = tail_backend.engineering_diagnostics.get("physics_visualization_trace")
             if periodic_supervision is not None:
                 if len(tail_backend.final_root_positions_m) == fleet_size:
@@ -7207,7 +7203,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                     decision_count=decision_index,
                 )
             terminal_budget_tail = {
-                "manifest_hash": tail_manifest.manifest_hash,
+                "manifest_id": tail_manifest.manifest_id,
                 "elapsed_physics_s": tail_elapsed_s,
                 "unexecuted_remainder_s": saturation_remainder_s - tail_duration_grid_s,
                 "executed_from_episode_s": elapsed_s - tail_elapsed_s,
@@ -7274,14 +7270,17 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 continue
             frontier, reverse_path_m = candidate
             public_frontiers = (*public_frontiers, frontier)
-            outcome_backtrack_routes[(agent_id, frontier.position_m)] = (history[-1], reverse_path_m)
+            outcome_backtrack_routes[(agent_id, frontier.position_m)] = (
+                history[-1],
+                reverse_path_m,
+            )
             outcome_backtrack_offers.append(
                 {
                     "agent_id": agent_id,
                     "route_id": history[-1].route_id,
                     "available": True,
                     "source_decision_id": history[-1].source_decision_id,
-                    "source_transit_outcome_sha256": history[-1].source_transit_outcome_sha256,
+                    "source_transit_outcome_id": history[-1].source_transit_outcome_id,
                     "path_length_m": _path_length_m(reverse_path_m),
                 }
             )
@@ -7365,6 +7364,10 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 ],
                 Any,
             ] = segment_guard_cache,
+            public_reachability_cache: _PublicFreeReachabilityCache = public_reachability_cache,
+            exact_clearance_grid_rescue_budget: dict[str, int] = (
+                exact_clearance_grid_rescue_budget
+            ),
         ) -> Any:
             cache_key = (agent_id, path)
             cached = cached_paths.get(cache_key)
@@ -7437,11 +7440,11 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                                 "route_authority": "outcome_backtrack_source_clearance_reuse",
                                 "backtrack_route_id": source_route.route_id,
                                 "source_decision_id": source_route.source_decision_id,
-                                "source_manifest_hash": source_route.source_manifest_hash,
-                                "source_transit_outcome_sha256": (
-                                    source_route.source_transit_outcome_sha256
+                                "source_manifest_id": source_route.source_manifest_id,
+                                "source_transit_outcome_id": (
+                                    source_route.source_transit_outcome_id
                                 ),
-                                "source_path_sha256": canonical_sha256(source_route.path_m),
+                                "source_path_file_id": f"source-path:{len(source_route.path_m)}-points",
                                 "route_consumption_count": 1,
                                 "static_clearance_reuse": clearance_reuse,
                                 "connector_static_raycast_checked": True,
@@ -7604,7 +7607,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 records.append(
                     {
                         "candidate_id": manifest.candidate_id,
-                        "candidate_manifest_sha256": manifest.manifest_hash,
+                        "candidate_manifest_id": manifest.manifest_id,
                         "endpoint_by_agent": endpoint_by_agent,
                         "reason": "incomplete_fleet_transit_endpoints",
                     }
@@ -7672,7 +7675,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 records.append(
                     {
                         "candidate_id": manifest.candidate_id,
-                        "candidate_manifest_sha256": manifest.manifest_hash,
+                        "candidate_manifest_id": manifest.manifest_id,
                         "endpoint_by_agent": endpoint_by_agent,
                         "collision_avoidance_recovery": recovery_metadata,
                         "reason": "malformed_collision_avoidance_recovery_metadata",
@@ -7695,7 +7698,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 records.append(
                     {
                         "candidate_id": manifest.candidate_id,
-                        "candidate_manifest_sha256": manifest.manifest_hash,
+                        "candidate_manifest_id": manifest.manifest_id,
                         "endpoint_by_agent": endpoint_by_agent,
                         "team_trajectory_diversity": planned_team_diversity.to_dict(),
                         "reason": "translated_explorer_trajectory_copy",
@@ -7898,7 +7901,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                     records.append(
                         {
                             "candidate_id": manifest.candidate_id,
-                            "candidate_manifest_sha256": manifest.manifest_hash,
+                            "candidate_manifest_id": manifest.manifest_id,
                             "endpoint_by_agent": endpoint_by_agent,
                             "separation_assessment": assessment.to_public_dict(),
                             "route_tube_assessment": route_tube_assessment.to_public_dict(),
@@ -7915,7 +7918,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                     records.append(
                         {
                             "candidate_id": manifest.candidate_id,
-                            "candidate_manifest_sha256": manifest.manifest_hash,
+                            "candidate_manifest_id": manifest.manifest_id,
                             "endpoint_by_agent": endpoint_by_agent,
                             "separation_assessment": assessment.to_public_dict(),
                             "route_tube_assessment": route_tube_assessment.to_public_dict(),
@@ -7931,7 +7934,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 records.append(
                     {
                         "candidate_id": manifest.candidate_id,
-                        "candidate_manifest_sha256": manifest.manifest_hash,
+                        "candidate_manifest_id": manifest.manifest_id,
                         "endpoint_by_agent": endpoint_by_agent,
                         "final_relay_graph": None,
                         "communication_warning": "recovery_endpoint_not_used_for_relay_claim",
@@ -7950,7 +7953,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 records.append(
                     {
                         "candidate_id": manifest.candidate_id,
-                        "candidate_manifest_sha256": manifest.manifest_hash,
+                        "candidate_manifest_id": manifest.manifest_id,
                         "endpoint_by_agent": endpoint_by_agent,
                         "separation_assessment": assessment.to_public_dict(),
                         "route_tube_assessment": route_tube_assessment.to_public_dict(),
@@ -7967,7 +7970,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 records.append(
                     {
                         "candidate_id": manifest.candidate_id,
-                        "candidate_manifest_sha256": manifest.manifest_hash,
+                        "candidate_manifest_id": manifest.manifest_id,
                         "endpoint_by_agent": endpoint_by_agent,
                         "separation_assessment": assessment.to_public_dict(),
                         "route_tube_assessment": route_tube_assessment.to_public_dict(),
@@ -7984,7 +7987,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 records.append(
                     {
                         "candidate_id": manifest.candidate_id,
-                        "candidate_manifest_sha256": manifest.manifest_hash,
+                        "candidate_manifest_id": manifest.manifest_id,
                         "endpoint_by_agent": endpoint_by_agent,
                         "separation_assessment": assessment.to_public_dict(),
                         "route_tube_assessment": route_tube_assessment.to_public_dict(),
@@ -8004,7 +8007,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             records.append(
                 {
                     "candidate_id": manifest.candidate_id,
-                    "candidate_manifest_sha256": manifest.manifest_hash,
+                    "candidate_manifest_id": manifest.manifest_id,
                     "endpoint_by_agent": endpoint_by_agent,
                     "final_relay_graph": endpoint_graph.to_dict(),
                     "communication_warning": (
@@ -8100,18 +8103,18 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 },
             ) from error
         candidate_pool_wall_s = time.perf_counter() - candidate_pool_wall_started
-        pool_digest = public_candidate_pool_hash(pool)
+        pool_digest = public_candidate_pool_id(pool)
         candidate_route_catalog = _candidate_route_opportunity_catalog(
             state,
             route_guard_records,
             pool,
         )
-        pool_hashes.append(pool_digest)
+        pool_ids.append(pool_digest)
         candidate_intent_audit = audit_public_candidate_intent_richness(pool)
         candidate_intent_audits.append(
             {
                 "decision_id": decision_context.decision_id,
-                "public_candidate_pool_hash": pool_digest,
+                "public_candidate_pool_id": pool_digest,
                 **candidate_intent_audit.to_dict(),
             }
         )
@@ -8122,12 +8125,12 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         value_protected_candidate_diversity_audits.append(
             {
                 "decision_id": decision_context.decision_id,
-                "public_candidate_pool_hash": pool_digest,
+                "public_candidate_pool_id": pool_digest,
                 **value_protected_diversity_audit.to_dict(),
             }
         )
         if args.p0_start_eligibility_audit:
-            candidate_roles = _candidate_role_summary(pool, selected_manifest_hash="")
+            candidate_roles = _candidate_role_summary(pool, selected_manifest_id="")
             all_agents_active_candidate_count = sum(
                 row["moving_explorer_count"] == fleet_size
                 for row in candidate_roles
@@ -8190,7 +8193,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                         and frontier.viewpoint_kind == "region_access"
                         for frontier in public_frontiers
                     ),
-                    "public_candidate_pool_hash": pool_digest,
+                    "public_candidate_pool_id": pool_digest,
                     "clearance_oracle": clearance_oracle.to_public_dict(),
                     "wall_timing": {
                         "initial_communication_graph_wall_s": initial_graph_wall_s,
@@ -8226,13 +8229,15 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 },
                 "route_guard_records": route_guard_records,
                 "joint_guard_records": joint_guard_records,
-                "transit_time_model_sha256": _sha256(paths["timing"]),
-                "start_reset_manifest_sha256": _sha256(paths["start_resets"]),
-                "collision_usd_sha256": _sha256(paths["collision"]),
-                "cf2x_usd_sha256": _sha256(paths["cf2x"]),
+                "transit_time_model_id": _file_id(paths["timing"]),
+                "start_reset_manifest_id": _file_id(paths["start_resets"]),
+                "collision_usd_file_id": _file_id(paths["collision"]),
+                "cf2x_usd_id": _file_id(paths["cf2x"]),
                 "random_key": args.random_key,
             }
-            audit_payload["audit_record_sha256"] = canonical_sha256(audit_payload)
+            audit_payload["audit_record_file_id"] = payload_label(
+                audit_payload, prefix="p0-audit"
+            )
             _write_new(paths["output"], audit_payload)
             print(
                 json.dumps(
@@ -8277,7 +8282,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 single_rl_checkpoint=None,
                 marl_ipp_checkpoint=None,
                 marl_ipp_source_root=args.marl_ipp_source_root.expanduser().resolve(),
-                split_manifest_sha256=split_manifest_sha256,
+                split_manifest_id=split_manifest_id,
                 planned_qd_selector=None,
                 realised_qd_selector=None,
                 public_exploration_need=public_exploration_need,
@@ -8309,13 +8314,15 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 pool,
                 random_key=args.random_key + decision_index,
                 single_rl_checkpoint=(
-                    None if args.single_rl_checkpoint is None else args.single_rl_checkpoint.resolve()
+                    None
+                    if args.single_rl_checkpoint is None
+                    else args.single_rl_checkpoint.resolve()
                 ),
                 marl_ipp_checkpoint=(
                     None if args.marl_ipp_checkpoint is None else args.marl_ipp_checkpoint.resolve()
                 ),
                 marl_ipp_source_root=args.marl_ipp_source_root.expanduser().resolve(),
-                split_manifest_sha256=split_manifest_sha256,
+                split_manifest_id=split_manifest_id,
                 planned_qd_selector=planned_qd_selector,
                 realised_qd_selector=realised_qd_selector,
                 public_exploration_need=public_exploration_need,
@@ -8331,7 +8338,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             (
                 record
                 for record in reversed(joint_guard_records)
-                if record.get("candidate_manifest_sha256") == selected.manifest_hash
+                if record.get("candidate_manifest_id") == selected.manifest_id
                 and record.get("reason")
                 in (None, "collision_avoidance_recovery_not_required")
             ),
@@ -8372,7 +8379,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             decision_context,
             pool,
             tuple(manifest.feasible for manifest in pool),
-            tuple(manifest.manifest_hash for manifest in pool).index(selected.manifest_hash),
+            tuple(manifest.manifest_id for manifest in pool).index(selected.manifest_id),
             token_id=f"p07-online-token-{uuid.uuid4().hex}",
             issued_at=0.0,
             duration=state.decision_duration_s,
@@ -8642,12 +8649,14 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                     None,
                 )
                 if source_frontier is None:
-                    raise RuntimeError("completed exploration transit omits its current public frontier")
+                    raise RuntimeError(
+                        "completed exploration transit omits its current public frontier"
+                    )
                 reservation = PublicTaskReservation.from_completed_public_exploration_transit(
                     agent_id=agent_id,
                     source_decision_id=decision_context.decision_id,
-                    source_manifest_hash=selected.manifest_hash,
-                    source_transit_outcome_sha256=transit_outcome.digest,
+                    source_manifest_id=selected.manifest_id,
+                    source_transit_outcome_id=transit_outcome.outcome_id,
                     public_path_m=fragment.path,
                     task_anchor_m=source_frontier.task_anchor_m,
                     task_normal_unit=source_frontier.task_normal_unit,
@@ -8723,7 +8732,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 if transit_safe_and_complete:
                     history = backtrack_history_by_agent[agent_id]
                     if not history or history[-1].route_id != source_route.route_id:
-                        raise RuntimeError("selected outcome backtrack is not the current owned history")
+                        raise RuntimeError(
+                            "selected outcome backtrack is not the current owned history"
+                        )
                     history.pop()
                     consumed = True
                 backtrack_outcomes.append(
@@ -8743,7 +8754,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 continue
             source_path = tuple(tuple(point) for point in transit_outcome.applied_fragment.path)
             if _path_length_m(source_path) + 1.0e-9 < MINIMUM_MEANINGFUL_EXPLORATION_PATH_M:
-                raise RuntimeError("completed exploration outcome violates the shared movement floor")
+                raise RuntimeError(
+                    "completed exploration outcome violates the shared movement floor"
+                )
             source_minimum_clearance = agent_row.get("minimum_static_mesh_clearance_m")
             source_required_clearance = agent_row.get("static_clearance_contract_required_m")
             if (
@@ -8763,12 +8776,12 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 _OutcomeBacktrackRoute(
                     route_id=(
                         f"{decision_context.decision_id}-{agent_id}-"
-                        f"{transit_outcome.digest[:12]}"
+                        f"{transit_outcome.outcome_id[:12]}"
                     ),
                     agent_id=agent_id,
                     source_decision_id=decision_context.decision_id,
-                    source_manifest_hash=selected.manifest_hash,
-                    source_transit_outcome_sha256=transit_outcome.digest,
+                    source_manifest_id=selected.manifest_id,
+                    source_transit_outcome_id=transit_outcome.outcome_id,
                     source_minimum_static_mesh_clearance_m=float(source_minimum_clearance),
                     source_static_clearance_contract_required_m=float(source_required_clearance),
                     path_m=source_path,
@@ -8840,14 +8853,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             qd_exclusion_reasons = ["TRANSLATED_EXPLORER_TRAJECTORY_COPY"]
         else:
             qd_exclusion_reasons = ["NO_NEW_PUBLIC_FREE_VOXELS"]
-        behavior_hash = canonical_sha256(
-            {
-                "selected_manifest_hash": selected.manifest_hash,
-                "outcome_hashes": [outcome.digest for outcome in ledger.outcomes],
-                "descriptor": descriptor.to_dict(),
-                "candidate_descriptor_features": candidate_descriptor_features.to_dict(),
-                "public_new_free_footprint": sorted(public_new_free_footprint),
-            }
+        behavior_id = (
+            f"realised-behavior:{selected.manifest_id}:"
+            f"{len(ledger.outcomes)}-outcomes:{descriptor.to_dict()}"
         )
         if args.strategy == "realised_qd":
             # Evaluated after the flight against the exact pre-selection public
@@ -8888,7 +8896,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 descriptor,
                 public_quality=public_free_delta_m3,
                 public_cost=ledger.total_energy_used_j,
-                execution_outcome_sha256=behavior_hash,
+                execution_outcome_id=behavior_id,
                 execution_feasible=qd_feasible,
             )
         else:
@@ -8896,8 +8904,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             admission = realised_qd_archive.add_or_update(
                 Elite(
                     candidate_id=selected.candidate_id,
-                    manifest_hash=selected.manifest_hash,
-                    behavior_hash=behavior_hash,
+                    manifest_id=selected.manifest_id,
+                    behavior_id=behavior_id,
                     realised_descriptor=descriptor.values,
                     quality=public_free_delta_m3,
                     cost=ledger.total_energy_used_j,
@@ -8907,8 +8915,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             )
         realised_qd_record = {
             "candidate_id": selected.candidate_id,
-            "candidate_manifest_sha256": selected.manifest_hash,
-            "execution_outcome_sha256": behavior_hash,
+            "candidate_manifest_id": selected.manifest_id,
+            "execution_outcome_id": behavior_id,
             "executed": execution_complete,
             "public_candidate_intent": list(selected.planned_descriptor),
             "descriptor": descriptor.to_dict(),
@@ -8922,8 +8930,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 list(key) for key in sorted(public_revised_free_footprint)
             ],
             "public_revised_free_voxel_count": len(public_revised_free_footprint),
-            "public_new_free_footprint_sha256": canonical_sha256(
-                [list(key) for key in sorted(public_new_free_footprint)]
+            "public_new_free_footprint_file_id": (
+                f"public-footprint:{len(public_new_free_footprint)}-voxels"
             ),
             "public_new_free_volume_m3": public_free_delta_m3,
             "quality_source": "public_sparse_range_outcomes",
@@ -8935,7 +8943,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 "admitted": admission.admitted,
                 "reason": admission.reason,
                 "cell": admission.cell,
-                "replaced_manifest_hash": admission.replaced_manifest_hash,
+                "replaced_manifest_id": admission.replaced_manifest_id,
                 "revision": admission.revision,
             },
         }
@@ -9017,11 +9025,11 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         decisions.append(
             {
                 "decision_id": decision_context.decision_id,
-                "public_context_hash": state.context.digest,
-                "public_belief_sha256_before": belief_before_hash,
-                "public_candidate_pool_hash": pool_digest,
+                "public_context_id": state.context.context_id,
+                "public_belief_file_id_before": belief_before_id,
+                "public_candidate_pool_id": pool_digest,
                 **public_schema_fields(),
-                "selected_manifest_hash": selected.manifest_hash,
+                "selected_manifest_id": selected.manifest_id,
                 "selected_public_candidate_intent": list(selected.planned_descriptor),
                 "candidate_reachability": {
                     "effective_frontier_step_m": effective_frontier_step_m,
@@ -9066,7 +9074,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                     "feasible_candidate_count": sum(candidate.feasible for candidate in pool),
                     "candidate_roles": _candidate_role_summary(
                         pool,
-                        selected_manifest_hash=selected.manifest_hash,
+                        selected_manifest_id=selected.manifest_id,
                     ),
                     "per_agent_edge_diagnostics": _per_agent_candidate_edge_diagnostics(
                         state,
@@ -9132,7 +9140,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 "source_observation_frame_count": len(backend.public_range_frames),
                 "source_range_ray_count": len(backend.public_range_outcomes),
                 "realised_qd": realised_qd_record,
-                "public_belief_sha256_after": team_belief.content_sha256,
+                "public_belief_file_id_after": team_belief.content_id,
                 "metric_explored_free_flight_volume_auc_time_contribution": (
                     segment_auc_contribution
                 ),
@@ -9149,9 +9157,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 "wall_timing": decision_wall_timing,
             }
         )
-        # Validate and checkpoint at the decision boundary, so a malformed
-        # diagnostic fails after one decision.
-        canonical_sha256(decisions[-1])
+        # Checkpoint at the decision boundary so an interrupted episode keeps progress.
         _write_decision_progress(
             paths["output"],
             scene_id=args.scene_id,
@@ -9187,7 +9193,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         )
         total_failed_fragments += ledger.failed_fragment_count
         total_executed_fragments += ledger.executed_fragment_count
-        outcome_hashes.extend(outcome.digest for outcome in ledger.outcomes)
+        outcome_ids.extend(outcome.outcome_id for outcome in ledger.outcomes)
         if not execution_complete:
             # An outcome-backed safety failure stays a scored episode; the metric
             # holds observed volume constant through the frozen T.
@@ -9346,7 +9352,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             "task-level superiority still requires paired coverage and cost metrics."
         ),
     }
-    initial_pool_hash = pool_hashes[0]
+    initial_pool_id = pool_ids[0]
     execution = {
         "collision_count": total_collision_count,
         "inter_agent_separation_violation_count": total_inter_agent_separation_violation_count,
@@ -9358,8 +9364,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         * (len(decisions) + 1 + int(terminal_budget_tail is not None)),
         "terminal_outcome": terminal_outcome,
         "terminal_budget_tail": terminal_budget_tail,
-        "outcome_count": len(outcome_hashes),
-        "outcome_hashes": outcome_hashes,
+        "outcome_count": len(outcome_ids),
+        "outcome_ids": outcome_ids,
         "total_energy_used_j": total_energy_j,
     }
     execution_status, execution_status_reason = _classify_execution_status(
@@ -9429,10 +9435,6 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         "formal_result": False,
         "p07_task_validity_closed": False,
         "record_purpose": args.record_purpose,
-        "evidence_integrity_contract": build_current_evidence_integrity_contract(
-            runner_source_sha256=_sha256(Path(__file__).resolve()),
-            execution_source_sha256=_sha256(Path(cf2x.__file__).resolve()),
-        ),
         "calibration_only_timeout_probe": timeout_probe,
         "claim_limit": (
             "Train-only QD replay calibration only; it validates public-outcome descriptor "
@@ -9459,7 +9461,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         **public_schema_fields(),
         "scene_id": args.scene_id,
         "selection_partition": args.split,
-        "split_manifest_sha256": split_manifest_sha256,
+        "split_manifest_id": split_manifest_id,
         "strategy": args.strategy,
         "qd_calibration_mode": args.qd_calibration_mode,
         "random_key": args.random_key,
@@ -9471,9 +9473,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             "cuda_random_seeded": torch.cuda.is_available(),
             "physx_enhanced_determinism": True,
         },
-        "selector_backbone_sha256": qd_selector_backbone_sha256(utility_slack=QD_UTILITY_SLACK),
+        "selector_backbone_id": qd_selector_backbone_id(utility_slack=QD_UTILITY_SLACK),
         "public_context": root_context.to_dict(),
-        "public_context_hash": root_context.digest,
+        "public_context_id": root_context.context_id,
         "public_episode_id": root_context.episode_id,
         "fleet_size": fleet_size,
         "candidate_limit": args.candidate_limit,
@@ -9521,24 +9523,24 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         "controller_id": args.controller_id,
         "action_completion_mode": "event_driven_all_routes_completed_plus_minimum_dwell",
         "execution_profile": execution_profile,
-        "execution_profile_sha256": execution_profile_sha256,
-        "sensor_profile_sha256": profile.entitlement_hash,
-        "public_contract_sha256": public_contract_sha256,
-        "evaluation_denominator_sha256": denominator_sha256,
-        "evaluation_geometry_denominator_sha256": geometry_denominator_sha256,
+        "execution_profile_id": execution_profile_id,
+        "sensor_profile_id": profile.entitlement_id,
+        "public_contract_id": public_contract_id,
+        "evaluation_denominator_id": denominator_file_id,
+        "evaluation_geometry_denominator_id": geometry_denominator_file_id,
         "evaluation_denominator": evaluation_denominator,
         "communication_contract": communication_contract.to_dict(),
-        "communication_contract_sha256": communication_contract.digest,
+        "communication_contract_id": communication_contract.contract_id,
         "communication": communication,
         "communication_contract_audit": communication_audit,
-        "collision_usd_sha256": _sha256(paths["collision"]),
-        "cf2x_usd_sha256": _sha256(paths["cf2x"]),
+        "collision_usd_file_id": _file_id(paths["collision"]),
+        "cf2x_usd_id": _file_id(paths["cf2x"]),
         "initial_public_relay_graph": initial_start_graph.to_dict(),
         "initial_start_reset": initial_start_reset_witness,
-        "initial_position_source_sha256": _sha256(paths["start_resets"]),
-        "transit_time_model_sha256": _sha256(paths["timing"]),
-        "public_candidate_pool_hash": initial_pool_hash,
-        "public_candidate_pool_sequence_hash": canonical_sha256(pool_hashes),
+        "initial_position_source_file_id": _file_id(paths["start_resets"]),
+        "transit_time_model_id": _file_id(paths["timing"]),
+        "public_candidate_pool_id": initial_pool_id,
+        "public_candidate_pool_sequence_id": "|".join(str(row) for row in pool_ids),
         "metric_report": metric.to_dict(),
         "mobility_summary": _episode_mobility_summary(decisions, starts),
         "stationarity_supervision": _episode_stationarity_summary(decisions),
@@ -9584,7 +9586,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 "realised-QD selection gain until the paired planned-QD/no-QD matrix is run."
             ),
             "archive_spec": realised_qd_archive.spec.to_dict(),
-            "archive_spec_sha256": realised_qd_archive.spec.digest,
+            "archive_spec_id": realised_qd_archive.spec.spec_id,
             "archive_metrics": realised_qd_archive.metrics(),
             "richness_audit": realised_qd_audit.to_dict(),
             "footprint_separation_audit": footprint_separation.to_dict(),
@@ -9594,7 +9596,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             ),
             "intent_outcome_alignment": intent_outcome_alignment.to_dict(),
             "selection_mode": args.strategy,
-            "selector_backbone_sha256": qd_selector_backbone_sha256(utility_slack=QD_UTILITY_SLACK),
+            "selector_backbone_id": qd_selector_backbone_id(utility_slack=QD_UTILITY_SLACK),
             "utility_slack": QD_UTILITY_SLACK,
             "history": qd_history_summary,
             "admissions": realised_qd_admissions,
@@ -9604,7 +9606,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         "decisions": decisions,
         "public_observation_summary": {
             "source_observation_binding": True,
-            "public_team_belief_sha256": team_belief.content_sha256,
+            "public_team_belief_file_id": team_belief.content_id,
             "public_observed_free_voxel_count": team_belief.observed_free_count,
             "public_predicted_free_volume_m3": evaluator_free_overlap.public_volume_m3,
             "evaluator_consistent_public_free_volume_m3": (
@@ -9637,7 +9639,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         },
         **training_transitions,
     }
-    payload["runtime_record_sha256"] = canonical_sha256(payload)
+    payload["runtime_record_id"] = payload_label(payload, prefix="p07-episode")
     _write_new(paths["output"], payload)
     _progress_path(paths["output"]).unlink(missing_ok=True)
     print(
@@ -9709,7 +9711,7 @@ def _write_failure(args: argparse.Namespace, error: BaseException) -> None:
                 "dynamics_calibration_evidence": {"eligible": True, "reasons": []},
                 "engineering_diagnostic_evidence": {"eligible": True, "reasons": []},
             }
-    payload["runtime_record_sha256"] = canonical_sha256(payload)
+    payload["runtime_record_id"] = payload_label(payload, prefix="p07-interrupted")
     _write_new(output, payload)
 
 

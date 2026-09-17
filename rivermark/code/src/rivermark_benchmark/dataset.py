@@ -1,24 +1,24 @@
-"""Collect and load hash-bound public-only pilot data for learned baselines."""
+"""Collect and load identity-bound public-only pilot data for learned baselines."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shutil
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .methods import NATIVE_DESCRIPTORS, NativePolicy, create_native_policy
 from .provenance import source_revision
 from .recording import EpisodeRecorder, _write_json
 from .runtime import PilotRuntimeConfig, PilotSwarmRuntime
 from .schema import INFORMATION_PROFILE_MODALITIES
 from .validate import validate_episode_manifest
-
 
 # These are stable researcher-facing names.  Manifest names remain accepted
 # as aliases so callers do not need to know the on-disk stream vocabulary.
@@ -51,8 +51,8 @@ _STREAM_MODALITIES = {
 }
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -131,7 +131,7 @@ class PilotEpisode:
     def source_binding(self) -> dict[str, str]:
         return {
             "episode_manifest": str(self.manifest_path.resolve()),
-            "episode_manifest_sha256": sha256_file(self.manifest_path),
+            "episode_manifest_identity": identity_file(self.manifest_path),
         }
 
 
@@ -176,12 +176,7 @@ def load_pilot_episode(
     modalities: Iterable[str] | None = None,
     agent_ids: Iterable[int] | None = None,
 ) -> PilotEpisode:
-    """Open a validated episode, optionally selecting modalities and agents.
-
-    ``modalities=None`` preserves the historical full-load behavior.  A
-    selection still validates the complete manifest and file bindings, but
-    only decodes requested NPZ members and returns ``None`` for omitted arrays.
-    """
+    """Open a validated episode, optionally selecting modalities and agents."""
 
     resolved = manifest_path.resolve()
     manifest = _require_valid_manifest(resolved)
@@ -371,7 +366,7 @@ def collect_episode(
     seed: int,
     overwrite: bool = False,
 ) -> Path:
-    """Collect one passive, hash-bound episode using an allowed native teacher."""
+    """Collect one passive, identity-bound episode using an allowed native teacher."""
 
     if agent_count < 1 or max_steps < 2:
         raise ValueError("agent_count must be positive and max_steps must be at least two")
@@ -442,7 +437,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             seed=args.seed + index,
             overwrite=args.overwrite,
         )
-        manifests.append({"path": str(manifest_path), "sha256": sha256_file(manifest_path)})
+        manifests.append({"path": str(manifest_path), "identity": identity_file(manifest_path)})
     index_path = args.output_root / "dataset_index.json"
     _write_json(
         index_path,

@@ -13,15 +13,11 @@ from .target_gate import TargetObservation, parse_observation
 
 
 def normalize_synthetic_truth(value: str | dict[str, object]) -> tuple[TargetObservation, str]:
-    """Validate an explicitly synthetic truth message before forwarding it.
-
-    The adapter accepts a declared synthetic source only and preserves that
-    identity in the resulting observation.
-    """
+    """Validate an explicitly synthetic truth message before forwarding it."""
 
     payload = json.loads(value) if isinstance(value, str) else value
     if not isinstance(payload, dict):
-        raise ValueError("synthetic target truth must be a JSON object")
+        raise TypeError("synthetic target truth must be a JSON object")
     source = str(payload.get("source", "")).strip()
     if not source:
         raise ValueError("synthetic target truth requires a source")

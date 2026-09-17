@@ -17,7 +17,7 @@ These three files cover the privacy scope, the inspection atlas and the ordinary
 python -m pytest tests -q
 ```
 
-The suite checks contracts, leakage, generation, schema integrity, host guards and runtime preflights. Tests that need Isaac or a physical asset root report as skipped on a plain CPU host.
+The suite checks contracts, leakage, generation, geometry, metrics, adapters and runtime behaviour. Tests that need Isaac or a physical asset root report as skipped on a plain CPU host.
 
 ## Build a development release
 
@@ -31,23 +31,27 @@ $outputRoot = Join-Path $env:AEROCITY_OUTPUT_ROOT "ordinary-v1-mini"
 python -m aerocity_bench build --release .\configs\releases\ordinary-v1-mini.json `
   --asset-root $assetRoot `
   --output $outputRoot `
-  --task-track G2-I `
   --allow-uncommitted-development
 python -m aerocity_bench validate $outputRoot
+python -m aerocity_bench export-public $outputRoot --output "$outputRoot-public"
 ```
 
-Development builds are marked `UNCOMMITTED-DEVELOPMENT`. Official builds refuse a dirty worktree.
+Development builds are marked `UNCOMMITTED-DEVELOPMENT`. A build with a frozen 40-character commit records the commit in the release index and the legal manifest.
 
-## Native and external paths
-
-Native Isaac paths launch child processes and run as bounded, host-guarded jobs on this host.
+## Run a baseline
 
 ```powershell
-python tools\isaac_native_gate.py --help
-python tools\cf2x_l1_fleet_preflight.py --help
+python -m aerocity_bench list-baselines
+python -m aerocity_bench run-baseline $outputRoot --method random-safe --split train `
+  --episode-index 0 --output .\output\run-train-0
+python -m aerocity_bench evaluate --run .\output\run-train-0 `
+  --episode "$outputRoot\splits\train\<layout-id>\evaluator_private\episodes\episode-0000.json" `
+  --duration-s 300
 ```
 
-External method adapters ship with source locks and their own container recipes under `external/`. Each adapter script documents its arguments.
+## External method adapters
+
+External methods run as isolated JSONL processes with their own runtime and source locks under `external/`. Each adapter documents its arguments.
 
 ```powershell
 python tools\run_ortools_g2i_l0_smoke.py --help
@@ -64,5 +68,5 @@ powershell -File tools\run_python_quality_gate.ps1
 ## Reading evidence flags
 
 - `formal_score_eligible=true` appears only on frozen formal records. Nothing else counts as a benchmark score.
-- `UNCOMMITTED-DEVELOPMENT` marks environment and wheel evidence produced outside a clean frozen commit.
-- The governance audit in `tools/audit_experiment_governance.py` recomputes containment, and its report states the current formal status.
+- `UNCOMMITTED-DEVELOPMENT` marks evidence produced outside a clean frozen commit.
+- Calibration reports carry `overall_status=CALIBRATION_ONLY` and aggregate anonymous outcomes only.

@@ -7,10 +7,6 @@ import numpy as np
 import pandas as pd
 
 from .ieee_cis_profiles import (
-    IEEE_FEATURE_PROFILE_PAPER_PRUNED,
-    IEEE_FEATURE_PROFILE_PAPER_V30,
-    IEEE_FEATURE_PROFILE_TYPED_160,
-    IEEE_FEATURE_PROFILE_TYPED_256,
     IEEE_FEATURE_PROFILE_TYPED_FULL,
     resolve_ieee_feature_profile,
 )
@@ -73,7 +69,6 @@ IEEE_MINIMAL_SCAN_COLUMNS: tuple[str, ...] = (
 @dataclass(frozen=True)
 class PreparedIEEEFeatures:
     frame: pd.DataFrame
-    feature_columns: list[str]
     metadata: dict[str, Any]
 
 
@@ -247,11 +242,5 @@ def prepare_ieee_feature_frame(
     metadata["kept_columns"] = [str(item) for item in filtered.columns]
     return PreparedIEEEFeatures(
         frame=filtered,
-        feature_columns=[
-            str(column)
-            for column in filtered.columns
-            if str(column) not in {"TransactionID", "TransactionDT", "isFraud", "split_name"}
-            and str(column) not in relation_source
-        ],
         metadata=metadata,
     )

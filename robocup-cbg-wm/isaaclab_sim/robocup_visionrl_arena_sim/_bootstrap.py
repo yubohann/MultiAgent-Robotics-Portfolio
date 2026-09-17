@@ -7,7 +7,6 @@ import math
 
 from isaaclab.app import AppLauncher
 
-
 parser = argparse.ArgumentParser(description="RoboCup VisionRL IsaacLab simulation scene.")
 parser.add_argument("--duration", type=float, default=0.0, help="Seconds to run. 0 means run until the GUI closes.")
 parser.add_argument("--seed", type=int, default=7, help="Deterministic layout seed for sim2real preview variation.")

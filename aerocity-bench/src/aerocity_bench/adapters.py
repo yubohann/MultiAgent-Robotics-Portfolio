@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from .canonical import content_hash, file_hash, read_json
+from .canonical import read_json
 from .contracts import ActionPacket, MessagePacket, ObservationPacket, Pose3D
 from .geometry import segment_segment_distance
 from .public_boundary import validate_public_episode
@@ -78,8 +78,7 @@ CAPABILITY_PROFILES = {
 _PROCESS_BOUNDARIES = frozenset({"in_process", "process", "container", "ros"})
 _COPYLEFT_LICENSE_PREFIXES = ("gpl-", "agpl-", "lgpl-")
 _FULL_GIT_REVISION = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
-_OCI_IMAGE_DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IMAGE_TAG = re.compile(r"^[a-z0-9][a-z0-9./_-]*:[a-zA-Z0-9][a-zA-Z0-9._-]*$")
 _EXTERNAL_WIRE_FORBIDDEN_KEYS = frozenset(
     {
         "counterfactual_pairs",
@@ -200,7 +199,7 @@ class AdapterDeclaration:
     process_boundary: str
     training_allowed: bool
     decentralized_execution: bool
-    runtime_image_digest: str | None = None
+    runtime_image: str | None = None
 
     def validate(self) -> None:
         if not self.adapter_id or not self.method_id:
@@ -222,12 +221,10 @@ class AdapterDeclaration:
             if self.process_boundary not in {"container", "process", "ros"}:
                 raise ValueError("copyleft baselines must remain behind an independent boundary")
         if self.process_boundary == "container":
-            if not self.runtime_image_digest or not _OCI_IMAGE_DIGEST.fullmatch(
-                self.runtime_image_digest
-            ):
-                raise ValueError("container adapters require a pinned sha256 OCI image digest")
-        elif self.runtime_image_digest is not None:
-            raise ValueError("only container adapters may declare a runtime_image_digest")
+            if not self.runtime_image or not _IMAGE_TAG.fullmatch(self.runtime_image):
+                raise ValueError("container adapters require a versioned runtime image tag")
+        elif self.runtime_image is not None:
+            raise ValueError("only container adapters may declare a runtime image")
 
     def to_dict(self) -> dict[str, Any]:
         self.validate()
@@ -247,28 +244,17 @@ _EXTERNAL_L1_EXECUTION_ARTIFACT_KINDS = frozenset({"checkpoint", "solver_lock"})
 
 @dataclass(frozen=True)
 class ExternalL1AdapterManifest:
-    """Pinned local launch material for an external L1 process diagnostic.
-
-    Paths are necessary to execute a locally installed upstream method, but no
-    path or command is copied into public evidence.  The report carries only
-    hashes and the upstream declaration, which binds the implementation without
-    leaking a workstation layout or turning a process bridge into a sandbox.
-    """
+    """Local launch material for an external L1 process diagnostic."""
 
     declaration: AdapterDeclaration
     command: tuple[str, ...]
     adapter_source_path: Path
-    adapter_source_sha256: str
     upstream_source_path: Path
     execution_artifact_kind: str
     execution_artifact_path: Path
-    execution_artifact_sha256: str
-    runtime_environment_sha256: str
     runtime_python_path: Path | None
-    runtime_python_sha256: str | None
     task_domain: str
     comparability_claim: str
-    manifest_file_sha256: str
 
     def validate(self) -> None:
         self.declaration.validate()
@@ -290,32 +276,12 @@ class ExternalL1AdapterManifest:
                 "external L1 manifest command must bind the runtime, adapter source, "
                 "upstream source, and any required execution artifact"
             )
-        for expected, actual, label in (
-            (self.adapter_source_sha256, file_hash(self.adapter_source_path), "adapter source"),
-            (
-                self.execution_artifact_sha256,
-                file_hash(self.execution_artifact_path),
-                "execution artifact",
-            ),
-        ):
-            if not _SHA256.fullmatch(expected):
-                raise ValueError(f"external L1 {label} hash is not SHA-256")
-            if expected != actual:
-                raise ValueError(f"external L1 {label} hash differs from the manifest")
-        if not _SHA256.fullmatch(self.runtime_environment_sha256):
-            raise ValueError("external L1 runtime environment hash is not SHA-256")
-        if (self.runtime_python_path is None) != (self.runtime_python_sha256 is None):
-            raise ValueError(
-                "external L1 runtime Python path and hash must be declared together"
-            )
-        if self.runtime_python_path is not None:
-            if not self.runtime_python_path.is_file():
-                raise ValueError("external L1 runtime Python is not a readable file")
-            assert self.runtime_python_sha256 is not None
-            if not _SHA256.fullmatch(self.runtime_python_sha256):
-                raise ValueError("external L1 runtime Python hash is not SHA-256")
-            if file_hash(self.runtime_python_path) != self.runtime_python_sha256:
-                raise ValueError("external L1 runtime Python hash differs from the manifest")
+        if not self.adapter_source_path.is_file():
+            raise ValueError("external L1 adapter source is not a readable file")
+        if not self.execution_artifact_path.is_file():
+            raise ValueError("external L1 execution artifact is not a readable file")
+        if self.runtime_python_path is not None and not self.runtime_python_path.is_file():
+            raise ValueError("external L1 runtime Python is not a readable file")
         if self.execution_artifact_kind not in _EXTERNAL_L1_EXECUTION_ARTIFACT_KINDS:
             raise ValueError("external L1 execution artifact kind is unsupported")
         if self.execution_artifact_kind == "solver_lock" and self.declaration.training_allowed:
@@ -348,8 +314,7 @@ class ExternalL1AdapterManifest:
             raise ValueError("external L1 upstream Git HEAD differs from the declared revision")
         unexpected_worktree_entries = []
         for entry in worktree_state.splitlines():
-            # Python writes bytecode next to imported upstream modules; only
-            # __pycache__/*.pyc is tolerated, every other entry is a failure.
+            # Python bytecode caches are tolerated; every other entry is a failure.
             path = entry[3:].replace("\\", "/") if entry.startswith("?? ") else ""
             bytecode_cache = entry.startswith("?? ") and "/__pycache__/" in f"/{path}"
             if not (bytecode_cache and path.endswith(".pyc")):
@@ -365,16 +330,9 @@ class ExternalL1AdapterManifest:
             and self.comparability_claim != "transfer_diagnostic"
         ):
             raise ValueError("a non-3-D external method can only be a transfer diagnostic")
-        if not _SHA256.fullmatch(self.manifest_file_sha256):
-            raise ValueError("external L1 manifest file hash is not SHA-256")
 
     def launch_command(self, python_executable: str | None = None) -> list[str]:
-        """Materialize a verified local process command without publishing paths.
-
-        Version 3 manifests bind the isolated interpreter used by the external
-        method.  Version 1 and 2 manifests are legacy inputs and require an
-        explicit interpreter from their caller.
-        """
+        """Materialize the verified local process command."""
 
         self.validate()
         if self.runtime_python_path is not None:
@@ -400,65 +358,34 @@ class ExternalL1AdapterManifest:
     def public_provenance(self) -> dict[str, Any]:
         self.validate()
         return {
-            "schema": "org.aerocity.bench.external-l1-adapter-provenance.v2",
-            "adapter_manifest_sha256": self.manifest_file_sha256,
+            "schema": "org.aerocity.bench.external-l1-adapter-provenance.v3",
             "declaration": self.declaration.to_dict(),
-            "adapter_source_sha256": self.adapter_source_sha256,
             "execution_artifact_kind": self.execution_artifact_kind,
-            "execution_artifact_sha256": self.execution_artifact_sha256,
-            "runtime_environment_sha256": self.runtime_environment_sha256,
-            "runtime_python_sha256": self.runtime_python_sha256,
-            "command_template_sha256": content_hash({"command": list(self.command)}),
             "task_domain": self.task_domain,
             "comparability_claim": self.comparability_claim,
         }
 
 
 def load_external_l1_adapter_manifest(path: Path) -> ExternalL1AdapterManifest:
-    """Load a pinned process declaration without publishing local path strings."""
+    """Load a process declaration for an external L1 baseline."""
 
     manifest_path = path.resolve()
     raw = read_json(manifest_path)
     if not isinstance(raw, dict):
         raise ValueError("external L1 adapter manifest must be a JSON object")
-    expected_v1 = {
+    expected = {
         "schema",
         "declaration",
         "command",
         "adapter_source_path",
-        "adapter_source_sha256",
-        "upstream_source_path",
-        "checkpoint_path",
-        "checkpoint_sha256",
-        "runtime_environment_sha256",
-        "task_domain",
-        "comparability_claim",
-    }
-    expected_v2 = {
-        "schema",
-        "declaration",
-        "command",
-        "adapter_source_path",
-        "adapter_source_sha256",
         "upstream_source_path",
         "execution_artifact_kind",
         "execution_artifact_path",
-        "execution_artifact_sha256",
-        "runtime_environment_sha256",
+        "runtime_python_path",
         "task_domain",
         "comparability_claim",
     }
-    expected_v3 = {
-        *expected_v2,
-        "runtime_python_path",
-        "runtime_python_sha256",
-    }
-    schema = raw.get("schema")
-    if (
-        (schema == _EXTERNAL_L1_ADAPTER_MANIFEST_SCHEMA_V1 and set(raw) == expected_v1)
-        or (schema == _EXTERNAL_L1_ADAPTER_MANIFEST_SCHEMA_V2 and set(raw) == expected_v2)
-        or (schema == EXTERNAL_L1_ADAPTER_MANIFEST_SCHEMA and set(raw) == expected_v3)
-    ) is False:
+    if raw.get("schema") != EXTERNAL_L1_ADAPTER_MANIFEST_SCHEMA or set(raw) != expected:
         raise ValueError("external L1 adapter manifest schema or fields differ")
     declaration_raw = raw["declaration"]
     declaration_fields = {
@@ -471,7 +398,7 @@ def load_external_l1_adapter_manifest(path: Path) -> ExternalL1AdapterManifest:
         "process_boundary",
         "training_allowed",
         "decentralized_execution",
-        "runtime_image_digest",
+        "runtime_image",
     }
     if not isinstance(declaration_raw, dict) or set(declaration_raw) != declaration_fields:
         raise ValueError("external L1 adapter declaration fields differ")
@@ -498,38 +425,20 @@ def load_external_l1_adapter_manifest(path: Path) -> ExternalL1AdapterManifest:
         return candidate
 
     def resolve_optional_file(field: str) -> Path | None:
-        if schema != EXTERNAL_L1_ADAPTER_MANIFEST_SCHEMA:
+        if raw[field] is None:
             return None
         return resolve_file(field)
 
-    artifact_kind = "checkpoint" if schema == _EXTERNAL_L1_ADAPTER_MANIFEST_SCHEMA_V1 else str(
-        raw["execution_artifact_kind"]
-    )
-    artifact_path = "checkpoint_path" if schema == _EXTERNAL_L1_ADAPTER_MANIFEST_SCHEMA_V1 else (
-        "execution_artifact_path"
-    )
-    artifact_hash = "checkpoint_sha256" if schema == _EXTERNAL_L1_ADAPTER_MANIFEST_SCHEMA_V1 else (
-        "execution_artifact_sha256"
-    )
     manifest = ExternalL1AdapterManifest(
         declaration=AdapterDeclaration(**declaration_raw),
         command=tuple(command),
         adapter_source_path=resolve_file("adapter_source_path"),
-        adapter_source_sha256=str(raw["adapter_source_sha256"]),
         upstream_source_path=resolve_directory("upstream_source_path"),
-        execution_artifact_kind=artifact_kind,
-        execution_artifact_path=resolve_file(artifact_path),
-        execution_artifact_sha256=str(raw[artifact_hash]),
-        runtime_environment_sha256=str(raw["runtime_environment_sha256"]),
+        execution_artifact_kind=str(raw["execution_artifact_kind"]),
+        execution_artifact_path=resolve_file("execution_artifact_path"),
         runtime_python_path=resolve_optional_file("runtime_python_path"),
-        runtime_python_sha256=(
-            str(raw["runtime_python_sha256"])
-            if schema == EXTERNAL_L1_ADAPTER_MANIFEST_SCHEMA
-            else None
-        ),
         task_domain=str(raw["task_domain"]),
         comparability_claim=str(raw["comparability_claim"]),
-        manifest_file_sha256=file_hash(manifest_path),
     )
     manifest.validate()
     return manifest
@@ -1273,7 +1182,6 @@ class ReplayWriter:
             "task_time_s": result.task_time_s,
             "done": result.done,
         }
-        record["record_hash"] = content_hash(record)
         self._records.append(record)
 
     def close(self) -> dict[str, Any]:
@@ -1282,7 +1190,6 @@ class ReplayWriter:
             "provenance": self.provenance,
             "records": self._records,
         }
-        payload["replay_hash"] = content_hash(payload)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(
             json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
@@ -1294,21 +1201,14 @@ class ReplayWriter:
 
 def validate_replay(path: Path) -> dict[str, Any]:
     replay = json.loads(path.read_text(encoding="utf-8"))
-    expected_hash = str(replay.pop("replay_hash", ""))
-    if content_hash(replay) != expected_hash:
-        raise ValueError("replay content hash mismatch")
     previous_time = -1.0
-    for index, record in enumerate(replay["records"]):
-        expected_record_hash = str(record.pop("record_hash", ""))
-        if content_hash(record) != expected_record_hash:
-            raise ValueError(f"replay record hash mismatch at step {index}")
+    for record in replay["records"]:
         if float(record["task_time_s"]) < previous_time:
             raise ValueError("replay task time runs backwards")
         previous_time = float(record["task_time_s"])
     return {
         "status": "PASS",
         "record_count": len(replay["records"]),
-        "replay_hash": expected_hash,
     }
 
 

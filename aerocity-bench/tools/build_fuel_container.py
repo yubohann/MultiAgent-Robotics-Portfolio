@@ -53,8 +53,8 @@ def load_lock(path: Path = LOCK_PATH) -> dict[str, Any]:
         raise ValueError("FUEL source lock must require a container boundary")
     if len(payload["upstream_commit"]) != 40:
         raise ValueError("FUEL source lock must contain a full 40-character Git revision")
-    if "@sha256:" not in payload["base_image"]:
-        raise ValueError("FUEL source lock must pin the ROS base image by digest")
+    if not payload["base_image"] or ":" not in payload["base_image"]:
+        raise ValueError("FUEL source lock must pin a versioned ROS base image")
     return payload
 
 

@@ -10,7 +10,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 COLORS = ["#0072B2", "#009E73", "#E69F00", "#D55E00", "#CC79A7"]
 
 

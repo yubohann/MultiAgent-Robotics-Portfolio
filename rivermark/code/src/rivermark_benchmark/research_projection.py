@@ -11,20 +11,20 @@ import shutil
 import tempfile
 import uuid
 import zipfile
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
 from .formal_dataset import (
     CandidateIntegrityReport,
     _verify_release_episode,
-    sha256_file,
+    identity_file,
     verify_candidate_episode,
 )
 from .schema import is_safe_relative_path
-
 
 ZARR_PROJECTION_SCHEMA = "org.rivermark.benchmark.zarr-projection.v1"
 ZARR_FORMAT = 2
@@ -42,7 +42,7 @@ class ZarrProjectionResult:
     output_root: Path
     episode_id: str
     array_paths: tuple[str, ...]
-    projection_receipt_sha256: str
+    projection_receipt_identity: str
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -183,11 +183,11 @@ def _load_source_manifest(episode_root: Path) -> tuple[dict[str, Any], str, str]
         if issues or manifest is None:
             raise ProjectionError("release episode failed integrity verification: " + "; ".join(issue.code for issue in issues))
         manifest_path = root / "episode_manifest.json"
-        return dict(manifest), sha256_file(manifest_path), sha256_file(root / "formal_capture_receipt.json")
+        return dict(manifest), identity_file(manifest_path), identity_file(root / "formal_capture_receipt.json")
     report: CandidateIntegrityReport = verify_candidate_episode(root, require_trusted_receipt=False)
-    if not report.valid or report.manifest is None or report.manifest_sha256 is None or report.receipt_sha256 is None:
+    if not report.valid or report.manifest is None or report.manifest_identity is None or report.receipt_identity is None:
         raise ProjectionError("candidate failed integrity verification: " + "; ".join(issue.code for issue in report.issues))
-    return dict(report.manifest), report.manifest_sha256, report.receipt_sha256
+    return dict(report.manifest), report.manifest_identity, report.receipt_identity
 
 
 def _selected_streams(manifest: Mapping[str, Any], stream_ids: Iterable[str] | None) -> list[Mapping[str, Any]]:
@@ -311,27 +311,18 @@ def project_episode_to_zarr(
     max_chunk_bytes: int | None = None,
     max_source_member_bytes: int | None = None,
 ) -> ZarrProjectionResult:
-    """Project selected verified NPZ streams to a standard Zarr v2 directory.
-
-    ``max_chunk_bytes`` bounds each emitted first-axis chunk.  ``None`` keeps
-    the historical one-chunk layout for compatibility; callers projecting
-    large streams should pass an explicit budget.  Compressed NPZ members are
-    decoded to temporary NPY files and memory-mapped, so the source array is
-    never materialized as one heap allocation.  Temporary disk usage is
-    bounded by ``max_source_member_bytes`` when supplied and is cleaned on
-    success or failure.
-    """
+    """Project selected verified NPZ streams to a standard Zarr v2 directory."""
 
     source_root = episode_root.resolve()
     destination = output_root.resolve()
     if destination.exists():
         raise ProjectionError(f"projection output already exists: {destination}")
-    manifest, manifest_hash, receipt_hash = _load_source_manifest(source_root)
+    manifest, manifest_identity, receipt_identity = _load_source_manifest(source_root)
     episode_id = manifest.get("episode_id")
     if not isinstance(episode_id, str) or not episode_id:
         raise ProjectionError("manifest has no episode_id")
     abi_ref = manifest.get("observation_abi")
-    if not isinstance(abi_ref, Mapping) or not isinstance(abi_ref.get("sha256"), str):
+    if not isinstance(abi_ref, Mapping) or not isinstance(abi_ref.get("identity"), str):
         raise ProjectionError("manifest has no observation ABI binding")
     selected = _selected_streams(manifest, stream_ids)
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -341,9 +332,9 @@ def project_episode_to_zarr(
         _write_json(staging / ".zattrs", {
             "schema": ZARR_PROJECTION_SCHEMA,
             "episode_id": episode_id,
-            "episode_manifest_sha256": manifest_hash,
-            "formal_capture_receipt_sha256": receipt_hash,
-            "observation_abi_sha256": abi_ref["sha256"],
+            "episode_manifest_identity": manifest_identity,
+            "formal_capture_receipt_identity": receipt_identity,
+            "observation_abi_identity": abi_ref["identity"],
             "source_encoding": "npz",
             "array_reader_contract": "zarr_v2_chunked_little_endian",
         })
@@ -366,13 +357,13 @@ def project_episode_to_zarr(
                     "shape": list(array.shape),
                     "chunks": metadata["chunks"],
                     "dtype": _dtype_json(array.dtype),
-                    "zarray_sha256": sha256_file(staging / name / ".zarray"),
-                    "chunk_sha256s": [sha256_file(staging / path) for path in chunk_paths],
+                    "zarray_identity": identity_file(staging / name / ".zarray"),
+                    "chunk_identities": [identity_file(staging / path) for path in chunk_paths],
                 }
                 if len(chunk_paths) == 1:
                     # Preserve the v1 manifest field for the historical
                     # single-chunk layout while exposing the multi-chunk list.
-                    record["chunk_sha256"] = record["chunk_sha256s"][0]
+                    record["chunk_identity"] = record["chunk_identities"][0]
                 array_records.append(record)
                 # Release the memmap-backed view before requesting the next
                 # source member; this is required for deterministic cleanup on
@@ -384,9 +375,9 @@ def project_episode_to_zarr(
             "schema": ZARR_PROJECTION_SCHEMA,
             "zarr_format": ZARR_FORMAT,
             "episode_id": episode_id,
-            "episode_manifest_sha256": manifest_hash,
-            "formal_capture_receipt_sha256": receipt_hash,
-            "observation_abi_sha256": abi_ref["sha256"],
+            "episode_manifest_identity": manifest_identity,
+            "formal_capture_receipt_identity": receipt_identity,
+            "observation_abi_identity": abi_ref["identity"],
             "arrays": array_records,
         }
         _write_json(staging / "projection_manifest.json", manifest_payload)
@@ -396,7 +387,7 @@ def project_episode_to_zarr(
         if staging is not None and staging.exists():
             shutil.rmtree(staging, ignore_errors=True)
     receipt_path = destination / "projection_manifest.json"
-    return ZarrProjectionResult(destination, episode_id, tuple(names), sha256_file(receipt_path))
+    return ZarrProjectionResult(destination, episode_id, tuple(names), identity_file(receipt_path))
 
 
 def _read_metadata(root: Path, relative: str) -> Mapping[str, Any]:
@@ -546,13 +537,13 @@ def read_zarr_array_external(root: Path, relative: str) -> np.ndarray:
 
 
 __all__ = [
+    "ZARR_PROJECTION_SCHEMA",
     "ProjectionError",
     "ZarrProjectionResult",
-    "ZARR_PROJECTION_SCHEMA",
     "project_episode_to_zarr",
     "read_zarr_array",
-    "read_zarr_array_independent",
     "read_zarr_array_external",
+    "read_zarr_array_independent",
 ]
 
 
@@ -580,7 +571,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "output_root": str(result.output_root),
         "episode_id": result.episode_id,
         "array_paths": list(result.array_paths),
-        "projection_manifest_sha256": result.projection_receipt_sha256,
+        "projection_manifest_identity": result.projection_receipt_identity,
     }, indent=2, sort_keys=True))
     return 0
 

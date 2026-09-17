@@ -1,10 +1,8 @@
 from kafka import KafkaConsumer, KafkaProducer
 import json
 from datetime import datetime
-from collections import defaultdict
 import threading
 import time
-import pickle
 
 
 class RecommendationFusion:
@@ -85,7 +83,6 @@ class RecommendationFusion:
     def try_load_deep_model(self):
         try:
             from deepfm_recommender import DeepFMRecommender
-            import pandas as pd
             
             self.deep_recommender = DeepFMRecommender(
                 self.deep_model_path, 
@@ -190,7 +187,7 @@ class RecommendationFusion:
         print(f"⏰ [{time_str}] 用户: {result['user_id']}")
         print(f"   触发商品: {result['trigger_product_name']}")
         print(f"   融合权重: 快速={result['fusion_weights']['fast']:.1f}, 深度={result['fusion_weights']['deep']:.1f}")
-        print(f"\n   📦 最终推荐:")
+        print("\n   📦 最终推荐:")
         
         for i, rec in enumerate(result['recommendations'], 1):
             star = "⭐" if rec['score'] > 0.5 else ""

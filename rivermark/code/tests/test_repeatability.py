@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import shutil
 import sys
@@ -15,6 +14,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from rivermark_benchmark._identity import IdentityAccumulator
 from rivermark_benchmark.frame_archive import write_chunked_frame_archive
 from rivermark_benchmark.repeatability import (
     REPEATABILITY_REPORT_SCHEMA,
@@ -37,10 +37,9 @@ USED_ARTIFACTS = (
 AGENTS = 8
 
 
-def _sha256(path: Path) -> str:
-    import hashlib
+def _identity(path: Path) -> str:
 
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return IdentityAccumulator(path.read_bytes()).hexdigest()
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -64,10 +63,10 @@ def _write_semantic_rows(root: Path, rows: list[dict[str, object]]) -> None:
 def _rebind(root: Path) -> None:
     receipt_path = root / "capture_receipt.json"
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    receipt["artifact_hashes"] = {
+    receipt["artifact_identities"] = {
         relative: {
             "bytes": (root / relative).stat().st_size,
-            "sha256": _sha256(root / relative),
+            "identity": _identity(root / relative),
         }
         for relative in USED_ARTIFACTS
     }
@@ -78,7 +77,7 @@ def _rebind(root: Path) -> None:
             "schema": "org.rivermark.isaac-independent-validation.v1",
             "valid": True,
             "issues": [],
-            "capture_receipt_sha256": _sha256(receipt_path),
+            "capture_receipt_identity": _identity(receipt_path),
         },
     )
 
@@ -201,9 +200,9 @@ def _capture(root: Path, *, attempt_id: str) -> Path:
             "ok": True,
             "source_worktree_dirty": False,
             "source_revision": "a" * 40,
-            "source_tree_sha256": "b" * 64,
+            "source_tree_identity": "b" * 16,
             "capture_attempt_id": attempt_id,
-            "evaluator_manifest_sha256": "c" * 64,
+            "evaluator_manifest_identity": "c" * 16,
             "agent_count_requested": AGENTS,
             "command": {"capture_stride": 10, "steps": 2, "dt_s": 0.005},
             "condition_request": {"cell_id": "train-citylite-direct-v2"},
@@ -217,14 +216,14 @@ def _capture(root: Path, *, attempt_id: str) -> Path:
             },
             "collection_binding": {
                 "protocol_id": "citylite-t1-expert-coverage-v2",
-                "protocol_sha256": "d" * 64,
+                "protocol_identity": "d" * 16,
                 "cell_id": "train-citylite-direct-v2",
                 "split": "train",
                 "episode_index": 0,
                 "episode_seed": 42,
             },
-            "runtime_lock": {"profile_id": "runtime-v1", "sha256": "e" * 64},
-            "city_lite_authority": {"contract_sha256": "f" * 64},
+            "runtime_lock": {"profile_id": "runtime-v1", "identity": "e" * 16},
+            "city_lite_authority": {"contract_identity": "f" * 16},
             "simulator": {"name": "Isaac Sim", "version": "5.1.0.0"},
             "created_wall_time_ns": 1_000_000_000,
             "finished_wall_time_ns": 3_000_000_000,
@@ -232,7 +231,7 @@ def _capture(root: Path, *, attempt_id: str) -> Path:
                 "maxima": {"commit_percent": 50.0, "private_commit_bytes": 1024}
             },
             "capture_storage_budget": {"required_bytes": 4096},
-            "artifact_hashes": {},
+            "artifact_identities": {},
         },
     )
     _rebind(root)
@@ -260,7 +259,7 @@ def test_identical_validated_pair_passes_and_cli_writes_schema_valid_report() ->
         assert report["schema"] == REPEATABILITY_REPORT_SCHEMA
         assert report["status"] == "passed"
         assert report["failed_metric_count"] == 0
-        assert report["analyzer"]["implementation_sha256"] == _sha256(
+        assert report["analyzer"]["implementation_identity"] == _identity(
             SRC / "rivermark_benchmark" / "repeatability.py"
         )
         output = root / "report.json"
@@ -279,9 +278,9 @@ def test_identical_validated_pair_passes_and_cli_writes_schema_valid_report() ->
         )
         written = json.loads(output.read_text(encoding="utf-8"))
         digest_payload = dict(written)
-        claimed_digest = digest_payload["report_payload_sha256"]
-        digest_payload["report_payload_sha256"] = ""
-        assert claimed_digest == hashlib.sha256(
+        claimed_digest = digest_payload["report_payload_identity"]
+        digest_payload["report_payload_identity"] = ""
+        assert claimed_digest == IdentityAccumulator(
             json.dumps(
                 digest_payload,
                 allow_nan=False,
@@ -414,7 +413,7 @@ def test_sparse_overview_semantics_use_timestamp_aligned_metadata() -> None:
         )
 
 
-def test_semantic_label_change_and_timestamp_mismatch_fail_closed() -> None:
+def test_semantic_label_change_and_timestamp_mismatch_strict() -> None:
     with tempfile.TemporaryDirectory() as temporary:
         reference, candidate = _pair(Path(temporary))
         rows = _read_semantic_rows(candidate)
@@ -442,7 +441,7 @@ def test_semantic_label_change_and_timestamp_mismatch_fail_closed() -> None:
             build_repeatability_report(reference, candidate, profile_path=PROFILE)
 
 
-def test_binding_mismatch_and_stale_validation_fail_closed() -> None:
+def test_binding_mismatch_and_stale_validation_strict() -> None:
     with tempfile.TemporaryDirectory() as temporary:
         reference, candidate = _pair(Path(temporary))
         receipt_path = candidate / "capture_receipt.json"

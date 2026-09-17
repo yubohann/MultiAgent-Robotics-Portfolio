@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import math
+from dataclasses import asdict, dataclass
 from typing import Literal
-
 
 FormationShape = Literal["line", "triangle", "rectangle", "diamond", "circle"]
 FormationMode = Literal["line", "triangle", "rectangle", "diamond", "circle", "mixed_route"]

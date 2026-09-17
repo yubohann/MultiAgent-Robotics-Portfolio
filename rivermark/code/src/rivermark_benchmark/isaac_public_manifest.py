@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections.abc import Mapping
 from typing import Any
 
+from ._identity import IdentityAccumulator
 from .schema import forbidden_policy_key, forbidden_policy_value_token, iter_tree
 
 
@@ -26,10 +26,10 @@ def _text(value: object, *, label: str) -> str:
     return value
 
 
-def _sha256(value: object, *, label: str) -> str:
+def _identity(value: object, *, label: str) -> str:
     text = _text(value, label=label)
-    if len(text) != 64 or any(character not in "0123456789abcdef" for character in text):
-        raise PublicManifestError(f"{label} must be SHA-256")
+    if len(text) != 16 or any(character not in "0123456789abcdef" for character in text):
+        raise PublicManifestError(f"{label} must be a short identity")
     return text
 
 
@@ -126,27 +126,27 @@ def build_public_scene_manifest(scene: Mapping[str, Any]) -> dict[str, Any]:
                 contract.get("schema"), label="scene_contract.schema"
             ),
             "contract_gate_status": gate_status,
-            "contract_payload_sha256": _sha256(
-                contract.get("payload_sha256"),
-                label="scene_contract.payload_sha256",
+            "contract_payload_identity": _identity(
+                contract.get("payload_identity"),
+                label="scene_contract.payload_identity",
             ),
-            "contract_file_sha256": _sha256(
-                contract.get("sha256"), label="scene_contract.sha256"
+            "contract_file_identity": _identity(
+                contract.get("identity"), label="scene_contract.identity"
             ),
             "resolved_inventory_schema": _text(
                 inventory.get("schema"), label="rivermark_layer_inventory.schema"
             ),
-            "resolved_inventory_sha256": _sha256(
-                inventory.get("inventory_sha256"),
-                label="rivermark_layer_inventory.inventory_sha256",
+            "resolved_inventory_identity": _identity(
+                inventory.get("inventory_identity"),
+                label="rivermark_layer_inventory.inventory_identity",
             ),
-            "local_authority_inventory_sha256": _sha256(
-                inventory.get("local_authority_inventory_sha256"),
-                label="rivermark_layer_inventory.local_authority_inventory_sha256",
+            "local_authority_inventory_identity": _identity(
+                inventory.get("local_authority_inventory_identity"),
+                label="rivermark_layer_inventory.local_authority_inventory_identity",
             ),
-            "external_asset_inventory_sha256": _sha256(
-                inventory.get("rivermarksrc51_external_inventory_sha256"),
-                label="rivermark_layer_inventory.rivermarksrc51_external_inventory_sha256",
+            "external_asset_inventory_identity": _identity(
+                inventory.get("rivermarksrc51_external_inventory_identity"),
+                label="rivermark_layer_inventory.rivermarksrc51_external_inventory_identity",
             ),
             "local_authority_layer_count": local_count,
             "external_asset_layer_count": external_count,
@@ -176,14 +176,14 @@ def canonical_public_bytes(value: Any) -> bytes:
     ).encode("utf-8")
 
 
-def public_manifest_sha256(value: Any) -> str:
-    return hashlib.sha256(canonical_public_bytes(value)).hexdigest()
+def public_manifest_identity(value: Any) -> str:
+    return IdentityAccumulator(canonical_public_bytes(value)).hexdigest()
 
 
 __all__ = [
     "PublicManifestError",
     "build_public_scene_manifest",
     "canonical_public_bytes",
-    "public_manifest_sha256",
+    "public_manifest_identity",
     "validate_public_payload",
 ]

@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 import numpy as np
 
+from shared.core.collision_2d import GateObstacleMap2D
+from shared.core.kinematics_2d import (
+    Kinematics2DConfig,
+    Kinematics2DUpdater,
+    KinematicState2D,
+    PlanarVelocityCommand2D,
+)
 from single_gate.configs.experiment_config import (
     SINGLE_EXPERIMENT_CONFIG,
     SingleGateEnvConfig,
@@ -16,13 +23,6 @@ from single_gate.env.observation_single import build_single_graph_observation
 from single_gate.rewards.single_agent_rewards import (
     compute_single_agent_reward,
     evaluate_single_agent_termination,
-)
-from shared.core.collision_2d import GateObstacleMap2D
-from shared.core.kinematics_2d import (
-    KinematicState2D,
-    Kinematics2DConfig,
-    Kinematics2DUpdater,
-    PlanarVelocityCommand2D,
 )
 
 

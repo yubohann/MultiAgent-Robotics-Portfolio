@@ -7,10 +7,12 @@ import time
 from pathlib import Path
 
 import numpy as np
-
-from robocup_visionrl_selfplay_env import AGENTS, RoboCupVisionRLSelfPlayEnv
-from robocup_visionrl_selfplay_env import TACTICAL_ACTION_DIM
 from expert_policy import scripted_action as expert_scripted_action
+from robocup_visionrl_selfplay_env import (
+    AGENTS,
+    TACTICAL_ACTION_DIM,
+    RoboCupVisionRLSelfPlayEnv,
+)
 
 
 def wrap_angle(angle: float) -> float:

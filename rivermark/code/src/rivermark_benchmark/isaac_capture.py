@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.metadata
+import itertools
 import json
 import math
 import os
@@ -14,46 +14,48 @@ import sys
 import tempfile
 import time
 import traceback
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
+from .capture_lease import repository_app_launcher_lease
 from .citylite_scene import (
     AABB,
     CITY_LITE_COMMAND_VOLUME_W_M,
     CITY_LITE_FLIGHT_VOLUME_W_M,
-    CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_SHA256,
-    ENVIRONMENT_ID,
-    SCENE_CONTRACT_SHA256,
-    EXPECTED_NATIVE_COLLISION_COUNTS,
-    PUBLIC_ROUTES_W_M,
-    ROUTE_CLEARANCE_M,
-    SELECTIVE_REFERENCES,
-    START_ANCHOR_IDS_BY_ROUTE_FAMILY,
-    TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M,
     CITY_LITE_ROUTE_FAMILY_A_ID,
     CITY_LITE_ROUTE_FAMILY_B_ID,
     CITY_LITE_TARGET_REGION_A_ID,
     CITY_LITE_TARGET_REGION_B_ID,
+    CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_IDENTITY,
+    ENVIRONMENT_ID,
+    EXPECTED_NATIVE_COLLISION_COUNTS,
+    PUBLIC_ROUTES_W_M,
+    ROUTE_CLEARANCE_M,
+    SCENE_CONTRACT_IDENTITY,
+    SELECTIVE_REFERENCES,
+    START_ANCHOR_IDS_BY_ROUTE_FAMILY,
+    TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M,
     CityLiteAuthority,
     CityLiteRouteError,
-    aabb_geometry_sha256,
-    canonical_payload_sha256,
+    aabb_geometry_identity,
+    canonical_payload_identity,
     city_task_obstacle_material_contract_payload,
     forbidden_scene_paths,
-    make_rivermark_layer_inventory,
     make_public_route_contract,
-    resolve_public_route_family,
+    make_rivermark_layer_inventory,
     resolve_city_lite_authority,
-    validate_rivermark_layer_inventory_receipt,
+    resolve_public_route_family,
     validate_public_route_contract,
     validate_public_routes,
+    validate_rivermark_layer_inventory_receipt,
     validate_static_scene_receipt,
 )
-from .eight_cf2x_fleet import EightCF2XFleet
 from .citylite_task import (
     LIDAR_CHANNEL_COUNT,
     LIDAR_HORIZONTAL_FOV_RANGE_DEG,
@@ -64,30 +66,22 @@ from .citylite_task import (
     ONBOARD_HORIZONTAL_APERTURE_MM,
     ONBOARD_IMAGE_HEIGHT,
     ONBOARD_IMAGE_WIDTH,
-    TARGET_VISIBILITY_GEOMETRY_SCHEMA,
+    PUBLIC_ROUTE_WAYPOINT_SEGMENT_SECONDS,
     TARGET_VISIBILITY_BUCKETS,
+    TARGET_VISIBILITY_GEOMETRY_SCHEMA,
     TARGET_VISIBILITY_MIN_NATIVE_FRAMES,
     TARGET_VISIBILITY_MIN_NATIVE_PIXELS,
-    PUBLIC_ROUTE_WAYPOINT_SEGMENT_SECONDS,
-    validate_route_timing_feasibility,
     target_region_for_positions,
     target_visibility_execution_window,
     target_visibility_geometry_contract,
+    validate_route_timing_feasibility,
     verify_target_visibility_bucket,
 )
-from .capture_lease import repository_app_launcher_lease
-from .frame_archive import FrameSpool, write_chunked_frame_archive
 from .cleanup_history import cleanup_completed_runs
-from .failure_ledger import (
-    CAPTURE_START_SCHEMA,
-    FailureRecord,
-    append_failure_record_once,
-    recover_crash_left_attempts,
-)
 from .collection_protocol import (
-    CollectionProtocolError,
     NATIVE_T2_CANARY_V2_PROTOCOL_SCHEMA,
     NATIVE_T2_CANARY_V3_PROTOCOL_SCHEMA,
+    CollectionProtocolError,
     is_native_t2_canary_protocol,
     load_collection_protocol,
     native_t2_motion_contract,
@@ -95,6 +89,43 @@ from .collection_protocol import (
     validate_collection_binding,
 )
 from .condition_realization import condition_request_from_protocol
+from .eight_cf2x_fleet import EightCF2XFleet
+from .failure_ledger import (
+    CAPTURE_START_SCHEMA,
+    FailureRecord,
+    append_failure_record_once,
+    recover_crash_left_attempts,
+)
+from .frame_archive import FrameSpool, write_chunked_frame_archive
+from .isaac_runtime_safety import (
+    RUNTIME_SAFETY_FRAME_OUTCOME_CODES,
+    RUNTIME_SAFETY_PHASE_CODES,
+    RUNTIME_SAFETY_TRACE_RELATIVE_PATH,
+    SENSOR_PHASE_EVENT_CODES,
+    SENSOR_PHASE_EVENT_SEQUENCE,
+    SENSOR_PHASE_SENSOR_NAMES,
+    SENSOR_PHASE_TRACE_RELATIVE_PATH,
+    SENSOR_PHASE_TRACE_SCHEMA,
+    RuntimeSafetyAbort,
+    bind_runtime_safety_trace_evidence,
+    evaluate_runtime_safety,
+    finalize_runtime_safety_guard,
+    physics_time_ns,
+    record_runtime_safety_abort,
+    record_runtime_safety_check,
+    runtime_safety_receipt_template,
+    sensor_phase_array_digest,
+)
+from .isaac_transfer import FixedDecisionCadence, WorldCommandBounds
+from .native_t2_canary import (
+    NATIVE_T2_EVENTS_SCHEMA,
+    NATIVE_T2_TRACE_SCHEMA,
+    PublicRouteCoveragePolicy,
+    SpatialCandidateDeduplicator,
+    bind_native_t2_calibration,
+    native_rgbd_world_points,
+    native_semantic_rgbd_candidates,
+)
 from .private_evaluator_manifest import (
     NATIVE_T2_V2_TASK_VARIANT_ID,
     NATIVE_T2_V3_TASK_VARIANT_ID,
@@ -117,35 +148,6 @@ from .resource_telemetry import (
     ResourceTelemetry,
     foreign_native_process_census,
 )
-from .isaac_runtime_safety import (
-    RUNTIME_SAFETY_FRAME_OUTCOME_CODES,
-    RUNTIME_SAFETY_PHASE_CODES,
-    RUNTIME_SAFETY_TRACE_RELATIVE_PATH,
-    SENSOR_PHASE_EVENT_CODES,
-    SENSOR_PHASE_EVENT_SEQUENCE,
-    SENSOR_PHASE_SENSOR_NAMES,
-    SENSOR_PHASE_TRACE_RELATIVE_PATH,
-    SENSOR_PHASE_TRACE_SCHEMA,
-    RuntimeSafetyAbort,
-    bind_runtime_safety_trace_evidence,
-    evaluate_runtime_safety,
-    finalize_runtime_safety_guard,
-    record_runtime_safety_abort,
-    record_runtime_safety_check,
-    runtime_safety_receipt_template,
-    sensor_phase_array_digest,
-    physics_time_ns,
-)
-from .isaac_transfer import FixedDecisionCadence, WorldCommandBounds
-from .native_t2_canary import (
-    NATIVE_T2_EVENTS_SCHEMA,
-    NATIVE_T2_TRACE_SCHEMA,
-    PublicRouteCoveragePolicy,
-    SpatialCandidateDeduplicator,
-    bind_native_t2_calibration,
-    native_rgbd_world_points,
-    native_semantic_rgbd_candidates,
-)
 from .t2_policy_abi import (
     T2CandidateEventJournal,
     T2NativeStepEvidence,
@@ -153,7 +155,6 @@ from .t2_policy_abi import (
     T2PublicFleetObservation,
     T2PublicSensorObservation,
 )
-
 
 AGENT_COUNT = 8
 _SYSTEM_COMMIT_SNAPSHOT_UNSET = object()
@@ -207,13 +208,7 @@ ONBOARD_CAMERA_PITCH_DOWN_RAD = math.radians(15.0)
 
 
 def _camera_mount_quat_wxyz(pitch_down_rad: float = ONBOARD_CAMERA_PITCH_DOWN_RAD) -> tuple[float, float, float, float]:
-    """Return the body-relative WXYZ mount quaternion for a downward pitch.
-
-    In the right-handed body frame, a positive rotation about +Y maps the
-    Camera ``world`` optical axis +X to ``(+cos(pitch), 0, -sin(pitch))``.
-    Keeping this formula in one place makes the USD/Fabric calibration
-    auditable instead of relying on a hand-entered quaternion sign.
-    """
+    """Return the body-relative WXYZ mount quaternion for a downward pitch."""
 
     pitch = float(pitch_down_rad)
     if not math.isfinite(pitch) or abs(pitch) >= math.pi / 2.0:
@@ -327,7 +322,7 @@ OVERVIEW_STRUCTURAL_LABEL_TOKENS = (
 )
 # A body may be contact-free according to its root sensor while an incorrectly
 # mounted camera or a missing static collider is already inside a rendered
-# facade.  These raw-sensor limits make that contradiction fail closed. The
+# facade.  These raw-sensor limits make that contradiction stop the run. The
 # LiDAR target set excludes the CF2X fleet, so a near return is independent
 # evidence of scene geometry rather than a self-return.
 VISUAL_INTRUSION_GATE_SCHEMA = "org.rivermark.isaac-rgbd-lidar-visual-intrusion-gate.v1"
@@ -456,12 +451,7 @@ def _module_path_is_under(module: Any, package_root: Path) -> bool:
 
 
 def _activate_local_isaaclab_source(source_root: Path | None = None) -> Path | None:
-    """Activate one IsaacLab source tree and reject preloaded source drift.
-
-    A locked capture must audit and import the same tree.  In particular, an
-    editable site-package or a stale ``sys.modules`` entry must not silently
-    win after the command-line path was audited.
-    """
+    """Activate one IsaacLab source tree and reject preloaded source drift."""
 
     if source_root is None:
         configured = os.environ.get("RIVERMARK_ISAACLAB_SOURCE")
@@ -931,7 +921,7 @@ def _bind_runtime_lock_to_args(
 
     if args.runtime_lock is None:
         return None
-    from .runtime_lock import load_runtime_lock, runtime_lock_sha256
+    from .runtime_lock import load_runtime_lock, runtime_lock_identity
 
     lock = load_runtime_lock(args.runtime_lock.expanduser().resolve())
     simulation = lock["simulation"]
@@ -958,18 +948,13 @@ def _bind_runtime_lock_to_args(
         receipt["runtime_lock"] = {
             "path": str(args.runtime_lock.expanduser().resolve()),
             "profile_id": str(lock["profile_id"]),
-            "sha256": runtime_lock_sha256(lock),
+            "identity": runtime_lock_identity(lock),
         }
     return lock
 
 
 def _captured_frame_indices(steps: int, capture_stride: int) -> tuple[int, ...]:
-    """Return zero-based rollout steps retained by the capture cadence.
-
-    A trailing partial stride is an accepted physical frame.  Keeping the
-    exact indices in one Isaac-free helper prevents the spool allocation,
-    capture loop, receipt, and independent validator from drifting apart.
-    """
+    """Return zero-based rollout steps retained by the capture cadence."""
 
     if steps < 1 or capture_stride < 1:
         raise ValueError("steps and capture_stride must be positive")
@@ -989,12 +974,7 @@ def _overview_archive_frame_indices(
     sensor_frame_count: int,
     archive_stride: int = OVERVIEW_ARCHIVE_STRIDE,
 ) -> tuple[int, ...]:
-    """Return the immutable low-rate overview evidence schedule.
-
-    The first and final retained sensor frames are always included.  Interior
-    entries are selected solely by their zero-based retained-frame index, so
-    the archive cannot become a quality-selected subset after a run succeeds.
-    """
+    """Return the immutable low-rate overview evidence schedule."""
 
     if sensor_frame_count < 1 or archive_stride < 1:
         raise ValueError("sensor_frame_count and archive_stride must be positive")
@@ -1006,14 +986,7 @@ def _overview_archive_frame_indices(
 
 @dataclass(frozen=True)
 class CaptureStorageBudget:
-    """Conservative on-volume reservation for one native capture.
-
-    This is deliberately a capacity model, not a prediction of compressed
-    artifact size.  It counts raw numeric payloads, the temporary spool-growth
-    generation, and a second finalization generation before adding fixed
-    headroom.  A caller therefore cannot make preflight pass merely by claiming
-    that RGB-D or semantic frames will compress well.
-    """
+    """Conservative on-volume reservation for one native capture."""
 
     sensor_frame_count: int
     overview_frame_count: int
@@ -1043,15 +1016,7 @@ class CaptureStorageBudget:
 
 
 def _capture_storage_budget(args: argparse.Namespace) -> CaptureStorageBudget:
-    """Derive the minimum acceptable capture reservation from frozen layouts.
-
-    The source keeps the calculation Isaac-free so it can fail before an
-    AppLauncher is created.  The explicit dtype widths mirror the arrays
-    written in ``_capture``: RGB is uint8, semantic/depth and sensor values are
-    32-bit numeric tensors, and timestamp/camera-witness scalars are int64 or
-    float64.  If a retained field is added, this model must change in the same
-    commit and its tests must be updated.
-    """
+    """Derive the minimum acceptable capture reservation from frozen layouts."""
 
     dimensions = {
         "steps": getattr(args, "steps", None),
@@ -1145,12 +1110,7 @@ def _capture_storage_budget(args: argparse.Namespace) -> CaptureStorageBudget:
 
 
 def _capture_tree_bytes(root: Path) -> int:
-    """Return durable regular-file bytes below a capture directory.
-
-    This is intentionally a conservative accounting helper rather than a
-    directory-size proxy: Windows allocation-unit size can only increase the
-    true demand, while the preflight headroom absorbs normal allocation slack.
-    """
+    """Return durable regular-file bytes below a capture directory."""
 
     total = 0
     for path in root.rglob("*"):
@@ -1199,7 +1159,7 @@ def _enforce_runtime_storage_guard(
     )
     events = guard["events"]
     if not isinstance(events, list):
-        raise RuntimeError("runtime storage guard receipt is malformed")
+        raise TypeError("runtime storage guard receipt is malformed")
     events.append(event)
     if not event["passed"]:
         raise RuntimeError(
@@ -1210,13 +1170,7 @@ def _enforce_runtime_storage_guard(
 
 @dataclass
 class _SensorUpdateTimeline:
-    """Advance each IsaacLab sensor exactly to an absolute physics timestamp.
-
-    IsaacLab ``SensorBase.update`` increments an internal sensor clock on
-    every call.  Safety and retained-contact reads may happen in the same
-    physical frame, so a second read must receive a zero increment rather
-    than another simulation interval.
-    """
+    """Advance each IsaacLab sensor exactly to an absolute physics timestamp."""
 
     _last_update_time_ns: dict[int, int]
 
@@ -1290,13 +1244,7 @@ def _enforce_system_commit_guard(
     output_dir: Path | None = None,
     snapshot: Mapping[str, Any] | None | object = _SYSTEM_COMMIT_SNAPSHOT_UNSET,
 ) -> None:
-    """Fail closed before host commit pressure risks Windows process failure.
-
-    Callers which have just sampled :class:`ResourceTelemetry` pass its exact
-    ``system_commit`` snapshot here.  This prevents the receipt, telemetry,
-    and threshold decision from describing three different host observations.
-    The direct query remains for preflight paths that exist before telemetry.
-    """
+    """Stop the run before host commit pressure risks Windows process failure."""
 
     if snapshot is _SYSTEM_COMMIT_SNAPSHOT_UNSET:
         observed_snapshot = _windows_system_commit_snapshot()
@@ -1367,14 +1315,7 @@ def _enforce_foreign_native_process_guard(
     output_dir: Path | None = None,
     census: Mapping[str, Any] | None | object = _SYSTEM_COMMIT_SNAPSHOT_UNSET,
 ) -> None:
-    """Reject whenever another high-commit native runtime owns the host.
-
-    The process census is intentionally anonymous in the receipt.  A human can
-    inspect local processes when needed, while a development artifact exposes
-    only the aggregate condition that made a run unsafe.  Census unavailability
-    or an invalid aggregate is a hard failure: treating either as zero candidates
-    would recreate the race this guard exists to prevent.
-    """
+    """Reject whenever another high-commit native runtime owns the host."""
 
     threshold_gib = float(getattr(args, "maximum_foreign_native_private_commit_gib", 8.0))
     if not math.isfinite(threshold_gib) or threshold_gib <= 0.0:
@@ -1396,7 +1337,7 @@ def _enforce_foreign_native_process_guard(
         },
     )
     if not isinstance(guard, dict):
-        raise RuntimeError("foreign native process guard receipt is not mutable")
+        raise TypeError("foreign native process guard receipt is not mutable")
     if guard.get("schema") != "org.rivermark.foreign-native-process-guard.v2":
         raise RuntimeError("foreign native process guard receipt schema changed during the run")
     if guard.get("maximum_private_commit_gib") != threshold_gib:
@@ -1575,12 +1516,12 @@ def _load_native_t2_calibration_binding(
         )
     except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
         raise ValueError(f"cannot read CF2X runtime calibration: {source}") from exc
-    from .runtime_lock import runtime_lock_sha256
+    from .runtime_lock import runtime_lock_identity
 
     return bind_native_t2_calibration(
         report,
-        expected_usd_sha256=_sha256(args.drone_usd.expanduser().resolve()),
-        expected_runtime_lock_sha256=runtime_lock_sha256(runtime_lock),
+        expected_usd_identity=_identity(args.drone_usd.expanduser().resolve()),
+        expected_runtime_lock_identity=runtime_lock_identity(runtime_lock),
         expected_control_dt_s=float(args.dt),
     )
 
@@ -1656,18 +1597,13 @@ def _normalized_private_targets(manifest: Mapping[str, Any]) -> tuple[dict[str, 
 def validate_external_private_evaluator_manifest(
     manifest: Mapping[str, Any],
     *,
-    city_lite_scene_contract_sha256: str,
-    city_lite_scene_payload_sha256: str,
+    city_lite_scene_contract_identity: str,
+    city_lite_scene_payload_identity: str,
     expected_collection_binding: Mapping[str, Any] | None = None,
     expected_task_variant_id: str = TASK_VARIANT_ID,
     expected_native_t2_motion_contract: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], ...]:
-    """Validate an evaluator-owned manifest without minting any target truth.
-
-    The selector, its candidate population, and any entropy source are outside
-    the public repository.  Capture receives only selected targets from a
-    pre-existing private artifact and records only that artifact's SHA-256.
-    """
+    """Validate an evaluator-owned manifest without minting any target truth."""
 
     if not isinstance(manifest, Mapping):
         raise PrivateEvaluatorManifestError("external evaluator manifest must be a JSON object")
@@ -1690,8 +1626,8 @@ def validate_external_private_evaluator_manifest(
     expected = {
         "schema": PRIVATE_EVALUATOR_SCHEMA,
         "environment_id": ENVIRONMENT_ID,
-        "city_lite_scene_contract_sha256": city_lite_scene_contract_sha256,
-        "city_lite_scene_payload_sha256": city_lite_scene_payload_sha256,
+        "city_lite_scene_contract_identity": city_lite_scene_contract_identity,
+        "city_lite_scene_payload_identity": city_lite_scene_payload_identity,
         "task_variant_id": expected_task_variant_id,
         "sampled_before_policy_start": True,
         "route_conditioning": "public_only",
@@ -1732,17 +1668,17 @@ def validate_external_private_evaluator_manifest(
     try:
         route_family_id = str(visibility["route_family_id"])
         routes = resolve_public_route_family(route_family_id)
-        aabb_hash = str(visibility["aabb_geometry_sha256"])
+        aabb_identity = str(visibility["aabb_geometry_identity"])
         target_region_id = str(visibility["target_region_id"])
         visibility_bucket = str(visibility["visibility_bucket"])
         tracking_envelope_m = float(visibility["tracking_envelope_m"])
         execution_window = visibility.get("execution_window")
         if not isinstance(execution_window, Mapping):
-            raise ValueError("target visibility contract has no execution window")
+            raise TypeError("target visibility contract has no execution window")
         expected_visibility = target_visibility_geometry_contract(
             route_family_id=route_family_id,
             routes_w_m=routes,
-            aabb_geometry_sha256=aabb_hash,
+            aabb_geometry_identity=aabb_identity,
             target_region_id=target_region_id,
             visibility_bucket=visibility_bucket,
             tracking_envelope_m=tracking_envelope_m,
@@ -1771,13 +1707,7 @@ def validate_external_private_evaluator_manifest(
 def _validate_target_visibility_against_native_t2_motion(
     visibility_contract: Mapping[str, Any], motion_contract: Mapping[str, Any]
 ) -> None:
-    """Bind a v4 private target contract to the independently loaded protocol.
-
-    The manifest's own SHA only proves self-consistency.  This comparison is
-    deliberately against the capture-side protocol content, so changing a
-    heading or retained-window field in the private file cannot weaken target
-    placement without failing before Isaac starts.
-    """
+    """Bind a v4 private target contract to the independently loaded protocol."""
 
     try:
         expected_window = target_visibility_execution_window(
@@ -1809,18 +1739,13 @@ def _validate_target_visibility_against_native_t2_motion(
 def _target_visibility_heading_kwargs(
     visibility_contract: Mapping[str, Any],
 ) -> dict[str, float | str]:
-    """Extract the optional v4 public camera-heading schedule.
-
-    Absence intentionally means the frozen v3 initial-heading model.  A
-    malformed v4 field is left to ``target_visibility_geometry_contract`` so
-    every manifest validator shares one strict semantic implementation.
-    """
+    """Extract the optional v4 public camera-heading schedule."""
 
     heading = visibility_contract.get("camera_heading_contract")
     if heading is None:
         return {}
     if not isinstance(heading, Mapping):
-        raise ValueError("target visibility camera_heading_contract must be an object")
+        raise TypeError("target visibility camera_heading_contract must be an object")
     return {
         "camera_heading_model": str(heading.get("model")),
         "max_yaw_rate_rad_s": float(heading.get("max_yaw_rate_rad_s")),
@@ -1837,12 +1762,7 @@ def _target_semantic_visibility_evidence(
     *,
     minimum_pixels: int,
 ) -> dict[str, Any]:
-    """Count anonymous target slots in the just-rendered onboard semantic frame.
-
-    Slots are capture-local learning-label identities.  They are deliberately
-    unrelated to evaluator-owned target IDs, which must never enter a public
-    semantic label or payload.
-    """
+    """Count anonymous target slots in the just-rendered onboard semantic frame."""
 
     semantic_array = np.asarray(_to_numpy(semantic))
     if semantic_array.ndim == 4 and semantic_array.shape[-1] == 1:
@@ -1963,18 +1883,14 @@ def _target_semantic_slots(count: int) -> tuple[str, ...]:
 def _target_visibility_checkpoint_summary(
     evidence: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
-    """Reduce native target visibility evidence for a frame checkpoint.
-
-    ``per_target_slot`` is the public capture-local ABI.  Keeping this access
-    in one helper prevents a stale evaluator-oriented key from aborting a
-    physical capture after raw sensor frames have already been written.
-    """
+    """Reduce native target visibility evidence for a frame checkpoint."""
 
     if evidence is None:
         return None
     per_target_slot = evidence.get("per_target_slot")
+    # The public ABI contract is ValueError here; test_isaac_capture asserts it.
     if not isinstance(per_target_slot, Mapping):
-        raise ValueError("target visibility evidence is missing per_target_slot")
+        raise ValueError("target visibility evidence is missing per_target_slot")  # noqa: TRY004
     return {
         "schema": evidence["schema"],
         "passed": evidence["passed"],
@@ -1990,13 +1906,7 @@ def _target_visibility_rollout_summary(
     target_slots: Sequence[str],
     evidence_samples: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    """Aggregate native target visibility without exposing evaluator truth.
-
-    Capture-local semantic slots are intentionally the only identities in the
-    persisted summary.  Target IDs, positions, private seed material, and the
-    evaluator manifest stay outside the capture directory even when a final
-    visibility gate fails.
-    """
+    """Aggregate native target visibility without exposing evaluator truth."""
 
     if len(set(target_slots)) != len(target_slots) or any(
         not isinstance(slot, str) or not slot.startswith(TARGET_SEMANTIC_INSTANCE_PREFIX)
@@ -2083,14 +1993,7 @@ def _public_capture_failure(
     *,
     private_route: bool,
 ) -> dict[str, str | bool]:
-    """Return failure evidence that cannot disclose evaluator-private inputs.
-
-    A failed private-route capture is still useful locally through its process
-    stderr and retained raw artifact directory, but its receipt is a public
-    control-plane document.  Exception strings and tracebacks are therefore not
-    serialized for that route: validation errors can contain target IDs or
-    coordinates even when the normal success receipt is aggregate-only.
-    """
+    """Return failure evidence that cannot disclose evaluator-private inputs."""
 
     if private_route:
         return {
@@ -2128,8 +2031,8 @@ def _load_external_private_evaluator_manifest(
         raise PrivateEvaluatorManifestError("external evaluator manifest must be a JSON object")
     validate_external_private_evaluator_manifest(
         payload,
-        city_lite_scene_contract_sha256=authority.contract_sha256,
-        city_lite_scene_payload_sha256=authority.contract_payload_sha256,
+        city_lite_scene_contract_identity=authority.contract_identity,
+        city_lite_scene_payload_identity=authority.contract_payload_identity,
         expected_collection_binding=expected_collection_binding,
         expected_task_variant_id=expected_task_variant_id,
         expected_native_t2_motion_contract=expected_native_t2_motion_contract,
@@ -2158,22 +2061,18 @@ def validate_private_target_geometry(
     *,
     structural_aabbs: Sequence[AABB],
     public_routes_w_m: Sequence[Sequence[Sequence[float]]],
-    city_lite_scene_contract_sha256: str,
-    city_lite_scene_payload_sha256: str,
+    city_lite_scene_contract_identity: str,
+    city_lite_scene_payload_identity: str,
     execution_window: Mapping[str, Any] | None = None,
     expected_task_variant_id: str = TASK_VARIANT_ID,
     expected_native_t2_motion_contract: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Reject unsafe/private targets before they can be spawned in Isaac.
-
-    This checks selected truth against runtime City-Lite geometry and public
-    routes.  It does not reveal positions, candidate pools, or source seeds.
-    """
+    """Reject unsafe/private targets before they can be spawned in Isaac."""
 
     targets = validate_external_private_evaluator_manifest(
         manifest,
-        city_lite_scene_contract_sha256=city_lite_scene_contract_sha256,
-        city_lite_scene_payload_sha256=city_lite_scene_payload_sha256,
+        city_lite_scene_contract_identity=city_lite_scene_contract_identity,
+        city_lite_scene_payload_identity=city_lite_scene_payload_identity,
         expected_task_variant_id=expected_task_variant_id,
         expected_native_t2_motion_contract=expected_native_t2_motion_contract,
     )
@@ -2182,7 +2081,7 @@ def validate_private_target_geometry(
     route_segments = [
         (start, end)
         for route in public_routes_w_m
-        for start, end in zip(route, route[1:])
+        for start, end in itertools.pairwise(route)
     ]
     if not route_segments:
         raise PrivateEvaluatorManifestError("private target placement requires public route segments")
@@ -2195,7 +2094,7 @@ def validate_private_target_geometry(
         expected_routes = resolve_public_route_family(route_family_id)
     except CityLiteRouteError as exc:
         raise PrivateEvaluatorManifestError(str(exc)) from exc
-    if canonical_payload_sha256(public_routes_w_m) != canonical_payload_sha256(expected_routes):
+    if canonical_payload_identity(public_routes_w_m) != canonical_payload_identity(expected_routes):
         raise PrivateEvaluatorManifestError(
             "private target visibility contract route family does not match the executed public route"
         )
@@ -2203,11 +2102,11 @@ def validate_private_target_geometry(
     if not isinstance(declared_window, Mapping):
         raise PrivateEvaluatorManifestError("private target visibility contract has no execution window")
     effective_window = declared_window if execution_window is None else execution_window
-    geometry_sha256 = aabb_geometry_sha256(structural_aabbs)
+    geometry_identity = aabb_geometry_identity(structural_aabbs)
     expected_visibility_contract = target_visibility_geometry_contract(
         route_family_id=route_family_id,
         routes_w_m=expected_routes,
-        aabb_geometry_sha256=geometry_sha256,
+        aabb_geometry_identity=geometry_identity,
         target_region_id=str(visibility_contract.get("target_region_id", "")),
         visibility_bucket=str(visibility_contract.get("visibility_bucket", "")),
         tracking_envelope_m=float(visibility_contract.get("tracking_envelope_m")),
@@ -2344,13 +2243,7 @@ def validate_private_target_execution_window(
     *,
     execution_window: Mapping[str, Any],
 ) -> None:
-    """Reject a target manifest that was sampled for another rollout window.
-
-    The full target geometry test runs after the native City-Lite stage is
-    composed.  This smaller check runs before AppLauncher so a harmless-looking
-    command-line duration change cannot allocate Isaac and then sample only a
-    prefix of the manifest's promised witness route.
-    """
+    """Reject a target manifest that was sampled for another rollout window."""
 
     visibility_contract = manifest.get("target_visibility_contract")
     if not isinstance(visibility_contract, Mapping):
@@ -2418,15 +2311,7 @@ SEMANTIC_FRAME_METADATA_RELATIVE_PATH = "learning_labels/semantic_frame_metadata
 def _public_semantic_id_mapping(
     metadata: Any, *, private_target_ids: Sequence[str] = ()
 ) -> dict[str, Any]:
-    """Project Replicator metadata to the public per-render semantic ID ABI.
-
-    Replicator's numeric semantic IDs belong to a render product and can be
-    reassigned after a camera update.  The capture artifact therefore stores a
-    freshly projected mapping for every retained frame.  Restricting it to ID,
-    class, and public CF2X identity prevents USD paths, transforms, arbitrary
-    annotator attributes, and evaluator-private target identifiers from
-    entering a public capture directory.
-    """
+    """Project Replicator metadata to the public per-render semantic ID ABI."""
 
     redacted = _redact_private_target_metadata(
         metadata, private_target_ids=private_target_ids
@@ -2504,8 +2389,8 @@ def _semantic_frame_metadata_record(
     }
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
@@ -2558,28 +2443,20 @@ def _persist_receipt_snapshot(output_dir: Path, receipt: Mapping[str, Any]) -> N
         encoding="utf-8",
     )
     _atomic_write_text(
-        output_dir / "capture_receipt.sha256",
-        f"{_sha256(receipt_path)}  capture_receipt.json\n",
+        output_dir / "capture_receipt.identity",
+        f"{_identity(receipt_path)}  capture_receipt.json\n",
         encoding="ascii",
     )
 
 
 def _persist_terminal_capture_state(output_dir: Path, receipt: dict[str, Any]) -> None:
-    """Durably record a terminal receipt and its public denominator entry.
+    """Durably record a terminal receipt and its public denominator entry."""
 
-    Isaac/Kit shutdown can terminate the interpreter from ``app.close()``. A
-    terminal receipt must therefore reach the append-only failure ledger before
-    ``_capture`` enters its resource-closing ``finally`` block. The ledger
-    append is idempotent and deliberately best-effort: receipt durability is
-    never downgraded if a separate control-plane write temporarily fails, and
-    ``recover_crash_left_attempts`` can reconcile that explicit residue.
-    """
-
-    receipt["artifact_hashes"] = _artifact_hashes(output_dir)
+    receipt["artifact_identities"] = _artifact_identities(output_dir)
     _persist_receipt_snapshot(output_dir, receipt)
     try:
         _record_raw_capture_attempt(output_dir, receipt)
-    except Exception as error:  # noqa: BLE001 - independent ledger I/O is recoverable.
+    except Exception as error:
         # Do not convert successfully captured physical evidence into a false
         # capture failure because its separately recoverable ledger write failed.
         print(f"[WARN] raw capture ledger append skipped: {error}", file=sys.stderr)
@@ -2590,15 +2467,15 @@ def _write_capture_start_marker(output_dir: Path, receipt: Mapping[str, Any]) ->
 
     created = int(receipt["created_wall_time_ns"])
     source_revision = str(receipt["source_revision"])
-    attempt_id = "attempt-" + hashlib.sha256(
-        f"{output_dir.name}:{created}:{source_revision}".encode("utf-8")
+    attempt_id = "attempt-" + IdentityAccumulator(
+        f"{output_dir.name}:{created}:{source_revision}".encode()
     ).hexdigest()[:32]
     marker: dict[str, Any] = {
         "schema": CAPTURE_START_SCHEMA,
         "attempt_id": attempt_id,
         "started_wall_time_ns": created,
         "source_revision": source_revision,
-        "source_tree_sha256": str(receipt["source_tree_sha256"]),
+        "source_tree_identity": str(receipt["source_tree_identity"]),
         "source_worktree_dirty": bool(receipt["source_worktree_dirty"]),
         "task_kind": str(receipt["task_kind"]),
         "control_mode": str(receipt["command"]["control_mode"]),
@@ -2644,13 +2521,7 @@ def _resolve_collection_binding(args: argparse.Namespace) -> dict[str, Any] | No
 def _native_t2_motion_contract_for_capture(
     args: argparse.Namespace, *, collection_binding: Mapping[str, Any] | None
 ) -> dict[str, Any] | None:
-    """Bind versioned motion values and route feasibility before AppLauncher starts.
-
-    The old T2 canary had no public binding from its command limits to private
-    target placement.  It is retained as failure evidence, but a new native
-    launch must use v2 so the camera-witness schedule, action envelope and
-    route timing are one auditable contract.
-    """
+    """Bind versioned motion values and route feasibility before AppLauncher starts."""
 
     if args.control_mode != CONTROL_MODE_NATIVE_T2_CANARY:
         return None
@@ -2735,7 +2606,7 @@ def _resolve_condition_request(
         return condition_request_from_protocol(
             protocol,
             protocol_id=str(binding["protocol_id"]),
-            protocol_sha256=str(binding["protocol_sha256"]),
+            protocol_identity=str(binding["protocol_identity"]),
             cell_id=str(binding["cell_id"]),
         )
     except (OSError, CollectionProtocolError, ValueError, TypeError, KeyError) as exc:
@@ -2748,12 +2619,7 @@ def _bind_sensor_physics_smoke_receipt(
     receipt: dict[str, Any],
     runtime_lock: Mapping[str, Any],
 ) -> None:
-    """Validate and commit to a pre-existing full native smoke receipt.
-
-    The smoke remains outside the capture ownership boundary. Reading its
-    bytes once prevents a time-of-check/time-of-use mismatch between semantic
-    validation and the SHA-256 committed by the raw capture receipt.
-    """
+    """Validate and commit to a pre-existing full native smoke receipt."""
 
     configured = args.sensor_physics_smoke_receipt
     if configured is None:
@@ -2768,23 +2634,23 @@ def _bind_sensor_physics_smoke_receipt(
             "--sensor-physics-smoke-receipt must name an existing "
             "isaac_smoke_receipt.json"
         )
-    sidecar = path.with_suffix(".sha256")
+    sidecar = path.with_suffix(".identity")
     if not sidecar.is_file():
         raise SensorPhysicsSmokeReceiptError(
-            "sensor-physics smoke SHA-256 sidecar is missing"
+            "sensor-physics smoke IDENTITY sidecar is missing"
         )
     payload_bytes = path.read_bytes()
-    payload_sha256 = hashlib.sha256(payload_bytes).hexdigest()
-    expected_sidecar = f"{payload_sha256}  {path.name}\n"
+    payload_identity = IdentityAccumulator(payload_bytes).hexdigest()
+    expected_sidecar = f"{payload_identity}  {path.name}\n"
     try:
         observed_sidecar = sidecar.read_text(encoding="ascii")
     except UnicodeDecodeError as exc:
         raise SensorPhysicsSmokeReceiptError(
-            "sensor-physics smoke SHA-256 sidecar is not ASCII"
+            "sensor-physics smoke IDENTITY sidecar is not ASCII"
         ) from exc
     if observed_sidecar != expected_sidecar:
         raise SensorPhysicsSmokeReceiptError(
-            "sensor-physics smoke receipt was modified after its SHA-256 sidecar"
+            "sensor-physics smoke receipt was modified after its IDENTITY sidecar"
         )
     try:
         payload = json.loads(payload_bytes.decode("utf-8"))
@@ -2800,7 +2666,7 @@ def _bind_sensor_physics_smoke_receipt(
     # Local import avoids a module cycle: isaac_smoke deliberately reuses the
     # native capture constructors from this module.
     from .isaac_smoke import validate_smoke_receipt
-    from .runtime_lock import runtime_lock_sha256
+    from .runtime_lock import runtime_lock_identity
 
     errors = validate_smoke_receipt(payload, runtime_lock=runtime_lock)
     if errors:
@@ -2823,16 +2689,16 @@ def _bind_sensor_physics_smoke_receipt(
         )
     if (
         source.get("source_revision") != receipt.get("source_revision")
-        or source.get("source_tree_sha256") != receipt.get("source_tree_sha256")
+        or source.get("source_tree_identity") != receipt.get("source_tree_identity")
     ):
         raise SensorPhysicsSmokeReceiptError(
             "sensor-physics smoke source revision/tree does not match this capture"
         )
 
-    lock_sha256 = runtime_lock_sha256(runtime_lock)
+    lock_identity = runtime_lock_identity(runtime_lock)
     profile_id = runtime_lock.get("profile_id")
     if (
-        payload.get("runtime_lock_sha256") != lock_sha256
+        payload.get("runtime_lock_identity") != lock_identity
         or payload.get("runtime_profile_id") != profile_id
     ):
         raise SensorPhysicsSmokeReceiptError(
@@ -2848,23 +2714,23 @@ def _bind_sensor_physics_smoke_receipt(
         or dict(observed_assets) != dict(expected_assets)
     ):
         raise SensorPhysicsSmokeReceiptError(
-            "sensor-physics smoke asset hashes do not match the runtime lock"
+            "sensor-physics smoke asset identities do not match the runtime lock"
         )
     scene = payload.get("scene")
     if (
         not isinstance(scene, Mapping)
-        or scene.get("contract_sha256")
-        != expected_assets.get("city_lite_contract_sha256")
+        or scene.get("contract_identity")
+        != expected_assets.get("city_lite_contract_identity")
     ):
         raise SensorPhysicsSmokeReceiptError(
             "sensor-physics smoke City-Lite contract does not match this capture"
         )
 
-    build = f"isaaclab:{profile_id}@sha256:{lock_sha256}"
+    build = f"isaaclab:{profile_id}@identity:{lock_identity}"
     receipt["capture_backend"] = {
         "kind": "isaaclab",
         "build": build,
-        "sensor_physics_smoke_receipt_sha256": payload_sha256,
+        "sensor_physics_smoke_receipt_identity": payload_identity,
     }
 
 
@@ -2904,7 +2770,7 @@ def _run_capture_preflight(
         isaac_sim_version=args.isaac_sim_version,
         isaaclab_version=args.isaaclab_version,
         scene_contract=args.scene_contract,
-        scene_contract_sha256=SCENE_CONTRACT_SHA256,
+        scene_contract_identity=SCENE_CONTRACT_IDENTITY,
         runtime_lock=args.runtime_lock,
         isaaclab_source=args.isaaclab_source,
         cf2x_usd=args.drone_usd,
@@ -2921,7 +2787,7 @@ def _run_capture_preflight(
         estimated_capture_bytes=declared_capture_bytes,
         source_root=_repository_root(),
         required_assets=(
-            (args.drone_usd.expanduser().resolve(), _sha256(args.drone_usd.expanduser().resolve())),
+            (args.drone_usd.expanduser().resolve(), _identity(args.drone_usd.expanduser().resolve())),
         ),
         require_clean=not args.allow_dirty_source,
         runtime=runtime,
@@ -2980,13 +2846,13 @@ def _run_capture_preflight(
         _persist_receipt_snapshot(output_dir, receipt)
 
 
-def _artifact_hashes(root: Path) -> dict[str, dict[str, Any]]:
-    excluded = {"capture_receipt.json", "capture_receipt.sha256"}
+def _artifact_identities(root: Path) -> dict[str, dict[str, Any]]:
+    excluded = {"capture_receipt.json", "capture_receipt.identity"}
     result: dict[str, dict[str, Any]] = {}
     for path in sorted(root.rglob("*")):
         if path.is_file() and path.name not in excluded:
             relative = path.relative_to(root).as_posix()
-            result[relative] = {"bytes": path.stat().st_size, "sha256": _sha256(path)}
+            result[relative] = {"bytes": path.stat().st_size, "identity": _identity(path)}
     return result
 
 
@@ -3016,20 +2882,14 @@ def _failure_ledger_classification(receipt: Mapping[str, Any]) -> tuple[str, str
 
 
 def _record_raw_capture_attempt(output_dir: Path, receipt: Mapping[str, Any]) -> None:
-    """Record a public raw-capture denominator without touching formal index data.
-
-    The automatic path is deliberately restricted to a ``rivermark-runs``
-    sibling root.  Unit tests and ad-hoc runs outside that root remain isolated;
-    production capture attempts get one path-free ledger record after the final
-    receipt hash is known.
-    """
+    """Record a public raw-capture denominator without touching formal index data."""
 
     if output_dir.parent.name.lower() != "rivermark-runs":
         return
     receipt_path = output_dir / "capture_receipt.json"
     if not receipt_path.is_file():
         return
-    receipt_hash = _sha256(receipt_path)
+    receipt_identity = _identity(receipt_path)
     outcome, category, reason_code = _failure_ledger_classification(receipt)
     start_marker = output_dir / "capture_start.json"
     attempt_id: str | None = None
@@ -3041,15 +2901,15 @@ def _record_raw_capture_attempt(output_dir: Path, receipt: Mapping[str, Any]) ->
         pass
     if attempt_id is None:
         # Compatibility for pre-recovery pilot runs that predate the marker.
-        attempt_id = "attempt-" + hashlib.sha256(
-            f"{output_dir.name}:{receipt_hash}".encode("utf-8")
+        attempt_id = "attempt-" + IdentityAccumulator(
+            f"{output_dir.name}:{receipt_identity}".encode()
         ).hexdigest()[:32]
     binding = receipt.get("collection_binding")
     binding_kwargs: dict[str, Any] = {}
     if isinstance(binding, Mapping):
         binding_kwargs = {
             "collection_protocol_id": binding.get("protocol_id"),
-            "collection_protocol_sha256": binding.get("protocol_sha256"),
+            "collection_protocol_identity": binding.get("protocol_identity"),
             "collection_cell_id": binding.get("cell_id"),
             "collection_episode_index": binding.get("episode_index"),
             "episode_seed": binding.get("episode_seed"),
@@ -3066,8 +2926,8 @@ def _record_raw_capture_attempt(output_dir: Path, receipt: Mapping[str, Any]) ->
             stage="isaac_capture",
             recorded_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             split=split if isinstance(split, str) else "pilot",
-            source_capture_sha256=receipt_hash,
-            receipt_sha256=receipt_hash,
+            source_capture_identity=receipt_identity,
+            receipt_identity=receipt_identity,
             reason_code=reason_code,
             **binding_kwargs,
         ),
@@ -3176,13 +3036,7 @@ def _city_lite_initial_root_states(
     device: str,
     routes_w_m: Sequence[Sequence[Sequence[float]]] = PUBLIC_ROUTES_W_M,
 ) -> Any:
-    """Return the complete literal CF2X default root state expected by IsaacLab.
-
-    ``AssetBase`` authors ``init_state.pos`` and ``init_state.rot`` into the
-    USD spawn transform.  The remaining velocity fields are resolved into
-    ``Multirotor.data.default_root_state`` and must be zero before the first
-    policy command.  This helper makes both parts of that contract explicit.
-    """
+    """Return the complete literal CF2X default root state expected by IsaacLab."""
 
     states = torch.zeros((AGENT_COUNT, 13), dtype=torch.float32, device=device)
     states[:, :7] = _city_lite_initial_root_poses(torch, device, routes_w_m)
@@ -3207,7 +3061,7 @@ def _initial_route_heading_yaws_rad(
 
     headings: list[float] = []
     for route in routes_w_m:
-        for start, end in zip(route, route[1:]):
+        for start, end in itertools.pairwise(route):
             delta_x = float(end[0]) - float(start[0])
             delta_y = float(end[1]) - float(start[1])
             if math.hypot(delta_x, delta_y) > 1.0e-6:
@@ -3310,12 +3164,7 @@ def _onboard_camera_mount_diagnostics(
     previous_root_expected_phase: str | None,
     torch: Any,
 ) -> dict[str, Any]:
-    """Emit receipt-only alternatives for the native parent/timing closure audit.
-
-    The data deliberately contains camera/body transforms only. It neither
-    relaxes render-facing USD acceptance nor exposes targets, images, semantic
-    payloads, or private evaluator information.
-    """
+    """Emit receipt-only alternatives for the native parent/timing closure audit."""
 
     body_pos_w, body_quat_w, body_index = _literal_onboard_camera_parent_link_poses(robot, torch)
     body_expected_pos_w, body_expected_quat_wxyz = _expected_onboard_camera_world_poses_from_parent(
@@ -3411,14 +3260,7 @@ def _onboard_camera_mount_diagnostics(
 
 
 def _camera_pose_closure(robot: Any, camera: Any, torch: Any) -> dict[str, Any]:
-    """Read Camera's Fabric cache for diagnostics only.
-
-    ``Camera.data`` is populated through a Fabric view.  It is useful for
-    detecting a delayed cache, but it is not the authority for a frame that
-    was rendered by the USD camera hierarchy.  Callers that bind an RGB-D
-    frame must use :func:`_camera_pose_closure_from_usd` after the matching
-    render/read fence has completed.
-    """
+    """Read Camera's Fabric cache for diagnostics only."""
 
     expected_pos, expected_quat = _expected_onboard_camera_world_poses(robot, torch)
     observed_pos = camera.data.pos_w.detach()
@@ -3442,14 +3284,7 @@ def _world_camera_quat_from_usd_axes(
     right: Sequence[float],
     up: Sequence[float],
 ) -> tuple[float, float, float, float]:
-    """Convert USD/OpenGL camera axes to IsaacLab's ``world`` convention.
-
-    USD Cameras use ``+X`` right, ``+Y`` up, and ``-Z`` forward.  IsaacLab's
-    world convention instead uses ``+X`` forward, ``-Y`` right, and ``+Z``
-    up.  The returned quaternion maps that latter local basis into world
-    coordinates, matching ``CameraData.quat_w_world`` without reading its
-    potentially delayed Fabric cache.
-    """
+    """Convert USD/OpenGL camera axes to IsaacLab's ``world`` convention."""
 
     if any(len(vector) != 3 for vector in (forward, right, up)):
         raise RuntimeError("onboard USD camera axes must be three-dimensional")
@@ -3649,7 +3484,7 @@ def _onboard_camera_usd_pose_closure(
 
 
 def _require_onboard_camera_usd_pose(closure: Mapping[str, Any]) -> None:
-    """Fail closed when any Isaac render camera drifts from its CF2X mount."""
+    """Stop the run when any Isaac render camera drifts from its CF2X mount."""
 
     position_error = float(closure["max_position_error_m"])
     forward_cosine = float(closure["min_forward_alignment_cosine"])
@@ -3674,13 +3509,7 @@ def _require_onboard_camera_usd_pose(closure: Mapping[str, Any]) -> None:
 def _onboard_camera_fabric_pose_diagnostic(
     closure: Mapping[str, Any], torch: Any
 ) -> dict[str, Any]:
-    """Classify the non-authoritative Camera Fabric cache without gating RGB-D.
-
-    The render-facing USD transform and its matching render/read fence are the
-    acceptance evidence.  A Fabric residual can reveal cache lag or a parent
-    binding problem, so it is retained verbatim, but it cannot reject a frame
-    whose USD transform, raw image and independent replay all agree.
-    """
+    """Classify the non-authoritative Camera Fabric cache without gating RGB-D."""
 
     position_error = float(torch.max(closure["position_error_m"]).item())
     orientation_error = float(torch.max(closure["orientation_error_rad"]).item())
@@ -3709,18 +3538,12 @@ def _onboard_camera_fabric_pose_diagnostic(
 def _prepare_onboard_camera_local_mount(
     sim: Any, stage: Any, robot: Any, torch: Any
 ) -> tuple[Any, Any, dict[str, Any]]:
-    """Flush the body transform and close the native parent-relative camera mount.
-
-    ``CameraCfg.offset`` is the local transform from the CF2X body parent to
-    the camera.  Do not write a world pose to this dynamic child: IsaacLab's
-    Fabric world-pose path and USD hierarchy composition have different
-    authorities.  The only runtime operation here is a simulation flush before
-    reading the renderer-facing USD hierarchy.
-    """
+    """Flush the body transform and close the native parent-relative camera mount."""
 
     forward = getattr(sim, "forward", None)
+    # Not a caller type error: the running Isaac build lacks the required API.
     if not callable(forward):
-        raise RuntimeError("SimulationContext Fabric-forward API is unavailable")
+        raise RuntimeError("SimulationContext Fabric-forward API is unavailable")  # noqa: TRY004
     # Flush the post-step PhysX body transform before querying the composed USD
     # hierarchy.  This is not a camera transform write.
     forward()
@@ -3733,13 +3556,7 @@ def _prepare_onboard_camera_local_mount(
 
 
 def _onboard_camera_frame_counter(camera: Any, torch: Any) -> Any:
-    """Return IsaacLab's per-render Camera counter as fail-closed audit data.
-
-    IsaacLab 2.3.2 exposes this counter as ``Camera._frame`` rather than a
-    public property.  It is used only to fence a render/read operation; it is
-    explicitly not evidence that a particular pixel was rendered at a given
-    physics time.  The latter remains subject to native candidate replay.
-    """
+    """Return IsaacLab's per-render Camera counter as strict audit data."""
 
     counter = getattr(camera, "_frame", None)
     if not torch.is_tensor(counter):
@@ -3903,40 +3720,6 @@ def _author_camera_usd_look_at(
         orient.Set(Gf.Quatd(w, Gf.Vec3d(x, y, z)))
 
 
-def _set_fixed_overview_view(stage: Any, overview: Any) -> dict[str, Any]:
-    """Set then independently verify the render-facing fixed overview transform."""
-
-    spec = _overview_view_spec()
-    # Try the exact upstream helper first. In headless Isaac Sim it may return
-    # after only logging that no active viewport exists, hence the explicit USD
-    # audit and fallback below.
-    viewport_api_error: Exception | None = None
-    try:
-        from isaacsim.core.utils.viewports import set_camera_view
-
-        set_camera_view(
-            eye=spec["eye_w_m"],
-            target=spec["target_w_m"],
-            camera_prim_path=overview.cfg.prim_path,
-        )
-    except Exception as error:  # noqa: BLE001 - every failure takes the audited USD fallback
-        viewport_api_error = error
-    closure = _overview_camera_usd_pose_closure(stage, overview.cfg.prim_path)
-    try:
-        if viewport_api_error is not None:
-            raise RuntimeError("Isaac Sim viewport API did not author the witness pose")
-        _require_overview_camera_pose(closure)
-        spec["transform_authoring"] = "isaacsim_viewport_api"
-    except RuntimeError:
-        _author_overview_camera_usd_transform(stage, overview.cfg.prim_path)
-        closure = _overview_camera_usd_pose_closure(stage, overview.cfg.prim_path)
-        _require_overview_camera_pose(closure)
-        spec["transform_authoring"] = "direct_usd_look_at_fallback"
-        if viewport_api_error is not None:
-            spec["viewport_api_error_type"] = type(viewport_api_error).__name__
-    return spec
-
-
 def _overview_camera_usd_pose_closure(stage: Any, prim_path: str) -> dict[str, Any]:
     """Read the render-facing USD transform instead of a possibly stale Fabric pose."""
 
@@ -4059,13 +3842,7 @@ def _public_follow_view_from_body_pose(
 def _set_public_follow_overview_view(
     stage: Any, overview: Any, robot: Any, torch: Any
 ) -> dict[str, Any]:
-    """Author the evidence camera from the live public CF2X pose before render.
-
-    ``Camera.set_world_poses`` uses the Camera Fabric orientation convention,
-    which is not the USD Camera OpenGL optical-axis convention used by the
-    renderer.  Authoring the look-at transform directly keeps the frame that
-    Isaac renders and the USD closure in the same coordinate system.
-    """
+    """Author the evidence camera from the live public CF2X pose before render."""
 
     agent_id = OVERVIEW_FOLLOW_TRACKED_AGENT_ID
     body_pos = _to_numpy(robot.data.root_pos_w[agent_id]).tolist()
@@ -4171,12 +3948,6 @@ def _public_route_witness_view_at_time_ns(effective_time_ns: int) -> dict[str, A
                 "orientation_wxyz": list(shot["orientation_wxyz"]),
             }
     raise RuntimeError("route-witness schedule does not cover its effective timestamp")
-
-
-def _public_route_witness_view() -> dict[str, Any]:
-    """Return the first immutable witness shot for initial-render compatibility."""
-
-    return _public_route_witness_view_at_time_ns(0)
 
 
 def _set_public_route_witness_overview_view(
@@ -4304,12 +4075,7 @@ def _overview_render_array(value: Any, *, channels: int) -> np.ndarray | None:
 def _overview_tracked_agent_visibility_evidence(
     semantic: Any, semantic_metadata: Any
 ) -> dict[str, Any]:
-    """Prove that the route-witness image contains its named live CF2X marker.
-
-    The semantic marker is parented to the physical CF2X body.  It is a better
-    visual-evidence contract than a global pixel-difference threshold, which
-    could be satisfied by rendering noise or unrelated scene motion.
-    """
+    """Prove that the route-witness image contains its named live CF2X marker."""
 
     tracked_agent = str(OVERVIEW_WITNESS_TRACKED_AGENT_ID)
     marker_ids: set[int] = set()
@@ -4394,13 +4160,7 @@ def _persist_initial_overview_failure_diagnostics(
     root_lin_vel_w_mps: Any,
     np: Any,
 ) -> dict[str, Any]:
-    """Persist the native initial witness frame before a fail-closed gate raises.
-
-    The overview gate executes before the normal frame spools exist. Retaining its
-    real RGB, depth, semantic IDs, and public fleet state makes a camera or
-    semantic failure independently diagnosable without manufacturing a frame or
-    leaking evaluator-private coordinates.
-    """
+    """Persist the native initial witness frame before a strict gate raises."""
 
     relative_root = Path("failure_diagnostics")
     archive_path = output_dir / relative_root / "initial_overview_native.npz"
@@ -4420,7 +4180,7 @@ def _persist_initial_overview_failure_diagnostics(
         {
             "schema": "org.rivermark.initial-overview-failure-diagnostics.v1",
             "raw_sensor_archive": archive_path.name,
-            "raw_sensor_archive_sha256": _sha256(archive_path),
+            "raw_sensor_archive_identity": _identity(archive_path),
             "semantic_metadata": semantic_metadata,
             "overview_content_evidence": dict(content_evidence),
             "overview_agent_visibility_evidence": dict(agent_visibility_evidence),
@@ -4430,9 +4190,9 @@ def _persist_initial_overview_failure_diagnostics(
     return {
         "schema": "org.rivermark.initial-overview-failure-diagnostics.v1",
         "archive_relative_path": archive_path.relative_to(output_dir).as_posix(),
-        "archive_sha256": _sha256(archive_path),
+        "archive_identity": _identity(archive_path),
         "metadata_relative_path": metadata_path.relative_to(output_dir).as_posix(),
-        "metadata_sha256": _sha256(metadata_path),
+        "metadata_identity": _identity(metadata_path),
     }
 
 
@@ -4453,14 +4213,7 @@ def _overview_city_content_evidence(
     *,
     far_clip_m: float = OVERVIEW_CAMERA_CLIPPING_RANGE_M[1],
 ) -> dict[str, Any]:
-    """Measure whether one real overview render visibly contains City-Lite.
-
-    Depth proves that the renderer returned scene geometry rather than only an
-    environment/background. RGB spatial variation prevents a uniform depth
-    buffer from being treated as a useful video frame. Structural semantic
-    evidence is mandatory only when the render product supplies structural ID
-    metadata, preserving a valid geometric fallback for unlabelled USD assets.
-    """
+    """Measure whether one real overview render visibly contains City-Lite."""
 
     failures: list[str] = []
     rgb_array = _overview_render_array(rgb, channels=3)
@@ -4662,14 +4415,7 @@ def _onboard_scene_content_evidence(
     *,
     far_clip_m: float = ONBOARD_CAMERA_CLIPPING_RANGE_M[1],
 ) -> dict[str, Any]:
-    """Reject onboard frames dominated by far-clip/background pixels.
-
-    Near-geometry intrusion and scene-content quality are separate contracts:
-    a camera can be clear of meshes while still looking mostly at the sky.  The
-    semantic background fraction is recomputed from the raw label image and
-    per-camera Replicator metadata; calibration can only declare the result,
-    never make a failing raw frame pass.
-    """
+    """Reject onboard frames dominated by far-clip/background pixels."""
 
     depth = np.asarray(_to_numpy(depth_m))
     labels = np.asarray(_to_numpy(semantic))
@@ -4767,12 +4513,7 @@ def _onboard_semantic_frame_evidence(
     semantic_metadata: Any,
     target_slots: Sequence[str] = (),
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
-    """Evaluate both onboard semantic contracts from one frame-local mapping.
-
-    Replicator IDs are camera-local and can change after each update.  Keeping
-    both gates behind this small helper prevents a stale or differently scoped
-    metadata variable from making one gate observe a different frame.
-    """
+    """Evaluate both onboard semantic contracts from one frame-local mapping."""
 
     scene_content = _onboard_scene_content_evidence(
         depth_m,
@@ -4821,12 +4562,7 @@ def _onboard_visual_intrusion_evidence(
     *,
     lidar_max_distance_m: float,
 ) -> dict[str, Any]:
-    """Cross-check raw onboard RGB-D and LiDAR for rendered geometry intrusion.
-
-    This guard is intentionally independent of the root contact sensor and
-    conservative AABB sweep. It catches a stale/mis-mounted camera as well as
-    a rendered mesh that has no corresponding native collider.
-    """
+    """Cross-check raw onboard RGB-D and LiDAR for rendered geometry intrusion."""
 
     depth = np.asarray(_to_numpy(depth_m))
     ranges = np.asarray(_to_numpy(lidar_ranges_m))
@@ -4915,13 +4651,7 @@ def _make_multirotor_cfgs(
     ThrusterCfg: Any,
     routes_w_m: Sequence[Sequence[Sequence[float]]] = PUBLIC_ROUTES_W_M,
 ) -> tuple[Any, ...]:
-    """Author all eight City-Lite CF2X starts before Isaac initializes PhysX.
-
-    The per-agent literal config pattern follows the upstream md_qd_swarm
-    runtime-spawn lifecycle.  Rivermark owns the route-anchor positions and
-    headings, so this function deliberately does not claim the unrelated
-    upstream frozen-start layout.
-    """
+    """Author all eight City-Lite CF2X starts before Isaac initializes PhysX."""
 
     arm_m = 0.046
     yaw_ratio = 0.006
@@ -5006,12 +4736,7 @@ class _LiteralUsdWorldPose:
 
 @dataclass(frozen=True)
 class _RuntimeTargetUsdObservation:
-    """One evaluator-private target read from the composed live USD stage.
-
-    This object is intentionally local-only.  ``_audit_runtime_target_usd_authoring``
-    converts it into a path-free aggregate before putting anything in a public
-    receipt or checkpoint.
-    """
+    """One evaluator-private target read from the composed live USD stage."""
 
     prim_path: str
     position_w_m: tuple[float, float, float]
@@ -5028,14 +4753,7 @@ class _RuntimeTargetUsdObservation:
 def _runtime_target_sphere_prim(
     prim: Any, sphere_type: Any, descendants: Any | None = None
 ) -> Any:
-    """Return the unique authored sphere under a target root.
-
-    IsaacLab shape spawners use an Xform root with a ``geometry/mesh`` child;
-    accepting only the root's concrete type would reject the native authoring
-    that the capture itself creates. OpenUSD exposes subtree traversal through
-    ``Usd.PrimRange``; ``Usd.Prim`` itself has no ``GetDescendants`` method.
-    The optional iterable keeps the hierarchy rule unit-testable without Isaac.
-    """
+    """Return the unique authored sphere under a target root."""
 
     if prim.IsA(sphere_type):
         return prim
@@ -5058,15 +4776,7 @@ def _runtime_target_sphere_prim(
 def _runtime_target_class_labels(
     prim: Any, labels_api_type: Any, descendants: Any | None = None
 ) -> tuple[str, ...]:
-    """Read native class labels from one target subtree.
-
-    IsaacLab's shape spawner applies semantic tags to the authored root, but
-    USD composition and Replicator authoring can place the corresponding
-    ``SemanticsLabelsAPI:class`` on a geometry descendant.  The audit must
-    inspect the composed subtree without treating render-product ID maps as
-    authoring evidence.  Repeated copies of the same label are harmless;
-    conflicting class labels or private ``target_id`` namespaces are not.
-    """
+    """Read native class labels from one target subtree."""
 
     if descendants is None:
         from pxr import Usd
@@ -5091,7 +4801,7 @@ def _runtime_target_class_labels(
             if labels is None:
                 continue
             if isinstance(labels, (str, bytes)):
-                raise RuntimeError("runtime target USD class semantic label is malformed")
+                raise RuntimeError("runtime target USD class semantic label is malformed")  # noqa: TRY004 - malformed external USD state keeps the RuntimeError contract
             try:
                 label_values = tuple(labels)
             except TypeError as exc:
@@ -5296,7 +5006,7 @@ def _read_runtime_target_usd_authoring(
         # the child carries the sphere radius.  A direct Sphere is still
         # accepted for older/simple stages, but a wrapped target must contain
         # exactly one sphere descendant so a malformed or ambiguous asset
-        # fails closed instead of silently using the wrong geometry.
+        # stops the run instead of silently using the wrong geometry.
         sphere_prim = _runtime_target_sphere_prim(
             prim, UsdGeom.Sphere, descendants=Usd.PrimRange(prim)
         )
@@ -5344,17 +5054,11 @@ def _audit_runtime_target_usd_authoring(
     observed: Sequence[_RuntimeTargetUsdObservation],
     evaluator_manifest: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Fail closed unless USD target authoring exactly matches private truth.
-
-    The returned receipt contains no per-target detail because even an index
-    paired with a position, radius, or semantic slot would disclose evaluator
-    information.  It proves only that every expected target passed the same
-    runtime closure at the named capture phase.
-    """
+    """Stop the run unless USD target authoring exactly matches private truth."""
 
     targets = evaluator_manifest.get("targets")
     if not isinstance(targets, Sequence) or isinstance(targets, (str, bytes)):
-        raise RuntimeError("runtime target USD audit has no private target list")
+        raise RuntimeError("runtime target USD audit has no private target list")  # noqa: TRY004 - external manifest data
     if len(observed) != len(targets) or not observed:
         raise RuntimeError("runtime target USD audit count differs from private manifest")
 
@@ -5368,7 +5072,7 @@ def _audit_runtime_target_usd_authoring(
     all_rigid = True
     for index, (row, target) in enumerate(zip(observed, targets, strict=True)):
         if not isinstance(target, Mapping):
-            raise RuntimeError("runtime target USD audit has malformed private target")
+            raise RuntimeError("runtime target USD audit has malformed private target")  # noqa: TRY004 - external manifest data
         expected_path = f"/World/SearchTargets/Target_{index}"
         if row.prim_path != expected_path:
             raise RuntimeError("runtime target USD audit has unstable target-path order")
@@ -5476,18 +5180,7 @@ def _verify_literal_city_lite_spawn(
     expected_thruster_rps: Any,
     torch: Any,
 ) -> dict[str, Any]:
-    """Audit authored defaults separately from reset-time physical settling.
-
-    ``SimulationContext.reset()`` advances PhysX before the multirotor facade
-    can issue its first wrench.  With gravity enabled, that can legitimately
-    yield a small downward position delta and non-zero velocity even though the
-    USD spawn transform and configured default velocity are correct.  Do not
-    conceal that behavior with a root-state rewrite or by treating a live
-    velocity as a configuration error.  Instead, prove the resolved defaults
-    exactly, retain a tight live pose/orientation closure, record the physical
-    settling evidence, and let the immediately following runtime safety guard
-    reject contact, geometry, volume, and inter-agent violations.
-    """
+    """Audit authored defaults separately from reset-time physical settling."""
 
     observed_position = robot.data.root_pos_w
     observed_quaternion = robot.data.root_quat_w
@@ -5622,7 +5315,7 @@ def _collision_enabled(prim: Any) -> bool:
     try:
         if "PhysicsCollisionAPI" in {str(schema) for schema in prim.GetAppliedSchemas()}:
             return True
-    except Exception:
+    except Exception:  # noqa: S110 - best-effort USD probe; any failure falls through to the attribute check
         pass
     attribute = prim.GetAttribute("physics:collisionEnabled")
     if attribute and attribute.HasAuthoredValueOpinion():
@@ -5732,13 +5425,7 @@ def _native_collision_counts(stage: Any) -> dict[str, int]:
 
 
 def _author_city_task_obstacle_material_repair(stage: Any) -> None:
-    """Author the eight source-faithful local materials before reference loading.
-
-    The final City-Lite USDA binds these meshes to absolute material paths that
-    are deliberately outside the two admitted reference scopes.  A local
-    explicit binding authored in the stronger root layer prevents the scoped
-    geometry from silently falling back to an unbound display color.
-    """
+    """Author the eight source-faithful local materials before reference loading."""
 
     from pxr import Gf, Sdf, UsdGeom, UsdShade
 
@@ -5902,7 +5589,7 @@ def _validate_city_task_obstacle_material_closure(
     ]
     return {
         **contract,
-        "contract_sha256": CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_SHA256,
+        "contract_identity": CITY_TASK_OBSTACLE_MATERIAL_CONTRACT_IDENTITY,
         "post_repair_binding_closure": True,
         "observed_bindings": observed_bindings,
         "source_scope_diagnostics": {
@@ -5957,8 +5644,8 @@ def _compose_city_lite_stage(authority: CityLiteAuthority) -> tuple[Any, dict[st
     used_layer_identifiers: list[str] = []
     for layer in stage.GetUsedLayers():
         # `realPath` is empty for Kit's anonymous root/session layers. Preserve
-        # their `anon:` identifier so the inventory can count, but not hash,
-        # them. Every non-anonymous layer is resolved and hash-bound below.
+        # their `anon:` identifier so the inventory can count, but not identity,
+        # them. Every non-anonymous layer is resolved and identity-bound below.
         identifier = str(
             getattr(layer, "realPath", "") or getattr(layer, "identifier", "")
         ).strip()
@@ -6029,8 +5716,7 @@ def _extract_structural_aabbs(stage: Any) -> tuple[AABB, ...]:
     for prim in all_prims:
         path = str(prim.GetPath())
         if not (
-            path.startswith("/World/StaticScene/City/Rivermark/")
-            or path.startswith("/World/StaticScene/CityTaskObstacles/")
+            path.startswith(("/World/StaticScene/City/Rivermark/", "/World/StaticScene/CityTaskObstacles/"))
         ):
             continue
         if not prim.IsA(UsdGeom.Boundable) or _city_lite_ground_like(path) or _city_lite_helper(path):
@@ -6184,7 +5870,11 @@ def _make_sensors(
         Imu,
         ImuCfg,
     )
-    from isaaclab.sensors.ray_caster import MultiMeshRayCaster, MultiMeshRayCasterCfg, patterns
+    from isaaclab.sensors.ray_caster import (
+        MultiMeshRayCaster,
+        MultiMeshRayCasterCfg,
+        patterns,
+    )
 
     if use_tiled_onboard_camera or use_tiled_overview_camera:
         from isaaclab.sensors import TiledCamera, TiledCameraCfg
@@ -6271,7 +5961,7 @@ def _make_sensors(
         ray_alignment="base",
         max_distance=100.0,
         # IsaacLab 2.3.2 currently allocates [..., 1] but returns [...] for
-        # mesh IDs. Distances and hit points are unaffected, so fail closed on
+        # mesh IDs. Distances and hit points are unaffected, so stop the run on
         # this optional output instead of patching the external installation.
         update_mesh_ids=False,
     )
@@ -6365,13 +6055,7 @@ def _velocity_yaw_controller_target(
     torch: Any,
     math_utils: Any,
 ) -> tuple[Any, Any, Any, Any]:
-    """Lower a bounded world-velocity/yaw command to real CF2X thrust.
-
-    This is deliberately separate from the frozen public-route tracker. The
-    caller owns policy provenance and the swept geometry guard; this function
-    only provides the physical velocity/yaw-to-wrench control law and returns
-    the exact clipped command used to produce the thrust target.
-    """
+    """Lower a bounded world-velocity/yaw command to real CF2X thrust."""
 
     if not math.isfinite(float(base_thrust)) or not math.isfinite(float(command_hold_s)):
         raise ValueError("base thrust and command hold must be finite")
@@ -6447,12 +6131,7 @@ def _append(samples: dict[str, list[Any]], key: str, value: Any) -> None:
 
 
 def _raw_contact_force_maximum_n(net_contact_forces_w_n: Any) -> float:
-    """Return the raw per-body normal-force maximum for a trace frame.
-
-    This runs before the guard decision so an aborted frame retains the same
-    raw contact evidence that triggered it.  A non-finite component remains
-    non-finite rather than being silently converted to a passing value.
-    """
+    """Return the raw per-body normal-force maximum for a trace frame."""
 
     try:
         rows = net_contact_forces_w_n.reshape((-1, 3))
@@ -6512,12 +6191,7 @@ def _evaluate_and_record_runtime_safety(
     physics_step: int,
     physics_dt_s: float,
 ) -> Any:
-    """Evaluate one CPU snapshot and retain a passing or abort evidence frame.
-
-    The inputs are copied from Fabric in two batched transfers before the
-    pure-Python guard runs. This avoids CUDA scalar synchronization for every
-    coordinate and makes the previous state an immutable trace snapshot.
-    """
+    """Evaluate one CPU snapshot and retain a passing or abort evidence frame."""
 
     current_positions = _to_numpy(current_positions_w_m)
     current_forces = _to_numpy(net_contact_forces_w_n)
@@ -6602,7 +6276,7 @@ def _write_sensor_phase_trace(
         "physics_step",
         "physics_time_ns",
         "event_codes",
-        "retained_contact_sha256",
+        "retained_contact_identity",
         "archive_frame_index",
     }
     if set(phase_samples) != expected:
@@ -6612,11 +6286,11 @@ def _write_sensor_phase_trace(
         raise RuntimeError("sensor phase trace samples are incomplete")
     event_codes = np.asarray(phase_samples["event_codes"], dtype=np.uint8)
     contact_digests = np.asarray(
-        phase_samples["retained_contact_sha256"], dtype=np.uint8
+        phase_samples["retained_contact_identity"], dtype=np.uint8
     )
     if event_codes.shape != (count, len(SENSOR_PHASE_EVENT_SEQUENCE)):
         raise RuntimeError("sensor phase event trace has an invalid shape")
-    if contact_digests.shape != (count, 32):
+    if contact_digests.shape != (count, 8):
         raise RuntimeError("sensor phase contact digests have an invalid shape")
     destination = output_dir / SENSOR_PHASE_TRACE_RELATIVE_PATH
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -6627,7 +6301,7 @@ def _write_sensor_phase_trace(
         physics_step=np.asarray(phase_samples["physics_step"], dtype=np.int64),
         physics_time_ns=np.asarray(phase_samples["physics_time_ns"], dtype=np.int64),
         event_codes=event_codes,
-        retained_contact_sha256=contact_digests,
+        retained_contact_identity=contact_digests,
         archive_frame_index=np.asarray(
             phase_samples["archive_frame_index"], dtype=np.int64
         ),
@@ -6650,13 +6324,7 @@ def _capture_quality_observations(
     applied_thrust_n: Any,
     np: Any,
 ) -> dict[str, Any]:
-    """Build scalar receipt observations from already captured raw arrays.
-
-    Route-witness validity is established separately by the public schedule,
-    pose-closure, and agent-visibility gates.  The camera displacement here is
-    descriptive evidence across that fixed schedule, including its declared
-    shot transitions; it is not a substitute for any of those gates.
-    """
+    """Build scalar receipt observations from already captured raw arrays."""
 
     positions = np.asarray(overview_camera_positions_w_m, dtype=np.float64)
     if positions.ndim != 2 or positions.shape[0] < 1 or positions.shape[1] != 3:
@@ -6767,11 +6435,11 @@ def _capture(
             output_dir=output_dir,
         )
 
+        import isaaclab.sim as sim_utils
+        import isaaclab.utils.math as math_utils
         import numpy as np
         import omni.usd
         import torch
-        import isaaclab.sim as sim_utils
-        import isaaclab.utils.math as math_utils
         from isaaclab_contrib.actuators import ThrusterCfg
         from isaaclab_contrib.assets import Multirotor, MultirotorCfg
         after_launcher_telemetry = resource_telemetry.sample(
@@ -6824,8 +6492,8 @@ def _capture(
                 evaluator_manifest,
                 structural_aabbs=structural_aabbs,
                 public_routes_w_m=public_routes_w_m,
-                city_lite_scene_contract_sha256=authority.contract_sha256,
-                city_lite_scene_payload_sha256=authority.contract_payload_sha256,
+                city_lite_scene_contract_identity=authority.contract_identity,
+                city_lite_scene_payload_identity=authority.contract_payload_identity,
                 execution_window=_capture_target_visibility_execution_window(args),
                 expected_task_variant_id=(
                     _native_t2_task_variant_id(args)
@@ -6833,7 +6501,7 @@ def _capture(
                     else TASK_VARIANT_ID
                 ),
                 expected_native_t2_motion_contract=(
-                    getattr(args, "native_t2_motion_contract")
+                    args.native_t2_motion_contract
                     if args.control_mode == CONTROL_MODE_NATIVE_T2_CANARY
                     else None
                 ),
@@ -6984,7 +6652,7 @@ def _capture(
             _checkpoint(
                 output_dir,
                 "runtime_lock_live_configuration_verified",
-                runtime_lock_sha256=receipt["runtime_lock"]["sha256"],
+                runtime_lock_identity=receipt["runtime_lock"]["identity"],
                 observed=runtime_live_observed,
             )
         # IsaacLab exposes PhysX views only after reset.  Build the batching
@@ -7069,7 +6737,7 @@ def _capture(
                     )
                     bind_runtime_safety_trace_evidence(
                         runtime_safety_guard,
-                        trace_sha256=_sha256(trace_path),
+                        trace_identity=_identity(trace_path),
                         physics_frame_count=len(runtime_safety_samples["physics_step"]),
                     )
                 receipt["runtime_safety_guard"] = runtime_safety_guard
@@ -7187,7 +6855,7 @@ def _capture(
             "witness_shot_index": int(overview_witness_view["shot_index"]),
         }
         # This checkpoint is overwritten by the verified stage on success. On
-        # a fail-closed initial render it preserves enough raw evidence to
+        # a strict initial render it preserves enough raw evidence to
         # diagnose a real Isaac camera/semantic mismatch without guessing.
         _checkpoint(
             output_dir,
@@ -7348,17 +7016,7 @@ def _capture(
             "command_time_ns", "effective_time_ns", "root_pos_w_m", "root_quat_wxyz", "root_lin_vel_w_mps",
             "root_ang_vel_b_radps", "desired_pos_w_m", "desired_vel_w_mps", "target_thrust_n", "applied_thrust_n"
         ]
-        if args.control_mode == CONTROL_MODE_SB3_STATE_ONLY_TRANSFER:
-            state_sample_keys.extend(
-                (
-                    "pre_command_root_pos_w_m",
-                    "pre_command_root_quat_wxyz",
-                    "pre_command_root_lin_vel_w_mps",
-                    "pre_command_root_ang_vel_b_radps",
-                    "emitted_world_velocity_yaw_command",
-                )
-            )
-        elif args.control_mode == CONTROL_MODE_NATIVE_T2_CANARY:
+        if args.control_mode == CONTROL_MODE_SB3_STATE_ONLY_TRANSFER or args.control_mode == CONTROL_MODE_NATIVE_T2_CANARY:
             state_sample_keys.extend(
                 (
                     "pre_command_root_pos_w_m",
@@ -7400,7 +7058,7 @@ def _capture(
             "physics_step": [],
             "physics_time_ns": [],
             "event_codes": [],
-            "retained_contact_sha256": [],
+            "retained_contact_identity": [],
             "archive_frame_index": [],
         }
         capture_frame_indices = frozenset(
@@ -7635,7 +7293,7 @@ def _capture(
                                 "schema": NATIVE_T2_TRACE_SCHEMA,
                                 "record_type": "decision",
                                 "rollout_physics_step": step,
-                                "decision_sha256": native_t2_decision.sha256,
+                                "decision_identity": native_t2_decision.identity,
                                 "decision": native_t2_decision.public_dict(),
                             },
                             sort_keys=True,
@@ -8079,7 +7737,7 @@ def _capture(
             )
             sensor_phase_samples["physics_time_ns"].append(effective_time_ns)
             sensor_phase_samples["event_codes"].append(tuple(phase_events))
-            sensor_phase_samples["retained_contact_sha256"].append(
+            sensor_phase_samples["retained_contact_identity"].append(
                 np.frombuffer(
                     sensor_phase_array_digest(contact.data.net_forces_w),
                     dtype=np.uint8,
@@ -8205,7 +7863,7 @@ def _capture(
                 "formal_benchmark_admission": False,
                 "capture_attempt_id": receipt["capture_attempt_id"],
                 "decision_trace": NATIVE_T2_DECISION_TRACE_RELATIVE_PATH,
-                "decision_trace_sha256": _sha256(native_t2_trace_path),
+                "decision_trace_identity": _identity(native_t2_trace_path),
                 "source_observations": native_t2_sensor_observations,
                 "candidate_event_journal": native_t2_event_journal.public_dict(),
                 "event_time_origin_ns": physics_time_ns(args.warmup_steps, args.dt),
@@ -8218,13 +7876,13 @@ def _capture(
                 "claim_boundary": "development_native_t2_canary_only",
                 "decision_trace": {
                     "path": NATIVE_T2_DECISION_TRACE_RELATIVE_PATH,
-                    "sha256": _sha256(native_t2_trace_path),
+                    "identity": _identity(native_t2_trace_path),
                     "decision_count": native_t2_decision_count,
                     "physical_step_count": native_t2_physical_step_count,
                 },
                 "candidate_events": {
                     "path": NATIVE_T2_EVENT_JOURNAL_RELATIVE_PATH,
-                    "sha256": _sha256(native_t2_event_path),
+                    "identity": _identity(native_t2_event_path),
                     "source_observation_count": len(native_t2_sensor_observations),
                     "event_count": len(
                         native_t2_event_payload["candidate_event_journal"]["submission"]["events"]
@@ -8232,7 +7890,7 @@ def _capture(
                 },
                 "camera_extrinsics": {
                     "path": NATIVE_T2_CAMERA_EXTRINSICS_RELATIVE_PATH,
-                    "sha256": _sha256(native_t2_extrinsics_path),
+                    "identity": _identity(native_t2_extrinsics_path),
                     "frame_count": len(native_t2_extrinsics["timestamps_ns"]),
                     "world_camera_closure": "T_world_camera_from_verified_render_facing_usd_pose_converted_to_ros",
                 },
@@ -8290,9 +7948,9 @@ def _capture(
                     "state_phase": "pre_sim_command_state",
                     "state_action_state_phase": "pre_sim_command_state",
                     "state_action_path": "streams/state_action.npz",
-                    "state_action_sha256": _sha256(stream_dir / "state_action.npz"),
+                    "state_action_identity": _identity(stream_dir / "state_action.npz"),
                     "trace_path": SB3_TRANSFER_TRACE_RELATIVE_PATH,
-                    "trace_sha256": _sha256(transfer_trace_path),
+                    "trace_identity": _identity(transfer_trace_path),
                     "trace_decision_count": len(transfer_samples["rollout_physics_step"]),
                     "trace_fields": list(transfer_samples),
                     "transfer": dict(transfer_provenance),
@@ -8454,7 +8112,7 @@ def _capture(
         )
         finalize_runtime_safety_guard(
             runtime_safety_guard,
-            trace_sha256=_sha256(runtime_safety_trace_path),
+            trace_identity=_identity(runtime_safety_trace_path),
             physics_frame_count=expected_runtime_frames,
         )
         receipt["runtime_safety_guard"] = runtime_safety_guard
@@ -8466,7 +8124,7 @@ def _capture(
         receipt["sensor_phase_trace"] = {
             "schema": SENSOR_PHASE_TRACE_SCHEMA,
             "path": SENSOR_PHASE_TRACE_RELATIVE_PATH,
-            "sha256": _sha256(sensor_phase_trace_path),
+            "identity": _identity(sensor_phase_trace_path),
             "frame_count": len(sensor_phase_samples["physics_step"]),
             "sensor_names": list(SENSOR_PHASE_SENSOR_NAMES),
             "event_codes": list(SENSOR_PHASE_EVENT_SEQUENCE),
@@ -8549,7 +8207,7 @@ def _capture(
             raise RuntimeError(
                 "route-witness capture does not visibly contain its tracked CF2X in every frame"
             )
-        public_task_sha256: str | None = None
+        public_task_identity: str | None = None
         target_observability_passed: bool | None = None
         observable_target_count: int | None = None
         private_target_count = 0
@@ -8577,7 +8235,7 @@ def _capture(
                 "waypoint_reached_radius_m": WAYPOINT_REACHED_RADIUS_M,
                 # The public route contract is the frozen task definition. The
                 # controller executes its float32 tensor representation, but
-                # serialising that tensor here would change hashes for values
+                # serialising that tensor here would change identities for values
                 # such as 9.081 and make the route identity platform-dependent.
                 "routes_w_m": [
                     [list(point) for point in route]
@@ -8586,8 +8244,8 @@ def _capture(
                 "route_contract": {
                     "geometry_source": "citylite_structural_aabb_v1",
                     "clearance_m": ROUTE_CLEARANCE_M,
-                    "aabb_geometry_sha256": route_report.aabb_geometry_sha256,
-                    "routes_sha256": route_contract["routes_sha256"],
+                    "aabb_geometry_identity": route_report.aabb_geometry_identity,
+                    "routes_identity": route_contract["routes_identity"],
                     "all_waypoints_in_command_volume": True,
                     "all_segments_clear": True,
                 },
@@ -8605,7 +8263,7 @@ def _capture(
             }
             public_task_path = output_dir / "public_task.json"
             _write_json(public_task_path, public_task)
-            public_task_sha256 = _sha256(public_task_path)
+            public_task_identity = _identity(public_task_path)
             _write_json(
                 output_dir / "task_outcome.json",
                 {
@@ -8619,8 +8277,8 @@ def _capture(
                     "observation_rule": "native onboard semantic anonymous-slot-class visibility",
                     "policy_confirmation_events_present": False,
                     "closed_loop_scoring_eligible": False,
-                    "private_manifest_commitment_sha256": receipt["evaluator_manifest_sha256"],
-                    "state_action_sha256": _sha256(stream_dir / "state_action.npz"),
+                    "private_manifest_commitment_identity": receipt["evaluator_manifest_identity"],
+                    "state_action_identity": _identity(stream_dir / "state_action.npz"),
                     "private_coordinates_released": False,
                 },
             )
@@ -8643,7 +8301,7 @@ def _capture(
                 "route_family_id": route_profile.route_family_id,
                 "start_anchor_id": route_profile.start_anchor_id,
                 "waypoint_segment_seconds": _native_t2_waypoint_segment_seconds(args),
-                "motion_contract": dict(getattr(args, "native_t2_motion_contract")),
+                "motion_contract": dict(args.native_t2_motion_contract),
                 "routes_w_m": [
                     [list(point) for point in route]
                     for route in public_routes_w_m
@@ -8651,8 +8309,8 @@ def _capture(
                 "route_contract": {
                     "geometry_source": "citylite_structural_aabb_v1",
                     "clearance_m": ROUTE_CLEARANCE_M,
-                    "aabb_geometry_sha256": route_report.aabb_geometry_sha256,
-                    "routes_sha256": route_contract["routes_sha256"],
+                    "aabb_geometry_identity": route_report.aabb_geometry_identity,
+                    "routes_identity": route_contract["routes_identity"],
                     "all_waypoints_in_command_volume": True,
                     "all_segments_clear": True,
                 },
@@ -8693,7 +8351,7 @@ def _capture(
             }
             public_task_path = output_dir / "public_task.json"
             _write_json(public_task_path, public_task)
-            public_task_sha256 = _sha256(public_task_path)
+            public_task_identity = _identity(public_task_path)
             _write_json(
                 output_dir / "task_outcome.json",
                 {
@@ -8707,8 +8365,8 @@ def _capture(
                     "policy_confirmation_events_present": True,
                     "closed_loop_scoring_eligible": False,
                     "formal_benchmark_admission": False,
-                    "private_manifest_commitment_sha256": receipt["evaluator_manifest_sha256"],
-                    "state_action_sha256": _sha256(stream_dir / "state_action.npz"),
+                    "private_manifest_commitment_identity": receipt["evaluator_manifest_identity"],
+                    "state_action_identity": _identity(stream_dir / "state_action.npz"),
                     "native_t2_evidence": receipt["native_t2_evidence"],
                     "private_coordinates_released": False,
                 },
@@ -8888,7 +8546,7 @@ def _capture(
             },
             "radar": {
                 "status": "not_captured",
-                "fail_closed": True,
+                "strict": True,
                 "reason": "No independently validated RTX radar or hardware radar source was available.",
             },
         }
@@ -8919,8 +8577,8 @@ def _capture(
                 "structural_aabbs": structural_aabb_rows,
                 "collision_proxies": {
                     "count": len(proxy_paths),
-                    "aabb_geometry_sha256": route_report.aabb_geometry_sha256,
-                    "source_aabb_geometry_sha256": route_report.aabb_geometry_sha256,
+                    "aabb_geometry_identity": route_report.aabb_geometry_identity,
+                    "source_aabb_geometry_identity": route_report.aabb_geometry_identity,
                     "representation": COLLISION_PROXY_REPRESENTATION,
                     "prim_root": COLLISION_PROXY_ROOT,
                     "collision_enabled": True,
@@ -8930,7 +8588,7 @@ def _capture(
                     "includes_city": True,
                     "includes_city_task_obstacles": True,
                     "includes_collision_proxies": True,
-                    "geometry_aabb_sha256": route_report.aabb_geometry_sha256,
+                    "geometry_aabb_identity": route_report.aabb_geometry_identity,
                 },
                 "capture_control_mode": args.control_mode,
                 "identity_markers": marker_paths,
@@ -8964,14 +8622,14 @@ def _capture(
             }
         )
         if args.control_mode in (CONTROL_MODE_FIXED_PUBLIC_ROUTE, CONTROL_MODE_NATIVE_T2_CANARY):
-            if public_task_sha256 is None:
-                raise RuntimeError("private-target capture scene requires a public task hash")
+            if public_task_identity is None:
+                raise RuntimeError("private-target capture scene requires a public task identity")
             scene_payload.update(
                 {
-                    "private_evaluator_manifest_sha256": receipt[
-                        "evaluator_manifest_sha256"
+                    "private_evaluator_manifest_identity": receipt[
+                        "evaluator_manifest_identity"
                     ],
-                    "public_task_sha256": public_task_sha256,
+                    "public_task_identity": public_task_identity,
                 }
             )
             if args.control_mode == CONTROL_MODE_NATIVE_T2_CANARY:
@@ -8982,15 +8640,15 @@ def _capture(
                     {
                         "native_t2_task_kind": NATIVE_T2_TASK_KIND,
                         "native_t2_task_variant_id": _native_t2_task_variant_id(args),
-                        "native_t2_decision_trace_sha256": native_t2_evidence[
+                        "native_t2_decision_trace_identity": native_t2_evidence[
                             "decision_trace"
-                        ]["sha256"],
-                        "native_t2_event_journal_sha256": native_t2_evidence[
+                        ]["identity"],
+                        "native_t2_event_journal_identity": native_t2_evidence[
                             "candidate_events"
-                        ]["sha256"],
-                        "native_t2_camera_extrinsics_sha256": native_t2_evidence[
+                        ]["identity"],
+                        "native_t2_camera_extrinsics_identity": native_t2_evidence[
                             "camera_extrinsics"
-                        ]["sha256"],
+                        ]["identity"],
                         "native_t2_policy_input": "public_state_only",
                     }
                 )
@@ -9001,8 +8659,8 @@ def _capture(
                 {
                     "control_transfer_task_kind": CONTROL_TRANSFER_TASK_KIND,
                     "control_transfer_task_variant_id": CONTROL_TRANSFER_TASK_VARIANT_ID,
-                    "control_transfer_trace_sha256": _sha256(transfer_trace_path),
-                    "control_transfer_provenance_sha256": _sha256(
+                    "control_transfer_trace_identity": _identity(transfer_trace_path),
+                    "control_transfer_provenance_identity": _identity(
                         transfer_provenance_path
                     ),
                     "control_transfer_state_phase": "pre_sim_command_state",
@@ -9048,7 +8706,7 @@ def _capture(
                 "evaluation": "not_a_search_result",
                 "private_targets_present": False,
                 "decision_trace": SB3_TRANSFER_TRACE_RELATIVE_PATH,
-                "decision_trace_sha256": _sha256(
+                "decision_trace_identity": _identity(
                     output_dir / SB3_TRANSFER_TRACE_RELATIVE_PATH
                 ),
             }
@@ -9081,9 +8739,9 @@ def _capture(
                 "private_targets_present": True,
                 "formal_benchmark_admission": False,
                 "decision_trace": native_t2_evidence["decision_trace"]["path"],
-                "decision_trace_sha256": native_t2_evidence["decision_trace"]["sha256"],
+                "decision_trace_identity": native_t2_evidence["decision_trace"]["identity"],
                 "candidate_events": native_t2_evidence["candidate_events"]["path"],
-                "candidate_events_sha256": native_t2_evidence["candidate_events"]["sha256"],
+                "candidate_events_identity": native_t2_evidence["candidate_events"]["identity"],
             }
             capture_modalities = {
                 "rgb": "captured_for_public_candidate_reconstruction",
@@ -9151,14 +8809,14 @@ def _capture(
                 "task": capture_task,
                 "city_lite_scene": {
                     "environment_id": ENVIRONMENT_ID,
-                    "scene_contract_sha256": authority.contract_sha256,
-                    "scene_contract_payload_sha256": authority.contract_payload_sha256,
+                    "scene_contract_identity": authority.contract_identity,
+                    "scene_contract_payload_identity": authority.contract_payload_identity,
                     "active_static_prim_count": static_scene_evidence["active_static_prim_count"],
                     "structural_aabb_count": len(structural_aabbs),
                     "collision_proxy_count": len(proxy_paths),
-                    "structural_aabb_geometry_sha256": route_report.aabb_geometry_sha256,
-                    "rivermark_layer_inventory_sha256": static_scene_evidence[
-                        "rivermark_layer_inventory"]["inventory_sha256"]
+                    "structural_aabb_geometry_identity": route_report.aabb_geometry_identity,
+                    "rivermark_layer_inventory_identity": static_scene_evidence[
+                        "rivermark_layer_inventory"]["inventory_identity"]
                     ,
                     "rivermarksrc51_external_layer_count": static_scene_evidence[
                         "rivermark_layer_inventory"
@@ -9212,7 +8870,7 @@ def _capture(
                 receipt["sensor_phase_trace"] = {
                     "schema": SENSOR_PHASE_TRACE_SCHEMA,
                     "path": SENSOR_PHASE_TRACE_RELATIVE_PATH,
-                    "sha256": _sha256(failed_phase_path),
+                    "identity": _identity(failed_phase_path),
                     "frame_count": len(sensor_phase_samples["physics_step"]),
                     "sensor_names": list(SENSOR_PHASE_SENSOR_NAMES),
                     "event_codes": list(SENSOR_PHASE_EVENT_SEQUENCE),
@@ -9344,7 +9002,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "skipped_count": sum(record.action == "skipped" for record in cleanup_records),
         },
         "source_revision": revision,
-        "source_tree_sha256": source.source_tree_sha256,
+        "source_tree_identity": source.source_tree_identity,
         "source_worktree_dirty": dirty,
         "task_kind": (
             "search3d"
@@ -9396,7 +9054,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "max_angular_velocity_radps": MAX_CF2X_ANGULAR_VELOCITY_RADPS,
             },
             "drone_usd": str(args.drone_usd.resolve()),
-            "drone_usd_sha256": _sha256(args.drone_usd.resolve()) if args.drone_usd.is_file() else None,
+            "drone_usd_identity": _identity(args.drone_usd.resolve()) if args.drone_usd.is_file() else None,
             "scene_contract": str(args.scene_contract.expanduser().resolve()),
         },
         "provenance": {
@@ -9529,7 +9187,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     else TASK_VARIANT_ID
                 ),
                 expected_native_t2_motion_contract=(
-                    getattr(args, "native_t2_motion_contract")
+                    args.native_t2_motion_contract
                     if args.control_mode == CONTROL_MODE_NATIVE_T2_CANARY
                     else None
                 ),
@@ -9539,10 +9197,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 evaluator_manifest, execution_window=execution_window
             )
             receipt["target_visibility_execution_window"] = execution_window
-            receipt["evaluator_manifest_sha256"] = retained_manifest.sha256
+            receipt["evaluator_manifest_identity"] = retained_manifest.identity
             receipt["evaluator_manifest_retention"] = {
                 "kind": PRIVATE_MANIFEST_RETENTION_KIND,
-                "sha256": retained_manifest.sha256,
+                "identity": retained_manifest.identity,
                 "bytes": retained_manifest.byte_count,
                 "path_released": False,
                 "payload_released": False,

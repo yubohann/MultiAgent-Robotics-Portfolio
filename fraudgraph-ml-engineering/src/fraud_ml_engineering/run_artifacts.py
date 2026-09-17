@@ -5,10 +5,11 @@ import platform
 import subprocess
 import sys
 import time
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -16,7 +17,6 @@ class RunArtifacts:
     run_root: Path
     manifest_path: Path
     summary_path: Path
-    report_path: Path
 
 
 def _timestamp_token() -> str:
@@ -47,19 +47,6 @@ def create_run_artifacts(base_root: str | Path, *, prefix: str | None = None) ->
         run_root=run_root,
         manifest_path=run_root / "manifest.json",
         summary_path=run_root / "summary.json",
-        report_path=run_root / "report.md",
-    )
-
-
-def resume_run_artifacts(run_root: str | Path) -> RunArtifacts:
-    root = _normalize_root(run_root)
-    if not root.exists():
-        raise FileNotFoundError(f"Run directory does not exist: {root}")
-    return RunArtifacts(
-        run_root=root,
-        manifest_path=root / "manifest.json",
-        summary_path=root / "summary.json",
-        report_path=root / "report.md",
     )
 
 

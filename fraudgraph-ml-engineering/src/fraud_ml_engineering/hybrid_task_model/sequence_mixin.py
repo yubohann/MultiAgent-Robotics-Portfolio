@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-import math
-import random
-
-import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
-from ._helpers import (
-    _slice_optional_batch
+from ..fraud_dataset import (
+    _has_lazy_relation_sequence_payload,
+    _materialize_relation_sequence_chunk,
 )
+from ._helpers import _slice_optional_batch
 
 
 class SequenceMixin:
@@ -184,19 +180,19 @@ class SequenceMixin:
         if "sequence" in graph.ndata:
             return (
                 graph.ndata["sequence"][start:end],
-                _slice_optional_batch(graph.ndata["sequence_mask"] if "sequence_mask" in graph.ndata else None, start, end),
+                _slice_optional_batch(graph.ndata.get("sequence_mask", None), start, end),
                 _slice_optional_batch(
-                    graph.ndata["sequence_token_weights"] if "sequence_token_weights" in graph.ndata else None,
+                    graph.ndata.get("sequence_token_weights", None),
                     start,
                     end,
                 ),
                 _slice_optional_batch(
-                    graph.ndata["sequence_token_types"] if "sequence_token_types" in graph.ndata else None,
+                    graph.ndata.get("sequence_token_types", None),
                     start,
                     end,
                 ),
                 _slice_optional_batch(
-                    graph.ndata["sequence_relation_ids"] if "sequence_relation_ids" in graph.ndata else None,
+                    graph.ndata.get("sequence_relation_ids", None),
                     start,
                     end,
                 ),
@@ -226,24 +222,24 @@ class SequenceMixin:
         if "event_sequence" in graph.ndata:
             return (
                 graph.ndata["event_sequence"][start:end],
-                _slice_optional_batch(graph.ndata["event_mask"] if "event_mask" in graph.ndata else None, start, end),
+                _slice_optional_batch(graph.ndata.get("event_mask", None), start, end),
                 _slice_optional_batch(
-                    graph.ndata["event_time_deltas"] if "event_time_deltas" in graph.ndata else None,
+                    graph.ndata.get("event_time_deltas", None),
                     start,
                     end,
                 ),
                 _slice_optional_batch(
-                    graph.ndata["event_token_weights"] if "event_token_weights" in graph.ndata else None,
+                    graph.ndata.get("event_token_weights", None),
                     start,
                     end,
                 ),
                 _slice_optional_batch(
-                    graph.ndata["event_token_types"] if "event_token_types" in graph.ndata else None,
+                    graph.ndata.get("event_token_types", None),
                     start,
                     end,
                 ),
                 _slice_optional_batch(
-                    graph.ndata["event_source_ids"] if "event_source_ids" in graph.ndata else None,
+                    graph.ndata.get("event_source_ids", None),
                     start,
                     end,
                 ),
@@ -271,22 +267,22 @@ class SequenceMixin:
             gathered,
             event_mask,
             _slice_optional_batch(
-                graph.ndata["event_time_deltas"] if "event_time_deltas" in graph.ndata else None,
+                graph.ndata.get("event_time_deltas", None),
                 start,
                 end,
             ),
             _slice_optional_batch(
-                graph.ndata["event_token_weights"] if "event_token_weights" in graph.ndata else None,
+                graph.ndata.get("event_token_weights", None),
                 start,
                 end,
             ),
             _slice_optional_batch(
-                graph.ndata["event_token_types"] if "event_token_types" in graph.ndata else None,
+                graph.ndata.get("event_token_types", None),
                 start,
                 end,
             ),
             _slice_optional_batch(
-                graph.ndata["event_source_ids"] if "event_source_ids" in graph.ndata else None,
+                graph.ndata.get("event_source_ids", None),
                 start,
                 end,
             ),

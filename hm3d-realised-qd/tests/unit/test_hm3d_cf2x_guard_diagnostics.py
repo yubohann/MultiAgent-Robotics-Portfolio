@@ -33,8 +33,8 @@ from aerocity_method.runtime.hm3d_cf2x_execution import (
     _observation_failure_reason,
     _observation_source_identity,
     _raycast_guard_diagnostic,
-    _routed_guard,
     _route_corner_speed_mps,
+    _routed_guard,
     _scheduled_observation_completed,
     _so3_attitude_error,
     _sparse_range_sampling_phase,
@@ -171,7 +171,7 @@ def test_cell_index_exact_distances_match_reference_within_query_margin() -> Non
     custom = oracle._exact_distances_with_cell_index(points)
     reference = trimesh.proximity.closest_point(mesh, points)[1]
 
-    for point, custom_distance, reference_distance in zip(
+    for _point, custom_distance, reference_distance in zip(
         points, custom, reference, strict=True
     ):
         if reference_distance <= oracle._LOCAL_MESH_MARGIN_M:
@@ -847,7 +847,10 @@ def test_routed_guard_shortened_polyline_keeps_the_original_first_point() -> Non
     assert guarded.legal is True
     assert guarded.path_m[0] == start
     assert guarded.path_m[-1] == end
-    assert all(math.dist(a, b) <= 1.0e-9 for a, b in ((guarded.path_m[0], start), (guarded.path_m[-1], end)))
+    assert all(
+        math.dist(a, b) <= 1.0e-9
+        for a, b in ((guarded.path_m[0], start), (guarded.path_m[-1], end))
+    )
 
 
 def test_line_profile_pass_through_to_rest_terminates_at_arrival() -> None:
@@ -951,11 +954,11 @@ def test_unexecuted_observation_timeout_uses_a_zero_width_execution_window() -> 
 
     cutoff_s = 1.5
     sample = FragmentExecutionSample(
-        planned_fragment_hash="a" * 64,
+        planned_fragment_id="a" * 64,
         executed=False,
         actual_start_s=cutoff_s,
         actual_end_s=cutoff_s,
-        execution_trace_hash="b" * 64,
+        execution_trace_id="b" * 64,
         failure_reason="observation_not_reached",
     )
 

@@ -4,18 +4,16 @@ from __future__ import annotations
 
 import argparse
 import csv
-from dataclasses import asdict, fields, is_dataclass, replace
-from datetime import datetime
-import hashlib
 import json
 import math
-from pathlib import Path
 import sys
-from typing import Any, Iterable
+from collections.abc import Iterable
+from dataclasses import asdict, fields, is_dataclass, replace
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import numpy as np
-import torch
-
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -33,7 +31,6 @@ from multi_gate.training import (
     validate_multi_checkpoint_compatibility,
 )
 from shared.core.dynamic_gate_density_2d import post_clearance, swept_post_clearance
-
 
 DEFAULT_OUTPUT_ROOT = ROOT / "results" / f"variable_team_size_eval_{datetime.now():%Y%m%d_%H%M%S}"
 EXPECTED_EXPERIMENT_ID = "multi_gate_dynamic_gate_density_8d_v1"
@@ -160,10 +157,6 @@ def finite_or_none(value: Any) -> float | None:
     return resolved if math.isfinite(resolved) else None
 
 
-def bool01(value: Any) -> int:
-    return 1 if bool(value) else 0
-
-
 def percentile(values: Iterable[float], q: float) -> float | None:
     arr = np.asarray([float(value) for value in values if math.isfinite(float(value))], dtype=np.float64)
     if arr.size == 0:
@@ -204,14 +197,6 @@ def bootstrap_ci(values: Iterable[float], *, seed: int = 20260520, samples: int 
     for idx in range(int(samples)):
         means[idx] = float(np.mean(rng.choice(arr, size=arr.size, replace=True)))
     return (float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5)))
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def dataclass_field_names(value: Any) -> set[str]:
@@ -442,7 +427,7 @@ def audit_checkpoint(
                     env=env,
                     experiment_config=base_config,
                 )
-            except Exception as exc:  # noqa: BLE001 - audit must continue over bad files.
+            except Exception as exc:
                 record["reason"] = f"metadata_or_compatibility_error: {exc}"
                 rejected.append(record)
                 continue
@@ -485,7 +470,6 @@ def audit_checkpoint(
                 rejected.append(record)
                 continue
             record["reason"] = "selected_latest_passing_candidate"
-            record["sha256"] = sha256_file(path)
             selected = record
             break
         if selected is None:
@@ -581,7 +565,7 @@ def formation_audit(
     actual_minor: list[float] = []
     desired_major: list[float] = []
     desired_minor: list[float] = []
-    for pos, slots in zip(positions, desired_slots):
+    for pos, slots in zip(positions, desired_slots, strict=False):
         major, minor = span_major_minor(pos)
         d_major, d_minor = span_major_minor(slots)
         actual_major.append(major)
@@ -1313,7 +1297,6 @@ def render_rollout_mp4(
     title: str,
 ) -> dict[str, Any]:
     import imageio.v2 as imageio
-
     import matplotlib
 
     matplotlib.use("Agg")
@@ -1673,7 +1656,7 @@ def main() -> None:
         disable_terminal_formation_collapse=bool(args.disable_terminal_formation_collapse),
         formation_line_collapse_min_lateral_bands=args.formation_line_collapse_min_lateral_bands,
     )
-    selected_checkpoint, checkpoint_audit = audit_checkpoint(
+    selected_checkpoint, _ = audit_checkpoint(
         checkpoint_path=args.checkpoint,
         base_config=base_eval_config,
         output_root=output_root,
@@ -1803,7 +1786,6 @@ def main() -> None:
         {
             "output_root": str(output_root),
             "checkpoint": str(selected_checkpoint),
-            "checkpoint_sha256": checkpoint_audit.get("selected", {}).get("sha256"),
             "episodes": len(all_rows),
             "conditions": sorted(set(str(row["condition"]) for row in all_rows)),
             "plots": plot_paths,

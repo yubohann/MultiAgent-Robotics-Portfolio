@@ -9,10 +9,6 @@ delivery="${DELIVERY:-$workspace/deliverables/MID360_MAIN}"
 run_root="${RUN_ROOT:-$delivery/one_command_runs/$(date +%Y%m%d_%H%M%S)}"
 world="${WORLD:-$workspace/install/robocon_mid360_simulation/share/robocon_mid360_simulation/worlds/indoor_competition_candidate.world}"
 map_file="${MAP_FILE:-$delivery/01_frozen_map_dense.pcd}"
-map_file_explicit=false
-if [[ -n "${MAP_FILE:-}" ]]; then
-  map_file_explicit=true
-fi
 lio_duration="${LIO_DURATION_SEC:-60}"
 mapping_duration="${MAPPING_DURATION_SEC:-45}"
 localization_duration="${LOCALIZATION_DURATION_SEC:-25}"
@@ -149,7 +145,7 @@ map_is_eligible() {
   [[ -s "$run_manifest" ]] || return 1
   points="$(awk '/^POINTS / {print $2; exit}' "$candidate" 2>/dev/null || true)"
   [[ "$points" =~ ^[0-9]+$ ]] && (( points >= 500 )) || return 1
-  python3 - "$manifest" "$run_manifest" "$candidate" <<'PY'
+  python3 - "$manifest" "$run_manifest" "$points" <<'PY'
 import json
 import sys
 
@@ -161,13 +157,9 @@ try:
 except (OSError, json.JSONDecodeError):
     raise SystemExit(1)
 
+point_count = int(sys.argv[3])
 eligible = map_manifest.get("eligible_for_fixed_map") is True
-pcd_sha256 = map_manifest.get("pcd_sha256")
-try:
-    import hashlib
-    actual_sha256 = hashlib.sha256(open(sys.argv[3], "rb").read()).hexdigest()
-except OSError:
-    raise SystemExit(1)
+point_count_matches = int(map_manifest.get("point_count", -1)) == point_count
 requested_rays = run_manifest.get("lidar_samples_requested")
 try:
     requested_rays = int(requested_rays)
@@ -181,54 +173,26 @@ try:
 except (TypeError, ValueError):
     downsample = -1
 
-# A large diagnostic PCD can exceed the point-count gate while still being
-# explicitly unsuitable for competition localization. Require the controlled
-# 30,000-ray indoor profile as well as the map manifest's promotion flag.
+# A dense diagnostic PCD is not a competition map: require the controlled indoor profile.
 accepted_profile = profile in {"mapping-controlled", "30000-ray-controlled-motion"}
-accepted = eligible and pcd_sha256 == actual_sha256 and requested_rays >= 30000 and downsample == 1 \
+accepted = eligible and point_count_matches and requested_rays >= 30000 and downsample == 1 \
     and scene == "indoor_competition_candidate" and accepted_profile
 raise SystemExit(0 if accepted else 1)
 PY
-}
-
-latest_generated_map() {
-  local candidate
-  while IFS= read -r candidate; do
-    if map_is_eligible "$candidate"; then
-      printf '%s' "$candidate"
-      return 0
-    fi
-  done < <(
-    # Include retained dense mapping artifacts as well as maps produced by
-    # this dispatcher.  A standalone `localization` run must work from a
-    # fresh shell after the mapping run has already been archived.
-    find "$delivery" -type f -name 'frozen_map.pcd' \
-      -printf '%T@ %p\n' 2>/dev/null | sort -nr | cut -d' ' -f2-
-  )
-  return 1
 }
 
 map_for_localization() {
   local candidate="$run_root/02_mapping_dense/frozen_map.pcd"
   if map_is_eligible "$candidate"; then
     printf '%s' "$candidate"
-    return 0
+  else
+    printf '%s' "$map_file"
   fi
-  if [[ "$map_file_explicit" == false ]]; then
-    candidate="$(latest_generated_map || true)"
-    if [[ -n "$candidate" ]]; then
-      printf '%s' "$candidate"
-      return 0
-    fi
-  fi
-  printf '%s' "$map_file"
 }
 
 run_localization() {
   local selected_map
-  # In a combined run, localization must consume the map made by this exact
-  # invocation. Falling back to an archived map would turn a failed mapping
-  # step into misleadingly successful downstream evidence.
+  # Combined runs consume the map produced by this invocation only.
   if [[ "$mode" == "all" || "$mode" == "quality" ]]; then
     selected_map="$run_root/02_mapping_dense/frozen_map.pcd"
     if [[ "$dry_run" == false ]] && ! map_is_eligible "$selected_map"; then

@@ -2,7 +2,6 @@
 
 from .config import INCOMING_DIR, ensure_directories
 
-
 DEMO_TITLES = {
     "campus_sports": "真实运动场跑步短视频",
     "night_scene_review": "真实夜间低照度街景",
@@ -16,20 +15,13 @@ REAL_DEMO_FILES = {
 }
 
 
-def ensure_demo_videos(overwrite: bool = False) -> list[dict]:
-    """Return the three real public demo videos.
-
-    The overwrite argument is kept for compatibility with the original classroom
-    helper command, but this portfolio does not synthesize replacement videos.
-    """
+def ensure_demo_videos() -> list[dict]:
+    """Return the three real public demo videos."""
     ensure_directories()
     videos = []
     for kind, title in DEMO_TITLES.items():
         real_path = INCOMING_DIR / REAL_DEMO_FILES[kind]
         if not real_path.exists():
-            raise FileNotFoundError(
-                f"missing required Pexels real demo video for {kind}: {real_path}. "
-                "Do not fall back to generated animation for this portfolio."
-            )
+            raise FileNotFoundError(f"missing required real demo video for {kind}: {real_path}")
         videos.append({"path": real_path, "title": title, "source": "pexels-public-real-video"})
     return videos

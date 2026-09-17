@@ -6,9 +6,9 @@ import ctypes
 import os
 import platform
 import time
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Mapping
-
+from typing import Any
 
 RESOURCE_TELEMETRY_SCHEMA = "org.rivermark.resource-telemetry.v1"
 FOREIGN_NATIVE_PROCESS_CENSUS_SCHEMA = "org.rivermark.foreign-native-process-census.v1"
@@ -135,12 +135,7 @@ def _system_commit_snapshot() -> dict[str, int | float] | None:
 
 
 def _windows_native_process_rows() -> tuple[dict[str, int | str], ...] | None:
-    """Return private-commit rows for other possible native-runtime owners.
-
-    The function is Windows-only and best effort.  Access-denied and
-    short-lived processes are skipped rather than treated as a reason to
-    prevent all collection.  Callers receive only an aggregated census.
-    """
+    """Return private-commit rows for other possible native-runtime owners."""
 
     if os.name != "nt":
         return None
@@ -265,13 +260,7 @@ def _owned_process_ids_from_parent_rows(
 
 
 def _windows_owned_process_ids(root_pid: int) -> frozenset[int] | None:
-    """Best-effort owner process tree for an Isaac AppLauncher invocation.
-
-    Isaac Sim can retain the renderer in a Kit child process.  Counting that
-    child as foreign makes a full-sensor smoke reject itself after launch.  A
-    failed process-tree query intentionally falls back to the root PID only in
-    the caller, preserving the conservative foreign-process gate.
-    """
+    """Best-effort owner process tree for an Isaac AppLauncher invocation."""
 
     if os.name != "nt":
         return frozenset({root_pid})
@@ -373,12 +362,7 @@ def _summarize_foreign_native_process_rows(
 def foreign_native_process_census(
     *, minimum_private_commit_bytes: int, current_pid: int | None = None
 ) -> dict[str, int | str] | None:
-    """Return an anonymous census of conflicting native-runtime processes.
-
-    A collection owner is excluded by PID.  ``None`` means the host could not
-    provide a reliable Windows process census and must be recorded as such by
-    the caller rather than fabricated as an empty result.
-    """
+    """Return an anonymous census of conflicting native-runtime processes."""
 
     rows = _windows_native_process_rows()
     if rows is None:

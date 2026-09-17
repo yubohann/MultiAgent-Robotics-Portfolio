@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import math
 import time
 
 import rclpy
-from rclpy.executors import ExternalShutdownException
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import Bool
@@ -23,7 +22,6 @@ from .geometry import (
     quaternion_from_rpy,
     rotate_vector,
     vector_norm,
-    vector_scale,
 )
 
 
@@ -172,9 +170,15 @@ class Mid360PoseBridge(Node):
 
     def _quality_issues(self, message: Odometry, base_position: tuple[float, float, float]) -> list[str]:
         issues: list[str] = []
-        if self.max_position_step_m > 0.0 and self.last_base_position is not None:
-            if vector_norm(tuple(base_position[index] - self.last_base_position[index] for index in range(3))) > self.max_position_step_m:
-                issues.append("position step exceeds max_position_step_m")
+        if (
+            self.max_position_step_m > 0.0
+            and self.last_base_position is not None
+            and vector_norm(
+                tuple(base_position[index] - self.last_base_position[index] for index in range(3))
+            )
+            > self.max_position_step_m
+        ):
+            issues.append("position step exceeds max_position_step_m")
         linear_speed = vector_norm((
             message.twist.twist.linear.x,
             message.twist.twist.linear.y,

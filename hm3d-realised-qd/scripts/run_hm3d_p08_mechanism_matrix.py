@@ -9,7 +9,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from aerocity_method.contracts.io import canonical_sha256, read_json_object, write_json_atomic
+from aerocity_method.contracts.io import (  # noqa: E402 -- sys.path bootstrap
+    payload_label,
+    read_json_object,
+    write_json_atomic,
+)
 
 
 def audit_p08_admission(
@@ -38,8 +42,8 @@ def audit_p08_admission(
         "schema_version": "hm3d-p08-mechanism-admission-v1",
         "status": "READY_TO_RUN_P08_MECHANISM_MATRIX" if not reasons else "P08_NOT_READY",
         "reasons": reasons,
-        "p07_summary_hash": canonical_sha256(p07_summary),
-        "mechanism_matrix_hash": canonical_sha256(mechanism_matrix),
+        "p07_summary_id": payload_label(p07_summary, prefix="p07-summary"),
+        "mechanism_matrix_id": payload_label(mechanism_matrix, prefix="mechanism-matrix"),
         "formal_result": False,
     }
 

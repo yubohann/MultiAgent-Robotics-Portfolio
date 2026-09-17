@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import Any, Iterator
+from typing import Any
 
 EPISODE_SCHEMA = "org.rivermark.benchmark.episode.v1"
 
@@ -201,5 +202,5 @@ def is_safe_relative_path(value: object) -> bool:
     )
 
 
-def is_sha256(value: object) -> bool:
-    return isinstance(value, str) and bool(re.fullmatch(r"[0-9a-f]{64}", value))
+def is_identity(value: object) -> bool:
+    return isinstance(value, str) and bool(re.fullmatch(r"[0-9a-f]{16}", value))

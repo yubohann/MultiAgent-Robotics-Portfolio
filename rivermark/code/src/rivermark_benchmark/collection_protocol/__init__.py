@@ -1,10 +1,10 @@
-"""Fail-closed collection protocol, paired power gate, and coverage report."""
+"""Strict collection protocol, paired power gate, and coverage report."""
 
 from .cli import main
 from .common import (
     CollectionProtocolError,
     CollectionProtocolIssue,
-    protocol_sha256,
+    protocol_identity,
 )
 from .constants import (
     COLLECTION_BINDING_KEYS,
@@ -26,7 +26,6 @@ from .seeds import (
     resolve_collection_binding,
     validate_collection_binding,
 )
-from .t1 import citylite_t1_split_certificate
 from .t2 import (
     is_native_t2_canary_protocol,
     native_t2_motion_contract,
@@ -49,7 +48,6 @@ __all__ = [
     "T1_COVERAGE_REPORT_SCHEMA",
     "CollectionProtocolError",
     "CollectionProtocolIssue",
-    "citylite_t1_split_certificate",
     "coverage_report",
     "derive_episode_seed",
     "is_native_t2_canary_protocol",
@@ -58,7 +56,7 @@ __all__ = [
     "native_t2_motion_contract",
     "native_t2_v2_motion_contract",
     "native_t2_v3_motion_contract",
-    "protocol_sha256",
+    "protocol_identity",
     "required_paired_episodes",
     "resolve_collection_binding",
     "validate_collection_binding",

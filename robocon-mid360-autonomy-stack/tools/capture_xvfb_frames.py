@@ -4,27 +4,26 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import time
 from pathlib import Path
 
 from PIL import Image
-from Xlib import X, display
+from Xlib import X, display, error
+
+
+def _window_title(window) -> str | None:
+    try:
+        name = window.get_wm_name()
+    except error.XError:
+        return None
+    if isinstance(name, bytes):
+        name = name.decode("utf-8", errors="replace")
+    return str(name) if name else None
 
 
 def window_titles(root) -> list[str]:
-    titles: list[str] = []
-    for child in root.query_tree().children:
-        try:
-            name = child.get_wm_name()
-        except Exception:  # X clients may disappear during enumeration.
-            continue
-        if isinstance(name, bytes):
-            name = name.decode("utf-8", errors="replace")
-        if name:
-            titles.append(str(name))
-    return titles
+    return [title for window in root.query_tree().children if (title := _window_title(window))]
 
 
 def main() -> int:
@@ -54,14 +53,17 @@ def main() -> int:
         raise SystemExit(f"Gazebo window not found on {args.display}; titles={titles}")
 
     interval = 1.0 / args.fps
-    frames = max(1, int(round(args.duration_sec * args.fps)))
-    frame_hashes: list[str] = []
+    frames = max(1, round(args.duration_sec * args.fps))
+    previous: bytes | None = None
+    changed_frames = 0
     started = time.monotonic()
     for index in range(frames):
         image = root.get_image(0, 0, width, height, X.ZPixmap, 0xFFFFFFFF)
         rgb = Image.frombytes("RGB", (width, height), image.data, "raw", "BGRX")
         payload = rgb.tobytes()
-        frame_hashes.append(hashlib.sha256(payload).hexdigest())
+        if previous is not None and payload != previous:
+            changed_frames += 1
+        previous = payload
         rgb.save(args.output_dir / f"gazebo_{index:06d}.jpg", quality=95, subsampling=0)
         due = started + (index + 1) * interval
         time.sleep(max(0.0, due - time.monotonic()))
@@ -73,12 +75,12 @@ def main() -> int:
         "fps": args.fps,
         "frames": frames,
         "titles_at_start": titles,
-        "unique_frame_hashes": len(set(frame_hashes)),
+        "changed_frames": changed_frames,
         "capture_kind": "raw_gazebo_gui_from_isolated_xvfb",
     }
     (args.output_dir / "capture_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-    if metadata["unique_frame_hashes"] < 3:
-        raise SystemExit("capture contained fewer than three distinct frames")
+    if metadata["changed_frames"] < 3:
+        raise SystemExit("capture showed fewer than three frame changes")
     return 0
 
 

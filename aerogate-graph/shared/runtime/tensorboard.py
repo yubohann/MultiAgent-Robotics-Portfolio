@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from numbers import Number
-from pathlib import Path
 import math
 import re
+from numbers import Number
+from pathlib import Path
 from typing import Any
 
 try:

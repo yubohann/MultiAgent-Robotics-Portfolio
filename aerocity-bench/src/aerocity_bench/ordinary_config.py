@@ -1,10 +1,4 @@
-"""Fail-closed configuration for the ordinary-paper benchmark contract.
-
-The legacy v2 loader remains available for historical pilot artifacts.  New
-development uses this module and the ``org.aerocity.bench.release.ordinary.v3``
-schema so resilience, perception, and formal-test semantics cannot silently
-leak back into the ordinary-paper release.
-"""
+"""Configuration loaders for the ordinary-v3 and legacy v2 benchmark contracts."""
 
 from __future__ import annotations
 
@@ -13,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .canonical import content_hash, read_json
+from .canonical import read_json
 from .planning_cadence import validate_planning_cadence
 
 ORDINARY_SCHEMA = "org.aerocity.bench.release.ordinary.v3"
@@ -80,7 +74,7 @@ def _split_mapping(node: object, name: str) -> dict[str, Any]:
 class OrdinaryReleaseConfig:
     path: Path
     raw: dict[str, Any]
-    config_hash: str
+    config_id: str
 
     @property
     def version(self) -> str:
@@ -128,7 +122,7 @@ class PublicRuntimeConfig:
 
     path: Path
     raw: dict[str, Any]
-    contract_hash: str
+    contract_id: str
 
     @property
     def version(self) -> str:
@@ -576,7 +570,11 @@ def load_ordinary_config(path: Path) -> OrdinaryReleaseConfig:
     if governance["formal_access"] != "private_until_contract_freeze":
         raise ValueError("formal test must remain private until contract freeze")
 
-    return OrdinaryReleaseConfig(path=path.resolve(), raw=root, config_hash=content_hash(root))
+    return OrdinaryReleaseConfig(
+        path=path.resolve(),
+        raw=root,
+        config_id=f"{root['release_version']}-{root['generator_version']}",
+    )
 
 
 def load_public_runtime_contract(path: Path) -> PublicRuntimeConfig:
@@ -588,26 +586,20 @@ def load_public_runtime_contract(path: Path) -> PublicRuntimeConfig:
             "generator_version",
             "fleet",
             "execution_contract",
-            "authority_release_commitment",
-            "contract_hash",
         },
         "public runtime contract",
     )
-    expected_hash = str(root.pop("contract_hash", ""))
-    if content_hash(root) != expected_hash:
-        raise ValueError("public runtime contract hash mismatch")
     if root["schema"] != "org.aerocity.bench.runtime-contract-public.ordinary.v1":
         raise ValueError("public runtime contract schema is not ordinary-v1")
     fleet = _exact_keys(root["fleet"], {"profile", "count"}, "public runtime fleet")
     if int(fleet["count"]) != 4:
         raise ValueError("public runtime contract must use four UAVs")
     validate_public_execution_contract(root["execution_contract"])
-    if len(str(root["authority_release_commitment"])) != 64:
-        raise ValueError("public runtime contract lacks an authority commitment")
     runtime_raw = {
         "release_version": root["release_version"],
         "generator_version": root["generator_version"],
         "fleet": fleet,
         "execution_contract": root["execution_contract"],
     }
-    return PublicRuntimeConfig(path=path.resolve(), raw=runtime_raw, contract_hash=expected_hash)
+    contract_id = f"{root['release_version']}-public-runtime"
+    return PublicRuntimeConfig(path=path.resolve(), raw=runtime_raw, contract_id=contract_id)

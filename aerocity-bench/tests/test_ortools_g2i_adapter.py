@@ -138,7 +138,7 @@ def _public_reset_inputs() -> tuple[dict[str, object], dict[str, object]]:
     task = {
         "task_track": "G2-I",
         "inspection_atlas": {
-            "atlas_hash": "a" * 64,
+            "layout_id": "city-calibration-000-a0",
             "regions": [
                 {
                     "cells": [
@@ -173,7 +173,7 @@ def _public_reset_inputs() -> tuple[dict[str, object], dict[str, object]]:
         "mission_sector": {
             "truth_independent": True,
             "frozen_before_sampling": True,
-            "atlas_hash": "a" * 64,
+            "layout_id": "city-calibration-000-a0",
             "selected_cell_ids": ["public-cell-00"],
             "cell_assignment_by_drone": {"uav-00": ["public-cell-00"]},
             "capacity_certificate": {

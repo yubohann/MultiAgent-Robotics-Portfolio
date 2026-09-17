@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import sys
 import tempfile
@@ -15,8 +14,9 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from rivermark_benchmark._identity import IdentityAccumulator
 from rivermark_benchmark import isaac_validate
-from rivermark_benchmark.abi import OBSERVATION_ABI_SCHEMA, observation_abi_sha256
+from rivermark_benchmark.abi import OBSERVATION_ABI_SCHEMA, observation_abi_identity
 from rivermark_benchmark.isaac_pack import (
     PACK_SPEC_SCHEMA,
     PACK_SPEC_SCHEMA_V2,
@@ -24,14 +24,14 @@ from rivermark_benchmark.isaac_pack import (
 )
 from rivermark_benchmark.isaac_public_manifest import (
     build_public_scene_manifest,
-    public_manifest_sha256,
+    public_manifest_identity,
 )
 from rivermark_benchmark.isaac_validate import VALIDATION_SCHEMA, IsaacValidationReport
-from rivermark_benchmark.video import sha256_file
+from rivermark_benchmark.video import identity_file
 
 
 def _digest(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return IdentityAccumulator(text.encode("utf-8")).hexdigest()
 
 
 def _json(path: Path, value: object) -> None:
@@ -102,7 +102,7 @@ def _fixture(root: Path) -> tuple[Path, Path, Path, Path]:
     revision = "0123456789abcdef"
     evaluator = root / "evaluator" / "manifest.json"
     _json(evaluator, {"private": "stored outside candidate"})
-    evaluation_sha = sha256_file(evaluator)
+    evaluation_sha = identity_file(evaluator)
     (capture / "capture_receipt.json").write_text(
         json.dumps(
             {
@@ -112,11 +112,11 @@ def _fixture(root: Path) -> tuple[Path, Path, Path, Path]:
                 "task_kind": "search3d",
                 "source_revision": revision,
                 "source_worktree_dirty": False,
-                "evaluator_manifest_sha256": evaluation_sha,
+                "evaluator_manifest_identity": evaluation_sha,
                 "capture_backend": {
                     "kind": "isaaclab",
                     "build": "isaac-sim-test",
-                    "sensor_physics_smoke_receipt_sha256": _digest("smoke"),
+                    "sensor_physics_smoke_receipt_identity": _digest("smoke"),
                 },
             }
         )
@@ -124,16 +124,16 @@ def _fixture(root: Path) -> tuple[Path, Path, Path, Path]:
         encoding="utf-8",
     )
     validation = root / "validation.json"
-    capture_sha = sha256_file(capture / "capture_receipt.json")
+    capture_sha = identity_file(capture / "capture_receipt.json")
     _json(
         validation,
         {
             "schema": VALIDATION_SCHEMA,
             "status": "passed",
             "formal_benchmark_admission": False,
-            "capture_receipt_sha256": capture_sha,
+            "capture_receipt_identity": capture_sha,
             "validator_id": "independent-test-validator",
-            "validator_source_sha256": sha256_file(Path(isaac_validate.__file__).resolve()),
+            "validator_source_identity": identity_file(Path(isaac_validate.__file__).resolve()),
             "checks": {
                 "online_capture": True,
                 "queue_overflow": False,
@@ -143,7 +143,7 @@ def _fixture(root: Path) -> tuple[Path, Path, Path, Path]:
                 "action_causality_audit_passed": True,
                 "sensor_decode_audit_passed": True,
                 "policy_leakage_audit_passed": True,
-                "evaluator_manifest_sha256": evaluation_sha,
+                "evaluator_manifest_identity": evaluation_sha,
                 "pose_closure_max_error_m": 0.001,
                 "pose_closure_threshold_m": 0.01,
             },
@@ -217,8 +217,8 @@ def _fixture(root: Path) -> tuple[Path, Path, Path, Path]:
             "split": "train",
             "layout": {
                 "layout_id": "layout-test",
-                "layout_hash": _digest("layout"),
-                "layout_lineage_hash": _digest("layout-lineage"),
+                "layout_identity": _digest("layout"),
+                "layout_lineage_identity": _digest("layout-lineage"),
                 "source": "scene.json",
             },
             "task": {
@@ -263,7 +263,7 @@ def _fixture(root: Path) -> tuple[Path, Path, Path, Path]:
             },
             "capture_backend": {
                 "build": "isaac-sim-test",
-                "sensor_physics_smoke_receipt_sha256": _digest("smoke"),
+                "sensor_physics_smoke_receipt_identity": _digest("smoke"),
             },
         },
     )
@@ -275,9 +275,9 @@ def _bind_fixture(capture: Path, validation: Path, binding: dict[str, object]) -
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     receipt["collection_binding"] = binding
     _json(receipt_path, receipt)
-    capture_sha = sha256_file(receipt_path)
+    capture_sha = identity_file(receipt_path)
     validation_payload = json.loads(validation.read_text(encoding="utf-8"))
-    validation_payload["capture_receipt_sha256"] = capture_sha
+    validation_payload["capture_receipt_identity"] = capture_sha
     validation_payload["checks"]["collection_binding_present"] = True
     validation_payload["checks"]["collection_binding_verified"] = True
     _json(validation, validation_payload)
@@ -293,19 +293,19 @@ def _v2_scene_with_private_diagnostics() -> dict[str, object]:
         "static_scene_authority_verified": True,
         "legacy_route_or_target_imported": False,
         "unresolved_reference_count": 0,
-        "private_evaluator_manifest_sha256": "e" * 64,
+        "private_evaluator_manifest_identity": "e" * 16,
         "source_scene": r"C:\private\rivermark.usd",
         "scene_contract": {
             "schema": "citylite-contract-v1",
             "gate_status": "pass_city_lite_static_construction",
-            "payload_sha256": _digest("contract-payload"),
-            "sha256": _digest("contract-file"),
+            "payload_identity": _digest("contract-payload"),
+            "identity": _digest("contract-file"),
         },
         "rivermark_layer_inventory": {
             "schema": "resolved-layer-inventory-v1",
-            "inventory_sha256": _digest("inventory"),
-            "local_authority_inventory_sha256": _digest("local-inventory"),
-            "rivermarksrc51_external_inventory_sha256": _digest("external-inventory"),
+            "inventory_identity": _digest("inventory"),
+            "local_authority_inventory_identity": _digest("local-inventory"),
+            "rivermarksrc51_external_inventory_identity": _digest("external-inventory"),
             "local_authority_layer_count": 2,
             "rivermarksrc51_external_layer_count": 3,
             "input_resolved_layer_count": 5,
@@ -337,11 +337,11 @@ class IsaacPackTests(unittest.TestCase):
             receipt.pop("capture_backend")
             _json(receipt_path, receipt)
             validation_payload = json.loads(validation.read_text(encoding="utf-8"))
-            validation_payload["capture_receipt_sha256"] = sha256_file(receipt_path)
+            validation_payload["capture_receipt_identity"] = identity_file(receipt_path)
             _json(validation, validation_payload)
             report = IsaacValidationReport(
                 capture,
-                sha256_file(receipt_path),
+                identity_file(receipt_path),
                 validation_payload["checks"],
                 (),
             )
@@ -368,14 +368,14 @@ class IsaacPackTests(unittest.TestCase):
             root = Path(temporary)
             capture, validation, evaluator, spec = _fixture(root)
             payload = json.loads(spec.read_text(encoding="utf-8"))
-            payload["capture_backend"]["sensor_physics_smoke_receipt_sha256"] = _digest(
+            payload["capture_backend"]["sensor_physics_smoke_receipt_identity"] = _digest(
                 "invented"
             )
             _json(spec, payload)
             validation_payload = json.loads(validation.read_text(encoding="utf-8"))
             report = IsaacValidationReport(
                 capture,
-                sha256_file(capture / "capture_receipt.json"),
+                identity_file(capture / "capture_receipt.json"),
                 validation_payload["checks"],
                 (),
             )
@@ -412,15 +412,15 @@ class IsaacPackTests(unittest.TestCase):
                 "source": external_abi.name,
                 "source_scope": "pack_spec",
                 "path": "metadata/observation_abi.json",
-                "sha256": "0" * 64,
-                "capture_receipt_sha256": "0" * 64,
+                "identity": "0" * 16,
+                "capture_receipt_identity": "0" * 16,
             }
             _json(spec, payload)
             destination = root / "candidate"
             checks = json.loads(validation.read_text(encoding="utf-8"))["checks"]
             report = IsaacValidationReport(
                 capture,
-                sha256_file(capture / "capture_receipt.json"),
+                identity_file(capture / "capture_receipt.json"),
                 checks,
                 (),
             )
@@ -462,10 +462,10 @@ class IsaacPackTests(unittest.TestCase):
             payload["schema"] = PACK_SPEC_SCHEMA_V2
             payload["layout"] = {
                 "layout_id": "citylite-v1",
-                "layout_hash": public_manifest_sha256(
+                "layout_identity": public_manifest_identity(
                     build_public_scene_manifest(raw_scene)
                 ),
-                "layout_lineage_hash": _digest("contract-payload"),
+                "layout_lineage_identity": _digest("contract-payload"),
                 "source": "scene.json",
             }
             payload["task"] = {
@@ -480,8 +480,8 @@ class IsaacPackTests(unittest.TestCase):
                 "source": external_abi.name,
                 "source_scope": "pack_spec",
                 "path": "metadata/observation_abi.json",
-                "sha256": observation_abi_sha256(abi),
-                "capture_receipt_sha256": sha256_file(capture / "capture_receipt.json"),
+                "identity": observation_abi_identity(abi),
+                "capture_receipt_identity": identity_file(capture / "capture_receipt.json"),
             }
             payload["streams"] = [
                 {
@@ -583,7 +583,7 @@ class IsaacPackTests(unittest.TestCase):
             checks = json.loads(validation.read_text(encoding="utf-8"))["checks"]
             report = IsaacValidationReport(
                 capture,
-                sha256_file(capture / "capture_receipt.json"),
+                identity_file(capture / "capture_receipt.json"),
                 checks,
                 (),
             )
@@ -605,8 +605,8 @@ class IsaacPackTests(unittest.TestCase):
             packed_scene = json.loads((destination / "scenes/scene.json").read_text(encoding="utf-8"))
             self.assertEqual(packed_scene, build_public_scene_manifest(raw_scene))
             self.assertEqual(
-                sha256_file(destination / "scenes/scene.json"),
-                payload["layout"]["layout_hash"],
+                identity_file(destination / "scenes/scene.json"),
+                payload["layout"]["layout_identity"],
             )
             self.assertNotIn("private", json.dumps(packed_scene).lower())
             self.assertNotIn("C:\\", json.dumps(packed_scene))
@@ -614,7 +614,7 @@ class IsaacPackTests(unittest.TestCase):
     def test_collection_binding_is_recomputed_and_inherited(self) -> None:
         binding: dict[str, object] = {
             "protocol_id": "citylite-coverage-v1",
-            "protocol_sha256": "c" * 64,
+            "protocol_identity": "c" * 16,
             "cell_id": "train-route-0",
             "split": "train",
             "episode_index": 3,
@@ -648,10 +648,10 @@ class IsaacPackTests(unittest.TestCase):
             self.assertEqual(manifest["collection_binding"], binding)
             self.assertEqual(receipt["collection_binding"], binding)
 
-    def test_collection_binding_tamper_is_rejected(self) -> None:
+    def test_collection_binding_alter_is_rejected(self) -> None:
         expected: dict[str, object] = {
             "protocol_id": "citylite-coverage-v1",
-            "protocol_sha256": "c" * 64,
+            "protocol_identity": "c" * 16,
             "cell_id": "train-route-0",
             "split": "train",
             "episode_index": 3,
@@ -684,7 +684,7 @@ class IsaacPackTests(unittest.TestCase):
     def test_collection_binding_requires_independent_attestation(self) -> None:
         binding: dict[str, object] = {
             "protocol_id": "citylite-coverage-v1",
-            "protocol_sha256": "c" * 64,
+            "protocol_identity": "c" * 16,
             "cell_id": "train-route-0",
             "split": "train",
             "episode_index": 3,
@@ -721,7 +721,7 @@ class IsaacPackTests(unittest.TestCase):
             capture, validation, evaluator, spec = _fixture(Path(temporary))
             destination = Path(temporary) / "candidate"
             checks = json.loads(validation.read_text(encoding="utf-8"))["checks"]
-            report = IsaacValidationReport(capture, sha256_file(capture / "capture_receipt.json"), checks, ())
+            report = IsaacValidationReport(capture, identity_file(capture / "capture_receipt.json"), checks, ())
             with patch("rivermark_benchmark.isaac_pack.validate_isaac_capture", return_value=report):
                 result = pack_isaac_capture(capture, validation, evaluator, spec, destination)
             self.assertTrue(result.valid, result.issues)
@@ -731,7 +731,7 @@ class IsaacPackTests(unittest.TestCase):
             self.assertFalse((destination / "evaluator_private").exists())
             self.assertFalse((destination / "sensors" / "overview_rgb.npz").exists())
             receipt = json.loads((destination / "formal_capture_receipt.json").read_text(encoding="utf-8"))
-            self.assertEqual(receipt["integrity"]["independent_validator_sha256"], sha256_file(validation))
+            self.assertEqual(receipt["integrity"]["independent_validator_identity"], identity_file(validation))
             self.assertEqual(receipt["partitions"]["evaluator_private_server_only"], True)
 
     def test_legacy_abi_is_rejected_by_formal_packer(self) -> None:
@@ -747,7 +747,7 @@ class IsaacPackTests(unittest.TestCase):
             _json(abi_path, abi)
             destination = root / "candidate"
             checks = json.loads(validation.read_text(encoding="utf-8"))["checks"]
-            report = IsaacValidationReport(capture, sha256_file(capture / "capture_receipt.json"), checks, ())
+            report = IsaacValidationReport(capture, identity_file(capture / "capture_receipt.json"), checks, ())
             with patch("rivermark_benchmark.isaac_pack.validate_isaac_capture", return_value=report):
                 result = pack_isaac_capture(capture, validation, evaluator, spec, destination)
             self.assertFalse(result.valid)
@@ -764,7 +764,7 @@ class IsaacPackTests(unittest.TestCase):
             spec.write_text(json.dumps(payload) + "\n", encoding="utf-8")
             destination = root / "candidate"
             checks = json.loads(validation.read_text(encoding="utf-8"))["checks"]
-            report = IsaacValidationReport(capture, sha256_file(capture / "capture_receipt.json"), checks, ())
+            report = IsaacValidationReport(capture, identity_file(capture / "capture_receipt.json"), checks, ())
             with patch("rivermark_benchmark.isaac_pack.validate_isaac_capture", return_value=report):
                 result = pack_isaac_capture(capture, validation, evaluator, spec, destination)
             self.assertFalse(result.valid)
@@ -784,7 +784,7 @@ class IsaacPackTests(unittest.TestCase):
             checks = json.loads(validation.read_text(encoding="utf-8"))["checks"]
             report = IsaacValidationReport(
                 capture,
-                sha256_file(capture / "capture_receipt.json"),
+                identity_file(capture / "capture_receipt.json"),
                 checks,
                 (),
             )
@@ -801,11 +801,11 @@ class IsaacPackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             capture, validation, evaluator, spec = _fixture(Path(temporary))
             payload = json.loads(validation.read_text(encoding="utf-8"))
-            payload["checks"]["evaluator_manifest_sha256"] = _digest("wrong")
+            payload["checks"]["evaluator_manifest_identity"] = _digest("wrong")
             validation.write_text(json.dumps(payload) + "\n", encoding="utf-8")
             destination = Path(temporary) / "candidate"
             checks = json.loads(validation.read_text(encoding="utf-8"))["checks"]
-            report = IsaacValidationReport(capture, sha256_file(capture / "capture_receipt.json"), checks, ())
+            report = IsaacValidationReport(capture, identity_file(capture / "capture_receipt.json"), checks, ())
             with patch("rivermark_benchmark.isaac_pack.validate_isaac_capture", return_value=report):
                 result = pack_isaac_capture(capture, validation, evaluator, spec, destination)
             self.assertFalse(result.valid)
@@ -828,7 +828,7 @@ class IsaacPackTests(unittest.TestCase):
             spec.write_text(json.dumps(payload) + "\n", encoding="utf-8")
             destination = root / "candidate"
             checks = json.loads(validation.read_text(encoding="utf-8"))["checks"]
-            report = IsaacValidationReport(capture, sha256_file(capture / "capture_receipt.json"), checks, ())
+            report = IsaacValidationReport(capture, identity_file(capture / "capture_receipt.json"), checks, ())
             with patch("rivermark_benchmark.isaac_pack.validate_isaac_capture", return_value=report):
                 result = pack_isaac_capture(capture, validation, evaluator, spec, destination)
             self.assertFalse(result.valid)
@@ -857,7 +857,7 @@ class IsaacPackTests(unittest.TestCase):
             checks = json.loads(validation.read_text(encoding="utf-8"))["checks"]
             report = IsaacValidationReport(
                 capture,
-                sha256_file(capture / "capture_receipt.json"),
+                identity_file(capture / "capture_receipt.json"),
                 checks,
                 (),
             )

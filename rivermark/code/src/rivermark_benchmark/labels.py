@@ -3,22 +3,27 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import re
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
-from .schema import forbidden_policy_key, forbidden_policy_value_token, is_safe_relative_path, iter_tree
-
+from ._identity import IdentityAccumulator
+from .schema import (
+    forbidden_policy_key,
+    forbidden_policy_value_token,
+    is_safe_relative_path,
+    iter_tree,
+)
 
 LABEL_ONTOLOGY_SCHEMA = "org.rivermark.benchmark.label-ontology.v1"
 LABEL_RECORD_SCHEMA = "org.rivermark.benchmark.label-record.v1"
 _VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 _ID = re.compile(r"^[a-z][a-z0-9_.-]{2,127}$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _REVISION = re.compile(r"^[0-9a-f]{7,64}$")
 _CATEGORIES = frozenset({"object", "obstacle", "landmark"})
 _GEOMETRY_TYPES = frozenset({"point3d", "bbox3d", "bbox2d", "mask2d", "polyline3d"})
@@ -91,9 +96,9 @@ def _optional_vector(value: Any, width: int, path: str, issues: list[LabelIssue]
         _vector(value, width, path, issues, positive=positive)
 
 
-def _sha256(value: Any, path: str, issues: list[LabelIssue]) -> bool:
-    if not isinstance(value, str) or not _SHA256.fullmatch(value):
-        _issue(issues, "sha256", path, "must be a lowercase SHA-256")
+def _identity(value: Any, path: str, issues: list[LabelIssue]) -> bool:
+    if not isinstance(value, str) or not _IDENTITY.fullmatch(value):
+        _issue(issues, "identity", path, "must be a lowercase IDENTITY")
         return False
     return True
 
@@ -185,7 +190,7 @@ def _validate_geometry(
             "orientation_wxyz",
             "xywh_px",
             "mask_path",
-            "mask_sha256",
+            "mask_identity",
             "width_px",
             "height_px",
             "points_m",
@@ -214,20 +219,23 @@ def _validate_geometry(
         if set(geometry) - {"type", "frame_id", "center_m", "dimensions_m", "orientation_wxyz"}:
             _issue(issues, "geometry_fields", path, "bbox3d has fields for another geometry type")
     elif geometry_type == "bbox2d":
-        if _vector(geometry.get("xywh_px"), 4, f"{path}.xywh_px", issues, positive=False):
-            if float(geometry["xywh_px"][2]) < 0 or float(geometry["xywh_px"][3]) < 0:
-                _issue(issues, "bbox2d", f"{path}.xywh_px", "width and height must be non-negative")
+        if _vector(
+            geometry.get("xywh_px"), 4, f"{path}.xywh_px", issues, positive=False
+        ) and (
+            float(geometry["xywh_px"][2]) < 0 or float(geometry["xywh_px"][3]) < 0
+        ):
+            _issue(issues, "bbox2d", f"{path}.xywh_px", "width and height must be non-negative")
         if set(geometry) - {"type", "frame_id", "xywh_px"}:
             _issue(issues, "geometry_fields", path, "bbox2d has fields for another geometry type")
     elif geometry_type == "mask2d":
-        _sha256(geometry.get("mask_sha256"), f"{path}.mask_sha256", issues)
+        _identity(geometry.get("mask_identity"), f"{path}.mask_identity", issues)
         if not is_safe_relative_path(geometry.get("mask_path")):
             _issue(issues, "mask_path", f"{path}.mask_path", "must be a safe relative path")
         for key in ("width_px", "height_px"):
             value = geometry.get(key)
             if isinstance(value, bool) or not isinstance(value, int) or value < 1:
                 _issue(issues, "mask_size", f"{path}.{key}", "must be a positive integer")
-        if set(geometry) - {"type", "frame_id", "mask_path", "mask_sha256", "width_px", "height_px"}:
+        if set(geometry) - {"type", "frame_id", "mask_path", "mask_identity", "width_px", "height_px"}:
             _issue(issues, "geometry_fields", path, "mask2d has fields for another geometry type")
     elif geometry_type == "polyline3d":
         points = geometry.get("points_m")
@@ -341,7 +349,7 @@ def validate_label_record(
             "episode_id",
             "frame_index",
             "timestamp_ns",
-            "source_capture_receipt_sha256",
+            "source_capture_receipt_identity",
             "source_revision",
             "labels",
         }
@@ -361,8 +369,8 @@ def validate_label_record(
         value = payload.get(key)
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             _issue(issues, "integer", f"$.{key}", "must be a non-negative integer")
-    if "source_capture_receipt_sha256" in payload:
-        _sha256(payload["source_capture_receipt_sha256"], "$.source_capture_receipt_sha256", issues)
+    if "source_capture_receipt_identity" in payload:
+        _identity(payload["source_capture_receipt_identity"], "$.source_capture_receipt_identity", issues)
     if "source_revision" in payload and (not isinstance(payload["source_revision"], str) or not _REVISION.fullmatch(payload["source_revision"])):
         _issue(issues, "source_revision", "$.source_revision", "must be a lowercase Git revision")
     classes = {
@@ -442,8 +450,8 @@ def canonical_ontology_bytes(payload: Mapping[str, Any]) -> bytes:
     return (json.dumps(payload, ensure_ascii=True, allow_nan=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
 
 
-def ontology_sha256(payload: Mapping[str, Any]) -> str:
-    return hashlib.sha256(canonical_ontology_bytes(payload)).hexdigest()
+def ontology_identity(payload: Mapping[str, Any]) -> str:
+    return IdentityAccumulator(canonical_ontology_bytes(payload)).hexdigest()
 
 
 def _load_json(path: Path) -> Any:
@@ -546,7 +554,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = {
         "schema": "org.rivermark.benchmark.label-validation-report.v1",
         "status": "passed" if not issues else "failed",
-        "ontology_sha256": ontology_sha256(ontology) if isinstance(ontology, Mapping) else None,
+        "ontology_identity": ontology_identity(ontology) if isinstance(ontology, Mapping) else None,
         "record_count": record_count,
         "issues": [issue.__dict__ for issue in issues],
         "claim_boundary": "label ABI validation only; no formal episode or redistribution claim",

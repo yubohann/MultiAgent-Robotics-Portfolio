@@ -21,7 +21,7 @@ if str(SOURCE_ROOT) not in sys.path:
 
 # ruff: noqa: E402
 from aerocity_bench.assets import stage_assets
-from aerocity_bench.canonical import content_hash, read_json, write_json
+from aerocity_bench.canonical import read_json, write_json
 from aerocity_bench.compiler import compile_g2_i_task_spec, write_compiled_public_v3
 from aerocity_bench.ordinary_config import FORMAL_SPLITS, load_ordinary_config
 from aerocity_bench.public_boundary import audit_public_layout
@@ -143,7 +143,7 @@ def materialize(
                 config.raw["execution_contract"],
             )
             episode_source = "frozen-calibration-input"
-        staged_assets = stage_assets(lock, asset_root.resolve(), output)
+        stage_assets(lock, asset_root.resolve(), output)
         layout_relative_root = Path("splits") / split / str(city["layout_id"])
         layout_root = output / layout_relative_root
         scene_dir = layout_root / "scene_authority"
@@ -153,12 +153,10 @@ def materialize(
         (public_dir / "episodes").mkdir(parents=True)
         (private_dir / "episodes").mkdir(parents=True)
         write_compiled_public_v3(city, scene_dir, lock)
-        materialized_cityspec = read_json(scene_dir / "cityspec.json")
         write_json(public_dir / "task_spec.json", task)
         public_episode = public_episode_projection(private_episode)
         if prior_level == "coarse-regions":
             public_episode.pop("mission_sector", None)
-            public_episode.pop("mission_sector_hash", None)
         write_json(
             public_dir / "episodes" / f"episode-{episode_index:04d}.json",
             public_episode,
@@ -172,17 +170,16 @@ def materialize(
             {
                 "schema": "org.aerocity.bench.support-sites-private.ordinary.v3",
                 "layout_id": city["layout_id"],
-                "layout_hash": city["layout_hash"],
                 "support_site_count": len(support_sites),
                 "support_sites": support_sites,
             },
         )
         atlas = task.get("inspection_atlas")
         projection = task.get("inspection_atlas_projection")
-        source_atlas_hash = (
-            str(atlas["atlas_hash"])
+        source_geometry_id = (
+            str(atlas["inspection_geometry_id"])
             if isinstance(atlas, dict)
-            else str(projection["source_atlas_hash"])
+            else str(projection["inspection_geometry_id"])
         )
         write_json(output / "development_layout_manifest.json", {
             "schema": "org.aerocity.bench.g2-i-development-layout.v1",
@@ -190,20 +187,12 @@ def materialize(
             "task_track": "G2-I",
             "split": split,
             "layout_id": city["layout_id"],
-            "layout_hash": city["layout_hash"],
             "layout_relative_root": layout_relative_root.as_posix(),
-            "task_spec_hash": task["task_spec_hash"],
-            "authority_task_spec_hash": authority_task["task_spec_hash"],
-            "atlas_hash": source_atlas_hash,
+            "inspection_geometry_id": source_geometry_id,
             "inspection_prior_level": prior_level,
-            "asset_lock_hash": staged_assets["asset_lock_hash"],
             "episode_index": episode_index,
             "private_episode_source": episode_source,
-            "city_source_sha256": content_hash(city),
-            "materialized_cityspec_sha256": content_hash(materialized_cityspec),
-            "private_episode_sha256": content_hash(private_episode),
             "public_boundary_audit": public_boundary_audit,
-            "public_boundary_audit_hash": content_hash(public_boundary_audit),
         })
         return read_json(output / "development_layout_manifest.json")
     except Exception:

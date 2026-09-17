@@ -18,7 +18,7 @@
 
 **An uncertainty-aware belief-graph world model for rule-gated multi-robot tactics, built in ROS 2 and IsaacLab.**
 
-CBG-WM is a robotics research artifact for a RoboCup-style adversarial match. Two differential-drive robots share a 3 m by 3 m arena, hunt opponent targets through a 0.80 s laser dwell gate and a 5 cm to 50 cm normal-target range, push rigid red boxes and open base armor plates in order. The hard part is tactics under rules. Detections go stale behind cover, movable boxes change line of sight, armor state decides which base shots are legal, and referee events rewrite object presence. CBG-WM keeps typed belief tokens for every object, predicts interaction dynamics with a stochastic ensemble, and ranks joint Flow proposals by lower-tail risk before a geometry-aware shield executes the first action.
+CBG-WM is a robotics research artifact for a RoboCup-style adversarial match. Two differential-drive robots share a 3 m by 3 m arena, hunt opponent targets through a 0.80 s laser dwell gate and a 5 cm to 50 cm normal-target range, push rigid red boxes and open base armor plates in order. Detections go stale behind cover, movable boxes change line of sight, armor state decides which base shots are legal, and referee events rewrite object presence. CBG-WM keeps typed belief tokens for every object, predicts interaction dynamics with a stochastic ensemble, and ranks joint Flow proposals by lower-tail risk before a geometry-aware shield executes the first action.
 
 **Status.** `v0.1.0` research artifact. The validated main line is the two-robot match with a 128-episode scoring run, an 8-episode strict replay audit, three-view IsaacLab media and 1v1 real-robot experiment coverage. The 50v50 rule benchmark is a simulation-stage extension.
 

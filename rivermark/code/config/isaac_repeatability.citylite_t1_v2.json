@@ -6,7 +6,7 @@
     "source": "frame_aligned_public_id_to_labels",
     "key_fields": ["class", "agent_id"],
     "camera_local": true,
-    "unmapped_id_policy": "fail_closed"
+    "unmapped_id_policy": "strict"
   },
   "thresholds": {
     "root_position_max_error_m": 0.05,

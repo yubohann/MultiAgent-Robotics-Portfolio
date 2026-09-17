@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from .canonical import content_hash, file_hash, read_json
+from .canonical import read_json
 from .geometry import (
     Vec3,
     colliders_from_city,
@@ -20,11 +20,10 @@ from .public_boundary import assert_public_fields, validate_public_task_spec
 
 NATIVE_INPUT_BINDING_KEYS = frozenset(
     {
-        "release_config_sha256",
-        "task_spec_sha256",
-        "public_episode_sha256",
-        "cityspec_sha256",
-        "execution_contract_hash",
+        "release_config",
+        "task_spec",
+        "public_episode",
+        "cityspec",
         "layout_id",
         "episode_id",
     }
@@ -77,8 +76,6 @@ def load_native_gate_inputs(
     contract = public_execution_contract(authority_contract)
     if task_spec.get("execution_contract") != contract:
         raise ValueError("task spec execution contract differs from the release config")
-    if task_spec.get("public_execution_contract_hash") != content_hash(contract):
-        raise ValueError("task spec public execution-contract hash is invalid")
     fleet_count = int(config.get("fleet", {}).get("count", 0))
     starts = episode.get("starts")
     if not isinstance(starts, list) or len(starts) != fleet_count or fleet_count != 4:
@@ -97,11 +94,10 @@ def load_native_gate_inputs(
     if leaked:
         raise ValueError(f"native gate public episode contains private fields: {leaked}")
     bindings = {
-        "release_config_sha256": file_hash(release_config_path),
-        "task_spec_sha256": file_hash(task_spec_path),
-        "public_episode_sha256": file_hash(public_episode_path),
-        "cityspec_sha256": file_hash(cityspec_path),
-        "execution_contract_hash": content_hash(contract),
+        "release_config": release_config_path.name,
+        "task_spec": task_spec_path.name,
+        "public_episode": public_episode_path.name,
+        "cityspec": cityspec_path.name,
         "layout_id": next(iter(layout_ids)),
         "episode_id": str(episode.get("episode_id", "")),
     }

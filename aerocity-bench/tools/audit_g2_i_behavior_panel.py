@@ -33,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _arguments(argv)
     reports = [read_json(path.resolve()) for path in args.profiles]
     contexts = {
-        (str(report.get("layout_hash", "")), str(report.get("episode_hash", "")))
+        (str(report.get("layout_id", "")), str(report.get("episode_id", "")))
         for report in reports
     }
     result = (

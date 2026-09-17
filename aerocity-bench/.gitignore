@@ -12,15 +12,5 @@ outputs/
 screenshots/
 *.partial
 # Evaluator-private receipts contain hidden target outcomes and replay detail.
-# Public reports carry only bound hashes and aggregate anonymous receipts.
+# Public reports carry aggregate anonymous receipts only.
 *.private.json
-
-# Local quality-gate session logs are reproducible diagnostics, not benchmark
-# evidence.  Keep precommitted manifests and public reports under reason/.
-reason/**/quality-*.log
-reason/**/quality-*.log.err
-reason/**/quality-*.exitcode.txt
-reason/**/quality-*.pid.txt
-reason/**/target-tests.log
-reason/**/ruff.log
-reason/**/cmd-wrapper-test*

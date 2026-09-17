@@ -131,6 +131,7 @@ def _response(request_id: object, **payload: Any) -> str:
 def serve(policy: FrozenMarvelPolicy) -> None:
     projection: MarvelG2IProjection | None = None
     for line in sys.stdin:
+        request: dict[str, Any] | None = None
         try:
             request = json.loads(line)
             if not isinstance(request, dict) or request.get("schema") != REQUEST_SCHEMA:
@@ -162,11 +163,7 @@ def serve(policy: FrozenMarvelPolicy) -> None:
             else:
                 raise ValueError("request kind is unsupported")
         except Exception as exc:
-            request_id = (
-                request.get("request_id")
-                if "request" in locals() and isinstance(request, dict)
-                else None
-            )
+            request_id = request.get("request_id") if isinstance(request, dict) else None
             output = _response(request_id, status=f"error:{type(exc).__name__}")
         print(output, flush=True)
 

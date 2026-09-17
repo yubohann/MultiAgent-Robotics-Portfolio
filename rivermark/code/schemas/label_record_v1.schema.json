@@ -11,7 +11,7 @@
     "episode_id",
     "frame_index",
     "timestamp_ns",
-    "source_capture_receipt_sha256",
+    "source_capture_receipt_identity",
     "source_revision",
     "labels"
   ],
@@ -22,7 +22,7 @@
     "episode_id": {"$ref": "#/$defs/id"},
     "frame_index": {"type": "integer", "minimum": 0},
     "timestamp_ns": {"type": "integer", "minimum": 0},
-    "source_capture_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "source_capture_receipt_identity": {"$ref": "#/$defs/identity"},
     "source_revision": {"type": "string", "pattern": "^[0-9a-f]{7,64}$"},
     "labels": {
       "type": "array",
@@ -33,7 +33,7 @@
   "$defs": {
     "id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{2,127}$"},
     "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
     "vector3": {
       "type": "array",
       "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}],
@@ -83,7 +83,7 @@
               "items": false
             },
             "mask_path": {"type": "string", "minLength": 1},
-            "mask_sha256": {"$ref": "#/$defs/sha256"},
+            "mask_identity": {"$ref": "#/$defs/identity"},
             "width_px": {"type": "integer", "minimum": 1},
             "height_px": {"type": "integer", "minimum": 1},
             "points_m": {

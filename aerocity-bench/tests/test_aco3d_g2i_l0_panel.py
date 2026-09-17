@@ -29,16 +29,16 @@ def _report(city: str, *, returned: bool = True) -> dict[str, object]:
             "url": "https://example.invalid/aco",
             "commit": "a" * 40,
             "license": "MIT",
-            "source_lock_sha256": "b" * 64,
+            "source_lock": "source-lock.json",
             "adapter_version": "translation-v1",
             "source_checkout_verified": True,
             "upstream_runtime_executed": False,
         },
         "adapter": {
-            "adapter_source_sha256": "c" * 64,
-            "runner_source_sha256": "d" * 64,
+            "adapter_source": "aco3d_g2i_process_adapter.py",
+            "runner": "run_aco3d_g2i_l0_smoke.py",
         },
-        "public_input_hashes": {"city": city, "release_config": "e" * 64},
+        "public_inputs": {"city": city, "release_config": "ordinary.json"},
         "execution": {
             "formal_score_eligible": False,
             "all_returned_home": returned,
@@ -62,7 +62,7 @@ def test_panel_requires_three_matching_safe_returning_calibration_reports(
     paths: dict[str, Path] = {}
     for index, label in enumerate(("ancestor-00", "ancestor-01", "ancestor-02")):
         path = tmp_path / f"{label}.json"
-        module.write_json(path, _report(f"{index:064x}"))
+        module.write_json(path, _report(f"city-ancestor-{index}"))
         paths[label] = path
 
     panel = module.build_panel(paths)
@@ -79,7 +79,7 @@ def test_panel_rejects_a_nonreturning_replay(tmp_path: Path) -> None:
     paths: dict[str, Path] = {}
     for index, label in enumerate(("ancestor-00", "ancestor-01", "ancestor-02")):
         path = tmp_path / f"{label}.json"
-        module.write_json(path, _report(f"{index:064x}", returned=label != "ancestor-02"))
+        module.write_json(path, _report(f"city-ancestor-{index}", returned=label != "ancestor-02"))
         paths[label] = path
 
     with pytest.raises(ValueError, match="did not return"):

@@ -1,12 +1,4 @@
-"""Ancestor-level statistical planning for the G2-I formal matrix.
-
-Episode rollouts from the same city layout share geometry, the public atlas,
-starts, and the target-process realization.  They are useful repeated
-measurements, but are not independent samples.  This module therefore only
-uses one already-aggregated value per layout ancestor for uncertainty and
-sample-size planning.  It is deliberately a planning aid: a calibration
-report can never grant formal-score eligibility.
-"""
+"""Ancestor-level statistical planning for the G2-I comparison matrix."""
 
 from __future__ import annotations
 
@@ -15,8 +7,6 @@ import random
 import statistics
 from statistics import NormalDist
 from typing import Any
-
-from .canonical import content_hash
 
 PROTOCOL_SCHEMA = "org.aerocity.bench.g2-i-statistical-protocol.v1"
 SEARCHABILITY_SCHEMA = "org.aerocity.bench.g2-i-l0-searchability-calibration.v1"
@@ -82,21 +72,17 @@ def _validated_protocol(protocol: object) -> dict[str, Any]:
         "bootstrap_seed",
         "multiple_comparison_control",
         "failure_denominator_policy",
-        "protocol_hash",
     }
     if set(protocol) != expected:
         raise ValueError("statistical protocol fields differ")
-    payload = {key: value for key, value in protocol.items() if key != "protocol_hash"}
-    if content_hash(payload) != protocol["protocol_hash"]:
-        raise ValueError("statistical protocol hash mismatch")
     if protocol["formal_score_eligible"] is not False:
         raise ValueError("a planning protocol cannot be formally score eligible")
     if protocol["primary_metric"] != "mean_final_confirmed_recall":
         raise ValueError("the primary metric must be ancestor-mean final confirmed recall")
     if protocol["independent_unit"] != "layout_ancestor":
         raise ValueError("the independent unit must be layout_ancestor")
-    if protocol["pairing_key"] != "layout_hash":
-        raise ValueError("the pairing key must be layout_hash")
+    if protocol["pairing_key"] != "layout_id":
+        raise ValueError("the pairing key must be layout_id")
     reference = protocol["reference_method_id"]
     comparators = protocol["comparator_method_ids"]
     if (
@@ -132,10 +118,6 @@ def _validated_searchability_report(report: object) -> dict[str, Any]:
         raise ValueError("statistical planning requires a G2-I searchability calibration report")
     if report.get("formal_score_eligible") is not False:
         raise ValueError("formal result reports are not valid statistical-planning inputs")
-    expected_hash = report.get("report_hash")
-    payload = {key: value for key, value in report.items() if key != "report_hash"}
-    if not isinstance(expected_hash, str) or content_hash(payload) != expected_hash:
-        raise ValueError("searchability report hash mismatch")
     method_reports = report.get("method_reports")
     if not isinstance(method_reports, list) or not method_reports:
         raise ValueError("searchability report has no method reports")
@@ -154,7 +136,7 @@ def _ancestor_rows(method_report: object, *, method_id: str) -> dict[str, dict[s
     for row in rows:
         if not isinstance(row, dict):
             raise ValueError(f"method has an invalid ancestor row: {method_id}")
-        key = row.get("layout_hash")
+        key = row.get("layout_id")
         value = row.get("mean_final_confirmed_recall")
         episode_count = row.get("episode_count")
         if (
@@ -244,7 +226,6 @@ def build_statistical_planning_report(
                 "comparator_method_id": comparator_id,
                 "layout_ancestor_count": ancestor_count,
                 "episode_rows_are_not_independent": True,
-                "paired_ancestor_hash": content_hash(ordered_keys),
                 "mean_delta_comparator_minus_reference": statistics.fmean(deltas),
                 "sample_sd_of_paired_deltas": sample_sd,
                 "bootstrap_percentile_ci_95": [ci_low, ci_high],
@@ -290,8 +271,6 @@ def build_statistical_planning_report(
         "schema": REPORT_SCHEMA,
         "formal_score_eligible": False,
         "overall_status": "CALIBRATION_STATISTICS_ONLY",
-        "source_calibration_report_hash": calibration["report_hash"],
-        "protocol_hash": protocol_node["protocol_hash"],
         "protocol": {
             "primary_metric": protocol_node["primary_metric"],
             "independent_unit": protocol_node["independent_unit"],
@@ -315,5 +294,4 @@ def build_statistical_planning_report(
         },
         "next_authorized_step": "COLLECT_PRECOMMITTED_EXTERNAL_L1_ANCESTOR_PANEL",
     }
-    report["report_hash"] = content_hash(report)
     return report

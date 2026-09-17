@@ -3,7 +3,7 @@
   "formal_score_eligible": false,
   "primary_metric": "mean_final_confirmed_recall",
   "independent_unit": "layout_ancestor",
-  "pairing_key": "layout_hash",
+  "pairing_key": "layout_id",
   "reference_method_id": "atlas-surface-inspector",
   "comparator_method_ids": [
     "atlas-region-greedy"
@@ -15,6 +15,5 @@
   "bootstrap_replicates": 5000,
   "bootstrap_seed": 20260802,
   "multiple_comparison_control": "holm_within_primary_family",
-  "failure_denominator_policy": "retain_all_completed_ancestor_rows",
-  "protocol_hash": "bdaf37498f734b4378d051ffefdcef394b19ef7eee83a1aef3e0d2bc78260322"
+  "failure_denominator_policy": "retain_all_completed_ancestor_rows"
 }

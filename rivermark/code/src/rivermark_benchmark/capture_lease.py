@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 import os
 import time
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 
 class AppLauncherLeaseError(RuntimeError):
@@ -21,12 +22,7 @@ def _metadata_bytes(metadata: Mapping[str, Any]) -> bytes:
 
 
 class AppLauncherLease:
-    """Hold an OS-backed exclusive lock for one AppLauncher lifetime.
-
-    The lock file is deliberately tiny and is never treated as capture data.
-    Kernel file-lock ownership means an abrupt process exit releases the lease;
-    no stale PID or wall-clock timeout can incorrectly permit two Kit owners.
-    """
+    """Hold an OS-backed exclusive lock for one AppLauncher lifetime."""
 
     def __init__(self, path: Path, *, metadata: Mapping[str, Any]):
         self.path = Path(path).expanduser().resolve()
@@ -102,7 +98,8 @@ class AppLauncherLease:
         finally:
             stream.close()
 
-    def __enter__(self) -> "AppLauncherLease":
+    # PYI034: typing.Self requires Python 3.11; typing_extensions is not a declared dependency.
+    def __enter__(self) -> AppLauncherLease:  # noqa: PYI034
         self.acquire()
         return self
 

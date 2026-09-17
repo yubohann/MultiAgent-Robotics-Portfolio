@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from ._compat import gym, spaces
+import gymnasium as gym
+from gymnasium import spaces
 
 from .constants import (
     ARENA_SIZE,
@@ -38,11 +39,11 @@ from .constants import (
     ROBOT_RADIUS,
     ROBOT_WIDTH,
     ROUTE_CLEARANCE,
-    SHOOTER_FORWARD_OFFSET,
     SHOOT_HIT_RADIUS,
     SHOOT_IDEAL_DISTANCE,
     SHOOT_MIN_RANGE,
     SHOOT_RANGE,
+    SHOOTER_FORWARD_OFFSET,
     SIDE_GATE_TARGET_Y,
     SOUTH_MIDDLE_TARGET_X,
     TARGET_WALL_ANGLE_RAD,
@@ -52,11 +53,10 @@ from .constants import (
     YELLOW_BASE_TARGET_YAW,
     YELLOW_BASE_XY,
     YELLOW_START,
-    ZONE_SIZE
+    ZONE_SIZE,
 )
-
 from .datatypes import Target
-
+from .env import RoboCupVisionRLGymEnv
 from .geometry import (
     active_base_armor_blockers,
     angled_wall_target_yaw,
@@ -74,11 +74,8 @@ from .geometry import (
     route_pose,
     segment_intersects_aabb,
     shooting_range_limits,
-    wrap_angle
+    wrap_angle,
 )
-
-from .env import RoboCupVisionRLGymEnv
-
 
 __all__ = [
     'ARENA_SIZE',
@@ -116,7 +113,6 @@ __all__ = [
     'ROBOT_RADIUS',
     'ROBOT_WIDTH',
     'ROUTE_CLEARANCE',
-    'RoboCupVisionRLGymEnv',
     'SHOOTER_FORWARD_OFFSET',
     'SHOOT_HIT_RADIUS',
     'SHOOT_IDEAL_DISTANCE',
@@ -126,13 +122,14 @@ __all__ = [
     'SOUTH_MIDDLE_TARGET_X',
     'TARGET_WALL_ANGLE_RAD',
     'TARGET_WALL_INSET',
-    'Target',
     'WALL_THICKNESS',
     'YELLOW_BASE_TARGET_XY',
     'YELLOW_BASE_TARGET_YAW',
     'YELLOW_BASE_XY',
     'YELLOW_START',
     'ZONE_SIZE',
+    'RoboCupVisionRLGymEnv',
+    'Target',
     'active_base_armor_blockers',
     'angled_wall_target_yaw',
     'annotations',

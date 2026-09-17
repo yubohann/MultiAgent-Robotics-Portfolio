@@ -1,13 +1,12 @@
 """FastAPI web service for the short-video review demo."""
 
+import re
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-import re
 
 import uvicorn
-from fastapi import File, Form, HTTPException, Request, UploadFile
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -18,10 +17,9 @@ from .demo_assets import ensure_demo_videos
 from .job_queue import enqueue_job, has_active_jobs, job_stats
 from .local_worker import LocalReviewWorker
 from .model_registry import get_active_model, list_model_candidates, set_active_model
-from .ollama_vlm import OllamaVLMClient, OllamaModelError
+from .ollama_vlm import OllamaModelError, OllamaVLMClient
 from .pipeline import ShortVideoPipeline
 from .storage import add_event, clear_db, list_events, list_videos, stats
-
 
 ensure_directories()
 # One pipeline and one worker are shared inside the application process.
@@ -88,11 +86,11 @@ def _enqueue_review(record: dict, *, simulate_stream: bool = True) -> dict:
     return job
 
 
-def _enqueue_demo(overwrite: bool = False) -> list[dict]:
-    """Generate demo videos, ingest them, and enqueue their review jobs."""
-    add_event(None, "system", "开始准备内置短视频样本", {"overwrite": overwrite})
+def _enqueue_demo() -> list[dict]:
+    """Ingest the demo videos and enqueue their review jobs."""
+    add_event(None, "system", "开始准备演示视频任务", {})
     jobs = []
-    for descriptor in ensure_demo_videos(overwrite=overwrite):
+    for descriptor in ensure_demo_videos():
         record = pipeline.ingest_video(
             Path(descriptor["path"]),
             title=descriptor["title"],
@@ -180,11 +178,11 @@ def api_events():
 
 
 @app.post("/api/demo")
-def api_demo(overwrite: bool = False):
+def api_demo():
     """Start the built-in sample-video flow by enqueueing demo review jobs."""
     if has_active_jobs():
         raise HTTPException(status_code=409, detail="pipeline is already running")
-    jobs = _enqueue_demo(overwrite)
+    jobs = _enqueue_demo()
     return {"started": True, "processing": True, "queued": len(jobs)}
 
 

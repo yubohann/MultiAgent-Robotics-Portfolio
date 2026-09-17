@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .canonical import content_hash
-
 
 @dataclass(frozen=True)
 class SensorExecutionProfile:
@@ -61,7 +59,7 @@ class SensorExecutionProfile:
     @property
     def fingerprint(self) -> str:
         self.validate()
-        return content_hash(self.to_dict())
+        return self.profile_id
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -152,8 +150,6 @@ def render_due(
 
 
 def validate_single_sensor_profile(profiles: list[SensorExecutionProfile]) -> str:
-    """Reject a batch that silently mixes resolutions, FoV, or render policy."""
-
     if not profiles:
         raise ValueError("sensor profile batch is empty")
     fingerprints = {profile.fingerprint for profile in profiles}

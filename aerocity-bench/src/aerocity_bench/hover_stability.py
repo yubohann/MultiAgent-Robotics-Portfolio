@@ -1,11 +1,4 @@
-"""Pure-Python long-horizon CF2X hover metrics and candidate gate.
-
-Short controller smoke tests can hide a small persistent altitude trend.  This
-module deliberately measures the late part of a native flight trace, so a
-vehicle that slowly descends (or climbs) cannot pass merely because its first
-few seconds look stable.  The threshold set is an engineering preflight
-candidate only; it never promotes the CF2X model to formal-score eligibility.
-"""
+"""Long-horizon CF2X hover metrics over the late part of a native flight trace."""
 
 from __future__ import annotations
 

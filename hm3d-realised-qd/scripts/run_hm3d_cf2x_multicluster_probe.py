@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import random
@@ -18,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from aerocity_method.contracts import FORMAL_FLEET_SIZE
-from aerocity_method.contracts.io import canonical_sha256, write_json_atomic
+from aerocity_method.contracts.io import write_json_atomic
 from aerocity_method.runtime import hm3d_cf2x_execution as cf2x
 from aerocity_method.runtime.communication import RelayMessage, RelayMessageQueue
 from aerocity_method.runtime.hm3d_multicluster import HM3DClusterLayout, cluster_seed
@@ -32,12 +31,9 @@ def _point(values: list[float]) -> tuple[float, float, float]:
     return tuple(float(value) for value in values)  # type: ignore[return-value]
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -269,15 +265,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         for cluster_id in range(layout.cluster_count)
         for agent_index in range(layout.fleet_size)
     ]
-    action_hashes = [
-        canonical_sha256(
-            {
-                "cluster_id": cluster_id,
-                "local_starts_m": starts,
-                "local_offsets_m": target_offsets[cluster_id],
-                "duration_s": args.duration_s,
-            }
-        )
+    action_ids = [
+        f"probe-action:cluster{cluster_id}:{len(starts)}-agents:{args.duration_s}s"
         for cluster_id in range(layout.cluster_count)
     ]
 
@@ -289,9 +278,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 message_id=f"cluster{cluster_id}-bootstrap",
                 sender_id="uav0",
                 source_timestamp_s=0.0,
-                payload_digest=canonical_sha256(
-                    {"cluster_id": cluster_id, "local_starts_m": starts}
-                ),
+                payload_id=f"cluster{cluster_id}-bootstrap:{len(starts)}-agents",
                 time_to_live_s=max(0.5, args.duration_s),
             )
         )
@@ -400,7 +387,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
 
     cluster_rows: list[dict[str, Any]] = []
     for cluster_id in range(layout.cluster_count):
-        trace_hash = canonical_sha256(local_traces[cluster_id])
+        trace_id = f"cluster{cluster_id}-trace:{len(local_traces[cluster_id])}-samples"
         outcomes = queues[cluster_id].outcomes
         cluster_rows.append(
             {
@@ -409,8 +396,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
                 "selected_candidate_ids": [
                     f"cluster{cluster_id}-offset-uav{index}" for index in range(layout.fleet_size)
                 ],
-                "action_hashes": [action_hashes[cluster_id]],
-                "outcome_hashes": [trace_hash],
+                "action_ids": [action_ids[cluster_id]],
+                "outcome_ids": [trace_id],
                 "local_root_trace_m": local_traces[cluster_id],
                 "public_map_voxel_count": len(public_map_voxels[cluster_id]),
                 "message_outcome_count": len(outcomes),
@@ -439,8 +426,8 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             physics_dt_s=args.physics_dt_s,
         ),
         "collision_filter_applied": True,
-        "collision_usd_sha256": _sha256(collision_usd),
-        "cf2x_usd_sha256": _sha256(cf2x_usd),
+        "collision_usd_file_id": _file_id(collision_usd),
+        "cf2x_usd_id": _file_id(cf2x_usd),
         "maximum_reset_error_m": reset_error_m,
         "maximum_contact_force_n": max(maximum_contact_force_n, default=0.0),
         "minimum_cross_cluster_distance_m": (
@@ -454,7 +441,9 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         "real_decisions_per_wall_hour": layout.cluster_count * 3600.0 / wall_s,
         "clusters": cluster_rows,
     }
-    payload["runtime_record_sha256"] = canonical_sha256(payload)
+    payload["runtime_record_id"] = (
+        f"multicluster-probe:{args.peer_mode}:{layout.cluster_count}x{layout.fleet_size}"
+    )
     write_json_atomic(output, payload)
     print(
         json.dumps(

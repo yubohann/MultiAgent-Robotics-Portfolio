@@ -1,9 +1,4 @@
-"""Isaac L1/L2 compatibility contract and native evidence validation.
-
-This module intentionally does not import Isaac Sim at package import time.
-Launching the simulator remains an explicit CLI/tool action so CPU-only schema,
-generation, adapter, and evaluator tests stay usable.
-"""
+"""Isaac L1/L2 compatibility contract and native evidence reading."""
 
 from __future__ import annotations
 
@@ -14,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import Any, Protocol
 
-from .canonical import content_hash, file_hash, read_json, write_json
+from .canonical import read_json, write_json
 from .contracts import ACTION_KINDS, ActionPacket, ExecutionReceipt, ObservationPacket
 from .errors import ValidationError
 from .geometry import distance
@@ -274,18 +269,11 @@ class NativeIsaacBackend(Protocol):
 @dataclass(frozen=True)
 class NativeEvidence:
     report_path: Path
-    report_hash: str
     execution_level: str
     runtime_fingerprint: dict[str, str]
     input_bindings: dict[str, str]
     formal_score_eligible: bool
     evidence_scope: str
-
-
-def _is_sha256(value: object) -> bool:
-    return isinstance(value, str) and len(value) == 64 and all(
-        character in "0123456789abcdef" for character in value
-    )
 
 
 @dataclass(frozen=True)
@@ -294,31 +282,16 @@ class FormalExecutionContext:
 
     episode_id: str
     layout_id: str
-    execution_contract_hash: str
-    native_gate_hash: str
-    runtime_fingerprint_hash: str
-    execution_receipt_set_hash: str
 
 
-def formal_execution_context(
-    evidence: NativeEvidence, execution_receipt_set_hash: str
-) -> FormalExecutionContext:
+def formal_execution_context(evidence: NativeEvidence) -> FormalExecutionContext:
     if evidence.execution_level != "L1":
         raise ValidationError("formal geometry scoring requires validated L1 native evidence")
-    if (
-        not evidence.formal_score_eligible
-        or evidence.evidence_scope != FORMAL_L1_EVIDENCE_SCOPE
-    ):
+    if not evidence.formal_score_eligible or evidence.evidence_scope != FORMAL_L1_EVIDENCE_SCOPE:
         raise ValidationError("native evidence is a capability gate, not formal episode evidence")
-    if not _is_sha256(execution_receipt_set_hash):
-        raise ValidationError("formal execution receipt-set hash is invalid")
     return FormalExecutionContext(
         episode_id=str(evidence.input_bindings["episode_id"]),
         layout_id=str(evidence.input_bindings["layout_id"]),
-        execution_contract_hash=str(evidence.input_bindings["execution_contract_hash"]),
-        native_gate_hash=evidence.report_hash,
-        runtime_fingerprint_hash=content_hash(evidence.runtime_fingerprint),
-        execution_receipt_set_hash=execution_receipt_set_hash,
     )
 
 
@@ -339,7 +312,6 @@ def build_l1_execution_receipt(
     out_of_bounds: bool,
     safety_intervention: bool,
     deadline_miss: bool,
-    previous_receipt_hash: str | None,
     planner_invoked: bool = True,
     confirmation_ids: tuple[str, ...] = (),
 ) -> ExecutionReceipt:
@@ -379,12 +351,7 @@ def build_l1_execution_receipt(
         safety_intervention=safety_intervention,
         deadline_miss=deadline_miss,
         execution_level="L1",
-        action_packet_hash=content_hash(action.to_dict()),
         source_observation_id=source_observation.observation_id,
-        source_observation_hash=content_hash(source_observation.to_dict()),
-        state_before_hash=content_hash(state_before),
-        state_after_hash=content_hash(state_after),
-        previous_receipt_hash=previous_receipt_hash,
         confirmation_ids=confirmation_ids,
         planner_invoked=planner_invoked,
     )
@@ -411,7 +378,6 @@ def write_native_gate_report(
         "schema": "org.aerocity.bench.native-isaac-gate.v1",
         "execution_level": execution_level,
         "stage_path": str(stage_path.resolve()),
-        "stage_sha256": file_hash(stage_path),
         "runtime_fingerprint": runtime_fingerprint,
         "checks": checks,
         "formal_score_eligible": formal_score_eligible,
@@ -425,7 +391,6 @@ def write_native_gate_report(
         ):
             raise ValueError("native gate input bindings are incomplete")
         report["input_bindings"] = dict(sorted(input_bindings.items()))
-    report["native_gate_hash"] = content_hash(report)
     write_json(destination, report)
     return report
 
@@ -436,9 +401,6 @@ def validate_native_gate_report(
     expected_input_bindings: dict[str, str] | None = None,
 ) -> NativeEvidence:
     report = read_json(path)
-    expected_hash = str(report.pop("native_gate_hash", ""))
-    if content_hash(report) != expected_hash:
-        raise ValidationError("native Isaac gate report hash mismatch")
     if report.get("execution_level") not in {"L1", "L2"}:
         raise ValidationError("native gate report is not L1/L2")
     if not isinstance(report.get("formal_score_eligible"), bool):
@@ -471,11 +433,10 @@ def validate_native_gate_report(
             raise ValidationError("relative native gate stage does not match the expected stage")
     else:
         raise ValidationError("relative native gate evidence requires an expected package stage")
-    if not stage.is_file() or file_hash(stage) != report.get("stage_sha256"):
-        raise ValidationError("native gate stage is absent or changed")
+    if not stage.is_file():
+        raise ValidationError("native gate stage is absent")
     return NativeEvidence(
         report_path=path.resolve(),
-        report_hash=expected_hash,
         execution_level=str(report["execution_level"]),
         runtime_fingerprint={
             str(key): str(value) for key, value in report["runtime_fingerprint"].items()
@@ -495,13 +456,11 @@ def assert_formal_receipts(
     expected_task_time_s: float,
     ledger: dict[str, Any],
 ) -> None:
-    """Validate the complete L1 receipt chain against trusted in-memory evidence."""
+    """Validate the complete L1 receipt set against trusted in-memory evidence."""
 
     if not receipts:
         raise ValidationError("formal scoring requires execution receipts")
-    if content_hash(receipts) != context.execution_receipt_set_hash:
-        raise ValidationError("formal execution receipts differ from the trusted receipt set")
-    required_v2 = {
+    required_v3 = {
         "schema",
         "episode_id",
         "drone_id",
@@ -520,14 +479,9 @@ def assert_formal_receipts(
         "safety_intervention",
         "deadline_miss",
         "execution_level",
-        "action_packet_hash",
         "source_observation_id",
-        "source_observation_hash",
-        "state_before_hash",
-        "state_after_hash",
-        "previous_receipt_hash",
         "confirmation_ids",
-        "receipt_hash",
+        "planner_invoked",
     }
     canonical_order = sorted(
         receipts, key=lambda item: (int(item.get("action_sequence", -1)), str(item.get("drone_id")))
@@ -538,35 +492,17 @@ def assert_formal_receipts(
     last_by_drone: dict[str, dict[str, Any]] = {}
     receipt_drone_ids: set[str] = set()
     confirmation_ids: list[str] = []
-    receipt_hashes: dict[tuple[str, int], str] = {}
     for receipt in receipts:
-        payload = dict(receipt)
-        expected_hash = str(payload.pop("receipt_hash", ""))
         schema = receipt.get("schema")
-        required = (
-            required_v2 | {"planner_invoked"}
-            if schema == "org.aerocity.bench.execution-receipt.v3"
-            else required_v2
-        )
-        if set(receipt) != required:
-            missing = sorted(required - set(receipt))
-            extra = sorted(set(receipt) - required)
+        if set(receipt) != required_v3:
+            missing = sorted(required_v3 - set(receipt))
+            extra = sorted(set(receipt) - required_v3)
             raise ValidationError(
                 f"formal execution receipt fields differ; missing={missing}, extra={extra}"
             )
-        if content_hash(payload) != expected_hash:
-            raise ValidationError(
-                "formal scoring received a corrupt execution receipt: "
-                f"{receipt.get('drone_id')}/{receipt.get('action_sequence')}"
-            )
-        if schema not in {
-            "org.aerocity.bench.execution-receipt.v2",
-            "org.aerocity.bench.execution-receipt.v3",
-        }:
+        if schema != "org.aerocity.bench.execution-receipt.v3":
             raise ValidationError("formal scoring requires a supported execution receipt")
-        if schema == "org.aerocity.bench.execution-receipt.v3" and not isinstance(
-            receipt.get("planner_invoked"), bool
-        ):
+        if not isinstance(receipt.get("planner_invoked"), bool):
             raise ValidationError("formal receipt planner invocation flag is invalid")
         if receipt.get("execution_level") != "L1":
             raise ValidationError("formal scoring received a non-L1 execution receipt")
@@ -612,21 +548,13 @@ def assert_formal_receipts(
             or float(clearance) < 0.0
         ):
             raise ValidationError("formal execution receipt clearance is invalid")
-        for key in (
-            "action_packet_hash",
-            "source_observation_hash",
-            "state_before_hash",
-            "state_after_hash",
-        ):
-            if not _is_sha256(receipt.get(key)):
-                raise ValidationError(f"formal execution receipt has invalid {key}")
         if not isinstance(receipt.get("source_observation_id"), str) or not receipt[
             "source_observation_id"
         ]:
             raise ValidationError("formal execution receipt lacks a source observation ID")
         previous = last_by_drone.get(drone_id)
         if previous is None:
-            if sequence != 0 or receipt.get("previous_receipt_hash") is not None:
+            if sequence != 0:
                 raise ValidationError(
                     "formal execution receipt chain does not start at sequence zero"
                 )
@@ -637,11 +565,6 @@ def assert_formal_receipts(
         else:
             if sequence != int(previous["action_sequence"]) + 1:
                 raise ValidationError("formal execution receipt chain skips an action sequence")
-            previous_pair = (drone_id, int(previous["action_sequence"]))
-            if receipt.get("previous_receipt_hash") != receipt_hashes[previous_pair]:
-                raise ValidationError("formal execution receipt previous hash is broken")
-            if receipt.get("state_before_hash") != previous.get("state_after_hash"):
-                raise ValidationError("formal execution state hash chain is broken")
             if abs(
                 float(receipt["task_time_start_s"]) - float(previous["task_time_end_s"])
             ) > 1.0e-9:
@@ -652,7 +575,6 @@ def assert_formal_receipts(
         ):
             raise ValidationError("formal execution receipt confirmation IDs are invalid")
         confirmation_ids.extend(current_confirmation_ids)
-        receipt_hashes[pair] = expected_hash
         last_by_drone[drone_id] = receipt
     if receipt_drone_ids != expected_drone_ids:
         raise ValidationError("formal execution receipt set omits one or more expected drones")

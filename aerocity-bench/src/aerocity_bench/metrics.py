@@ -115,9 +115,6 @@ def evaluate_run(
     audit = run_result["evaluator_private_audit"]
     if audit["episode_id"] != private_episode["episode_id"]:
         raise ValueError("run and private episode IDs differ")
-    validity = private_episode["target_validity"]
-    if audit["validity_hash"] != validity["validity_hash"]:
-        raise ValueError("run used another target-validity denominator")
     private_episode_id = str(private_episode["episode_id"])
     private_layout_id = str(private_episode.get("layout_id", ""))
     starts = private_episode.get("starts")
@@ -160,10 +157,6 @@ def evaluate_run(
         expected_bindings = {
             "episode_id": formal_context.episode_id,
             "layout_id": formal_context.layout_id,
-            "execution_contract_hash": formal_context.execution_contract_hash,
-            "native_gate_hash": formal_context.native_gate_hash,
-            "runtime_fingerprint_hash": formal_context.runtime_fingerprint_hash,
-            "execution_receipt_set_hash": formal_context.execution_receipt_set_hash,
         }
         mismatched = [
             key for key, value in expected_bindings.items() if run_result.get(key) != value
@@ -241,7 +234,6 @@ def evaluate_run(
     return {
         "schema": "org.aerocity.bench.metric-report.v1",
         "episode_id": private_episode["episode_id"],
-        "target_validity_hash": validity["validity_hash"],
         "execution_level": run_result["execution_level"],
         "formal_score_eligible": formal_eligible,
         "quality": {

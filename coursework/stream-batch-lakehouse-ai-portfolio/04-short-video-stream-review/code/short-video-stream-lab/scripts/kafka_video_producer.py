@@ -45,7 +45,7 @@ def main() -> None:
             }
         ]
     else:
-        items = ensure_demo_videos(overwrite=False)
+        items = ensure_demo_videos()
 
     for item in items:
         # event_time is a millisecond timestamp as used by stream systems.

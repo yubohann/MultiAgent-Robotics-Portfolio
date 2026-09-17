@@ -4,7 +4,7 @@ Rivermark is a toolchain for building and auditing a **multi-agent 3D stealth-se
 
 The project follows three ideas.
 
-- **Determinism by construction.** Every scene, protocol, runtime, and source tree is pinned by SHA-256. Episodes are seeded deterministically, and a runtime lock fixes the software stack so a capture re-runs and compares.
+- **Determinism by construction.** Every scene, protocol, runtime, and source tree is pinned by content identity. Episodes are seeded deterministically, and a runtime lock fixes the software stack so a capture re-runs and compares.
 - **Data integrity before release.** Captures enter the formal dataset after an independent validator checks them and the provenance rules pass. Private target information stays on the scorer side.
 - **One ABI, many methods.** A single observation and action contract lets classical planners, RL and MARL, quality-diversity, and vision-language-action agents target the same scoring interface.
 

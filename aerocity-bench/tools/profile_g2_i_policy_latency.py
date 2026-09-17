@@ -10,7 +10,7 @@ from typing import Any
 
 from aerocity_bench.baselines import BASELINES, create_baseline
 from aerocity_bench.behavioral_distinctness import summarize_public_action_trace
-from aerocity_bench.canonical import content_hash, read_json, write_json
+from aerocity_bench.canonical import read_json, write_json
 from aerocity_bench.compiler import compile_g2_i_task_spec
 from aerocity_bench.host_guard import foreign_isaac_processes, host_snapshot
 from aerocity_bench.inspection_atlas import validate_public_mission_sector
@@ -311,9 +311,7 @@ def profile_policy_latency(
     episode = read_json(_local_path(root, record["private_episode_path"], "private_episode_path"))
     if str(city.get("split")) in FORMAL_SPLITS:
         raise ValueError("latency profile must not inspect a formal split")
-    if episode.get("layout_id") != city.get("layout_id") or episode.get("layout_hash") != city.get(
-        "layout_hash"
-    ):
+    if episode.get("layout_id") != city.get("layout_id"):
         raise ValueError("frozen episode is not bound to its city")
     task_spec = compile_g2_i_task_spec(city, config.raw["execution_contract"], config.raw["fleet"])
     sector = episode.get("mission_sector")
@@ -354,9 +352,9 @@ def profile_policy_latency(
         "execution_level": "L0",
         "method_id": method_id,
         "method_requires_private_truth": descriptor.requires_private_truth,
-        "manifest_hash": content_hash(manifest),
-        "layout_hash": city["layout_hash"],
-        "episode_hash": episode["episode_hash"],
+        "manifest": manifest_path.name,
+        "layout_id": city["layout_id"],
+        "episode_id": episode["episode_id"],
         "planner_deadline_s": deadline_s,
         "replicates": replicates,
         "controlled_repeat_adjudication": adjudicate_controlled_repeats(
@@ -381,7 +379,6 @@ def profile_policy_latency(
         },
         "private_truth_omitted": not descriptor.requires_private_truth,
     }
-    report["report_hash"] = content_hash(report)
     return report
 
 

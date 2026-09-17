@@ -1,29 +1,25 @@
 from __future__ import annotations
 
-
+from itertools import pairwise
 
 from ._bootstrap import (
     BASE_ARMOR,
     COLLISION_PRIMS,
     LASER_BLOCKERS,
     NAV_BLOCKERS,
-    PUSHABLE_OBSTACLES,
     PUSHABLE_OBSTACLE_DYNAMIC_FRICTION,
     PUSHABLE_OBSTACLE_MASS_KG,
     PUSHABLE_OBSTACLE_STATIC_FRICTION,
+    PUSHABLE_OBSTACLES,
     RAYCAST_BOXES,
     ROUTE_CLEARANCE,
     TAG_CENTER_Z,
     TAG_SIZE,
     TARGET_REGISTRY,
-    sim_utils
+    sim_utils,
 )
-from .transforms import (
-    create_xform,
-    local_to_world,
-    quat_from_euler,
-    set_visibility
-)
+from .transforms import create_xform, local_to_world, quat_from_euler, set_visibility
+
 
 def material(
     color: tuple[float, float, float],
@@ -235,11 +231,7 @@ def spawn_apriltag(
     pitch: float,
     yaw: float,
 ):
-    """Build a physical tag-like target from primitive geometry.
-
-    The layout stays portable to USD, and the real detector reads the AprilTag
-    Tag36h11 family that the metadata and docs record.
-    """
+    """Build a physical tag-like target from primitive geometry."""
     create_xform(path)
     orient = quat_from_euler(roll, pitch, yaw)
 
@@ -402,10 +394,10 @@ def spawn_target(
     face_color = (0.86, 0.87, 0.80)
     dark_frame = (0.035, 0.038, 0.040)
     warning_color = (0.98, 0.70, 0.12) if tag_id == 1 else frame_color
-    board_center = (xy[0], xy[1], 0.116 if base_target else 0.116)
+    board_center = (xy[0], xy[1], 0.116)
     board_size = (0.012, 0.095, 0.115) if base_target else (0.012, 0.180, 0.190)
     front_x = board_size[0] * 0.5 + 0.006
-    edge = 0.010 if base_target else 0.010
+    edge = 0.010
     # The rules put the bottom of the 5 cm AprilTag at 6.5-7.5 cm above the
     # floor, so the visual tag stays anchored at that physical height.
     tag_local_z = TAG_CENTER_Z - board_center[2]
@@ -823,7 +815,7 @@ def segment_intersects_aabb(
 
 def validate_route(name: str, route: list[tuple[float, float]], *, strict: bool = False) -> bool:
     valid = True
-    for index, (p0, p1) in enumerate(zip(route, route[1:])):
+    for index, (p0, p1) in enumerate(pairwise(route)):
         for blocker_path, center, half_size in NAV_BLOCKERS:
             if segment_intersects_aabb(p0, p1, center, half_size):
                 valid = False

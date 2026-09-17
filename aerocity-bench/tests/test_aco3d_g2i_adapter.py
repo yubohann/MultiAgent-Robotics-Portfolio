@@ -36,7 +36,7 @@ def _public_reset_inputs() -> tuple[dict[str, object], dict[str, object]]:
     task: dict[str, object] = {
         "task_track": "G2-I",
         "inspection_atlas": {
-            "atlas_hash": "a" * 64,
+            "layout_id": "city-calibration-000-a0",
             "regions": [{"region_id": "r", "cells": cells}],
         },
         "execution_contract": {
@@ -62,7 +62,7 @@ def _public_reset_inputs() -> tuple[dict[str, object], dict[str, object]]:
         "mission_sector": {
             "truth_independent": True,
             "frozen_before_sampling": True,
-            "atlas_hash": "a" * 64,
+            "layout_id": "city-calibration-000-a0",
             "selected_cell_ids": [cell["cell_id"] for cell in cells],
             "cell_assignment_by_drone": {"uav-00": [cell["cell_id"] for cell in cells]},
             "capacity_certificate": {
@@ -84,7 +84,7 @@ def test_source_lock_is_pinned_and_honestly_marks_translation() -> None:
     assert lock["upstream"]["paper_doi"] == "10.1109/SII58957.2024.10417512"
     assert lock["adapter"]["upstream_runtime_executed"] is False
     assert lock["adapter"]["fixed_parameters"]["iterations"] == 350
-    assert set(lock["upstream"]["source_file_sha256"]) == {
+    assert set(lock["upstream"]["source_files"]) == {
         "CreateModel.m",
         "TourCost.m",
         "main.m",
@@ -202,13 +202,12 @@ def test_upstream_source_verifier_rejects_tampered_locked_file(
         ["git", "rev-parse", "HEAD"], cwd=source, check=True, capture_output=True, text=True
     ).stdout.strip()
     filenames = ("CreateModel.m", "TourCost.m", "main.m")
-    hashes = {name: module._file_hash(source / name) for name in filenames}
     lock = {
         "upstream": {
             "url": "https://example.invalid/aco.git",
             "commit": revision,
             "license": "MIT",
-            "source_file_sha256": hashes,
+            "source_files": list(filenames),
         },
         "adapter": {
             "fixed_parameters": {
@@ -227,7 +226,7 @@ def test_upstream_source_verifier_rejects_tampered_locked_file(
 
     module._verify_upstream_source(source)
     (source / "TourCost.m").write_text("tampered\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="source checkout must be clean|source hash differs"):
+    with pytest.raises(ValueError, match="must be clean"):
         module._verify_upstream_source(source)
 
 

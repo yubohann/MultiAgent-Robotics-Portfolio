@@ -1,14 +1,10 @@
 # Validation and Formal Admission
 
-A captured episode becomes formal data through `rivermark_benchmark.formal_dataset`, the release-control step between raw captures and a published dataset.
+A captured episode becomes formal data through `rivermark_benchmark.formal_dataset`, the step between raw captures and a published dataset.
 
-## Why Trust Is Layered
+## Validation
 
-The episode manifest proves the declared ABI and file bindings, and a formal capture receipt proves that a separate validation process asserted the required audits. Any process can write JSON, so admission requires the release operator to provide an explicit allowlist of accepted `formal_capture_receipt.json` SHA-256 values. Authorization comes from that allowlist.
-
-## Independent Validation
-
-`rivermark_benchmark.isaac_validate` reopens the raw artifacts and checks stage identity, collision-proxy binding, sensor synchronization, action causality, visual and LiDAR intrusion gates, contacts, route and condition realization, target-visibility evidence, provenance, and hash bindings.
+`rivermark_benchmark.isaac_validate` reopens the raw artifacts and checks stage identity, collision-proxy binding, sensor synchronization, action causality, visual and LiDAR intrusion gates, contacts, route and condition realization, target-visibility evidence, and file bindings.
 
 After validation passes, the packer creates an admission candidate.
 
@@ -18,11 +14,11 @@ rivermark-isaac-pack <capture> <independent-validation.json> `
   --collection-protocol .\collection-protocol.json
 ```
 
-The packer recomputes the protocol hash, cell split, episode index, seed, and condition request before building a candidate.
+The packer recomputes the protocol identity, cell split, episode index, seed, and condition request before building a candidate.
 
 ## Candidate Contract
 
-A source episode must contain `episode_manifest.json`, `lineage.json`, and `formal_capture_receipt.json` at its root. `lineage.json` holds opaque SHA-256 commitments for ten frozen split axes. The formal receipt binds the manifest and lineage hashes, declares an `isaaclab` or `hardware` backend, and requires independent positive audits for online capture, timestamps, pose closure, action causality, sensor decode, and policy leakage.
+A source episode must contain `episode_manifest.json`, `lineage.json`, and `formal_capture_receipt.json` at its root. `lineage.json` records the ten frozen split axes. The formal receipt binds the manifest and lineage records, declares an `isaaclab` or `hardware` backend, and requires positive audits for online capture, timestamps, pose closure, action causality, sensor decode, and policy leakage.
 
 Candidates are closed-world directories. Unbound files, symbolic links, and directories named for private truth cause rejection, and scorer-private payloads stay outside the candidate tree.
 
@@ -31,13 +27,13 @@ Candidates are closed-world directories. Unbound files, symbolic links, and dire
 ```powershell
 $env:PYTHONPATH = (Resolve-Path .\src)
 python -m rivermark_benchmark.formal_dataset collect C:\captures\episode-0001 .\rivermark `
-  --trusted-receipt-sha256 <formal_capture_receipt_sha256> `
+  --trusted-receipt-identity <formal_capture_receipt_identity> `
   --supply-chain-manifest <signed-release-supply-chain.json>
 ```
 
-The collector reads the source capture in place. On failure it writes a canonical reason record under `rivermark/quarantine/` with hashes and validation reasons. On success it stages a public projection and promotes it with an atomic rename.
+The collector reads the source capture in place. On failure it writes a canonical reason record under `rivermark/quarantine/` with the file records and validation reasons. On success it stages a public projection and promotes it with an atomic rename.
 
-Before staging, the collector verifies the supply-chain manifest in release mode, including its SBOM and detached signature. The resulting `admission.json` binds the canonical supply-chain hash and release ID, and the dataset root commits to a single supply-chain decision.
+Before staging, the collector checks the supply-chain manifest in release mode, including its SBOM and detached signature. The resulting `admission.json` records the supply-chain identity and release ID, and the dataset root commits to a single supply-chain decision.
 
 ## Split Authority
 
@@ -49,4 +45,4 @@ Split assignments are predeclared in the candidate manifest and stay frozen afte
 python -m rivermark_benchmark.formal_dataset verify-dataset .\rivermark
 ```
 
-Verification rehashes every payload, revalidates the manifest and admission record, rejects unbound files and symlinks, checks lineage split groups, and compares the stored index against a fresh deterministic reconstruction. A changed payload, a stale index, or an accidental private directory is a hard failure.
+Verification rechecks every payload, revalidates the manifest and admission record, rejects unbound files and symlinks, checks lineage split groups, and compares the stored index against a fresh deterministic reconstruction. A changed payload, a stale index, or an accidental private directory is a hard failure.

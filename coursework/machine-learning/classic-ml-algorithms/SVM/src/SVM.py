@@ -7,7 +7,7 @@ import random
 import os
 import sys
 import urllib.request
-from collections import defaultdict
+
 
 
 def load_iris_from_file(path):

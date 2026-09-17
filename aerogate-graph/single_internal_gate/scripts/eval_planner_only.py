@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
 import json
-from pathlib import Path
 import sys
-
+from dataclasses import asdict
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = ROOT.parent.parent
@@ -15,11 +14,11 @@ for _path in (ROOT, PROJECT_ROOT):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from single_internal_gate.configs.experiment_config import EXP2_SINGLE_INTERNAL_CONFIG
+from shared.task_suites.exp12_gate_scene import task_suite_names
 from single_internal_gate.baseline_groups import baseline_group_names, planners_for_group
+from single_internal_gate.configs.experiment_config import EXP2_SINGLE_INTERNAL_CONFIG
 from single_internal_gate.evaluation import make_tasks, summarize_results
 from single_internal_gate.planners import create_planner, planner_names
-from shared.task_suites.exp12_gate_scene import task_suite_names
 
 
 def main() -> None:

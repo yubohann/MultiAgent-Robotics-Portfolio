@@ -10,6 +10,8 @@ from pathlib import Path
 from statistics import mean, pstdev
 from typing import Any
 
+import numpy as np
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
@@ -469,8 +471,6 @@ def _export_curves(best_records: dict[str, dict[str, Any]], output_root: Path) -
 
 
 def _case_rows_from_masks(dataset_name: str, summary: dict[str, Any], probs: np.ndarray, preds: np.ndarray) -> dict[str, Any]:
-    import numpy as np
-
     from fraud_ml_engineering.fraud_dataset import load_splitgnn_dataset
 
     bundle = load_splitgnn_dataset(
@@ -494,8 +494,6 @@ def _case_rows_from_masks(dataset_name: str, summary: dict[str, Any], probs: np.
 
 
 def _build_case_studies(best_records: dict[str, dict[str, Any]], output_root: Path, topk: int) -> dict[str, str]:
-    import numpy as np
-
     case_paths: dict[str, str] = {}
     for dataset_name, record in best_records.items():
         summary_path = Path(record["summary_path"])
@@ -524,8 +522,14 @@ def _build_case_studies(best_records: dict[str, dict[str, Any]], output_root: Pa
                 }
             )
 
-        def select_rows(predicate: Any, *, reverse: bool, sort_key: str) -> list[dict[str, Any]]:
-            rows = [item for item in examples if predicate(item)]
+        def select_rows(
+            rows_source: list[dict[str, Any]],
+            predicate: Any,
+            *,
+            reverse: bool,
+            sort_key: str,
+        ) -> list[dict[str, Any]]:
+            rows = [item for item in rows_source if predicate(item)]
             rows.sort(key=lambda item: item[sort_key], reverse=reverse)
             return rows[:topk]
 
@@ -538,10 +542,10 @@ def _build_case_studies(best_records: dict[str, dict[str, Any]], output_root: Pa
                 "num_predicted_positive": int(sum(1 for item in examples if item["prediction"] == 1)),
                 "num_true_positive_labels": int(sum(1 for item in examples if item["label"] == 1)),
             },
-            "top_true_positives": select_rows(lambda item: item["label"] == 1 and item["prediction"] == 1, reverse=True, sort_key="positive_probability"),
-            "top_false_positives": select_rows(lambda item: item["label"] == 0 and item["prediction"] == 1, reverse=True, sort_key="positive_probability"),
-            "top_false_negatives": select_rows(lambda item: item["label"] == 1 and item["prediction"] == 0, reverse=False, sort_key="positive_probability"),
-            "top_true_negatives": select_rows(lambda item: item["label"] == 0 and item["prediction"] == 0, reverse=False, sort_key="positive_probability"),
+            "top_true_positives": select_rows(examples, lambda item: item["label"] == 1 and item["prediction"] == 1, reverse=True, sort_key="positive_probability"),
+            "top_false_positives": select_rows(examples, lambda item: item["label"] == 0 and item["prediction"] == 1, reverse=True, sort_key="positive_probability"),
+            "top_false_negatives": select_rows(examples, lambda item: item["label"] == 1 and item["prediction"] == 0, reverse=False, sort_key="positive_probability"),
+            "top_true_negatives": select_rows(examples, lambda item: item["label"] == 0 and item["prediction"] == 0, reverse=False, sort_key="positive_probability"),
         }
         case_path = output_root / "case_studies" / f"{dataset_name}_case_study.json"
         _dump_json(case_path, case_payload)
@@ -644,7 +648,7 @@ def main() -> None:
     args = parse_args()
     output_root = Path(args.output_root).expanduser().resolve()
     output_root.mkdir(parents=True, exist_ok=True)
-    datasets = set(str(item) for item in args.datasets)
+    datasets = {str(item) for item in args.datasets}
     supervised_records = _scan_supervised(datasets=datasets, allow_smoke=bool(args.allow_smoke))
     low_label_records = _scan_low_label(datasets=datasets, allow_smoke=bool(args.allow_smoke))
     fusion_records = _scan_fusion(datasets=datasets, allow_smoke=bool(args.allow_smoke))

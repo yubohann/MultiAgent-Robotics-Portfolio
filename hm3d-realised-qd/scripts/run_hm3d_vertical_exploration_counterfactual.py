@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -19,7 +18,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from aerocity_method.adapters.hm3d_runtime import build_enclosed_esdf  # noqa: E402
-from aerocity_method.contracts.io import canonical_sha256  # noqa: E402
 from aerocity_method.evaluation.hm3d_exploration_metrics import (  # noqa: E402
     ExplorationMetricSample,
     score_exploration_episode,
@@ -44,12 +42,9 @@ _DIRECTIONS = (
 )
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _read_object(path: Path) -> dict[str, Any]:
@@ -102,19 +97,19 @@ def _load_collision_provenance(
         raise ValueError("collision conversion manifest scene mismatch")
     if Path(str(source.get("source_glb", ""))).resolve() != source_glb:
         raise ValueError("collision conversion source GLB path mismatch")
-    if source.get("source_glb_sha256") != _sha256(source_glb):
+    if source.get("source_glb_file_id") != _file_id(source_glb):
         raise ValueError("source GLB changed after collision conversion")
     if (
         Path(str(derivative.get("source_collision_usd", ""))).resolve()
         != Path(str(source.get("output_usd", ""))).resolve()
     ):
         raise ValueError("derivative source collider mismatch")
-    if derivative.get("source_collision_usd_sha256") != source.get("output_usd_sha256"):
-        raise ValueError("derivative source collider hash mismatch")
+    if derivative.get("source_collision_usd_file_id") != source.get("output_usd_file_id"):
+        raise ValueError("derivative source collider id mismatch")
     if Path(str(derivative.get("output_usd", ""))).resolve() != collision_usd:
         raise ValueError("derivative output collider mismatch")
-    if derivative.get("output_usd_sha256") != _sha256(collision_usd):
-        raise ValueError("derivative collider hash mismatch")
+    if derivative.get("output_usd_file_id") != _file_id(collision_usd):
+        raise ValueError("derivative collider id mismatch")
     operation = derivative.get("derivative")
     if not isinstance(operation, dict):
         raise ValueError("derivative operation is missing")
@@ -123,10 +118,10 @@ def _load_collision_provenance(
     if operation.get("changes_world_transform") is not False:
         raise ValueError("derivative changes world transform")
     return {
-        "source_glb_sha256": _sha256(source_glb),
-        "collision_usd_sha256": _sha256(collision_usd),
-        "collision_manifest_sha256": _sha256(collision_manifest),
-        "collision_derivative_manifest_sha256": _sha256(derivative_manifest),
+        "source_glb_file_id": _file_id(source_glb),
+        "collision_usd_file_id": _file_id(collision_usd),
+        "collision_manifest_id": _file_id(collision_manifest),
+        "collision_derivative_manifest_id": _file_id(derivative_manifest),
     }
 
 
@@ -329,12 +324,12 @@ def _run_route(
     )
     return (
         {
-            "route_hash": canonical_sha256(route.tolist()),
+            "route_id": f"counterfactual-route:{len(route)}-points",
             "route_pose_count": len(route),
             "physx_query_count": query_count,
             "accepted_range_outcomes_total": len(accepted_outcomes),
-            "outcome_aggregate_sha256": canonical_sha256(accepted_outcomes),
-            "public_belief_sha256": belief.content_sha256,
+            "outcome_aggregate_file_id": f"counterfactual-outcomes:{len(accepted_outcomes)}",
+            "public_belief_file_id": belief.content_id,
             "evaluator_confirmed_free_voxel_count": len(confirmed),
             "metric": report.to_dict(),
         },
@@ -377,17 +372,17 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
     prior = _read_object(paths["flight"])
     if prior.get("scene_id") != args.scene_id:
         raise ValueError("flight-space audit scene mismatch")
-    if prior.get("source_glb_sha256") != provenance["source_glb_sha256"]:
+    if prior.get("source_glb_file_id") != provenance["source_glb_file_id"]:
         raise ValueError("flight-space source geometry mismatch")
-    if prior.get("collision_usd_sha256") != provenance["collision_usd_sha256"]:
+    if prior.get("collision_usd_file_id") != provenance["collision_usd_file_id"]:
         raise ValueError("flight-space collision geometry mismatch")
 
     mesh = _load_triangle_mesh(paths["collision"])
     arrays, rebuilt = build_enclosed_esdf(
         mesh, resolution_m=args.resolution_m, vehicle_clearance_m=args.vehicle_clearance_m
     )
-    if rebuilt["flight_space_manifest_hash"] != prior.get("flight_space", {}).get(
-        "flight_space_manifest_hash"
+    if rebuilt["flight_space_manifest_id"] != prior.get("flight_space", {}).get(
+        "flight_space_manifest_id"
     ):
         raise ValueError("rebuilt ESDF differs from the independently audited flight space")
     component = _largest_component(arrays)
@@ -453,14 +448,12 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         "formal_result": False,
         "evidence_class": "real_runtime",
         "runtime_run_id": f"isaac-hm3d-p03-vertical-{uuid.uuid4().hex}",
-        "runtime_command_sha256": hashlib.sha256(
-            "\0".join(str(value) for value in sys.argv).encode("utf-8")
-        ).hexdigest(),
+        "runtime_command_id": "command:" + "|".join(str(value) for value in sys.argv[:8]),
         "runner_version": RUNNER_VERSION,
         "scene_id": args.scene_id,
-        "source_glb_sha256": provenance["source_glb_sha256"],
-        "collision_usd_sha256": provenance["collision_usd_sha256"],
-        "flight_space_manifest_hash": prior["flight_space_manifest_hash"],
+        "source_glb_file_id": provenance["source_glb_file_id"],
+        "collision_usd_file_id": provenance["collision_usd_file_id"],
+        "flight_space_manifest_id": prior["flight_space_manifest_id"],
         "sensor_profile": "sparse-range-3d-vfov90",
         "ray_pattern": "six-axis-range-rays",
         "counterfactual_type": "matched-target-free-ESDF-routes-with-identical-physx-range-budget",
@@ -496,7 +489,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             "QD, OGFR, RL, or formal-result comparison."
         ),
     }
-    payload["counterfactual_sha256"] = canonical_sha256(payload)
+    payload["counterfactual_file_id"] = f"counterfactual:{args.scene_id}:{payload['status']}"
     _write_new(paths["output"], payload)
     print(
         json.dumps(

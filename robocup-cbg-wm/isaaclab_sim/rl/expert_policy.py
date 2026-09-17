@@ -4,10 +4,8 @@ import math
 from dataclasses import dataclass
 
 import numpy as np
-
 from robocup_visionrl_selfplay_env import (
     AGENTS,
-    BASE_RUSH_ARMOR_GATE,
     BASE_RUSH_BALANCED_NORMAL_HITS,
     BASE_RUSH_EARLY_NORMAL_HITS,
     BASE_RUSH_PREFERRED_NORMAL_HITS,
@@ -16,7 +14,6 @@ from robocup_visionrl_selfplay_env import (
     MIN_SHOOT_DISTANCE,
     RECOVERY_CONFIDENCE_THRESHOLD,
     SHOOT_RANGE,
-    SHOOTER_FORWARD_OFFSET,
     TACTICAL_ACTION_DIM,
     RoboCupVisionRLSelfPlayEnv,
     laser_origin_from_pose,
@@ -148,11 +145,7 @@ def select_target(
     risk: float = 0.62,
     profile: TeamExpertProfile | None = None,
 ):
-    """Pick the nearest legal opponent target with a valid firing pose.
-
-    Yellow and blue use separate profiles so opening order, push willingness
-    and base-rush tempo diverge before the residual actors are trained.
-    """
+    """Pick the nearest legal opponent target with a valid firing pose."""
 
     profile = expert_profile(team) if profile is None else profile
     other = opponent(team)
@@ -251,7 +244,6 @@ def _fire_readiness(env: RoboCupVisionRLSelfPlayEnv, team: str, target) -> tuple
     dy = float(target.xy[1] - origin[1])
     forward = (math.cos(float(pose[2])), math.sin(float(pose[2])))
     shot_distance = dx * forward[0] + dy * forward[1]
-    lateral_error = abs(dx * forward[1] - dy * forward[0])
     bearing = math.atan2(dy, dx)
     yaw_error = abs(wrap_angle(bearing - float(pose[2])))
     ready = bool(geometry["geometry_ready"])
@@ -414,11 +406,7 @@ def residual_expert_action(
     *,
     residual_scale: float = 0.28,
 ) -> np.ndarray:
-    """Blend an RL residual with the safe scripted policy.
-
-    Per-dimension bounds keep the residual from disabling recovery or the
-    opponent-only firing gate enforced by the environment.
-    """
+    """Blend an RL residual with the safe scripted policy."""
 
     base = scripted_action(env, team)
     residual = np.asarray(residual, dtype=np.float32).reshape(-1)
@@ -443,28 +431,3 @@ def compose_policy_action(
     if policy_mode == "residual_expert":
         return residual_expert_action(env, team, model_action, residual_scale=residual_scale)
     raise ValueError(f"unknown policy_mode: {policy_mode}")
-
-
-def batched_actions_to_env(
-    envs: list[RoboCupVisionRLSelfPlayEnv],
-    model_actions: np.ndarray,
-    *,
-    policy_mode: str = "direct",
-    residual_scale: float = 0.28,
-) -> list[dict[str, np.ndarray]]:
-    clipped = np.clip(model_actions, -1.0, 1.0).astype(np.float32)
-    env_actions: list[dict[str, np.ndarray]] = []
-    cursor = 0
-    for env in envs:
-        action_dict: dict[str, np.ndarray] = {}
-        for team in AGENTS:
-            action_dict[team] = compose_policy_action(
-                env,
-                team,
-                clipped[cursor],
-                policy_mode=policy_mode,
-                residual_scale=residual_scale,
-            )
-            cursor += 1
-        env_actions.append(action_dict)
-    return env_actions

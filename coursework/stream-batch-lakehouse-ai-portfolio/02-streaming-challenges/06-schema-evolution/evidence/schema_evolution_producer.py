@@ -1,6 +1,5 @@
 import json
 import time
-import random
 import os
 from kafka import KafkaProducer
 from datetime import datetime

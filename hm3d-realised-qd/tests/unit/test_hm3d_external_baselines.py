@@ -49,7 +49,7 @@ def test_gvp_port_selects_only_a_legal_common_pool_candidate_and_records_graph_d
     payload = selection.to_dict()
 
     assert selected.feasible
-    assert selected.manifest_hash == payload["selected_manifest_hash"]
+    assert selected.manifest_id == payload["selected_manifest_id"]
     assert payload["strategy"] == "gvp_mrep_port"
     assert payload["adaptation_status"] == "controlled_transfer_not_original_ros_reproduction"
     assert payload["author_source"]["commit"] == "f5865b9c9c39e9d85095555f3e04b4fa349fce40"
@@ -62,9 +62,7 @@ def test_gvp_port_selects_only_a_legal_common_pool_candidate_and_records_graph_d
         "allowance": 0.1,
         "tau": 0.3,
     }
-    assert diagnostics["author_graph_partition_sha256"] == (
-        "9eb02ce91f6e49184b224649ab6d6563139a82de58031ba5a60797ff36cbc846"
-    )
+    assert diagnostics["author_graph_partition_file_id"] == "gvp-mrep-author-graph-partition-v1"
     serialized = repr(payload).casefold()
     assert "target_id" not in serialized
     assert "target_position" not in serialized

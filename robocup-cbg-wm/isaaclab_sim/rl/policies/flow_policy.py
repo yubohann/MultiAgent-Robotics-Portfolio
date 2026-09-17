@@ -3,9 +3,8 @@ from __future__ import annotations
 import math
 
 import torch
-from torch import nn
 import torch.nn.functional as F
-
+from torch import nn
 
 LOG_STD_MIN = -5.0
 LOG_STD_MAX = 1.0
@@ -23,11 +22,7 @@ def build_mlp(input_dim: int, hidden_dim: int, output_dim: int, depth: int = 2) 
 
 
 class FlowActor(nn.Module):
-    """Velocity-reparameterized flow actor for bounded tactical actions.
-
-    The SAC update uses the Gaussian base log-probability plus a tanh
-    correction, a tractable stand-in for exact CNF likelihood.
-    """
+    """Velocity-reparameterized flow actor for bounded tactical actions."""
 
     def __init__(
         self,
@@ -105,11 +100,7 @@ class CentralizedTwinQ(nn.Module):
 
 
 class ObjectWorldModel(nn.Module):
-    """Auxiliary object-centric dynamics model for one-step prediction.
-
-    The SAC critic trains on real transitions, and this model predicts object
-    state deltas, rewards and termination from the same data path.
-    """
+    """Auxiliary object-centric dynamics model for one-step prediction."""
 
     def __init__(
         self,

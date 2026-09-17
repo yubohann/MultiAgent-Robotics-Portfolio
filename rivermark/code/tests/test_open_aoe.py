@@ -116,7 +116,7 @@ class OpenAoeTests(unittest.TestCase):
             self.assertNotIn(str(root), encoded)
             output = write_open_aoe_manifest(root / "open-aoe-provenance.json", manifest)
             written = json.loads(output.read_text(encoding="utf-8"))
-            self.assertEqual(written["manifest_sha256"], manifest["manifest_sha256"])
+            self.assertEqual(written["manifest_identity"], manifest["manifest_identity"])
 
     def test_intrinsic_mismatch_and_annotation_gap_are_retained_as_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

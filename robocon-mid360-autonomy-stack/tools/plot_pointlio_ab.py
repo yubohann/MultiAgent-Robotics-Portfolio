@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""Export and plot the paired FAST-LIO2 and Point-LIO replay metrics.
-
-The script reads one completed run directory and writes a CSV, a JSON summary
-and a publication-style PNG, PDF and SVG figure from the recorded logs.
-"""
+"""Export paired FAST-LIO2 and Point-LIO replay metrics as CSV, JSON and figures."""
 
 from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import re
 from pathlib import Path
@@ -17,21 +12,12 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 RATE_RE = re.compile(
     r"average rate:\s*([0-9.]+).*?\n\s*min:\s*([0-9.]+)s\s*"
     r"max:\s*([0-9.]+)s",
     re.MULTILINE,
 )
 POINT_RE = re.compile(r"^POINTS\s+(\d+)\s*$", re.MULTILINE)
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def _rate_metrics(path: Path) -> dict[str, float | int | None]:
@@ -76,7 +62,7 @@ def _truth_metrics(path: Path) -> dict[str, object]:
 
 def collect(run_dir: Path) -> list[dict[str, object]]:
     db3_files = sorted((run_dir / "input_bag").glob("*.db3"))
-    bag_hash = _sha256(db3_files[0]) if db3_files else None
+    bag_bytes = db3_files[0].stat().st_size if db3_files else None
     lidar_frames, imu_frames, clock_frames = _input_counts(run_dir / "bag_info.txt")
     rows: list[dict[str, object]] = []
     for method, topic in (("FAST-LIO2", "/Odometry"), ("Point-LIO", "/Odometry")):
@@ -97,7 +83,7 @@ def collect(run_dir: Path) -> list[dict[str, object]]:
             "input_lidar_frames": lidar_frames,
             "input_imu_frames": imu_frames,
             "input_clock_frames": clock_frames,
-            "bag_metadata_sha256": bag_hash,
+            "input_bag_bytes": bag_bytes,
             "evidence_level": "gazebo_simulation/bag_replay",
             "formal_rate_gate_hz": 10.0,
             "truth_matched_samples": truth.get("matched_samples"),

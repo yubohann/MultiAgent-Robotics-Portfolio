@@ -5,7 +5,7 @@ import csv
 import math
 import random
 import argparse
-from collections import defaultdict, Counter
+from collections import Counter
 
 class GaussianMixtureModel:
     def __init__(self, n_clusters=2, max_iterations=100, tolerance=1e-4, seed=42):
@@ -25,7 +25,7 @@ class GaussianMixtureModel:
 
     def _initialize_parameters(self, X):
         """Initialize the mixture weights and means."""
-        n_samples, n_features = len(X), len(X[0])
+        n_samples = len(X)
         
 
         self.weights = [1.0 / self.n_clusters] * self.n_clusters
@@ -329,9 +329,6 @@ def calculate_purity(y_true, y_pred, n_clusters):
         
 
         label_counts = Counter([y_true[i] for i in cluster_indices])
-        
-
-        most_common_label = label_counts.most_common(1)[0][0]
         most_common_count = label_counts.most_common(1)[0][1]
         
         matched += most_common_count
@@ -463,20 +460,20 @@ if __name__ == "__main__":
     y_test_pred = model.predict(X_test)
     
 
-    print(f"\n=== 训练集评估 ===")
+    print("\n=== 训练集评估 ===")
     train_purity = calculate_purity(y_train, y_train_pred, args.n_clusters)
     train_nmi = calculate_nmi(y_train, y_train_pred, args.n_clusters)
     print(f"纯度 (Purity): {train_purity:.4f}")
     print(f"规范化互信息 (NMI): {train_nmi:.4f}")
     
-    print(f"\n=== 测试集评估 ===")
+    print("\n=== 测试集评估 ===")
     test_purity = calculate_purity(y_test, y_test_pred, args.n_clusters)
     test_nmi = calculate_nmi(y_test, y_test_pred, args.n_clusters)
     print(f"纯度 (Purity): {test_purity:.4f}")
     print(f"规范化互信息 (NMI): {test_nmi:.4f}")
     
 
-    print(f"\n=== 簇信息 ===")
+    print("\n=== 簇信息 ===")
     for k in range(args.n_clusters):
         weight = model.weights[k]
         size = sum(1 for label in y_test_pred if label == k)
@@ -484,7 +481,7 @@ if __name__ == "__main__":
     
 
     if len(model.log_likelihood_history) > 1:
-        print(f"\n=== 收敛情况 ===")
+        print("\n=== 收敛情况 ===")
         print(f"初始对数似然: {model.log_likelihood_history[0]:.4f}")
         print(f"最终对数似然: {model.log_likelihood_history[-1]:.4f}")
         print(f"迭代次数: {len(model.log_likelihood_history)}")

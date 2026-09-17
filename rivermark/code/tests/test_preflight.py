@@ -7,17 +7,17 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from rivermark_benchmark._identity import IdentityAccumulator
 from rivermark_benchmark.preflight import (
     RuntimePreflightRequirements,
     _probe_nvidia_smi,
     run_preflight,
-    sha256_file,
+    identity_file,
 )
 
 
@@ -28,14 +28,13 @@ class PreflightTests(unittest.TestCase):
             report = run_preflight(output_dir=output, minimum_free_bytes=1)
             self.assertTrue(report.valid, report.as_dict())
 
-    def test_storage_and_asset_hash_pass_without_isaac(self) -> None:
+    def test_storage_and_asset_identity_pass_without_isaac(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             asset = root / "cf2x.usd"
             asset.write_bytes(b"asset")
-            import hashlib
 
-            digest = hashlib.sha256(asset.read_bytes()).hexdigest()
+            digest = IdentityAccumulator(asset.read_bytes()).hexdigest()
             report = run_preflight(
                 output_dir=root / "runs",
                 minimum_free_bytes=1,
@@ -57,9 +56,8 @@ class PreflightTests(unittest.TestCase):
             self.assertTrue(any(check.name.startswith("asset:") and not check.passed for check in report.checks))
 
     def test_negative_storage_budget_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            with self.assertRaises(ValueError):
-                run_preflight(output_dir=Path(temporary), minimum_free_bytes=-1)
+        with tempfile.TemporaryDirectory() as temporary, self.assertRaises(ValueError):
+            run_preflight(output_dir=Path(temporary), minimum_free_bytes=-1)
 
     def test_existing_file_as_output_path_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -104,9 +102,11 @@ class PreflightTests(unittest.TestCase):
             stdout="Test GPU, 16384, 550.54.14\n",
             stderr="",
         )
-        with patch("rivermark_benchmark.preflight.shutil.which", return_value="nvidia-smi.exe") as which:
-            with patch("rivermark_benchmark.preflight.subprocess.run", return_value=completed) as run:
-                records, error = _probe_nvidia_smi()
+        with (
+            patch("rivermark_benchmark.preflight.shutil.which", return_value="nvidia-smi.exe") as which,
+            patch("rivermark_benchmark.preflight.subprocess.run", return_value=completed) as run,
+        ):
+            records, error = _probe_nvidia_smi()
         self.assertIsNone(error)
         self.assertEqual(records[0]["name"], "Test GPU")
         self.assertEqual(records[0]["vram_bytes"], 16 * 1024**3)
@@ -120,7 +120,7 @@ class PreflightTests(unittest.TestCase):
             contract = root / "scene_contract.json"
             contract.write_text('{"scene_id":"RIVERMARK_CITY_LITE_v1"}\n', encoding="utf-8")
             authority = SimpleNamespace(
-                contract_sha256=sha256_file(contract),
+                contract_identity=identity_file(contract),
                 asset_paths={"scene.usda": contract},
             )
             with patch("rivermark_benchmark.preflight.resolve_city_lite_authority", return_value=authority):
@@ -129,13 +129,13 @@ class PreflightTests(unittest.TestCase):
                     minimum_free_bytes=0,
                     runtime=RuntimePreflightRequirements(
                         scene_contract=contract,
-                        scene_contract_sha256=sha256_file(contract),
+                        scene_contract_identity=identity_file(contract),
                     ),
                 )
         self.assertTrue(next(check for check in report.checks if check.name == "scene_contract_file").passed)
         self.assertTrue(next(check for check in report.checks if check.name == "scene_contract_authority").passed)
 
-    def test_scene_contract_hash_mismatch_fails_closed_without_resolving(self) -> None:
+    def test_scene_contract_identity_mismatch_fails_closed_without_resolving(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             contract = Path(temporary) / "scene_contract.json"
             contract.write_text("{}\n", encoding="utf-8")
@@ -145,7 +145,7 @@ class PreflightTests(unittest.TestCase):
                     minimum_free_bytes=0,
                     runtime=RuntimePreflightRequirements(
                         scene_contract=contract,
-                        scene_contract_sha256="0" * 64,
+                        scene_contract_identity="0" * 16,
                     ),
                 )
         self.assertFalse(report.valid)
@@ -164,24 +164,26 @@ class PreflightTests(unittest.TestCase):
             contract.write_text('{"scene_id":"RIVERMARK_CITY_LITE_v1"}\n', encoding="utf-8")
             drone.write_bytes(b"cf2x")
             authority = SimpleNamespace(
-                contract_sha256=sha256_file(contract),
+                contract_identity=identity_file(contract),
                 asset_paths={"scene.usda": contract},
             )
-            with patch("rivermark_benchmark.preflight.resolve_city_lite_authority", return_value=authority):
-                with patch(
+            with (
+                patch("rivermark_benchmark.preflight.resolve_city_lite_authority", return_value=authority),
+                patch(
                     "rivermark_benchmark.runtime_lock.audit_runtime_lock",
                     return_value={"status": "passed", "profile_id": "test"},
-                ) as audit:
-                    report = run_preflight(
-                        output_dir=root / "runs",
-                        minimum_free_bytes=0,
-                        runtime=RuntimePreflightRequirements(
-                            runtime_lock=lock,
-                            isaaclab_source=source,
-                            scene_contract=contract,
-                            cf2x_usd=drone,
-                        ),
-                    )
+                ) as audit,
+            ):
+                report = run_preflight(
+                    output_dir=root / "runs",
+                    minimum_free_bytes=0,
+                    runtime=RuntimePreflightRequirements(
+                        runtime_lock=lock,
+                        isaaclab_source=source,
+                        scene_contract=contract,
+                        cf2x_usd=drone,
+                    ),
+                )
         runtime_check = next(check for check in report.checks if check.name == "runtime_lock")
         self.assertTrue(runtime_check.passed, runtime_check)
         audit.assert_called_once_with(

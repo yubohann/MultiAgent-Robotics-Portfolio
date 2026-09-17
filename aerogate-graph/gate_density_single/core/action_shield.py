@@ -219,7 +219,6 @@ def apply_action_shield(
         and goal_distance_for_shield > 2.0
         and float(goal_vec_for_shield[0]) > 0.0
     )
-    lateral_speed_mps = abs(float(current_velocity[1]))
     moving_density_profile = (
         self._dynamic_gate_context is not None
         and bool(getattr(self.args, "moving_gates", False))

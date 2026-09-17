@@ -4,42 +4,35 @@
 
 from __future__ import annotations
 
-import hashlib
 import itertools
 import json
 import math
 import os
 import sys
-import time
 import threading
+import time
 import uuid
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, ClassVar, Literal, Sequence
+from typing import Any, ClassVar, Literal
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "src"))
 
 from aerocity_method.adapters.hm3d_baselines import (
-    ConservativeTransitTimingModel,
     GuardedPath,
 )
 from aerocity_method.adapters.hm3d_execution import (
     FragmentExecutionSample,
 )
-from aerocity_method.contracts import FORMAL_FLEET_SIZE
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.contracts.models import (
     CandidateFragmentManifest,
     FragmentInstance,
 )
 from aerocity_method.evaluation.hm3d_safety import (
     ConservativeVoxelClearance,
-    TimedPolyline,
-    assess_route_tube_separation,
-    assess_synchronized_separation,
     required_segment_sample_clearance_m,
 )
 from aerocity_method.runtime.communication import (
@@ -51,10 +44,6 @@ from aerocity_method.runtime.communication import (
 from aerocity_method.runtime.hm3d_belief import (
     PublicRangeObservationFrameOutcome,
     PublicRangeRayOutcome,
-)
-from aerocity_method.runtime.range_sensing import DENSE_26_RAY_PATTERN
-from aerocity_method.runtime.range_sensing import (
-    resolve_public_range_directions,
 )
 from aerocity_method.runtime.hm3d_cf2x_bitcraze_lee import (
     CONTROLLER_ID as BITCRAZE_LEE_CONTROLLER_ID,
@@ -102,6 +91,10 @@ from aerocity_method.runtime.hm3d_team_collaboration import (
     audit_translation_invariant_team_trajectories,
 )
 from aerocity_method.runtime.hm3d_trajectory import minimum_rest_to_rest_duration_s
+from aerocity_method.runtime.range_sensing import (
+    DENSE_26_RAY_PATTERN,
+    resolve_public_range_directions,
+)
 
 DRONE_USD = ROOT.parents[1] / "assets" / "new" / "cf2x.usd"
 DEFAULT_COMMUNICATION_CONTRACT = (
@@ -203,6 +196,13 @@ CF2X_ROTOR_XY_LEVER_ARM_M = 0.031
 CF2X_YAW_TORQUE_TO_THRUST_M = 0.006
 CF2X_ROTOR_YAW_REACTION_SIGNS = (-1, 1, -1, 1)
 CF2X_ROTOR_ALLOCATION_ID = "cf2x-usd-m1-m4-0p031m-reaction-yaw-v2"
+
+
+def _trace_id(path: Sequence[Sequence[float]]) -> str:
+    # Readable trace label: waypoint count and endpoints.
+    if not path:
+        return "trace:empty"
+    return f"trace:{len(path)}-points:{tuple(path[0])}->{tuple(path[-1])}"
 
 
 def _cf2x_allocation_matrix() -> list[list[float]]:
@@ -746,13 +746,13 @@ def _finalize_fragment_pair_into(
     if transit_completed or collision or out_of_bounds:
         ledger.append(
             FragmentExecutionSample(
-                planned_fragment_hash=transit.digest,
+                planned_fragment_id=transit.instance_fragment_id,
                 executed=True,
                 actual_start_s=transit_release_s or transit.planned_start,
                 actual_end_s=transit_end_s or execution_horizon_s,
                 command_path_m=transit.path,
                 actual_path_m=transit_trace,
-                execution_trace_hash=canonical_sha256(transit_trace),
+                execution_trace_id=_trace_id(transit_trace),
                 collision=collision,
                 out_of_bounds=out_of_bounds,
                 inter_agent_separation_violation=separation_violation,
@@ -765,13 +765,13 @@ def _finalize_fragment_pair_into(
     else:
         ledger.append(
             FragmentExecutionSample(
-                planned_fragment_hash=transit.digest,
+                planned_fragment_id=transit.instance_fragment_id,
                 executed=True,
                 actual_start_s=transit_release_s or transit.planned_start,
                 actual_end_s=execution_horizon_s,
                 command_path_m=transit.path,
                 actual_path_m=transit_trace,
-                execution_trace_hash=canonical_sha256(transit_trace),
+                execution_trace_id=_trace_id(transit_trace),
                 static_clearance_contract_violation=static_clearance_contract_violation,
                 minimum_clearance_m=minimum_clearance_m,
                 inter_agent_separation_violation=separation_violation,
@@ -791,13 +791,13 @@ def _finalize_fragment_pair_into(
         observation_verified = observation_completed and source_id is not None
         ledger.append(
             FragmentExecutionSample(
-                planned_fragment_hash=observe.digest,
+                planned_fragment_id=observe.instance_fragment_id,
                 executed=True,
                 actual_start_s=observation_start_s or observe.planned_start,
                 actual_end_s=observation_end_s or execution_horizon_s,
                 command_path_m=observe.path,
                 actual_path_m=observation_trace_tuple or (observe.path[0],),
-                execution_trace_hash=canonical_sha256(observation_trace_tuple),
+                execution_trace_id=_trace_id(observation_trace_tuple),
                 collision=collision,
                 out_of_bounds=out_of_bounds,
                 inter_agent_separation_violation=separation_violation,
@@ -824,30 +824,19 @@ def _finalize_fragment_pair_into(
     else:
         ledger.append(
             FragmentExecutionSample(
-                planned_fragment_hash=observe.digest,
+                planned_fragment_id=observe.instance_fragment_id,
                 executed=False,
                 actual_start_s=execution_horizon_s,
                 actual_end_s=execution_horizon_s,
-                execution_trace_hash=canonical_sha256(observation_trace_tuple),
+                execution_trace_id=_trace_id(observation_trace_tuple),
                 failure_reason="observation_not_reached",
             )
         )
 
 
-class CandidateHeadroomError(ValueError):
-    """Fail closed with evaluator-only counts for candidate-pool diagnosis."""
-
-    def __init__(self, message: str, admission_audit: dict[str, int]) -> None:
-        super().__init__(message)
-        self.admission_audit = dict(sorted(admission_audit.items()))
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _write_new_json(path: Path, payload: dict[str, Any]) -> None:
@@ -865,15 +854,6 @@ def _write_new_json(path: Path, payload: dict[str, Any]) -> None:
     except BaseException:
         temporary.unlink(missing_ok=True)
         raise
-
-
-def _as_point(raw: Any, label: str) -> tuple[float, float, float]:
-    if not isinstance(raw, list) or len(raw) != 3:
-        raise ValueError(f"{label} must be a three-coordinate list")
-    point = tuple(float(value) for value in raw)
-    if not all(math.isfinite(value) for value in point):
-        raise ValueError(f"{label} must be finite")
-    return point
 
 
 def _load_collision_triangle_mesh(usd_path: Path) -> Any:
@@ -1831,7 +1811,10 @@ class IsaacCF2XExecutionBackend:
     # transit+observe pair inside the window keeps flying the next callback pair
     # instead of idling; None restores synchronous team completion.
     on_agent_complete: (
-        Callable[[str, float, tuple[float, float, float]], tuple[FragmentInstance, FragmentInstance] | None]
+        Callable[
+            [str, float, tuple[float, float, float]],
+            tuple[FragmentInstance, FragmentInstance] | None,
+        ]
         | None
     ) = None
     # Opt-in audit-only observer of realised root states after PhysX steps; it
@@ -1851,9 +1834,6 @@ class IsaacCF2XExecutionBackend:
         default_factory=tuple, init=False
     )
     final_root_linear_speeds_mps: tuple[float, ...] = field(default_factory=tuple, init=False)
-    last_execution_samples: tuple[FragmentExecutionSample, ...] = field(
-        default_factory=tuple, init=False, repr=False
-    )
     _controller: BitcrazeLeeTracker | BitcrazeMellingerTracker | None = field(
         default=None, init=False, repr=False
     )
@@ -1883,7 +1863,6 @@ class IsaacCF2XExecutionBackend:
     ) -> tuple[FragmentExecutionSample, ...]:
         import torch
 
-        self.last_execution_samples = ()
         _controller_tracking_profile(self.controller_id, physics_dt_s=float(self.sim.cfg.dt))
         if self.visualization_trace_sample_hz is not None and (
             not math.isfinite(self.visualization_trace_sample_hz)
@@ -2571,7 +2550,7 @@ class IsaacCF2XExecutionBackend:
                 ):
                     continue
                 source_id = (
-                    f"range-{manifest.manifest_hash[:12]}-{routes[index][1].agent_id}"
+                    f"range-{manifest.manifest_id[:12]}-{routes[index][1].agent_id}"
                     f"-{sensor_frames_by_agent[index]:04d}"
                 )
                 range_distances = []
@@ -2721,14 +2700,12 @@ class IsaacCF2XExecutionBackend:
         for sender_id in segment_delta_senders:
             message_queue.publish(
                 RelayMessage(
-                    message_id=f"map-segment-{manifest.manifest_hash[:12]}-{sender_id}",
+                    message_id=f"map-segment-{manifest.manifest_id[:12]}-{sender_id}",
                     sender_id=sender_id,
                     source_timestamp_s=final_timestamp_s,
-                    payload_digest=canonical_sha256(
-                        {
-                            "sender_id": sender_id,
-                            "source_observation_ids": source_observation_ids_by_agent[sender_id],
-                        }
+                    payload_id=(
+                        f"{sender_id}:"
+                        f"{len(source_observation_ids_by_agent[sender_id])}-observations"
                     ),
                     time_to_live_s=self.communication_message_ttl_s,
                 )
@@ -2752,7 +2729,6 @@ class IsaacCF2XExecutionBackend:
             if outcome.status == "DELIVERED" and outcome.receiver_id == fusion_agent_id
         )
 
-        self.last_execution_samples = tuple(samples)
         roles_by_agent = {
             transit.agent_id: str(
                 dict(transit.type_signature.public_features).get("assignment_role", "explore")
@@ -2850,11 +2826,9 @@ class IsaacCF2XExecutionBackend:
                 "source_observation_frame_count": len(public_range_frames),
                 "frames_by_agent": dict(zip(self.agent_order, sensor_frames_by_agent, strict=True)),
                 "frames_by_phase": dict(range_frames_by_phase),
-                "outcome_hash": canonical_sha256([row.to_dict() for row in public_range_frames]),
+                "outcome_id": f"range-frames:{len(public_range_frames)}",
                 "ray_outcome_count": len(public_range_outcomes),
-                "ray_outcome_hash": canonical_sha256(
-                    [row.to_dict() for row in public_range_outcomes]
-                ),
+                "ray_outcome_id": f"range-rays:{len(public_range_outcomes)}",
             },
             "message_delivery": {
                 "model": "range-los-relay-decision-boundary-delta-v2",
@@ -3428,14 +3402,6 @@ def _axis_samples(lower: float, upper: float, step: float) -> tuple[float, ...]:
     return tuple(lower + step * (index + 0.5) for index in range(count))
 
 
-def _point_has_clearance(
-    clearance_oracle: _EvaluatorStaticClearance,
-    point: tuple[float, float, float],
-    clearance_m: float = PLANNED_CONTINUOUS_CLEARANCE_M,
-) -> bool:
-    return clearance_oracle.admits(point, clearance_m)
-
-
 def _path_length_m(path_m: tuple[tuple[float, float, float], ...]) -> float:
     """Return polyline length without attaching any optimistic speed claim."""
 
@@ -3699,7 +3665,9 @@ def _fine_clearance_grid_route(
 
     if not math.isfinite(resolution_m) or resolution_m <= 0.0:
         raise ValueError("fine grid resolution must be finite and positive")
-    anchor_points = tuple(tuple(point) for point in requested_path_m) if requested_path_m else (start, end)
+    anchor_points = (
+        tuple(tuple(point) for point in requested_path_m) if requested_path_m else (start, end)
+    )
     local_min = tuple(
         min(point[axis] for point in anchor_points) - FINE_CLEARANCE_ROUTE_LOCAL_MARGIN_M
         for axis in range(3)
@@ -3846,160 +3814,3 @@ def _fine_clearance_grid_route(
         "terminal_reached": terminal == end,
     }
 
-
-def _select_smoke_positions(
-    route_guard: Callable[[str, tuple[tuple[float, float, float], ...]], GuardedPath],
-    positions: tuple[tuple[float, float, float], ...],
-    transit_timing_model: ConservativeTransitTimingModel,
-    decision_duration_s: float,
-    observe_dwell_s: float,
-    candidate_limit: int,
-    minimum_feasible_candidates: int,
-    position_order_offset: int = 0,
-) -> tuple[tuple[tuple[float, float, float], ...], tuple[tuple[float, float, float], ...]]:
-    """Select public views with the requested guard- and budget-feasible headroom."""
-
-    if len(positions) < FORMAL_FLEET_SIZE + candidate_limit:
-        raise ValueError("not enough public view positions for the formal fleet")
-    if candidate_limit < FORMAL_FLEET_SIZE:
-        raise ValueError("candidate limit must cover the formal fleet")
-    if minimum_feasible_candidates < 1 or minimum_feasible_candidates > candidate_limit:
-        raise ValueError("invalid minimum feasible-candidate requirement")
-    if decision_duration_s <= observe_dwell_s:
-        raise ValueError("smoke route selector needs a positive transit-time budget")
-
-    admission_audit: defaultdict[str, int] = defaultdict(int)
-
-    def _admitted_leg(
-        agent_id: str,
-        start: tuple[float, float, float],
-        frontier: tuple[float, float, float],
-    ) -> GuardedPath | None:
-        admission_audit["leg_attempts"] += 1
-        # A guarded route is at least its straight-line lower bound, so the
-        # impossible case is rejected before any ray queries.
-        if (
-            transit_timing_model.estimate_seconds((start, frontier)) + observe_dwell_s
-            > decision_duration_s
-        ):
-            admission_audit["leg_lower_bound_budget_rejected"] += 1
-            return None
-        guarded = route_guard(agent_id, (start, frontier))
-        travel_s = transit_timing_model.estimate_seconds(guarded.path_m)
-        if not guarded.legal:
-            admission_audit[f"leg_guard_rejected:{guarded.reason or 'unspecified'}"] += 1
-            return None
-        if travel_s + observe_dwell_s > decision_duration_s + 1.0e-9:
-            admission_audit["leg_guarded_route_budget_rejected"] += 1
-            return None
-        admission_audit["leg_admitted"] += 1
-        return guarded
-
-    def _admitted_assignment(
-        starts: tuple[tuple[float, float, float], ...],
-        frontier_indices: tuple[int, ...],
-    ) -> bool:
-        admission_audit["joint_assignment_attempts"] += 1
-        guarded_legs = tuple(
-            _admitted_leg(
-                f"uav{agent_index}",
-                starts[agent_index],
-                positions[frontier_indices[agent_index]],
-            )
-            for agent_index in range(FORMAL_FLEET_SIZE)
-        )
-        if any(leg is None for leg in guarded_legs):
-            admission_audit["joint_assignment_leg_rejected"] += 1
-            return False
-        legal_legs = tuple(leg for leg in guarded_legs if leg is not None)
-        synchronized = assess_synchronized_separation(
-            tuple(
-                TimedPolyline(
-                    f"uav{agent_index}",
-                    leg.path_m,
-                    0.0,
-                    transit_timing_model.estimate_seconds(leg.path_m),
-                )
-                for agent_index, leg in enumerate(legal_legs)
-            ),
-            minimum_separation_m=PLANNED_INTER_AGENT_SEPARATION_M,
-        )
-        if not synchronized.admitted:
-            admission_audit["joint_assignment_separation_rejected"] += 1
-            return False
-        route_tube = assess_route_tube_separation(
-            tuple(
-                TimedPolyline(
-                    f"uav{agent_index}",
-                    leg.path_m,
-                    0.0,
-                    transit_timing_model.estimate_seconds(leg.path_m),
-                )
-                for agent_index, leg in enumerate(legal_legs)
-            ),
-            minimum_separation_m=CF2X_MIN_INTER_AGENT_SEPARATION_M,
-        )
-        if not route_tube.admitted:
-            admission_audit["joint_assignment_route_tube_rejected"] += 1
-            return False
-        admission_audit["joint_assignment_admitted"] += 1
-        return True
-
-    indices = tuple(range(len(positions)))
-    normalized_offset = position_order_offset % len(indices)
-    indices = indices[normalized_offset:] + indices[:normalized_offset]
-    for start_indices in itertools.combinations(indices, FORMAL_FLEET_SIZE):
-        remaining = tuple(index for index in indices if index not in start_indices)
-        for frontier_indices in itertools.combinations(remaining, FORMAL_FLEET_SIZE):
-            starts = tuple(positions[index] for index in start_indices)
-            for offset in range(FORMAL_FLEET_SIZE):
-                selected_frontier_indices = tuple(
-                    frontier_indices[(offset + agent_index) % FORMAL_FLEET_SIZE]
-                    for agent_index in range(FORMAL_FLEET_SIZE)
-                )
-                if not _admitted_assignment(starts, selected_frontier_indices):
-                    continue
-                admission_audit["first_assignment_admitted"] += 1
-                if minimum_feasible_candidates == 1:
-                    ordered_frontiers = selected_frontier_indices + tuple(
-                        index for index in remaining if index not in selected_frontier_indices
-                    )
-                    ordered_frontiers = ordered_frontiers[:candidate_limit]
-                    if len(ordered_frontiers) != candidate_limit:
-                        raise RuntimeError("candidate-frontier construction lost a public position")
-                    return starts, tuple(positions[index] for index in ordered_frontiers)
-                # Candidate 0 is the admitted assignment; candidate 1 shifts every
-                # destination by one frontier in the shared cyclic pool.
-                if candidate_limit == FORMAL_FLEET_SIZE:
-                    continuation_indices = (selected_frontier_indices[0],)
-                else:
-                    continuation_indices = tuple(
-                        index for index in remaining if index not in selected_frontier_indices
-                    )
-                for continuation in continuation_indices:
-                    admission_audit["continuation_assignment_attempts"] += 1
-                    next_assignment = selected_frontier_indices[1:] + (continuation,)
-                    if not _admitted_assignment(starts, next_assignment):
-                        continue
-                    admission_audit["continuation_assignment_admitted"] += 1
-                    ordered_frontiers = selected_frontier_indices + (
-                        () if candidate_limit == FORMAL_FLEET_SIZE else (continuation,)
-                    )
-                    ordered_frontiers += tuple(
-                        index for index in remaining if index not in ordered_frontiers
-                    )
-                    ordered_frontiers = ordered_frontiers[:candidate_limit]
-                    if len(ordered_frontiers) != candidate_limit:
-                        raise RuntimeError("candidate-frontier construction lost a public position")
-                    return starts, tuple(positions[index] for index in ordered_frontiers)
-    raise CandidateHeadroomError(
-        "no public view-position combination has the required P07 strategy headroom "
-        f"(feasible>={minimum_feasible_candidates})",
-        {
-            "candidate_limit": candidate_limit,
-            "fleet_size": FORMAL_FLEET_SIZE,
-            "minimum_feasible_candidates": minimum_feasible_candidates,
-            "public_position_count": len(positions),
-            **admission_audit,
-        },
-    )

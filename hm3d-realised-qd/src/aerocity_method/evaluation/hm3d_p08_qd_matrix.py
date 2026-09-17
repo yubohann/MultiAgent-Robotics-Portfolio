@@ -8,17 +8,17 @@ from dataclasses import dataclass
 from typing import Any
 
 from aerocity_method.contracts import FORMAL_FLEET_SIZE
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
 from aerocity_method.contracts.hm3d_public_schema import require_current_public_schema
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.runtime.hm3d_realised_qd import (
     HM3D_REALISED_QD_ARCHIVE_SPEC,
     HM3D_REALISED_QD_SCHEMA_VERSION,
     MAXIMUM_REALISED_QD_AXIS_ABSOLUTE_CORRELATION,
+    MINIMUM_OUTCOME_ARCHIVE_ENTRIES_FOR_SELECTION,
     MINIMUM_REALISED_QD_AXIS_CORRELATION_DETERMINANT,
     MINIMUM_REALISED_QD_JOINT_CELLS,
     MINIMUM_REALISED_QD_OUTCOMES_FOR_ADMISSION,
     MINIMUM_REALISED_QD_SHANNON_EFFECTIVE_CELLS,
-    MINIMUM_OUTCOME_ARCHIVE_ENTRIES_FOR_SELECTION,
     RealisedQDDescriptor,
 )
 
@@ -38,14 +38,14 @@ _PAIR_FIELDS = (
     "fleet_size",
     "random_key",
     "public_episode_id",
-    "public_context_hash",
-    "public_candidate_pool_hash",
+    "public_context_id",
+    "public_candidate_pool_id",
     "candidate_pool_schema_version",
     "task_reservation_schema_version",
-    "sensor_profile_sha256",
-    "public_contract_sha256",
-    "evaluation_denominator_sha256",
-    "communication_contract_sha256",
+    "sensor_profile_id",
+    "public_contract_id",
+    "evaluation_denominator_id",
+    "communication_contract_id",
     "action_budget_s",
     "candidate_limit",
     "physics_dt_s",
@@ -53,11 +53,8 @@ _PAIR_FIELDS = (
 )
 
 
-def _sha(value: object, label: str) -> str:
-    if not isinstance(value, str) or len(value) != 64:
-        raise ValueError(f"{label} must be a SHA-256 digest")
-    int(value, 16)
-    return value
+def _require_id(value: object, label: str) -> str:
+    return require_identifier(value, label)
 
 
 def _number(value: object, label: str) -> float:
@@ -87,10 +84,7 @@ def _verify_worker(payload: Mapping[str, Any], strategy: str) -> None:
     if payload.get("strategy") != strategy:
         raise ValueError("P08 QD input strategy does not match its declared branch")
     require_current_public_schema(payload, context="P08 QD worker record")
-    unsigned = dict(payload)
-    recorded_hash = _sha(unsigned.pop("runtime_record_sha256", None), "P07 runtime record hash")
-    if canonical_sha256(unsigned) != recorded_hash:
-        raise ValueError("P07 runtime record hash does not match its immutable content")
+    _require_id(payload.get("runtime_record_id"), "P07 runtime record id")
     for name in _PAIR_FIELDS:
         if name not in payload:
             raise ValueError(f"P07 record lacks pairing field: {name}")
@@ -101,15 +95,15 @@ def _verify_worker(payload: Mapping[str, Any], strategy: str) -> None:
     if not isinstance(payload["random_key"], int) or isinstance(payload["random_key"], bool):
         raise ValueError("P07 random_key is invalid")
     for name in (
-        "public_context_hash",
-        "public_candidate_pool_hash",
-        "sensor_profile_sha256",
-        "public_contract_sha256",
-        "evaluation_denominator_sha256",
-        "communication_contract_sha256",
-        "selector_backbone_sha256",
+        "public_context_id",
+        "public_candidate_pool_id",
+        "sensor_profile_id",
+        "public_contract_id",
+        "evaluation_denominator_id",
+        "communication_contract_id",
+        "selector_backbone_id",
     ):
-        _sha(payload.get(name), name)
+        _require_id(payload.get(name), name)
     metric = payload.get("metric_report")
     if not isinstance(metric, Mapping):
         raise ValueError("P07 worker lacks exploration metric report")
@@ -143,7 +137,7 @@ class P08QDUnit:
             drift = [name for name in _PAIR_FIELDS if payload[name] != anchor[name]]
             if drift:
                 raise ValueError(f"P08 QD unit has pair drift in {strategy}: {drift}")
-            if payload["selector_backbone_sha256"] != anchor["selector_backbone_sha256"]:
+            if payload["selector_backbone_id"] != anchor["selector_backbone_id"]:
                 raise ValueError("P08 QD controls must share one candidate-value backbone")
 
     @property
@@ -159,12 +153,12 @@ class P08QDUnit:
         return int(self.no_qd["random_key"])
 
     @property
-    def initial_pool_hash(self) -> str:
-        return str(self.no_qd["public_candidate_pool_hash"])
+    def initial_pool_id(self) -> str:
+        return str(self.no_qd["public_candidate_pool_id"])
 
     @property
-    def backbone_hash(self) -> str:
-        return str(self.no_qd["selector_backbone_sha256"])
+    def backbone_id(self) -> str:
+        return str(self.no_qd["selector_backbone_id"])
 
     def auc(self, strategy: str) -> float:
         record = getattr(self, strategy)
@@ -178,7 +172,7 @@ class P08QDUnit:
             "scene_id": self.scene_id,
             "fleet_size": self.fleet_size,
             "seed": self.seed,
-            "initial_public_candidate_pool_sha256": self.initial_pool_hash,
+            "initial_public_candidate_pool_id": self.initial_pool_id,
             "no_qd_auc": self.auc("no_qd"),
             "planned_qd_auc": self.auc("planned_qd"),
             "realised_qd_auc": self.auc("realised_qd"),
@@ -334,7 +328,7 @@ def _realised_outcomes(
                 raise ValueError("P08 QD admission does not describe an executed candidate")
             if not isinstance(entry.get("candidate_id"), str) or not entry["candidate_id"]:
                 raise ValueError("P08 QD admission lacks its executed candidate ID")
-            _sha(entry.get("execution_outcome_sha256"), "P08 QD execution outcome hash")
+            _require_id(entry.get("execution_outcome_id"), "P08 QD execution outcome id")
             raw_footprint = entry.get("public_new_free_voxel_keys")
             if not isinstance(raw_footprint, list) or not raw_footprint:
                 raise ValueError("P08 QD admission lacks its public execution footprint")
@@ -387,23 +381,19 @@ def _verified_train_descriptor_admission(
         admission = history.get("train_descriptor_admission")
         if not isinstance(admission, Mapping):
             raise ValueError("P08 realised-QD record lacks train descriptor admission")
-        unsigned = dict(admission)
-        recorded_hash = _sha(
-            unsigned.pop("train_descriptor_admission_sha256", None),
-            "train descriptor admission hash",
+        _require_id(
+            admission.get("train_descriptor_admission_id"), "train descriptor admission id"
         )
-        if canonical_sha256(unsigned) != recorded_hash:
-            raise ValueError("P08 train descriptor admission hash is invalid")
         if admission.get("status") != "QD_TRAIN_DESCRIPTOR_ADMITTED":
             raise ValueError("P08 realised-QD record uses a non-admitted train descriptor")
         if admission.get("descriptor_schema_version") != HM3D_REALISED_QD_SCHEMA_VERSION:
             raise ValueError("P08 train descriptor schema does not match the frozen runtime")
-        if admission.get("archive_spec_sha256") != HM3D_REALISED_QD_ARCHIVE_SPEC.digest:
+        if admission.get("archive_spec_id") != HM3D_REALISED_QD_ARCHIVE_SPEC.spec_id:
             raise ValueError("P08 train archive spec does not match the frozen runtime")
         outcome_count = admission.get("outcome_count")
         scene_ids = admission.get("scene_ids")
-        split_manifest_sha256 = admission.get("split_manifest_sha256")
-        source_hashes = admission.get("source_runtime_record_sha256s")
+        split_manifest_id = admission.get("split_manifest_id")
+        source_ids = admission.get("source_runtime_record_ids")
         if (
             not isinstance(outcome_count, int)
             or outcome_count < MINIMUM_REALISED_QD_OUTCOMES_FOR_ADMISSION
@@ -411,11 +401,11 @@ def _verified_train_descriptor_admission(
             raise ValueError("P08 train descriptor admission has too few outcomes")
         if not isinstance(scene_ids, list) or len(set(scene_ids)) < 2:
             raise ValueError("P08 train descriptor admission lacks cross-scene evidence")
-        _sha(split_manifest_sha256, "P08 train descriptor split manifest hash")
-        if not isinstance(source_hashes, list) or not source_hashes:
-            raise ValueError("P08 train descriptor admission lacks source record hashes")
-        for value in source_hashes:
-            _sha(value, "P08 train descriptor source record hash")
+        _require_id(split_manifest_id, "P08 train descriptor split manifest id")
+        if not isinstance(source_ids, list) or not source_ids:
+            raise ValueError("P08 train descriptor admission lacks source record ids")
+        for value in source_ids:
+            _require_id(value, "P08 train descriptor source record id")
         richness = admission["richness_audit"]
         if not isinstance(richness, Mapping) or richness.get("status") != "QD_DESCRIPTOR_ADMITTED":
             raise ValueError("P08 train descriptor lacks realised-QD richness evidence")
@@ -476,8 +466,8 @@ def _verified_train_descriptor_admission(
         ):
             raise ValueError("P08 train descriptor lacks execution-footprint separation")
         admissions.append(admission)
-    hashes = {str(admission["train_descriptor_admission_sha256"]) for admission in admissions}
-    if len(hashes) != 1:
+    ids = {str(admission["train_descriptor_admission_id"]) for admission in admissions}
+    if len(ids) != 1:
         raise ValueError("P08 realised-QD workers do not share one train descriptor admission")
     return admissions[0]
 
@@ -520,7 +510,7 @@ def assemble_p08_qd_paired_evidence(units: Sequence[P08QDUnit]) -> dict[str, obj
     if len(rows) < 12:
         raise ValueError("P08 QD needs at least twelve paired validation units")
     # Revalidate here; evidence mappings are mutable, so a post-construction edit
-    # could bypass the hash, pairing or schema checks.
+    # could bypass the id, pairing or schema checks.
     for unit in rows:
         P08QDUnit(unit.unit_id, unit.no_qd, unit.planned_qd, unit.realised_qd)
     unit_ids = [row.unit_id for row in rows]
@@ -531,8 +521,8 @@ def assemble_p08_qd_paired_evidence(units: Sequence[P08QDUnit]) -> dict[str, obj
     seeds = {row.seed for row in rows}
     if len(scene_ids) < 2 or fleet_size_values != {FORMAL_FLEET_SIZE} or len(seeds) < 2:
         raise ValueError(f"P08 QD needs two scenes, N={FORMAL_FLEET_SIZE}, and two seeds")
-    backbone_hashes = {row.backbone_hash for row in rows}
-    if len(backbone_hashes) != 1:
+    backbone_ids = {row.backbone_id for row in rows}
+    if len(backbone_ids) != 1:
         raise ValueError("P08 QD controls do not share one candidate-value backbone")
     pair_rows = tuple(row.to_pair_row() for row in rows)
     qd_records = tuple(record for unit in rows for record in (unit.planned_qd, unit.realised_qd))
@@ -590,7 +580,7 @@ def assemble_p08_qd_paired_evidence(units: Sequence[P08QDUnit]) -> dict[str, obj
     )
     evidence = {
         "descriptor_schema_version": HM3D_REALISED_QD_SCHEMA_VERSION,
-        "selector_backbone_sha256": next(iter(backbone_hashes)),
+        "selector_backbone_id": next(iter(backbone_ids)),
         "candidate_intent_admission": {
             "status": "QD_CANDIDATE_INTENT_ADMITTED"
             if admissions_passed
@@ -656,9 +646,9 @@ def assemble_p08_qd_paired_evidence(units: Sequence[P08QDUnit]) -> dict[str, obj
         reasons.append("QD_NEVER_CHANGED_THE_VALUE_PROTECTED_SELECTION")
     if not effect_passed:
         reasons.append("REALISED_QD_HAS_NO_SIGNIFICANT_PAIRED_ADVANTAGE")
-    raw_hashes = {
+    raw_ids = {
         strategy: [
-            _sha(getattr(unit, strategy).get("runtime_record_sha256"), "runtime record hash")
+            _require_id(getattr(unit, strategy).get("runtime_record_id"), "runtime record id")
             for unit in rows
         ]
         for strategy in _REQUIRED_STRATEGIES
@@ -677,7 +667,7 @@ def assemble_p08_qd_paired_evidence(units: Sequence[P08QDUnit]) -> dict[str, obj
         "seeds": sorted(seeds),
         "qd_mechanism_evidence": evidence,
         "paired_effect_summary": effects,
-        "raw_worker_record_sha256s": raw_hashes,
+        "raw_worker_record_ids": raw_ids,
         "reasons": reasons,
     }
 

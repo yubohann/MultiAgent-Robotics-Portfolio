@@ -11,7 +11,7 @@ from typing import Any
 
 from .assets import load_asset_lock, stage_assets
 from .audit import audit_city_candidate, build_layout_manifest, validate_release
-from .canonical import content_hash, write_json
+from .canonical import write_json
 from .compiler import write_compiled_public
 from .config import EXPECTED_SPLITS, ReleaseConfig
 from .errors import GenerationRejected
@@ -33,7 +33,6 @@ def _write_private(
         {
             "schema": "org.aerocity.bench.support-sites-private.v2",
             "layout_id": city["layout_id"],
-            "layout_hash": city["layout_hash"],
             "support_site_count": len(sites),
             "support_sites": sites,
         },
@@ -67,10 +66,10 @@ def build_release(
         standard_assets = [str(value) for value in visual["standard"]]
         requested = set(standard_assets)
         lock = load_asset_lock(asset_root.resolve(), bundle, requested)
-        asset_manifest = stage_assets(lock, asset_root.resolve(), staging)
+        stage_assets(lock, asset_root.resolve(), staging)
         layouts: list[dict[str, Any]] = []
         rejections: list[dict[str, Any]] = []
-        seen_hashes: set[str] = set()
+        seen_layouts: set[str] = set()
         seen_topology: set[str] = set()
         for split in selected_splits:
             asset_ids = standard_assets
@@ -82,8 +81,8 @@ def build_release(
                     try:
                         candidate = generate_city(config, split, index, attempt, asset_ids)
                         audit_city_candidate(candidate, config.raw["admission"])
-                        if candidate["layout_hash"] in seen_hashes:
-                            raise GenerationRejected("duplicate layout hash")
+                        if candidate["layout_id"] in seen_layouts:
+                            raise GenerationRejected("duplicate layout id")
                         if candidate["topology_signature"] in seen_topology:
                             raise GenerationRejected("duplicate audited topology signature")
                         # Generate private truth before admitting a layout, so impossible target
@@ -111,7 +110,7 @@ def build_release(
                         f"failed to admit {split}[{index}] after {MAX_ATTEMPTS_PER_LAYOUT} attempts"
                     )
                 city = accepted_city
-                seen_hashes.add(str(city["layout_hash"]))
+                seen_layouts.add(str(city["layout_id"]))
                 seen_topology.add(str(city["topology_signature"]))
                 layout_dir = staging / "splits" / split / city["layout_id"]
                 public_dir = layout_dir / "public"
@@ -122,9 +121,8 @@ def build_release(
                     {
                         "split": split,
                         "layout_id": city["layout_id"],
-                        "layout_hash": city["layout_hash"],
                         "topology_signature": city["topology_signature"],
-                        "asset_set_hash": city["asset_set_hash"],
+                        "asset_set_id": city["asset_set_id"],
                         "size_m": city["size_m"],
                         "family": city["family"],
                         "generation_seed": city["generation_seed"],
@@ -149,15 +147,13 @@ def build_release(
             "schema": "org.aerocity.bench.release-index.v2",
             "release_version": config.version,
             "generator_version": config.generator_version,
-            "release_config_sha256": config.config_hash,
-            "asset_lock_hash": asset_manifest["asset_lock_hash"],
+            "release_config": config.config_id,
             "selected_splits": list(selected_splits),
             "effective_release_config": effective,
             "layouts": layouts,
             "scientific_status": "pilot_only",
             "native_isaac_gate": "not_run",
         }
-        index["release_index_hash"] = content_hash(index)
         write_json(staging / "release_index.json", index)
         report = validate_release(staging)
         os.replace(staging, output)

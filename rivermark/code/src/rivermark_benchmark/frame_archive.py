@@ -5,12 +5,12 @@ from __future__ import annotations
 import shutil
 import tempfile
 import zipfile
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
-
 
 _FORMAT_FIELD = "__rivermark_chunked_frame_archive_v1__"
 _FRAME_COUNT_FIELD = "__rivermark_frame_count__"
@@ -59,12 +59,7 @@ def write_chunked_frame_archive(
     inline_fields: Mapping[str, np.ndarray],
     frame_fields: Mapping[str, np.ndarray],
 ) -> None:
-    """Write a fail-closed, one-member-per-frame NPZ archive atomically.
-
-    ``inline_fields`` are small arrays such as timestamps and camera poses.
-    Every field in ``frame_fields`` must have the timestamp count on axis 0;
-    each frame is read and compressed independently.
-    """
+    """Write a strict, one-member-per-frame NPZ archive atomically."""
 
     timestamps = np.asarray(timestamps_ns)
     if timestamps.dtype != np.int64 or timestamps.ndim != 1 or len(timestamps) <= 0:
@@ -237,7 +232,8 @@ class ChunkedFrameArchive:
     def close(self) -> None:
         self._archive.close()
 
-    def __enter__(self) -> "ChunkedFrameArchive":
+    # PYI034: typing.Self requires Python 3.11; typing_extensions is not a declared dependency.
+    def __enter__(self) -> ChunkedFrameArchive:  # noqa: PYI034
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -245,14 +241,7 @@ class ChunkedFrameArchive:
 
 
 class FrameSpool:
-    """Dynamically growing disk-backed sample storage for one Isaac capture.
-
-    Isaac RGB-D frames are large enough that preallocating the declared capture
-    length can consume tens of GiB before the first route-witness checkpoint.
-    Start with a small mapping and grow only when a frame arrives.  The spool
-    still enforces the declared upper bound, while keeping a short smoke or a
-    fail-closed capture from reserving the full run on disk.
-    """
+    """Dynamically growing disk-backed sample storage for one Isaac capture."""
 
     def __init__(self, root: Path, *, frame_capacity: int):
         if frame_capacity <= 0:
@@ -423,13 +412,7 @@ class FrameSpool:
         return self._arrays[field][: self.frame_count]
 
     def discard_fields_after_archive(self, fields: tuple[str, ...]) -> None:
-        """Release spool fields only after their replacement archive is durable.
-
-        A capture finalizer calls this only after ``write_chunked_frame_archive``
-        returns successfully.  Keeping unrelated fields makes a subsequent
-        finalization failure inspectable without retaining a second full copy of
-        already archived RGB-D or overview frames.
-        """
+        """Release spool fields only after their replacement archive is durable."""
 
         for field in fields:
             try:

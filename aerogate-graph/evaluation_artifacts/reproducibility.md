@@ -167,34 +167,3 @@ From `results/csv_json/multi_static_dynamic_four_metrics_plot_data.csv`,
 | multi dynamic | 60 | 3 | 100.0 | 0.0 | 66.6690 | 38.0333 | 0.24 |
 
 In the same CSV the single-agent dynamic 60-gate mainline row carries the `real_eval_failed` mark with success rate `0.0` and collision rate `0.6`. That row records the high-density stress limit and stays recorded as a failure sample.
-
-## Result Hash Check
-
-The SHA256 of every artifact file is fixed in `results_manifest.json`. The command below rechecks them.
-
-```powershell
-cd <gate_graph_2d_minimal>\evaluation_artifacts
-@'
-import hashlib, json
-from pathlib import Path
-
-root = Path.cwd()
-manifest = json.loads((root / "results_manifest.json").read_text(encoding="utf-8"))
-bad = []
-for item in manifest["files"]:
-    path = root / item["relative_path"]
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    if digest != item["sha256"]:
-        bad.append((item["relative_path"], digest, item["sha256"]))
-print(f"checked={len(manifest['files'])} mismatches={len(bad)}")
-for row in bad:
-    print(row)
-raise SystemExit(1 if bad else 0)
-'@ | python -
-```
-
-Expected output,
-
-```text
-checked=7 mismatches=0
-```

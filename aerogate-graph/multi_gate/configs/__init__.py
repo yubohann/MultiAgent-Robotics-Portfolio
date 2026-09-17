@@ -6,13 +6,23 @@ from pathlib import Path
 
 from multi_gate.configs.experiment_config import (
     MULTI_EXPERIMENT_CONFIG as VARIABLE_MULTI_EXPERIMENT_CONFIG,
+)
+from multi_gate.configs.experiment_config import (
     MultiExperimentConfig,
-    build_exp3_curriculum_experiment_config,
-    build_exp3_paper_experiment_config,
     build_dynamic_gate_density_8d_config,
-    build_fixed_team_experiment_config,
-    build_multi_experiment_config,
-    override_multi_scene_config,
+    build_exp3_paper_experiment_config,
+)
+from multi_gate.configs.experiment_config import (
+    build_exp3_curriculum_experiment_config as build_exp3_curriculum_experiment_config,
+)
+from multi_gate.configs.experiment_config import (
+    build_fixed_team_experiment_config as build_fixed_team_experiment_config,
+)
+from multi_gate.configs.experiment_config import (
+    build_multi_experiment_config as build_multi_experiment_config,
+)
+from multi_gate.configs.experiment_config import (
+    override_multi_scene_config as override_multi_scene_config,
 )
 from multi_gate.configs.experiment_config_fixed_02 import MULTI_EXPERIMENT_CONFIG as FIXED_MULTI_EXPERIMENT_CONFIG_02
 from multi_gate.configs.experiment_config_fixed_03 import MULTI_EXPERIMENT_CONFIG as FIXED_MULTI_EXPERIMENT_CONFIG_03

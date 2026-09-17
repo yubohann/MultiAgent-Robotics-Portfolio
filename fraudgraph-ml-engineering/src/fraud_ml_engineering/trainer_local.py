@@ -5,7 +5,6 @@ import gc
 import time
 from collections import Counter
 from types import SimpleNamespace
-from typing import Dict
 
 import numpy as np
 import torch
@@ -32,12 +31,12 @@ def _release_cuda_memory(device: torch.device | str | None = None) -> None:
 
 
 def apply_dp_noise_to_state_dict(
-    state_dict: Dict[str, torch.Tensor],
+    state_dict: dict[str, torch.Tensor],
     noise_std: float,
-) -> Dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor]:
     if noise_std <= 0:
         return state_dict
-    noisy_state: Dict[str, torch.Tensor] = {}
+    noisy_state: dict[str, torch.Tensor] = {}
     for key, value in state_dict.items():
         if torch.is_floating_point(value):
             scale = float(max(value.detach().float().std().item(), 1e-6))
@@ -97,7 +96,7 @@ def _detach_loss_items(loss_items: dict) -> dict:
 
 def _fedprox_penalty(
     model: HybridFraudModel,
-    global_state: Dict[str, torch.Tensor],
+    global_state: dict[str, torch.Tensor],
     mu: float,
     device: torch.device,
 ) -> torch.Tensor:
@@ -211,16 +210,18 @@ def _configure_stage_trainability(local_model: HybridFraudModel, args: SimpleNam
 
 
 def _parameter_group_name(parameter_name: str) -> str:
-    if parameter_name.startswith("graph_encoder.") or parameter_name.startswith("graph_residual_head."):
+    graph_prefixes = ("graph_encoder.", "graph_residual_head.")
+    sequence_prefixes = (
+        "sequence_encoder.",
+        "event_encoder.",
+        "temporal_context_encoder.",
+        "graph_temporal_proj.",
+        "graph_temporal_gate.",
+        "sequence_residual_head.",
+    )
+    if parameter_name.startswith(graph_prefixes):
         return "graph"
-    if (
-        parameter_name.startswith("sequence_encoder.")
-        or parameter_name.startswith("event_encoder.")
-        or parameter_name.startswith("temporal_context_encoder.")
-        or parameter_name.startswith("graph_temporal_proj.")
-        or parameter_name.startswith("graph_temporal_gate.")
-        or parameter_name.startswith("sequence_residual_head.")
-    ):
+    if parameter_name.startswith(sequence_prefixes):
         return "sequence"
     return "fusion"
 
@@ -288,7 +289,7 @@ def local_train_round(
     global_model: HybridFraudModel,
     graph_teacher_model: HybridFraudModel | None,
     subgraph,
-    global_state: Dict[str, torch.Tensor],
+    global_state: dict[str, torch.Tensor],
     class_weights: torch.Tensor,
     class_counts: torch.Tensor,
     args: SimpleNamespace,
@@ -299,7 +300,7 @@ def local_train_round(
     learning_rate: float,
     fedprox_mu: float,
     dp_noise_std: float,
-) -> tuple[Dict[str, torch.Tensor], dict]:
+) -> tuple[dict[str, torch.Tensor], dict]:
     """Run one round of local client training."""
     _release_cuda_memory(args.device)
     local_model = copy.deepcopy(global_model).to(args.device)
@@ -434,18 +435,16 @@ def local_train_round(
     fixed_graph_teacher_logits = None
     if use_graph_teacher:
         graph_teacher_model.eval()
-        with torch.no_grad():
-            with torch.autocast(device_type=device_obj.type, dtype=amp_dtype, enabled=amp_enabled):
-                fixed_graph_teacher_logits = graph_teacher_model(local_graph)
+        with torch.no_grad(), torch.autocast(device_type=device_obj.type, dtype=amp_dtype, enabled=amp_enabled):
+            fixed_graph_teacher_logits = graph_teacher_model(local_graph)
     teacher_logits = None
     for local_epoch_index in range(local_epochs):
         local_model.train()
         teacher_logits = None
         if teacher_model is not None:
             teacher_model.eval()
-            with torch.no_grad():
-                with torch.autocast(device_type=device_obj.type, dtype=amp_dtype, enabled=amp_enabled):
-                    teacher_logits = teacher_model(local_graph)
+            with torch.no_grad(), torch.autocast(device_type=device_obj.type, dtype=amp_dtype, enabled=amp_enabled):
+                teacher_logits = teacher_model(local_graph)
         stage_timer = getattr(args, "stage_timer", None)
         forward_start = time.perf_counter()
         with torch.autocast(device_type=device_obj.type, dtype=amp_dtype, enabled=amp_enabled):

@@ -15,7 +15,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from aerocity_method.contracts.io import canonical_sha256, write_json_atomic
+from aerocity_method.contracts.io import (  # noqa: E402 -- sys.path bootstrap
+    write_json_atomic,
+)
 
 PERSISTENT_SCRIPT = ROOT / "scripts" / "run_hm3d_p07_persistent_collection.py"
 WORKER_SCRIPT = ROOT / "scripts" / "run_hm3d_p07_exploration_episode.py"
@@ -23,7 +25,9 @@ DEFAULT_PYTHON = r"C:\Users\Administrator\anaconda3\envs\env_isaaclab\python.exe
 
 
 def _load_persistent_module() -> Any:
-    spec = importlib.util.spec_from_file_location("hm3d_p07_outcome_batch_persistent", PERSISTENT_SCRIPT)
+    spec = importlib.util.spec_from_file_location(
+        "hm3d_p07_outcome_batch_persistent", PERSISTENT_SCRIPT
+    )
     if spec is None or spec.loader is None:
         raise RuntimeError("cannot load persistent P07 collection module")
     module = importlib.util.module_from_spec(spec)
@@ -123,7 +127,7 @@ def _build_manifest(
             "Development real P07 outcome batch. Every episode is a fresh Isaac process. "
             "Each indexed transition remains bound to its original CF2X outcome."
         ),
-        "plan_sha256": canonical_sha256(json.loads(plan_path.read_text(encoding="utf-8"))),
+        "plan_file_id": f"{plan_path.name}:{plan_path.stat().st_size}",
         "isaac_process_count": len(rows),
         "process_boundary_policy": "one_fresh_isaac_process_per_episode",
         "lifecycle_note": (
@@ -151,7 +155,7 @@ def _build_manifest(
         "coverage_audit": module._coverage_audit(rows),
         "runs": rows,
     }
-    manifest["manifest_sha256"] = canonical_sha256(manifest)
+    manifest["manifest_id"] = f"outcome-batch:{manifest['scene_id']}:{len(manifest['runs'])}-runs"
     return manifest
 
 

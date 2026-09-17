@@ -76,7 +76,7 @@ def envelope_from_json(value: str | dict[str, object]) -> MessageEnvelope:
     """Parse and validate a JSON or already-decoded envelope."""
     payload = json.loads(value) if isinstance(value, str) else value
     if not isinstance(payload, dict):
-        raise ValueError("message envelope must be a JSON object")
+        raise TypeError("message envelope must be a JSON object")
     envelope = MessageEnvelope(
         protocol_version=int(payload["protocol_version"]),
         message_type=str(payload["message_type"]),

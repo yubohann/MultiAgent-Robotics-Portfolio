@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from ._identity import IdentityAccumulator
+
 import argparse
-import hashlib
 import json
 import os
 import subprocess
@@ -30,8 +31,8 @@ class TestChunk:
     test_files: tuple[str, ...]
 
 
-def _sha256_bytes(value: bytes) -> str:
-    return hashlib.sha256(value).hexdigest()
+def _identity_bytes(value: bytes) -> str:
+    return IdentityAccumulator(value).hexdigest()
 
 
 def _canonical_json(value: Mapping[str, Any]) -> bytes:
@@ -111,7 +112,7 @@ def _new_report(chunks: Sequence[TestChunk], *, test_root: Path, chunk_size: int
                 "return_code": None,
                 "duration_s": None,
                 "log_relative_path": None,
-                "log_sha256": None,
+                "log_identity": None,
                 "log_bytes": None,
             }
             for chunk in chunks
@@ -119,12 +120,12 @@ def _new_report(chunks: Sequence[TestChunk], *, test_root: Path, chunk_size: int
     }
 
 
-def report_sha256(report: Mapping[str, Any]) -> str:
-    """Hash a report while excluding its self-reference."""
+def report_identity(report: Mapping[str, Any]) -> str:
+    """Identity a report while excluding its self-reference."""
 
     payload = dict(report)
-    payload.pop("report_sha256", None)
-    return _sha256_bytes(_canonical_json(payload))
+    payload.pop("report_identity", None)
+    return _identity_bytes(_canonical_json(payload))
 
 
 def verify_run_report(path: Path) -> tuple[str, ...]:
@@ -142,8 +143,8 @@ def verify_run_report(path: Path) -> tuple[str, ...]:
         issues.append("report schema is invalid")
     if report.get("status") not in {"passed", "failed"}:
         issues.append("report is not terminal")
-    if report.get("report_sha256") != report_sha256(report):
-        issues.append("report self-hash does not match")
+    if report.get("report_identity") != report_identity(report):
+        issues.append("report self-identity does not match")
     chunks = report.get("chunks")
     if not isinstance(chunks, list) or not chunks:
         return (*issues, "report chunks are missing")
@@ -190,8 +191,8 @@ def verify_run_report(path: Path) -> tuple[str, ...]:
         except OSError:
             issues.append(f"{label} log is missing")
             continue
-        if chunk.get("log_bytes") != len(content) or chunk.get("log_sha256") != _sha256_bytes(content):
-            issues.append(f"{label} log hash does not match")
+        if chunk.get("log_bytes") != len(content) or chunk.get("log_identity") != _identity_bytes(content):
+            issues.append(f"{label} log identity does not match")
     expected_status = "passed" if return_codes and all(code == 0 for code in return_codes) else "failed"
     if report.get("status") in {"passed", "failed"} and report.get("status") != expected_status:
         issues.append("terminal report status disagrees with chunk return codes")
@@ -221,7 +222,7 @@ def run_cpu_test_chunks(
     destination.mkdir()
     report_path = destination / "cpu_test_report.json"
     report = _new_report(chunks, test_root=root, chunk_size=chunk_size)
-    report["report_sha256"] = report_sha256(report)
+    report["report_identity"] = report_identity(report)
     _write_json_atomic(report_path, report)
 
     environment = os.environ.copy()
@@ -256,15 +257,15 @@ def run_cpu_test_chunks(
                 "return_code": int(completed.returncode),
                 "duration_s": round(time.monotonic() - started, 6),
                 "log_relative_path": log_relative_path,
-                "log_sha256": _sha256_bytes(log),
+                "log_identity": _identity_bytes(log),
                 "log_bytes": len(log),
             }
         )
-        report["report_sha256"] = report_sha256(report)
+        report["report_identity"] = report_identity(report)
         _write_json_atomic(report_path, report)
     report["status"] = "passed" if all(row["return_code"] == 0 for row in report["chunks"]) else "failed"
     report["finished_wall_time_ns"] = time.time_ns()
-    report["report_sha256"] = report_sha256(report)
+    report["report_identity"] = report_identity(report)
     _write_json_atomic(report_path, report)
     return report_path
 

@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-from aerocity_bench.canonical import content_hash
 from aerocity_bench.compiler import compile_g2_i_task_spec, compile_method_task_spec
 from aerocity_bench.errors import GenerationRejected
 from aerocity_bench.generator_v3 import generate_city_v3
@@ -62,7 +61,8 @@ def test_g2_i_is_explicit_and_does_not_reclassify_g1_u(ordinary_config, developm
     assert g2["schema"] == "org.aerocity.bench.task-spec-public.g2-i.v1"
     assert g2["task_track"] == TASK_TRACK_G2_I
     assert g2["inspection_atlas"]["schema"] == ATLAS_SCHEMA
-    assert g2["inspection_atlas"]["atlas_hash"]
+    assert g2["inspection_atlas"]["layout_id"] == development_city["layout_id"]
+    assert g2["inspection_atlas"]["inspection_geometry_id"]
 
 
 def test_atlas_is_deterministic_and_ignores_private_episode_metadata(
@@ -150,7 +150,7 @@ def test_transit_nodes_reserve_the_same_flight_bound_margin(
         )
 
 
-def test_atlas_rejects_nested_private_field_and_hash_tampering(
+def test_atlas_rejects_nested_private_field_and_bad_fields(
     ordinary_config, development_city
 ) -> None:
     atlas = compile_inspection_atlas(development_city, ordinary_config.raw["execution_contract"])
@@ -160,19 +160,18 @@ def test_atlas_rejects_nested_private_field_and_hash_tampering(
         validate_public_inspection_atlas(leaked)
 
     tampered = copy.deepcopy(atlas)
-    tampered["regions"][0]["represented_area_m2"] += 1.0
-    with pytest.raises(ValueError, match="hash mismatch"):
+    tampered.pop("runtime_validation_required")
+    with pytest.raises(ValueError, match="root fields differ"):
         validate_public_inspection_atlas(tampered)
 
 
-def test_atlas_hash_changes_for_public_observation_contract(
+def test_atlas_observation_contract_changes_with_public_contract(
     ordinary_config, development_city
 ) -> None:
     original = compile_inspection_atlas(development_city, ordinary_config.raw["execution_contract"])
     revised_contract = copy.deepcopy(ordinary_config.raw["execution_contract"])
     revised_contract["observe"]["horizontal_fov_deg"] += 4.0
     revised = compile_inspection_atlas(development_city, revised_contract)
-    assert revised["atlas_hash"] != original["atlas_hash"]
     assert (
         revised["observation_contract"]["horizontal_cell_spacing_m"]
         != original["observation_contract"]["horizontal_cell_spacing_m"]
@@ -213,7 +212,7 @@ def test_density_candidates_are_explicit_validated_and_do_not_mutate_default(
     validate_public_inspection_atlas(dense)
     assert sparse["sampling_policy"]["calibration_status"] == "ablation-only"
     assert dense["sampling_policy"]["calibration_status"] == "ablation-only"
-    assert sparse["atlas_hash"] != dense["atlas_hash"]
+    assert sparse["regions"] != dense["regions"]
     assert (
         sparse["observation_contract"]["horizontal_cell_spacing_m"]
         > default["observation_contract"]["horizontal_cell_spacing_m"]
@@ -232,10 +231,10 @@ def test_density_candidates_are_explicit_validated_and_do_not_mutate_default(
         )
 
 
-def test_atlas_uses_a_target_independent_geometry_hash(ordinary_config, development_city) -> None:
+def test_atlas_uses_a_target_independent_geometry(ordinary_config, development_city) -> None:
     original = compile_inspection_atlas(development_city, ordinary_config.raw["execution_contract"])
     target_variant = copy.deepcopy(development_city)
-    target_variant["task_geometry_hash"] = "f" * 64
+    target_variant["task_geometry_id"] = "train-000-a0-task-variant"
     target_variant["buildings"][0]["components"][0]["target_support"] = False
     target_variant["obstacles"][0]["support_domain"] = False
 
@@ -275,15 +274,3 @@ def test_coarse_and_full_prior_projections_have_explicit_information_limits(
     assert coarse_task["inspection_prior_level"] == ATLAS_PRIOR_COARSE
     assert "inspection_atlas" not in coarse_task
     assert coarse_task["inspection_atlas_projection"] == coarse
-
-
-def test_disconnected_transit_graph_is_rejected_even_with_a_valid_hash(
-    ordinary_config, development_city
-) -> None:
-    atlas = compile_inspection_atlas(development_city, ordinary_config.raw["execution_contract"])
-    disconnected = copy.deepcopy(atlas)
-    disconnected["transit_graph"]["edges"] = []
-    disconnected.pop("atlas_hash")
-    disconnected["atlas_hash"] = content_hash(disconnected)
-    with pytest.raises(ValueError, match="disconnected"):
-        validate_public_inspection_atlas(disconnected)

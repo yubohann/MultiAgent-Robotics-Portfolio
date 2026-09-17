@@ -8,7 +8,7 @@ from aerocity_method.contracts.exploration import (
     ExplorationExecutionOutcome,
     TeamExplorationCandidate,
 )
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.evaluation.hm3d_exploration_metrics import (
     ExplorationMetricReport,
     ExplorationMetricSample,
@@ -21,17 +21,15 @@ EXPLORATION_EPISODE_SCHEMA_VERSION = "hm3d-exploration-episode-v1"
 @dataclass(frozen=True, slots=True)
 class ExplorationDecisionRecord:
     decision_id: str
-    candidate_set_sha256: str
-    selected_candidate_sha256: str
-    outcome_sha256: str
+    candidate_set_file_id: str
+    selected_candidate_file_id: str
+    outcome_file_id: str
     duration_s: float
 
     def __post_init__(self) -> None:
         require_identifier(self.decision_id, "decision_id")
-        for name in ("candidate_set_sha256", "selected_candidate_sha256", "outcome_sha256"):
-            value = getattr(self, name)
-            if not isinstance(value, str) or len(value) != 64:
-                raise ValueError(f"{name} must be a SHA-256 digest")
+        for name in ("candidate_set_file_id", "selected_candidate_file_id", "outcome_file_id"):
+            require_identifier(getattr(self, name), name)
         duration = finite_number(self.duration_s, "duration_s")
         if duration <= 0.0:
             raise ValueError("decision duration must be positive")
@@ -40,9 +38,9 @@ class ExplorationDecisionRecord:
     def to_dict(self) -> dict[str, object]:
         return {
             "decision_id": self.decision_id,
-            "candidate_set_sha256": self.candidate_set_sha256,
-            "selected_candidate_sha256": self.selected_candidate_sha256,
-            "outcome_sha256": self.outcome_sha256,
+            "candidate_set_file_id": self.candidate_set_file_id,
+            "selected_candidate_file_id": self.selected_candidate_file_id,
+            "outcome_file_id": self.outcome_file_id,
             "duration_s": self.duration_s,
         }
 
@@ -74,12 +72,14 @@ class ExplorationEpisodeLedger:
         object.__setattr__(self, "horizon_s", horizon)
 
     @property
-    def ledger_hash(self) -> str:
-        return canonical_sha256(self.to_dict(include_hash=False))
+    def ledger_id(self) -> str:
+        # One ledger per episode, scene and horizon; the label is explicit.
+        return f"{self.episode_id}:{self.scene_id}:{self.horizon_s:.3f}"
 
-    def to_dict(self, *, include_hash: bool = True) -> dict[str, object]:
-        payload: dict[str, object] = {
+    def to_dict(self) -> dict[str, object]:
+        return {
             "schema_version": self.schema_version,
+            "ledger_id": self.ledger_id,
             "episode_id": self.episode_id,
             "scene_id": self.scene_id,
             "horizon_s": self.horizon_s,
@@ -87,15 +87,13 @@ class ExplorationEpisodeLedger:
             "metric_report": self.metric_report.to_dict(),
             "status": self.status,
         }
-        if include_hash:
-            payload["ledger_hash"] = self.ledger_hash
-        return payload
 
 
-def candidate_set_hash(candidates: tuple[TeamExplorationCandidate, ...]) -> str:
+def candidate_set_id(candidates: tuple[TeamExplorationCandidate, ...]) -> str:
     if not candidates:
         raise ValueError("candidate set cannot be empty")
-    return canonical_sha256([candidate.to_dict() for candidate in candidates])
+    # Identity of a candidate set is the ordered list of its candidate IDs.
+    return "|".join(candidate.candidate_id for candidate in candidates)
 
 
 def build_decision_record(
@@ -107,13 +105,13 @@ def build_decision_record(
 ) -> ExplorationDecisionRecord:
     if selected_candidate not in candidate_set:
         raise ValueError("selected candidate must belong to the common candidate set")
-    if outcome.candidate_sha256 != selected_candidate.digest:
-        raise ValueError("outcome candidate hash does not match selected candidate")
+    if outcome.candidate_id != selected_candidate.candidate_id:
+        raise ValueError("outcome candidate id does not match selected candidate")
     return ExplorationDecisionRecord(
         decision_id=decision_id,
-        candidate_set_sha256=candidate_set_hash(candidate_set),
-        selected_candidate_sha256=selected_candidate.digest,
-        outcome_sha256=outcome.digest,
+        candidate_set_file_id=candidate_set_id(candidate_set),
+        selected_candidate_file_id=selected_candidate.candidate_id,
+        outcome_file_id=outcome.outcome_id,
         duration_s=outcome.ended_timestamp_s - outcome.started_timestamp_s,
     )
 
@@ -158,5 +156,5 @@ __all__ = [
     "ExplorationEpisodeLedger",
     "assemble_episode_ledger",
     "build_decision_record",
-    "candidate_set_hash",
+    "candidate_set_id",
 ]

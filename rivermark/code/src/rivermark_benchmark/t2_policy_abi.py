@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from collections.abc import Callable, Mapping, Sequence
@@ -11,6 +10,7 @@ from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .citylite_scene import AGENT_COUNT
 from .isaac_transfer import (
     ACTION_FIELDS,
@@ -46,12 +46,12 @@ def _canonical_bytes(value: Any) -> bytes:
     ).encode("utf-8")
 
 
-def _sha256(value: Any) -> str:
-    return hashlib.sha256(_canonical_bytes(value)).hexdigest()
+def _identity(value: Any) -> str:
+    return IdentityAccumulator(_canonical_bytes(value)).hexdigest()
 
 
-def _is_sha256(value: Any) -> bool:
-    return isinstance(value, str) and len(value) == 64 and set(value) <= _HEX
+def _is_identity(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 16 and set(value) <= _HEX
 
 
 def _finite_array(value: Any, *, shape: tuple[int, ...], label: str) -> np.ndarray:
@@ -156,8 +156,8 @@ class T2PublicFleetObservation:
         }
 
     @property
-    def sha256(self) -> str:
-        return _sha256(self.public_dict())
+    def identity(self) -> str:
+        return _identity(self.public_dict())
 
 
 @dataclass(frozen=True)
@@ -232,7 +232,7 @@ class T2PolicyDecision:
             "claim_boundary": T2_CLAIM_BOUNDARY,
             "command_before_step": True,
             "decision_index": self.decision_index,
-            "observation_sha256": self.observation.sha256,
+            "observation_identity": self.observation.identity,
             "observation": self.observation.public_dict(),
             "action": self.action.public_dict(),
             "world_command_bounds": {
@@ -243,22 +243,15 @@ class T2PolicyDecision:
         }
 
     @property
-    def sha256(self) -> str:
-        return _sha256(self.public_dict())
+    def identity(self) -> str:
+        return _identity(self.public_dict())
 
 
 PolicyActionFn = Callable[[T2PublicFleetObservation], Any]
 
 
 class T2PolicyRunner:
-    """Run a caller-owned public policy at one integer physics cadence.
-
-    The callable receives precisely one :class:`T2PublicFleetObservation` and
-    must return a finite ``[8,4]`` world velocity/yaw array.  It does not get a
-    task manifest, target truth, reward, evaluator result, seed, or future
-    state.  Native code must lower ``emitted_velocity_yaw_command`` into thrust
-    and append the resulting actuator/state evidence after the physical step.
-    """
+    """Run a caller-owned public policy at one integer physics cadence."""
 
     def __init__(
         self,
@@ -313,14 +306,7 @@ class T2PolicyRunner:
 
 @dataclass(frozen=True)
 class T2PublicSensorObservation:
-    """Public identity of one actual synchronized native sensor frame.
-
-    This is intentionally distinct from a pre-command state snapshot. The
-    native capture loop creates it only after reading the synchronized onboard
-    sensor frame, then records the final stream hash separately in the capture
-    receipt. A candidate event may cite this identity, never a policy-state
-    placeholder.
-    """
+    """Public identity of one actual synchronized native sensor frame."""
 
     agent_id: int
     capture_frame_index: int
@@ -364,13 +350,7 @@ class T2PublicSensorObservation:
 
 @dataclass(frozen=True)
 class T2CandidateDetection:
-    """A policy-side candidate localised from one public sensor observation.
-
-    ``deduplication_key`` is an optional, capture-local key derived from the
-    public semantic metadata.  It is intentionally not serialised into a
-    candidate event: its only purpose is preventing repeated views of the
-    same anonymous semantic instance from becoming repeated confirmations.
-    """
+    """A policy-side candidate localised from one public sensor observation."""
 
     agent_id: int
     position_w_m: tuple[float, float, float]
@@ -472,7 +452,7 @@ class T2CandidateEventJournal:
             "claim_boundary": T2_CLAIM_BOUNDARY,
             "event_time_origin_ns": self.event_time_origin_ns,
             "submission": submission,
-            "submission_sha256": _sha256(submission),
+            "submission_identity": _identity(submission),
         }
 
 
@@ -547,7 +527,7 @@ class T2NativeStepEvidence:
         return {
             "schema": T2_NATIVE_STEP_EVIDENCE_SCHEMA,
             "command_before_step": True,
-            "decision_sha256": self.decision.sha256,
+            "decision_identity": self.decision.identity,
             "decision_physics_step": self.decision.observation.physics_step,
             "applied_physics_step": self.applied_physics_step,
             "decision_command_time_ns": self.decision.observation.command_time_ns,
@@ -563,9 +543,9 @@ class T2NativeStepEvidence:
 __all__ = [
     "T2_CLAIM_BOUNDARY",
     "T2_DECISION_EVIDENCE_SCHEMA",
-    "T2_NATIVE_STEP_EVIDENCE_SCHEMA",
     "T2_EVENT_JOURNAL_SCHEMA",
     "T2_INFORMATION_PROFILE",
+    "T2_NATIVE_STEP_EVIDENCE_SCHEMA",
     "T2_POLICY_ABI_SCHEMA",
     "T2BoundedAction",
     "T2CandidateDetection",

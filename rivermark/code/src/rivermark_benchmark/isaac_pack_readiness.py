@@ -12,7 +12,7 @@ from typing import Any
 import numpy as np
 
 from . import isaac_validate as _isaac_validate
-from .abi import observation_abi_sha256, validate_formal_observation_abi
+from .abi import observation_abi_identity, validate_formal_observation_abi
 from .collection_protocol import (
     CollectionProtocolError,
     load_collection_protocol,
@@ -20,7 +20,7 @@ from .collection_protocol import (
     validate_collection_binding,
 )
 from .condition_realization import condition_request_from_protocol
-from .formal_dataset import sha256_file
+from .formal_dataset import identity_file
 from .isaac_pack import (
     PACK_SPEC_SCHEMA,
     PACK_SPEC_SCHEMA_V2,
@@ -28,7 +28,7 @@ from .isaac_pack import (
 )
 from .isaac_public_manifest import (
     build_public_scene_manifest,
-    public_manifest_sha256,
+    public_manifest_identity,
     validate_public_payload,
 )
 from .isaac_validate import validate_isaac_capture
@@ -43,7 +43,7 @@ from .schema import (
     INFORMATION_PROFILE_MODALITIES,
     forbidden_policy_key,
     is_safe_relative_path,
-    is_sha256,
+    is_identity,
 )
 from .supply_chain import SupplyChainError, verify_supply_chain_manifest
 
@@ -73,10 +73,10 @@ class PackReadinessIssue:
 
 @dataclass(frozen=True)
 class PackReadinessReport:
-    capture_receipt_sha256: str | None
-    independent_validation_sha256: str | None
+    capture_receipt_identity: str | None
+    independent_validation_identity: str | None
     source_revision: str | None
-    expected_evaluator_manifest_sha256: str | None
+    expected_evaluator_manifest_identity: str | None
     policy_source_inspection: Mapping[str, Any] | None
     candidate_streams: Mapping[str, Any] | None
     checks: Mapping[str, bool]
@@ -97,10 +97,10 @@ class PackReadinessReport:
             "candidate_pack_ready": self.candidate_pack_ready,
             "supply_chain_release_ready": self.supply_chain_release_ready,
             "formal_benchmark_admission": False,
-            "capture_receipt_sha256": self.capture_receipt_sha256,
-            "independent_validation_sha256": self.independent_validation_sha256,
+            "capture_receipt_identity": self.capture_receipt_identity,
+            "independent_validation_identity": self.independent_validation_identity,
             "source_revision": self.source_revision,
-            "expected_evaluator_manifest_sha256": self.expected_evaluator_manifest_sha256,
+            "expected_evaluator_manifest_identity": self.expected_evaluator_manifest_identity,
             "policy_source_inspection": self.policy_source_inspection,
             "candidate_streams": self.candidate_streams,
             "checks": dict(self.checks),
@@ -112,7 +112,7 @@ class PackReadinessReport:
 class _AuditedAbi:
     path: Path
     capture_relative: str | None
-    canonical_sha256: str
+    canonical_identity: str
 
 
 def _read_object(path: Path, *, label: str) -> Mapping[str, Any]:
@@ -185,7 +185,7 @@ def _audit_protocol(
         expected_condition = condition_request_from_protocol(
             protocol,
             protocol_id=str(resolved["protocol_id"]),
-            protocol_sha256=str(resolved["protocol_sha256"]),
+            protocol_identity=str(resolved["protocol_identity"]),
             cell_id=str(resolved["cell_id"]),
         )
     except (OSError, CollectionProtocolError, KeyError, TypeError, ValueError) as exc:
@@ -211,11 +211,11 @@ def _audit_evaluator(
     evaluator_manifest: Path | None,
     issues: list[PackReadinessIssue],
 ) -> bool:
-    expected = receipt.get("evaluator_manifest_sha256")
+    expected = receipt.get("evaluator_manifest_identity")
     checks = validation.get("checks")
-    validation_expected = checks.get("evaluator_manifest_sha256") if isinstance(checks, Mapping) else None
-    if not is_sha256(expected) or validation_expected != expected:
-        _add(issues, "evaluator_commitment", "capture_receipt.json.evaluator_manifest_sha256", "capture and validation do not share one evaluator SHA-256")
+    validation_expected = checks.get("evaluator_manifest_identity") if isinstance(checks, Mapping) else None
+    if not is_identity(expected) or validation_expected != expected:
+        _add(issues, "evaluator_commitment", "capture_receipt.json.evaluator_manifest_identity", "capture and validation do not share one evaluator IDENTITY")
         return False
     if evaluator_manifest is None:
         _add(issues, "evaluator_manifest_missing", "evaluator_manifest", "external evaluator-private manifest was not supplied")
@@ -229,11 +229,11 @@ def _audit_evaluator(
             "external evaluator-private manifest is missing",
         )
         return False
-    if sha256_file(manifest) != expected:
-        _add(issues, "evaluator_manifest_mismatch", "evaluator_manifest", "external manifest bytes do not match the committed SHA-256")
+    if identity_file(manifest) != expected:
+        _add(issues, "evaluator_manifest_mismatch", "evaluator_manifest", "external manifest bytes do not match the committed IDENTITY")
         return False
     report = validate_isaac_capture(capture, evaluator_manifest=manifest, require_clean_source=True)
-    if not report.valid or report.receipt_sha256 != sha256_file(capture / "capture_receipt.json"):
+    if not report.valid or report.receipt_identity != identity_file(capture / "capture_receipt.json"):
         detail = ", ".join(issue.code for issue in report.issues)
         _add(issues, "private_revalidation_failed", "evaluator_manifest", detail or "validator receipt binding failed")
         return False
@@ -274,7 +274,7 @@ def _audit_abi(
     audited = _AuditedAbi(
         path=resolved,
         capture_relative=relative,
-        canonical_sha256=observation_abi_sha256(abi),
+        canonical_identity=observation_abi_identity(abi),
     )
     return source_streams is not None and not source_issues, audited
 
@@ -286,7 +286,7 @@ def _audit_pack_spec(
     source_revision: str | None,
     split: object,
     audited_abi: _AuditedAbi | None,
-    capture_receipt_sha256: str | None,
+    capture_receipt_identity: str | None,
     source_streams: Mapping[str, Any] | None,
     capture_backend: Mapping[str, Any] | None,
     issues: list[PackReadinessIssue],
@@ -316,8 +316,8 @@ def _audit_pack_spec(
     expected_backend = (
         {
             "build": capture_backend.get("build"),
-            "sensor_physics_smoke_receipt_sha256": capture_backend.get(
-                "sensor_physics_smoke_receipt_sha256"
+            "sensor_physics_smoke_receipt_identity": capture_backend.get(
+                "sensor_physics_smoke_receipt_identity"
             ),
         }
         if isinstance(capture_backend, Mapping)
@@ -358,14 +358,14 @@ def _audit_pack_spec(
         if (
             abi_spec.get("source_scope") != "pack_spec"
             or resolved_source != audited_abi.path
-            or abi_spec.get("sha256") != audited_abi.canonical_sha256
-            or abi_spec.get("capture_receipt_sha256") != capture_receipt_sha256
+            or abi_spec.get("identity") != audited_abi.canonical_identity
+            or abi_spec.get("capture_receipt_identity") != capture_receipt_identity
         ):
             _add(
                 issues,
                 "pack_abi_mismatch",
                 "$spec.observation_abi",
-                "v2 external ABI source, canonical hash, or capture binding differs",
+                "v2 external ABI source, canonical identity, or capture binding differs",
             )
             valid = False
         layout_spec = spec.get("layout")
@@ -414,12 +414,12 @@ def _audit_pack_spec(
                         valid = False
             if (
                 public_scene is not None
-                and layout_spec.get("layout_hash") != public_manifest_sha256(public_scene)
+                and layout_spec.get("layout_identity") != public_manifest_identity(public_scene)
             ):
                 _add(
                     issues,
-                    "layout_hash",
-                    "$spec.layout.layout_hash",
+                    "layout_identity",
+                    "$spec.layout.layout_identity",
                     "must bind the deterministic public scene projection",
                 )
                 valid = False
@@ -641,8 +641,8 @@ def audit_isaac_pack_readiness(
     checks: dict[str, bool] = {}
     receipt: Mapping[str, Any] = {}
     validation: Mapping[str, Any] = {}
-    receipt_hash: str | None = None
-    validation_hash: str | None = None
+    receipt_identity: str | None = None
+    validation_identity: str | None = None
     source_revision: str | None = None
     expected_evaluator: str | None = None
     inspection: PolicySourceInspection | None = None
@@ -656,27 +656,27 @@ def audit_isaac_pack_readiness(
         try:
             receipt = _read_object(capture / "capture_receipt.json", label="capture receipt")
             validation = _read_object(capture / "independent_validation.json", label="independent validation")
-            receipt_hash = sha256_file(capture / "capture_receipt.json")
-            validation_hash = sha256_file(capture / "independent_validation.json")
+            receipt_identity = identity_file(capture / "capture_receipt.json")
+            validation_identity = identity_file(capture / "independent_validation.json")
             source_revision = receipt.get("source_revision") if isinstance(receipt.get("source_revision"), str) else None
-            expected_evaluator = receipt.get("evaluator_manifest_sha256") if is_sha256(receipt.get("evaluator_manifest_sha256")) else None
+            expected_evaluator = receipt.get("evaluator_manifest_identity") if is_identity(receipt.get("evaluator_manifest_identity")) else None
         except (OSError, TypeError, ValueError) as exc:
             _add(issues, "capture_metadata", "capture_root", str(exc))
         else:
             checks["capture_receipt_schema"] = receipt.get("schema") == _CAPTURE_SCHEMA
             checks["validation_schema"] = validation.get("schema") == _VALIDATION_SCHEMA
-            checks["validation_receipt_binding"] = validation.get("capture_receipt_sha256") == receipt_hash
-            checks["validator_source_current"] = validation.get("validator_source_sha256") == sha256_file(Path(_isaac_validate.__file__).resolve())
+            checks["validation_receipt_binding"] = validation.get("capture_receipt_identity") == receipt_identity
+            checks["validator_source_current"] = validation.get("validator_source_identity") == identity_file(Path(_isaac_validate.__file__).resolve())
             raw_backend = receipt.get("capture_backend")
             capture_backend = raw_backend if isinstance(raw_backend, Mapping) else None
             checks["capture_backend_commitment"] = bool(
                 isinstance(capture_backend, Mapping)
                 and set(capture_backend)
-                == {"kind", "build", "sensor_physics_smoke_receipt_sha256"}
+                == {"kind", "build", "sensor_physics_smoke_receipt_identity"}
                 and capture_backend.get("kind") == "isaaclab"
                 and isinstance(capture_backend.get("build"), str)
                 and bool(capture_backend["build"].strip())
-                and is_sha256(capture_backend.get("sensor_physics_smoke_receipt_sha256"))
+                and is_identity(capture_backend.get("sensor_physics_smoke_receipt_identity"))
             )
             for name, ok in tuple(checks.items()):
                 if not ok:
@@ -712,7 +712,7 @@ def audit_isaac_pack_readiness(
     abi_ok, audited_abi = _audit_abi(capture, observation_abi, candidate_streams, issues)
     checks["formal_observation_abi"] = abi_ok
     if audited_abi is not None:
-        checks["observation_abi_sha256"] = is_sha256(audited_abi.canonical_sha256)
+        checks["observation_abi_identity"] = is_identity(audited_abi.canonical_identity)
     binding = receipt.get("collection_binding") if isinstance(receipt, Mapping) else None
     split = binding.get("split") if isinstance(binding, Mapping) else None
     checks["pack_spec"] = _audit_pack_spec(
@@ -721,7 +721,7 @@ def audit_isaac_pack_readiness(
         source_revision=source_revision,
         split=split,
         audited_abi=audited_abi,
-        capture_receipt_sha256=receipt_hash,
+        capture_receipt_identity=receipt_identity,
         source_streams=candidate_streams,
         capture_backend=capture_backend,
         issues=issues,
@@ -747,10 +747,10 @@ def audit_isaac_pack_readiness(
                 _add(issues, "supply_chain_not_release_ready", "supply_chain_manifest", f"release checks failed: {codes}", scope="formal_release")
 
     return PackReadinessReport(
-        capture_receipt_sha256=receipt_hash,
-        independent_validation_sha256=validation_hash,
+        capture_receipt_identity=receipt_identity,
+        independent_validation_identity=validation_identity,
         source_revision=source_revision,
-        expected_evaluator_manifest_sha256=expected_evaluator,
+        expected_evaluator_manifest_identity=expected_evaluator,
         policy_source_inspection=inspection_payload,
         candidate_streams=candidate_streams,
         checks=checks,

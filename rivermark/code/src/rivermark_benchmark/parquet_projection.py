@@ -8,15 +8,15 @@ import os
 import shutil
 import tempfile
 import zipfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
-from .formal_dataset import sha256_file
+from .formal_dataset import identity_file
 from .schema import is_safe_relative_path
-
 
 DEVELOPMENT_PARQUET_SCHEMA = "org.rivermark.benchmark.development-parquet-projection.v1"
 _CAPTURE_SCHEMA = "org.rivermark.isaac-swarm-capture.v1"
@@ -66,7 +66,7 @@ _MESSAGE_FIELDS = {
 }
 _PUBLIC_BINDING_FIELDS = (
     "protocol_id",
-    "protocol_sha256",
+    "protocol_identity",
     "cell_id",
     "split",
     "episode_index",
@@ -81,9 +81,9 @@ class ParquetProjectionError(ValueError):
 @dataclass(frozen=True)
 class ParquetProjectionResult:
     output_root: Path
-    capture_receipt_sha256: str
-    independent_validation_sha256: str
-    projection_manifest_sha256: str
+    capture_receipt_identity: str
+    independent_validation_identity: str
+    projection_manifest_identity: str
     table_paths: tuple[str, ...]
 
 
@@ -118,15 +118,15 @@ def _contained_file(root: Path, relative: str) -> Path:
     return candidate
 
 
-def _source_hash(receipt: Mapping[str, Any], root: Path, relative: str) -> dict[str, Any]:
+def _source_identity(receipt: Mapping[str, Any], root: Path, relative: str) -> dict[str, Any]:
     source = _contained_file(root, relative)
-    expected = receipt.get("artifact_hashes", {}).get(relative)
-    if not isinstance(expected, Mapping) or not isinstance(expected.get("sha256"), str):
-        raise ParquetProjectionError(f"{relative} is not bound by capture artifact_hashes")
-    actual = sha256_file(source)
-    if actual != expected["sha256"] or int(expected.get("bytes", -1)) != source.stat().st_size:
+    expected = receipt.get("artifact_identities", {}).get(relative)
+    if not isinstance(expected, Mapping) or not isinstance(expected.get("identity"), str):
+        raise ParquetProjectionError(f"{relative} is not bound by capture artifact_identities")
+    actual = identity_file(source)
+    if actual != expected["identity"] or int(expected.get("bytes", -1)) != source.stat().st_size:
         raise ParquetProjectionError(f"{relative} does not match its capture receipt binding")
-    return {"path": relative, "bytes": source.stat().st_size, "sha256": actual}
+    return {"path": relative, "bytes": source.stat().st_size, "identity": actual}
 
 
 def _load_json(path: Path, label: str) -> Mapping[str, Any]:
@@ -171,19 +171,19 @@ def _verify_capture_boundary(root: Path) -> tuple[dict[str, Any], str, str, dict
         raise ParquetProjectionError("development projection requires formal_benchmark_admission=false")
     if validation.get("schema") not in _VALIDATION_SCHEMAS or validation.get("status") != "passed" or validation.get("issues") != []:
         raise ParquetProjectionError("development projection requires a passing independent validation receipt")
-    receipt_hash = sha256_file(receipt_path)
-    if validation.get("capture_receipt_sha256") != receipt_hash:
+    receipt_identity = identity_file(receipt_path)
+    if validation.get("capture_receipt_identity") != receipt_identity:
         raise ParquetProjectionError("independent validation is not bound to this capture receipt")
-    validation_hash = sha256_file(validation_path)
+    validation_identity = identity_file(validation_path)
     paths = (_STATE_PATH, _TASK_PATH, _MESSAGES_PATH)
-    artifacts = {relative: _source_hash(receipt, root, relative) for relative in paths}
-    artifacts["capture_receipt.json"] = {"path": "capture_receipt.json", "bytes": receipt_path.stat().st_size, "sha256": receipt_hash}
+    artifacts = {relative: _source_identity(receipt, root, relative) for relative in paths}
+    artifacts["capture_receipt.json"] = {"path": "capture_receipt.json", "bytes": receipt_path.stat().st_size, "identity": receipt_identity}
     artifacts["independent_validation.json"] = {
         "path": "independent_validation.json",
         "bytes": validation_path.stat().st_size,
-        "sha256": validation_hash,
+        "identity": validation_identity,
     }
-    return receipt, receipt_hash, validation_hash, artifacts
+    return receipt, receipt_identity, validation_identity, artifacts
 
 
 def _bounded_npz(path: Path, *, fields: set[str], max_source_member_bytes: int) -> dict[str, np.ndarray]:
@@ -212,17 +212,6 @@ def _bounded_npz(path: Path, *, fields: set[str], max_source_member_bytes: int) 
 def _require_shape(array: np.ndarray, *, name: str, dtype: np.dtype[Any], shape: tuple[int, ...]) -> None:
     if array.dtype != dtype or array.shape != shape or not np.all(np.isfinite(array.astype(np.float64, copy=False))):
         raise ParquetProjectionError(f"{name} must be finite {dtype} {shape}, got {array.dtype} {array.shape}")
-
-
-def _flatten_vector_fields(
-    columns: dict[str, np.ndarray],
-    values: Mapping[str, np.ndarray],
-    field: str,
-    suffixes: Sequence[str],
-) -> None:
-    array = values[field]
-    for index, suffix in enumerate(suffixes):
-        columns[f"{field}_{suffix}"] = array[:, :, index].reshape(-1)
 
 
 def _state_table(values: Mapping[str, np.ndarray], *, agent_count: int, row_group_size: int, writer_factory: Any) -> int:
@@ -359,10 +348,9 @@ def _messages_table(values: Mapping[str, np.ndarray], *, agent_count: int, row_g
 class _WriterFactory:
     """Delay ParquetWriter construction until the first validated row group."""
 
-    def __init__(self, path: Path, pq: Any, *, row_group_size: int):
+    def __init__(self, path: Path, pq: Any):
         self.path = path
         self.pq = pq
-        self.row_group_size = row_group_size
         self.writer: Any | None = None
 
     def set_schema(self, schema: Any) -> None:
@@ -384,7 +372,7 @@ class _WriterFactory:
 
 def _write_table(path: Path, values: Mapping[str, np.ndarray], *, kind: str, agent_count: int, row_group_size: int) -> int:
     _, pq = _arrow()
-    writer = _WriterFactory(path, pq, row_group_size=row_group_size)
+    writer = _WriterFactory(path, pq)
     try:
         if kind == "state_action":
             rows = _state_table(values, agent_count=agent_count, row_group_size=row_group_size, writer_factory=writer)
@@ -399,7 +387,7 @@ def _write_table(path: Path, values: Mapping[str, np.ndarray], *, kind: str, age
     return rows
 
 
-def _metadata_table(path: Path, receipt: Mapping[str, Any], receipt_hash: str, validation_hash: str) -> int:
+def _metadata_table(path: Path, receipt: Mapping[str, Any], receipt_identity: str, validation_identity: str) -> int:
     pa, pq = _arrow()
     physics = receipt.get("physics") if isinstance(receipt.get("physics"), Mapping) else {}
     binding = _public_collection_binding(receipt)
@@ -407,8 +395,8 @@ def _metadata_table(path: Path, receipt: Mapping[str, Any], receipt_hash: str, v
         "schema": [DEVELOPMENT_PARQUET_SCHEMA],
         "formal_benchmark_admission": [False],
         "capture_attempt_id": [str(receipt.get("capture_attempt_id", ""))],
-        "capture_receipt_sha256": [receipt_hash],
-        "independent_validation_sha256": [validation_hash],
+        "capture_receipt_identity": [receipt_identity],
+        "independent_validation_identity": [validation_identity],
         "source_revision": [str(receipt.get("source_revision", ""))],
         "collection_protocol_id": [binding["protocol_id"]],
         "collection_cell_id": [binding["cell_id"]],
@@ -436,7 +424,7 @@ def _table_record(root: Path, relative: str, rows: int) -> dict[str, Any]:
     return {
         "path": relative,
         "bytes": path.stat().st_size,
-        "sha256": sha256_file(path),
+        "identity": identity_file(path),
         "rows": int(rows),
         "columns": [field.name for field in parquet_file.schema_arrow],
         "row_groups": int(parquet_file.metadata.num_row_groups),
@@ -450,12 +438,7 @@ def project_development_capture_to_parquet(
     max_source_member_bytes: int = _DEFAULT_MAX_SOURCE_MEMBER_BYTES,
     row_group_size: int = _DEFAULT_ROW_GROUP_SIZE,
 ) -> ParquetProjectionResult:
-    """Write small public Parquet tables from a validated development capture.
-
-    The source capture and the output directory must be distinct.  The output
-    contains no RGB, depth, semantic, LiDAR, evaluator, or private-target
-    payload; those remain in the external evidence directory.
-    """
+    """Write small public Parquet tables from a validated development capture."""
 
     if isinstance(max_source_member_bytes, bool) or not isinstance(max_source_member_bytes, int) or max_source_member_bytes <= 0:
         raise ParquetProjectionError("max_source_member_bytes must be a positive integer")
@@ -467,7 +450,7 @@ def project_development_capture_to_parquet(
         raise ParquetProjectionError("projection output must not be inside the source capture")
     if destination.exists():
         raise ParquetProjectionError(f"projection output already exists: {destination}")
-    receipt, receipt_hash, validation_hash, artifacts = _verify_capture_boundary(capture)
+    receipt, receipt_identity, validation_identity, artifacts = _verify_capture_boundary(capture)
     physics = receipt.get("physics")
     if not isinstance(physics, Mapping) or not isinstance(physics.get("same_world_agent_count"), int):
         raise ParquetProjectionError("capture receipt has no agent count")
@@ -482,7 +465,7 @@ def project_development_capture_to_parquet(
     staging = Path(tempfile.mkdtemp(prefix=f".{destination.name}.", dir=destination.parent))
     try:
         table_rows = {
-            "metadata.parquet": _metadata_table(staging / "metadata.parquet", receipt, receipt_hash, validation_hash),
+            "metadata.parquet": _metadata_table(staging / "metadata.parquet", receipt, receipt_identity, validation_identity),
             "state_action.parquet": _write_table(staging / "state_action.parquet", state, kind="state_action", agent_count=agent_count, row_group_size=row_group_size),
             "public_task.parquet": _write_table(staging / "public_task.parquet", task, kind="public_task", agent_count=agent_count, row_group_size=row_group_size),
             "public_messages.parquet": _write_table(staging / "public_messages.parquet", messages, kind="public_messages", agent_count=agent_count, row_group_size=row_group_size),
@@ -492,8 +475,8 @@ def project_development_capture_to_parquet(
             "status": "projected",
             "development_only": True,
             "formal_benchmark_admission": False,
-            "source_capture_receipt_sha256": receipt_hash,
-            "independent_validation_sha256": validation_hash,
+            "source_capture_receipt_identity": receipt_identity,
+            "independent_validation_identity": validation_identity,
             "source_revision": receipt["source_revision"],
             "capture_attempt_id": receipt["capture_attempt_id"],
             "collection_binding": _public_collection_binding(receipt),
@@ -518,9 +501,9 @@ def project_development_capture_to_parquet(
     manifest_path = destination / "projection_manifest.json"
     return ParquetProjectionResult(
         output_root=destination,
-        capture_receipt_sha256=receipt_hash,
-        independent_validation_sha256=validation_hash,
-        projection_manifest_sha256=sha256_file(manifest_path),
+        capture_receipt_identity=receipt_identity,
+        independent_validation_identity=validation_identity,
+        projection_manifest_identity=identity_file(manifest_path),
         table_paths=tuple(table_rows),
     )
 
@@ -562,9 +545,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "development_only": True,
         "formal_benchmark_admission": False,
         "output_root": str(result.output_root),
-        "capture_receipt_sha256": result.capture_receipt_sha256,
-        "independent_validation_sha256": result.independent_validation_sha256,
-        "projection_manifest_sha256": result.projection_manifest_sha256,
+        "capture_receipt_identity": result.capture_receipt_identity,
+        "independent_validation_identity": result.independent_validation_identity,
+        "projection_manifest_identity": result.projection_manifest_identity,
         "table_paths": list(result.table_paths),
     }, indent=2, sort_keys=True))
     return 0

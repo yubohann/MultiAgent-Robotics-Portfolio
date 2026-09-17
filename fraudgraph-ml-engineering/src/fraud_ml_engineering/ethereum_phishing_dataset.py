@@ -2,9 +2,9 @@
 
 """Draft loader for the cleaned Ethereum Phishing Transaction Network dataset."""
 
+import re
 from pathlib import Path
 from typing import Any
-import re
 
 try:
     import dgl
@@ -59,7 +59,7 @@ def _read_table(parquet_path: Path, csv_path: Path, *, force_preview: bool = Fal
     if not force_preview and parquet_path.exists():
         try:
             return pd.read_parquet(parquet_path), {"path": str(parquet_path), "format": "parquet"}
-        except Exception:
+        except (ImportError, OSError, ValueError):
             pass
     if not csv_path.exists():
         raise FileNotFoundError(f"Missing required dataset file: {csv_path}")
@@ -117,7 +117,7 @@ def _append_relation_edges(
         torch.from_numpy(src.astype(np.int64)),
         torch.from_numpy(dst.astype(np.int64)),
     )
-    relation_edge_counts[relation_name] = int(len(src))
+    relation_edge_counts[relation_name] = len(src)
 
 
 def _add_context_relations(
@@ -389,7 +389,7 @@ def _build_synthetic_edges(users: pd.DataFrame) -> tuple[dict[tuple[str, str, st
         (NODE_TYPE, "transfer_out", NODE_TYPE): (torch.from_numpy(src.copy()), torch.from_numpy(dst.copy())),
         (NODE_TYPE, "transfer_in", NODE_TYPE): (torch.from_numpy(dst.copy()), torch.from_numpy(src.copy())),
     }
-    relation_edge_counts = {"homo": int(len(src)), "transfer_out": int(len(src)), "transfer_in": int(len(src))}
+    relation_edge_counts = {"homo": len(src), "transfer_out": len(src), "transfer_in": len(src)}
     _add_context_relations(users, edge_dict, relation_edge_counts)
     return edge_dict, relation_edge_counts
 
@@ -510,9 +510,9 @@ def load_ethereum_phishing_dataset(
             ),
         }
         relation_edge_counts = {
-            "homo": int(len(src_nodes)),
-            "transfer_out": int(len(src_nodes)),
-            "transfer_in": int(len(src_nodes)),
+            "homo": len(src_nodes),
+            "transfer_out": len(src_nodes),
+            "transfer_in": len(src_nodes),
         }
         _add_context_relations(users, edge_dict, relation_edge_counts)
         graph_source = "deduplicated_ego_transaction_graph"
@@ -606,7 +606,6 @@ def load_ethereum_phishing_dataset(
         clients.append(
             ClientShard(
                 client_id=client_id,
-                owned_global_nodes=owned_nodes,
                 subgraph=subgraph,
                 train_nodes=int(subgraph.nodes[NODE_TYPE].data["train_mask"].sum().item()),
             )
@@ -632,7 +631,7 @@ def load_ethereum_phishing_dataset(
         "feature_columns": feature_columns,
         "feature_dim": int(feature_matrix.shape[1]),
         "num_nodes": int(graph.num_nodes(NODE_TYPE)),
-        "num_clients": int(len(clients)),
+        "num_clients": len(clients),
         "relation_edge_counts": relation_edge_counts,
         "graph_source": graph_source,
         "anchor_nodes": int((raw_labels >= 0).sum()),

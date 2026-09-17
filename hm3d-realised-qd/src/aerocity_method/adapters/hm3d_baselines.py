@@ -9,15 +9,13 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any
 
-from aerocity_method.contracts.io import (
-    canonical_sha256,
-    finite_number,
-    require_identifier,
-    require_sha256,
-)
 from aerocity_method.contracts.hm3d_public_schema import (
     PUBLIC_CANDIDATE_POOL_SCHEMA_VERSION,
     PUBLIC_TASK_RESERVATION_SCHEMA_VERSION,
+)
+from aerocity_method.contracts.io import (
+    finite_number,
+    require_identifier,
 )
 from aerocity_method.contracts.models import (
     CandidateFragmentManifest,
@@ -25,19 +23,18 @@ from aerocity_method.contracts.models import (
     FragmentTypeSignature,
     PublicMethodContext,
 )
-from aerocity_method.contracts.privacy import walk_public_payload
 from aerocity_method.evaluation.hm3d_safety import (
     TimedPolyline,
     TimedStationary,
     assess_route_tube_separation,
 )
-from aerocity_method.runtime.hm3d_trajectory import (
-    maximum_rest_to_rest_distance_m,
-    minimum_rest_to_rest_duration_s,
-)
 from aerocity_method.runtime.hm3d_realised_qd import HM3D_CANDIDATE_INTENT_SPEC
 from aerocity_method.runtime.hm3d_team_collaboration import (
     audit_translation_invariant_team_trajectories,
+)
+from aerocity_method.runtime.hm3d_trajectory import (
+    maximum_rest_to_rest_distance_m,
+    minimum_rest_to_rest_duration_s,
 )
 
 Point3 = tuple[float, float, float]
@@ -72,15 +69,6 @@ def _path_length_m(path_m: Sequence[Point3]) -> float:
     if len(path) < 2:
         raise ValueError("transit path requires at least two points")
     return sum(_distance(start, end) for start, end in zip(path[:-1], path[1:], strict=True))
-
-
-def _manifest_planned_route_length_m(manifest: CandidateFragmentManifest) -> float:
-    """Total planned team transit length, used by the mileage preference."""
-    return sum(
-        _path_length_m(fragment.path)
-        for fragment in manifest.fragments
-        if fragment.type_signature.fragment_type == "transit"
-    )
 
 
 def _segment_boundary_duration_s(
@@ -535,9 +523,9 @@ class PublicTaskReservation:
 
     agent_id: str
     source_decision_id: str
-    source_manifest_hash: str
-    source_transit_outcome_sha256: str
-    source_public_path_sha256: str
+    source_manifest_id: str
+    source_transit_outcome_id: str
+    source_public_path_id: str
     completed_position_m: Point3
     terminal_heading_unit: Point3
     source_viewpoint_kind: str = "observation"
@@ -548,12 +536,12 @@ class PublicTaskReservation:
     def __post_init__(self) -> None:
         require_identifier(self.agent_id, "task reservation agent_id")
         require_identifier(self.source_decision_id, "task reservation source decision_id")
-        require_sha256(self.source_manifest_hash, "task reservation source manifest hash")
-        require_sha256(
-            self.source_transit_outcome_sha256,
-            "task reservation source transit outcome hash",
+        require_identifier(self.source_manifest_id, "task reservation source manifest id")
+        require_identifier(
+            self.source_transit_outcome_id,
+            "task reservation source transit outcome id",
         )
-        require_sha256(self.source_public_path_sha256, "task reservation source public path hash")
+        require_identifier(self.source_public_path_id, "task reservation source public path id")
         if self.source_viewpoint_kind not in {
             "observation",
             "route_progress",
@@ -600,8 +588,8 @@ class PublicTaskReservation:
         *,
         agent_id: str,
         source_decision_id: str,
-        source_manifest_hash: str,
-        source_transit_outcome_sha256: str,
+        source_manifest_id: str,
+        source_transit_outcome_id: str,
         public_path_m: Sequence[Point3],
         task_anchor_m: Point3 | None = None,
         task_normal_unit: Point3 | None = None,
@@ -619,9 +607,9 @@ class PublicTaskReservation:
         return cls(
             agent_id=agent_id,
             source_decision_id=source_decision_id,
-            source_manifest_hash=source_manifest_hash,
-            source_transit_outcome_sha256=source_transit_outcome_sha256,
-            source_public_path_sha256=canonical_sha256(path),
+            source_manifest_id=source_manifest_id,
+            source_transit_outcome_id=source_transit_outcome_id,
+            source_public_path_id=_public_path_id(path),
             completed_position_m=path[-1],
             terminal_heading_unit=heading,
             source_viewpoint_kind=source_viewpoint_kind,
@@ -634,9 +622,9 @@ class PublicTaskReservation:
         return {
             "agent_id": self.agent_id,
             "source_decision_id": self.source_decision_id,
-            "source_manifest_hash": self.source_manifest_hash,
-            "source_transit_outcome_sha256": self.source_transit_outcome_sha256,
-            "source_public_path_sha256": self.source_public_path_sha256,
+            "source_manifest_id": self.source_manifest_id,
+            "source_transit_outcome_id": self.source_transit_outcome_id,
+            "source_public_path_id": self.source_public_path_id,
             "completed_position_m": self.completed_position_m,
             "terminal_heading_unit": self.terminal_heading_unit,
             "source_viewpoint_kind": self.source_viewpoint_kind,
@@ -658,7 +646,7 @@ class PublicSearchState:
     transit_timing_model: ConservativeTransitTimingModel
     observe_dwell_s: float
     # Development default for isolated unit fixtures; real P07 workers pass the
-    # hash-bound communication-contract value.
+    # id-bound communication-contract value.
     communication_range_m: float = 10.0
     # Short-lived task association from a public outcome; fresh extraction,
     # routing and both guards still apply.
@@ -723,8 +711,7 @@ class PublicSearchState:
         object.__setattr__(self, "observe_dwell_s", dwell)
         object.__setattr__(self, "communication_range_m", communication_range)
         object.__setattr__(self, "task_reservations", reservations)
-        walk_public_payload(self.to_dict())
-
+        
     def to_dict(self) -> dict[str, object]:
         payload: dict[str, object] = {
             "context": self.context.to_dict(),
@@ -1119,112 +1106,6 @@ def identity_path_guard(agent_id: str, path_m: tuple[Point3, ...]) -> GuardedPat
     return GuardedPath(legal=True, path_m=path_m)
 
 
-def _cyclic_assignments(
-    agent_count: int, frontier_count: int, limit: int
-) -> tuple[tuple[int, ...], ...]:
-    """Produce deterministic distinct frontier assignments without truth labels."""
-
-    if limit < 1:
-        raise ValueError("candidate_limit must be positive")
-    assignments: list[tuple[int, ...]] = []
-    for offset in range(frontier_count):
-        assignment = tuple(
-            (offset + agent_index) % frontier_count for agent_index in range(agent_count)
-        )
-        if len(set(assignment)) == agent_count:
-            assignments.append(assignment)
-        if len(assignments) >= limit:
-            break
-    if not assignments:
-        raise ValueError("could not build a distinct public frontier assignment")
-    return tuple(assignments)
-
-
-def _shared_assignments(state: PublicSearchState, limit: int) -> tuple[tuple[int, ...], ...]:
-    """Build method-neutral team assignments over every delivered public frontier."""
-
-    if limit < 1:
-        raise ValueError("candidate_limit must be positive")
-    if len(state.frontiers) < len(state.agents):
-        raise ValueError("shared frontier assignment needs one frontier per agent")
-    assignments: list[tuple[int, ...]] = []
-
-    def is_assignable(agent_index: int, frontier_index: int) -> bool:
-        exclusive_agent_id = state.frontiers[frontier_index].exclusive_agent_id
-        return exclusive_agent_id is None or exclusive_agent_id == state.agents[agent_index].agent_id
-
-    def append_once(assignment: tuple[int, ...]) -> None:
-        if assignment not in assignments and len(assignments) < limit:
-            assignments.append(assignment)
-
-    def greedy_distinct(objective: Callable[[int, int], float]) -> tuple[int, ...]:
-        unused = set(range(len(state.frontiers)))
-        selected: list[int] = []
-        for agent_index in range(len(state.agents)):
-            eligible = tuple(index for index in unused if is_assignable(agent_index, index))
-            if not eligible:
-                raise ValueError("shared frontier assignment has no legal owner edge")
-            frontier_index = max(
-                eligible,
-                key=lambda index: (objective(agent_index, index), -index),
-            )
-            selected.append(frontier_index)
-            unused.remove(frontier_index)
-        return tuple(selected)
-
-    def vertical_delta(agent_index: int, frontier_index: int) -> float:
-        return (
-            state.frontiers[frontier_index].position_m[2] - state.agents[agent_index].position_m[2]
-        )
-
-    def path_distance(agent_index: int, frontier_index: int) -> float:
-        return _distance(
-            state.agents[agent_index].position_m,
-            state.frontiers[frontier_index].position_m,
-        )
-
-    nearest = greedy_distinct(lambda agent, frontier: -path_distance(agent, frontier))
-    gain_per_distance = greedy_distinct(
-        lambda agent, frontier: (
-            state.frontiers[frontier].information_gain
-            * (1.0 - state.frontiers[frontier].traversal_risk)
-            / max(path_distance(agent, frontier), 0.25)
-        )
-    )
-    up = greedy_distinct(vertical_delta)
-    down = greedy_distinct(lambda agent, frontier: -vertical_delta(agent, frontier))
-    level = greedy_distinct(lambda agent, frontier: -abs(vertical_delta(agent, frontier)))
-    high_gain = greedy_distinct(
-        lambda _agent, frontier: (
-            state.frontiers[frontier].information_gain
-            * (1.0 - state.frontiers[frontier].traversal_risk)
-        )
-    )
-
-    append_once(nearest)
-    append_once(gain_per_distance)
-    append_once(up)
-    append_once(down)
-    append_once(level)
-    append_once(high_gain)
-    append_once(tuple(up[index] if index % 2 == 0 else down[index] for index in range(len(up))))
-
-    for assignment in _cyclic_assignments(
-        len(state.agents), len(state.frontiers), max(limit, len(state.frontiers))
-    ):
-        if not all(
-            is_assignable(agent_index, frontier_index)
-            for agent_index, frontier_index in enumerate(assignment)
-        ):
-            continue
-        append_once(assignment)
-        if len(assignments) >= limit:
-            break
-    if not assignments:
-        raise ValueError("could not build shared public frontier assignments")
-    return tuple(assignments)
-
-
 def _duration_for_path(
     path_m: tuple[Point3, ...], timing_model: ConservativeTransitTimingModel
 ) -> float:
@@ -1453,10 +1334,10 @@ def _manifest_for_assignment(
             ("guard_rewritten", guarded.rewritten),
             ("public_access_path_revalidated", access_path_revalidated),
             (
-                "public_access_path_sha256",
+                "public_access_path_id",
                 ""
                 if not access_path_revalidated or frontier is None
-                else canonical_sha256(frontier.access_path_for_agent(agent.agent_id)),
+                else _public_path_id(frontier.access_path_for_agent(agent.agent_id)),
             ),
             (
                 "frontier_cluster_id",
@@ -1495,16 +1376,16 @@ def _manifest_for_assignment(
                 "" if reservation is None else reservation.source_decision_id,
             ),
             (
-                "task_reservation_source_manifest_hash",
-                "" if reservation is None else reservation.source_manifest_hash,
+                "task_reservation_source_manifest_id",
+                "" if reservation is None else reservation.source_manifest_id,
             ),
             (
-                "task_reservation_source_public_path_sha256",
-                "" if reservation is None else reservation.source_public_path_sha256,
+                "task_reservation_source_public_path_id",
+                "" if reservation is None else reservation.source_public_path_id,
             ),
             (
-                "task_reservation_source_transit_outcome_sha256",
-                "" if reservation is None else reservation.source_transit_outcome_sha256,
+                "task_reservation_source_transit_outcome_id",
+                "" if reservation is None else reservation.source_transit_outcome_id,
             ),
             (
                 "task_reservation_source_frontier_cluster_id",
@@ -1589,16 +1470,20 @@ def _manifest_for_assignment(
                             "" if reservation is None else reservation.source_decision_id,
                         ),
                         (
-                            "task_reservation_source_manifest_hash",
-                            "" if reservation is None else reservation.source_manifest_hash,
+                            "task_reservation_source_manifest_id",
+                            "" if reservation is None else reservation.source_manifest_id,
                         ),
                         (
-                            "task_reservation_source_public_path_sha256",
-                            "" if reservation is None else reservation.source_public_path_sha256,
+                            "task_reservation_source_public_path_id",
+                            "" if reservation is None else reservation.source_public_path_id,
                         ),
                         (
-                            "task_reservation_source_transit_outcome_sha256",
-                            "" if reservation is None else reservation.source_transit_outcome_sha256,
+                            "task_reservation_source_transit_outcome_id",
+                            (
+                                ""
+                                if reservation is None
+                                else reservation.source_transit_outcome_id
+                            ),
                         ),
                         (
                             "task_reservation_source_frontier_cluster_id",
@@ -1636,7 +1521,7 @@ def _manifest_for_assignment(
     )
     return CandidateFragmentManifest(
         candidate_id=f"hm3d-public-candidate-{candidate_index}",
-        context_hash=state.context.digest,
+        context_id=state.context.context_id,
         fragments=tuple(fragments),
         planned_descriptor=descriptor,
         feasible=feasible,
@@ -2457,7 +2342,7 @@ def _feasibility_first_assignments(
                 if require_joint_prefilter
                 else (endpoint_separated_combos or route_combos)
             )
-            for score, assignment in sorted(
+            for _score, assignment in sorted(
                 route_extreme_candidates,
                 key=lambda row: row[0],
                 reverse=True,
@@ -2535,7 +2420,7 @@ def _feasibility_first_assignments(
                         reverse=True,
                     )[:quota]:
                         partial_route_candidates.append((score, assignment))
-                for score, assignment in partial_route_candidates:
+                for _score, assignment in partial_route_candidates:
                     if assignment in seen:
                         continue
                     seen.add(assignment)
@@ -2822,12 +2707,12 @@ def build_public_candidate_pool(
                     by_cell.setdefault(cell_of_row[id(row)], []).append(row)
                 keep: list[CandidateFragmentManifest] = []
                 for group in by_cell.values():
-                    group.sort(key=lambda row: (-row.quality_hint, row.manifest_hash))
+                    group.sort(key=lambda row: (-row.quality_hint, row.manifest_id))
                     keep.append(group[0])
                 remaining_budget = candidate_limit - len(keep)
                 extras = sorted(
                     (row for group in by_cell.values() for row in group[1:]),
-                    key=lambda row: (-row.quality_hint, row.manifest_hash),
+                    key=lambda row: (-row.quality_hint, row.manifest_id),
                 )
                 keep.extend(extras[: max(0, remaining_budget)])
                 admitted[:] = [row for row in admitted if row in keep]
@@ -3066,8 +2951,7 @@ def build_public_candidate_pool(
             f"feasible={feasible_count}, required={minimum_feasible_candidates}; {diagnostics}"
         )
     for manifest in pool:
-        walk_public_payload(manifest.to_dict())
-    return pool
+            return pool
 
 
 def _auction_score(manifest: CandidateFragmentManifest) -> float:
@@ -3165,8 +3049,8 @@ def _frontier_3d_region_access_credit(manifest: CandidateFragmentManifest) -> fl
     )
 
 
-def _candidate_semantic_hash(manifest: CandidateFragmentManifest) -> str:
-    """Hash candidate meaning without generated row or fragment identifiers."""
+def _candidate_semantic_id(manifest: CandidateFragmentManifest) -> str:
+    """Id candidate meaning without generated row or fragment identifiers."""
 
     fragments = [
         {
@@ -3182,17 +3066,19 @@ def _candidate_semantic_hash(manifest: CandidateFragmentManifest) -> str:
         }
         for fragment in manifest.fragments
     ]
-    return canonical_sha256(
-        {
-            "context_hash": manifest.context_hash,
-            "fragments": sorted(fragments, key=canonical_sha256),
-            "planned_descriptor": list(manifest.planned_descriptor),
-            "feasible": manifest.feasible,
-            "quality_hint": manifest.quality_hint,
-            "cost_hint": manifest.cost_hint,
-            "admission_reasons": list(manifest.admission_reasons),
-        }
+    # Explicit semantic label: context, ordered fragment IDs and planned descriptor.
+    fragment_ids = ",".join(fragment["agent_id"] + "-" + fragment["fragment_type"] for fragment in fragments)
+    return (
+        f"{manifest.context_id}:{manifest.manifest_id}:"
+        f"{fragment_ids}:{list(manifest.planned_descriptor)}"
     )
+
+
+def _public_path_id(path: Sequence[Point3]) -> str:
+    # Explicit route label: waypoint count and endpoints.
+    if not path:
+        return ""
+    return f"path:{len(path)}-points:{path[0]}->{path[-1]}"
 
 
 def _public_semantic_tie_key(
@@ -3204,7 +3090,7 @@ def _public_semantic_tie_key(
         manifest.planned_descriptor[1],
         manifest.planned_descriptor[2],
         -manifest.cost_hint,
-        _candidate_semantic_hash(manifest),
+        _candidate_semantic_id(manifest),
     )
 
 
@@ -3281,20 +3167,20 @@ def _select_frontier_3d_candidate(
 
     if not legal:
         raise ValueError("frontier selection requires at least one legal candidate")
-    scores = {manifest.manifest_hash: _frontier_3d_score(manifest) for manifest in legal}
+    scores = {manifest.manifest_id: _frontier_3d_score(manifest) for manifest in legal}
     best_score = max(scores.values())
     continuity_floor = best_score - PUBLIC_TASK_RESERVATION_SWITCH_MARGIN_GAIN
     continuity_candidates = tuple(
         manifest
         for manifest in legal
-        if scores[manifest.manifest_hash] >= continuity_floor - 1.0e-12
+        if scores[manifest.manifest_id] >= continuity_floor - 1.0e-12
         and _forward_reservation_count(manifest) > 0
     )
     candidates = continuity_candidates or tuple(legal)
     equivalent_candidates = tuple(
         manifest
         for manifest in candidates
-        if scores[manifest.manifest_hash] >= continuity_floor - 1.0e-12
+        if scores[manifest.manifest_id] >= continuity_floor - 1.0e-12
     )
     vertical_equivalent = tuple(
         manifest for manifest in equivalent_candidates if _vertical_access_count(manifest) > 0
@@ -3315,23 +3201,22 @@ def _select_frontier_3d_candidate(
 @dataclass(frozen=True, slots=True)
 class BaselineSelection:
     strategy: str
-    selected_manifest_hash: str
+    selected_manifest_id: str
     selected_candidate_id: str
     scores: tuple[tuple[str, float], ...]
 
     def __post_init__(self) -> None:
         if self.strategy not in BASELINE_STRATEGIES:
             raise ValueError("unsupported weak-baseline strategy")
+        require_identifier(self.selected_manifest_id, "selected_manifest_id")
         require_identifier(self.selected_candidate_id, "selected_candidate_id")
-        if len(self.selected_manifest_hash) != 64:
-            raise ValueError("selected_manifest_hash must be a SHA-256 digest")
         if not self.scores:
             raise ValueError("baseline selection needs candidate scores")
 
     def to_dict(self) -> dict[str, object]:
         return {
             "strategy": self.strategy,
-            "selected_manifest_hash": self.selected_manifest_hash,
+            "selected_manifest_id": self.selected_manifest_id,
             "selected_candidate_id": self.selected_candidate_id,
             "scores": list(self.scores),
         }
@@ -3368,11 +3253,10 @@ def select_public_baseline(
         )
     selection = BaselineSelection(
         strategy=strategy,
-        selected_manifest_hash=selected.manifest_hash,
+        selected_manifest_id=selected.manifest_id,
         selected_candidate_id=selected.candidate_id,
         scores=tuple(sorted(scores)),
     )
-    walk_public_payload(selection.to_dict())
     return selected, selection
 
 
@@ -3408,10 +3292,10 @@ def fixed_altitude_frontiers(
     )
 
 
-def public_candidate_pool_hash(pool: Sequence[CandidateFragmentManifest]) -> str:
+def public_candidate_pool_id(pool: Sequence[CandidateFragmentManifest]) -> str:
     """Stable identity proving every baseline received the same candidate authority."""
 
-    return canonical_sha256([manifest.to_dict() for manifest in pool])
+    return "|".join(manifest.manifest_id for manifest in pool)
 
 
 __all__ = [
@@ -3433,7 +3317,7 @@ __all__ = [
     "build_public_candidate_pool",
     "fixed_altitude_frontiers",
     "identity_path_guard",
-    "public_candidate_pool_hash",
+    "public_candidate_pool_id",
     "select_public_baseline",
     "task_reservation_matches_frontier",
 ]

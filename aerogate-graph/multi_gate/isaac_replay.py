@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import json
 import math
-from pathlib import Path
 import time
+from pathlib import Path
 
 import numpy as np
 
 from multi_gate.configs.experiment_config import MULTI_EXPERIMENT_CONFIG, MultiExperimentConfig
+from shared.configs.global_config import GLOBAL_CONFIG
 from shared.core.collision_2d import GateObstacleMap2D
 from shared.runtime.artifacts import write_json
-from shared.configs.global_config import GLOBAL_CONFIG
 from shared.visualization.scene_isaaclab import (
     REPLAY_DRONE_BEACON_Z_OFFSET_M,
     REPLAY_DRONE_HALO_Z_OFFSET_M,
@@ -25,7 +25,6 @@ from shared.visualization.scene_isaaclab import (
     update_overview_replay_camera,
     update_replay_camera,
 )
-
 
 DEFAULT_GATE_USD = Path(__file__).resolve().parents[1] / "assets" / "gate" / "gate.usd"
 # Native gate height is 2.1335 m measured from assets/gate/gate.usd through the IsaacLab BBoxCache.
@@ -608,9 +607,8 @@ def _dynamic_gate_motion_summary(
 
 
 def _define_clean_xform(prim_path: str) -> None:
-    from pxr import UsdGeom
-
     import omni.usd
+    from pxr import UsdGeom
 
     stage = omni.usd.get_context().get_stage()
     if stage is None:
@@ -630,9 +628,8 @@ def _define_clean_xform(prim_path: str) -> None:
 def _force_xform_scale(prim_path: str, scale_xyz: tuple[float, float, float]) -> tuple[float, float, float]:
     """Author an explicit USD scale op so replay visuals match 2D gate geometry."""
 
-    from pxr import Gf, UsdGeom
-
     import omni.usd
+    from pxr import Gf, UsdGeom
 
     stage = omni.usd.get_context().get_stage()
     if stage is None:
@@ -654,9 +651,8 @@ def _force_xform_scale(prim_path: str, scale_xyz: tuple[float, float, float]) ->
 
 
 def _hide_collision_geometry(root_prim_path: str) -> None:
-    from pxr import Usd, UsdGeom
-
     import omni.usd
+    from pxr import Usd, UsdGeom
 
     stage = omni.usd.get_context().get_stage()
     if stage is None:
@@ -674,9 +670,8 @@ def _hide_collision_geometry(root_prim_path: str) -> None:
 
 
 def _lock_replay_obstacles_static(root_prim_path: str) -> None:
-    from pxr import Usd
-
     import omni.usd
+    from pxr import Usd
 
     try:
         from pxr import UsdPhysics
@@ -911,9 +906,8 @@ def _set_camera_pose(
 
 
 def _set_camera_orthographic(camera_prim_path: str, *, orthographic_size_m: float) -> None:
-    from pxr import UsdGeom
-
     import omni.usd
+    from pxr import UsdGeom
 
     stage = omni.usd.get_context().get_stage()
     camera_prim = stage.GetPrimAtPath(camera_prim_path)

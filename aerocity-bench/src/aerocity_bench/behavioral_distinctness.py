@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from .canonical import content_hash
 from .contracts import ActionPacket
 
 BEHAVIOR_SUMMARY_SCHEMA = "org.aerocity.bench.public-action-behavior.v1"
@@ -55,7 +55,7 @@ def _action_semantics(action: ActionPacket | Mapping[str, Any]) -> dict[str, Any
 def summarize_public_action_trace(
     trace: Sequence[Mapping[str, ActionPacket | Mapping[str, Any]]],
 ) -> dict[str, Any]:
-    """Hash mission-level action semantics without persisting the action trace."""
+    """Summarize mission-level action semantics without persisting the action trace."""
 
     if not trace:
         raise ValueError("public action behavior requires at least one planner invocation")
@@ -84,7 +84,7 @@ def summarize_public_action_trace(
         "action_count": sum(len(actions) for actions in normalized),
         "fleet_roster": list(expected_roster or ()),
         "action_kind_counts": dict(sorted(kinds.items())),
-        "mission_action_semantics_sha256": content_hash(normalized),
+        "mission_action_signature": json.dumps(normalized, sort_keys=True),
         "identity_and_absolute_time_fields_omitted": True,
         "private_truth_omitted": True,
     }
@@ -101,11 +101,11 @@ def audit_method_panel_behavior(reports: Sequence[Mapping[str, Any]]) -> dict[st
         if report.get("formal_score_eligible") is not False:
             raise ValueError("behavior audit accepts diagnostic reports only")
         method_id = str(report.get("method_id", ""))
-        layout_hash = str(report.get("layout_hash", ""))
-        episode_hash = str(report.get("episode_hash", ""))
-        if not method_id or not layout_hash or not episode_hash:
+        layout_id = str(report.get("layout_id", ""))
+        episode_id = str(report.get("episode_id", ""))
+        if not method_id or not layout_id or not episode_id:
             raise ValueError("behavior report lacks method or public context binding")
-        contexts.add((layout_hash, episode_hash))
+        contexts.add((layout_id, episode_id))
         replicates = report.get("replicates")
         if not isinstance(replicates, list) or not replicates:
             raise ValueError("behavior report lacks replicates")
@@ -116,8 +116,8 @@ def audit_method_panel_behavior(reports: Sequence[Mapping[str, Any]]) -> dict[st
             summary = replicate.get("public_action_behavior")
             if not isinstance(summary, Mapping) or summary.get("schema") != BEHAVIOR_SUMMARY_SCHEMA:
                 raise ValueError("behavior report replicate lacks a public action signature")
-            signature = str(summary.get("mission_action_semantics_sha256", ""))
-            if len(signature) != 64:
+            signature = str(summary.get("mission_action_signature", ""))
+            if not signature:
                 raise ValueError("behavior report contains an invalid action signature")
             method_signatures.add(signature)
     if len(contexts) != 1:
@@ -138,13 +138,13 @@ def audit_method_panel_behavior(reports: Sequence[Mapping[str, Any]]) -> dict[st
         status = "REVIEW_NONDETERMINISM"
     elif equivalent_groups:
         status = "REVIEW_EXACT_EQUIVALENCE"
-    layout_hash, episode_hash = next(iter(contexts))
+    layout_id, episode_id = next(iter(contexts))
     result: dict[str, Any] = {
         "schema": PANEL_AUDIT_SCHEMA,
         "formal_score_eligible": False,
         "status": status,
-        "layout_hash": layout_hash,
-        "episode_hash": episode_hash,
+        "layout_id": layout_id,
+        "episode_id": episode_id,
         "method_count": len(signatures),
         "distinct_deterministic_behavior_count": distinct_deterministic_signatures,
         "exact_equivalence_groups": equivalent_groups,
@@ -156,7 +156,6 @@ def audit_method_panel_behavior(reports: Sequence[Mapping[str, Any]]) -> dict[st
         "does_not_delete_or_censor_replays": True,
         "requires_justification_before_redundant_l1": bool(equivalent_groups),
     }
-    result["report_hash"] = content_hash(result)
     return result
 
 
@@ -178,11 +177,11 @@ def audit_method_panel_behavior_cohort(
     indexed: dict[tuple[str, str], dict[str, Mapping[str, Any]]] = {}
     for report in reports:
         method_id = str(report.get("method_id", ""))
-        layout_hash = str(report.get("layout_hash", ""))
-        episode_hash = str(report.get("episode_hash", ""))
-        if not method_id or len(layout_hash) != 64 or len(episode_hash) != 64:
+        layout_id = str(report.get("layout_id", ""))
+        episode_id = str(report.get("episode_id", ""))
+        if not method_id or not layout_id or not episode_id:
             raise ValueError("cohort behavior report lacks method or context bindings")
-        context = (layout_hash, episode_hash)
+        context = (layout_id, episode_id)
         if method_id in indexed.setdefault(context, {}):
             raise ValueError("cohort behavior panel duplicates a method/context report")
         indexed[context][method_id] = report
@@ -204,18 +203,18 @@ def audit_method_panel_behavior_cohort(
         )
         context_audits.append(
             {
-                "layout_hash": context[0],
-                "episode_hash": context[1],
+                "layout_id": context[0],
+                "episode_id": context[1],
                 "status": audit["status"],
                 "exact_equivalence_groups": audit["exact_equivalence_groups"],
                 "nondeterministic_methods": audit["nondeterministic_methods"],
-                "audit_report_hash": audit["report_hash"],
+                
             }
         )
         nondeterministic.update(str(value) for value in audit["nondeterministic_methods"])
         for method in methods:
             signatures = {
-                str(replicate["public_action_behavior"]["mission_action_semantics_sha256"])
+                str(replicate["public_action_behavior"]["mission_action_signature"])
                 for replicate in indexed[context][method]["replicates"]
             }
             if len(signatures) == 1:
@@ -261,5 +260,4 @@ def audit_method_panel_behavior_cohort(
         "does_not_delete_or_censor_candidate_methods": True,
         "requires_stochastic_repeat_adjudication": bool(nondeterministic),
     }
-    result["report_hash"] = content_hash(result)
     return result

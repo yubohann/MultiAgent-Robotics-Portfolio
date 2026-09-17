@@ -10,8 +10,13 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.metrics import METRIC_VERSION, score_search_episode  # noqa: E402
-from rivermark_benchmark.metrics_reference import score_search_episode_reference  # noqa: E402
+from rivermark_benchmark.metrics import (
+    METRIC_VERSION,
+    score_search_episode,
+)
+from rivermark_benchmark.metrics_reference import (
+    score_search_episode_reference,
+)
 
 
 class MetricsReferenceTests(unittest.TestCase):

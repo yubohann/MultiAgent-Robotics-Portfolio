@@ -9,19 +9,19 @@ from pathlib import Path
 
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 try:
-    import cv2  # noqa: F401
+    import cv2
     import imageio_ffmpeg  # noqa: F401
 except ImportError:
     cv2 = None
 
 from rivermark_benchmark.demo import Mp4Writer
+
 from rivermark_benchmark.frame_archive import write_chunked_frame_archive
 from rivermark_benchmark.video import (
     STATE_ONLY_TRANSFER_INDEPENDENT_VALIDATION_SCHEMA,
@@ -30,14 +30,14 @@ from rivermark_benchmark.video import (
     encode_isaac_composite,
     encode_isaac_overview,
     require_release_video,
-    sha256_file,
+    identity_file,
 )
 
 
 def _audit(**changes) -> VideoAudit:
     value = VideoAudit(
         path="demo.mp4",
-        sha256="0" * 64,
+        identity="0" * 16,
         bytes=4096,
         width=16,
         height=16,
@@ -67,7 +67,7 @@ class ReleaseVideoTests(unittest.TestCase):
             "schema": "org.rivermark.isaac-independent-validation.v1",
             "status": "passed",
             "issues": [],
-            "capture_receipt_sha256": sha256_file(receipt_path),
+            "capture_receipt_identity": identity_file(receipt_path),
         }
         validation.update(updates)
         destination = root / "independent_validation.json"
@@ -125,13 +125,13 @@ class ReleaseVideoTests(unittest.TestCase):
         receipt = {
             "schema": "org.rivermark.isaac-swarm-capture.v1",
             "ok": True,
-            "artifact_hashes": {
+            "artifact_identities": {
                 "sensors/overview_rgb.npz": {
-                    "sha256": sha256_file(overview_path),
+                    "identity": identity_file(overview_path),
                     "bytes": overview_path.stat().st_size,
                 },
                 "sensors/onboard_rgbd.npz": {
-                    "sha256": sha256_file(onboard_path),
+                    "identity": identity_file(onboard_path),
                     "bytes": onboard_path.stat().st_size,
                 },
             },
@@ -189,7 +189,7 @@ class ReleaseVideoTests(unittest.TestCase):
                     {
                         "schema": "org.rivermark.isaac-swarm-capture.v1",
                         "ok": True,
-                        "artifact_hashes": {"sensors/overview_rgb.npz": {"sha256": sha256_file(source)}},
+                        "artifact_identities": {"sensors/overview_rgb.npz": {"identity": identity_file(source)}},
                     }
                 ),
                 encoding="utf-8",
@@ -197,14 +197,14 @@ class ReleaseVideoTests(unittest.TestCase):
             validation_path = self._write_passing_validation(root)
             destination = Path(temporary) / "isaac-demo.mp4"
             result = encode_isaac_overview(root, destination)
-            self.assertEqual(result["capture_receipt_sha256"], sha256_file(receipt_path))
-            self.assertEqual(result["independent_validation_sha256"], sha256_file(validation_path))
-            self.assertEqual(result["overview_npz_sha256"], sha256_file(source))
+            self.assertEqual(result["capture_receipt_identity"], identity_file(receipt_path))
+            self.assertEqual(result["independent_validation_identity"], identity_file(validation_path))
+            self.assertEqual(result["overview_npz_identity"], identity_file(source))
             self.assertAlmostEqual(result["fps"], 20.0)
             self.assertEqual(result["audit"]["frame_count"], 3)
             self.assertTrue(destination.with_suffix(".mp4.receipt.json").is_file())
 
-    def test_overview_tamper_and_invalid_fps_fail_before_encoding(self) -> None:
+    def test_overview_alter_and_invalid_fps_fail_before_encoding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "capture"
             source = root / "sensors" / "overview_rgb.npz"
@@ -217,13 +217,13 @@ class ReleaseVideoTests(unittest.TestCase):
             receipt = {
                 "schema": "org.rivermark.isaac-swarm-capture.v1",
                 "ok": True,
-                "artifact_hashes": {"sensors/overview_rgb.npz": {"sha256": "0" * 64}},
+                "artifact_identities": {"sensors/overview_rgb.npz": {"identity": "0" * 16}},
             }
             (root / "capture_receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
             self._write_passing_validation(root)
             with self.assertRaisesRegex(RuntimeError, "not bound"):
-                encode_isaac_overview(root, Path(temporary) / "tampered.mp4")
-            receipt["artifact_hashes"]["sensors/overview_rgb.npz"]["sha256"] = sha256_file(source)
+                encode_isaac_overview(root, Path(temporary) / "altered.mp4")
+            receipt["artifact_identities"]["sensors/overview_rgb.npz"]["identity"] = identity_file(source)
             (root / "capture_receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
             self._write_passing_validation(root)
             with self.assertRaisesRegex(ValueError, "finite and positive"):
@@ -244,7 +244,7 @@ class ReleaseVideoTests(unittest.TestCase):
                     {
                         "schema": "org.rivermark.isaac-swarm-capture.v1",
                         "ok": True,
-                        "artifact_hashes": [],
+                        "artifact_identities": [],
                     }
                 ),
                 encoding="utf-8",
@@ -272,7 +272,7 @@ class ReleaseVideoTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "passing independent validation"):
                     encode_isaac_overview(root, Path(temporary) / "invalid-validation.mp4")
 
-            self._write_passing_validation(root, capture_receipt_sha256="0" * 64)
+            self._write_passing_validation(root, capture_receipt_identity="0" * 16)
             with self.assertRaisesRegex(RuntimeError, "does not bind"):
                 encode_isaac_composite(root, Path(temporary) / "wrong-capture-binding.mp4")
 
@@ -282,7 +282,7 @@ class ReleaseVideoTests(unittest.TestCase):
             self._composite_capture(root)
             validation_path = self._write_state_only_transfer_validation(root)
             result = encode_isaac_overview(root, Path(temporary) / "transfer-overview.mp4")
-            self.assertEqual(result["independent_validation_sha256"], sha256_file(validation_path))
+            self.assertEqual(result["independent_validation_identity"], identity_file(validation_path))
 
             self._write_passing_validation(root)
             with self.assertRaisesRegex(RuntimeError, "state-only transfer capture requires"):
@@ -322,10 +322,10 @@ class ReleaseVideoTests(unittest.TestCase):
             self.assertEqual(result["layout"]["slots"][0]["height"], 24)
             self.assertEqual(result["timestamps"]["count"], len(timestamps))
             self.assertEqual(len(set(result["timestamp_bindings"].values())), 1)
-            self.assertEqual(result["video_sha256"], sha256_file(destination))
+            self.assertEqual(result["video_identity"], identity_file(destination))
             self.assertEqual(
-                result["independent_validation_sha256"],
-                sha256_file(root / "independent_validation.json"),
+                result["independent_validation_identity"],
+                identity_file(root / "independent_validation.json"),
             )
             self.assertEqual(result["audit"]["path"], destination.name)
             self.assertEqual(result["audit"]["codec_name"], "h264")
@@ -385,8 +385,8 @@ class ReleaseVideoTests(unittest.TestCase):
                 ("sensors/overview_rgb.npz", overview_path),
                 ("sensors/onboard_rgbd.npz", onboard_path),
             ):
-                receipt["artifact_hashes"][relative] = {
-                    "sha256": sha256_file(path),
+                receipt["artifact_identities"][relative] = {
+                    "identity": identity_file(path),
                     "bytes": path.stat().st_size,
                 }
             receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
@@ -398,7 +398,7 @@ class ReleaseVideoTests(unittest.TestCase):
     def test_isaac_composite_maps_low_rate_overview_to_exact_onboard_frames(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "capture"
-            timestamps, overview, onboard = self._composite_capture(root)
+            timestamps, overview, _onboard = self._composite_capture(root)
             overview_path = root / "sensors" / "overview_rgb.npz"
             selected = np.asarray([0, 2], dtype=np.int64)
             np.savez_compressed(
@@ -408,8 +408,8 @@ class ReleaseVideoTests(unittest.TestCase):
             )
             receipt_path = root / "capture_receipt.json"
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-            receipt["artifact_hashes"]["sensors/overview_rgb.npz"] = {
-                "sha256": sha256_file(overview_path),
+            receipt["artifact_identities"]["sensors/overview_rgb.npz"] = {
+                "identity": identity_file(overview_path),
                 "bytes": overview_path.stat().st_size,
             }
             receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
@@ -429,7 +429,7 @@ class ReleaseVideoTests(unittest.TestCase):
                 ],
             )
 
-    def test_isaac_composite_rejects_tamper_timestamp_mismatch_and_wrong_agent_count(self) -> None:
+    def test_isaac_composite_rejects_alter_timestamp_mismatch_and_wrong_agent_count(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "capture"
             timestamps, _, onboard = self._composite_capture(root)
@@ -437,15 +437,15 @@ class ReleaseVideoTests(unittest.TestCase):
             destination = Path(temporary) / "invalid.mp4"
 
             with onboard_path.open("ab") as stream:
-                stream.write(b"tamper")
+                stream.write(b"alter")
             with self.assertRaisesRegex(RuntimeError, "not bound"):
                 encode_isaac_composite(root, destination)
             self.assertFalse(destination.exists())
 
             np.savez_compressed(onboard_path, timestamps_ns=timestamps + 1, rgb=onboard)
             receipt = json.loads((root / "capture_receipt.json").read_text(encoding="utf-8"))
-            receipt["artifact_hashes"]["sensors/onboard_rgbd.npz"] = {
-                "sha256": sha256_file(onboard_path),
+            receipt["artifact_identities"]["sensors/onboard_rgbd.npz"] = {
+                "identity": identity_file(onboard_path),
                 "bytes": onboard_path.stat().st_size,
             }
             (root / "capture_receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
@@ -454,8 +454,8 @@ class ReleaseVideoTests(unittest.TestCase):
                 encode_isaac_composite(root, destination)
 
             np.savez_compressed(onboard_path, timestamps_ns=timestamps, rgb=onboard[:, :7])
-            receipt["artifact_hashes"]["sensors/onboard_rgbd.npz"] = {
-                "sha256": sha256_file(onboard_path),
+            receipt["artifact_identities"]["sensors/onboard_rgbd.npz"] = {
+                "identity": identity_file(onboard_path),
                 "bytes": onboard_path.stat().st_size,
             }
             (root / "capture_receipt.json").write_text(json.dumps(receipt), encoding="utf-8")

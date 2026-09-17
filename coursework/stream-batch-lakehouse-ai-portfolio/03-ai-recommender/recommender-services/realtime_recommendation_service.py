@@ -2,7 +2,7 @@ from kafka import KafkaConsumer, KafkaProducer
 import json
 from datetime import datetime
 from recommendation_algorithms import (
-    Product, UserProfile, HybridRecommender, get_sample_products
+    UserProfile, HybridRecommender, get_sample_products
 )
 import threading
 import time

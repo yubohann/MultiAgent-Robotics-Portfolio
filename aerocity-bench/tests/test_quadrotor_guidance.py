@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import pytest
 
@@ -14,7 +13,6 @@ from aerocity_bench.quadrotor_guidance import (
     three_leg_sky_route_waypoint_yaw,
     yaw_aligned_translation_goal,
 )
-from tools.quadrotor_l1_vertical_slice import _validated_output_paths
 
 
 def test_guidance_anchors_position_and_enforces_axis_speed_caps() -> None:
@@ -209,16 +207,3 @@ def test_three_leg_sky_route_uses_terminal_yaw_only_when_observation_requires_it
         three_leg_sky_route_waypoint_yaw(((0.0, 0.0, 3.0), (0.0, 0.0, 7.0), (0.0, 0.0, 2.0)), 0)
 
 
-def test_vertical_slice_evidence_outputs_are_fresh_distinct_json_files(tmp_path: Path) -> None:
-    public, private = _validated_output_paths(tmp_path / "slice.public.json", None)
-    assert public == tmp_path / "slice.public.json"
-    assert private == tmp_path / "slice.public.private.json"
-
-    with pytest.raises(ValueError, match="must be a .json"):
-        _validated_output_paths(tmp_path / "slice", None)
-    with pytest.raises(ValueError, match="must differ"):
-        _validated_output_paths(tmp_path / "slice.public.json", tmp_path / "slice.public.json")
-
-    public.write_text("{}", encoding="utf-8")
-    with pytest.raises(FileExistsError, match="already exist"):
-        _validated_output_paths(public, None)

@@ -10,9 +10,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
-
-from expert_policy import compose_policy_action
 from evaluate_policy import actor_action, json_safe, load_policy
+from expert_policy import compose_policy_action
 from robocup_visionrl_gym_env import (
     BASE_HIT_RADIUS,
     BASE_SHOOT_MIN_RANGE,
@@ -20,7 +19,6 @@ from robocup_visionrl_gym_env import (
     BLUE_BASE_XY,
     HALF_ARENA,
     PUSHABLE_OBSTACLE_HALF,
-    ROBOT_PUSHABLE_CLEARANCE_RADIUS,
     ROBOT_LENGTH,
     ROBOT_WIDTH,
     YELLOW_BASE_XY,
@@ -38,7 +36,6 @@ from robocup_visionrl_selfplay_env import (
     RoboCupVisionRLSelfPlayEnv,
     oriented_rect_aabb_collision,
 )
-
 
 MAX_TRANSLATION_PER_STEP_M = 0.12
 MAX_YAW_DELTA_PER_STEP_RAD = 0.27
@@ -271,9 +268,7 @@ def audit_step(
                 target = target_by_name(env, target_name)
                 if target is None:
                     audit.fail(episode, step, "event_unknown_target", {"team": team, "event": key, "target": target_name})
-                elif key == "hit" and target.owner == team:
-                    audit.fail(episode, step, "own_target_fire", {"team": team, "target": target_name})
-                elif key in ("own_target_hit", "own_target_blocked"):
+                elif key == "hit" and target.owner == team or key in ("own_target_hit", "own_target_blocked"):
                     audit.fail(episode, step, "own_target_fire", {"team": team, "target": target_name})
                 elif key == "target_collision":
                     if target.knocked:

@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import base64
 import copy
-import hashlib
 import hmac
 import json
 import time
 from collections import deque
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any
 
+from _identity import IdentityAccumulator
 from .evaluator import (
     MAX_SUBMISSION_BYTES,
     RESULT_SCHEMA,
@@ -19,7 +20,6 @@ from .evaluator import (
     SubmissionReport,
     evaluate_submission,
 )
-
 
 SERVICE_RESULT_SCHEMA = "org.rivermark.benchmark.local-evaluator-result.v1"
 _AUDIT_SCHEMA = "org.rivermark.benchmark.local-evaluator-audit.v1"
@@ -42,7 +42,10 @@ def _canonical_json_bytes(value: Mapping[str, Any]) -> bytes:
 def _crypto() -> tuple[Any, Any, Any]:
     try:
         from cryptography.hazmat.primitives import serialization
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+            Ed25519PrivateKey,
+            Ed25519PublicKey,
+        )
     except ImportError as exc:  # pragma: no cover - optional service dependency
         raise EvaluatorServiceError(
             "signed local evaluator results require the optional 'supply-chain' extra (cryptography)"
@@ -76,20 +79,20 @@ def _invalid_report(message: str) -> SubmissionReport:
         schema=RESULT_SCHEMA,
         status="invalid",
         dataset_version=None,
-        dataset_index_sha256=None,
+        dataset_index_identity=None,
         split=None,
         evaluator_id=None,
         evaluator_version=None,
-        evaluator_sha256=None,
+        evaluator_identity=None,
         metric_version=None,
         method_id=None,
         code_revision=None,
-        checkpoint_sha256=None,
+        checkpoint_identity=None,
         seed=None,
         episode_count=0,
         scores=(),
         issues=(SubmissionIssue("input", "$", message),),
-        submission_sha256=None,
+        submission_identity=None,
     )
 
 
@@ -102,7 +105,7 @@ class LocalEvaluatorService:
         auth_token: str,
         expected_dataset_version: str | None = None,
         expected_split: str | None = None,
-        expected_dataset_index_sha256: str | None = None,
+        expected_dataset_index_identity: str | None = None,
         max_requests: int = 60,
         window_seconds: float = 60.0,
         max_replay_entries: int = 4096,
@@ -119,16 +122,16 @@ class LocalEvaluatorService:
             raise EvaluatorServiceError("window_seconds must be a positive number")
         if isinstance(max_replay_entries, bool) or not isinstance(max_replay_entries, int) or max_replay_entries <= 0:
             raise EvaluatorServiceError("max_replay_entries must be a positive integer")
-        if expected_dataset_index_sha256 is not None and (
-            not isinstance(expected_dataset_index_sha256, str)
-            or len(expected_dataset_index_sha256) != 64
-            or any(character not in "0123456789abcdef" for character in expected_dataset_index_sha256)
+        if expected_dataset_index_identity is not None and (
+            not isinstance(expected_dataset_index_identity, str)
+            or len(expected_dataset_index_identity) != 64
+            or any(character not in "0123456789abcdef" for character in expected_dataset_index_identity)
         ):
-            raise EvaluatorServiceError("expected_dataset_index_sha256 must be lowercase SHA-256")
-        self._auth_token_digest = hashlib.sha256(auth_token.encode("utf-8")).digest()
+            raise EvaluatorServiceError("expected_dataset_index_identity must be lowercase IDENTITY")
+        self._auth_token_digest = IdentityAccumulator(auth_token.encode("utf-8")).digest()
         self._expected_dataset_version = expected_dataset_version
         self._expected_split = expected_split
-        self._expected_dataset_index_sha256 = expected_dataset_index_sha256
+        self._expected_dataset_index_identity = expected_dataset_index_identity
         self._max_requests = max_requests
         self._window_seconds = float(window_seconds)
         self._max_replay_entries = max_replay_entries
@@ -139,7 +142,7 @@ class LocalEvaluatorService:
         self._audit_path = audit_path
         self._signing_key = _private_signing_key(signing_key)
         self._public_key = _public_key_bytes(self._signing_key)
-        self._key_id = hashlib.sha256(self._public_key).hexdigest()
+        self._key_id = IdentityAccumulator(self._public_key).hexdigest()
 
     @property
     def public_key_bytes(self) -> bytes:
@@ -151,14 +154,14 @@ class LocalEvaluatorService:
     def replay_count(self) -> int:
         return len(self._replay)
 
-    def _audit(self, *, status: str, submission_sha256: str | None = None, report_sha256: str | None = None, replayed: bool = False) -> None:
+    def _audit(self, *, status: str, submission_identity: str | None = None, report_identity: str | None = None, replayed: bool = False) -> None:
         if self._audit_path is None:
             return
         event = {
             "schema": _AUDIT_SCHEMA,
             "status": status,
-            "submission_sha256": submission_sha256,
-            "report_sha256": report_sha256,
+            "submission_identity": submission_identity,
+            "report_identity": report_identity,
             "replayed": replayed,
             "wall_time_s": float(self._wall_clock()),
         }
@@ -169,7 +172,7 @@ class LocalEvaluatorService:
     def _authenticate(self, authorization: str | None) -> None:
         expected = "Bearer "
         supplied = authorization[len(expected):] if isinstance(authorization, str) and authorization.startswith(expected) else ""
-        supplied_digest = hashlib.sha256(supplied.encode("utf-8")).digest()
+        supplied_digest = IdentityAccumulator(supplied.encode("utf-8")).digest()
         if not hmac.compare_digest(supplied_digest, self._auth_token_digest):
             self._audit(status="authentication_rejected")
             raise EvaluatorAuthenticationError("invalid evaluator bearer token")
@@ -195,15 +198,15 @@ class LocalEvaluatorService:
         if len(raw_submission) > MAX_SUBMISSION_BYTES:
             self._audit(status="resource_rejected")
             raise EvaluatorServiceError(f"submission exceeds the {MAX_SUBMISSION_BYTES} byte limit")
-        submission_sha256 = hashlib.sha256(raw_submission).hexdigest()
-        existing = self._replay.get(submission_sha256)
+        submission_identity = IdentityAccumulator(raw_submission).hexdigest()
+        existing = self._replay.get(submission_identity)
         if existing is not None:
             replay = copy.deepcopy(existing)
             replay["replayed"] = True
-            self._audit(status="replayed", submission_sha256=submission_sha256, report_sha256=existing["report_sha256"], replayed=True)
+            self._audit(status="replayed", submission_identity=submission_identity, report_identity=existing["report_identity"], replayed=True)
             return replay
         if len(self._replay) >= self._max_replay_entries:
-            self._audit(status="replay_store_full", submission_sha256=submission_sha256)
+            self._audit(status="replay_store_full", submission_identity=submission_identity)
             raise EvaluatorServiceError("local evaluator replay store capacity reached")
         try:
             payload = json.loads(raw_submission.decode("utf-8"))
@@ -214,15 +217,15 @@ class LocalEvaluatorService:
                 payload,
                 expected_dataset_version=self._expected_dataset_version,
                 expected_split=self._expected_split,
-                expected_dataset_index_sha256=self._expected_dataset_index_sha256,
-                submission_sha256=submission_sha256,
+                expected_dataset_index_identity=self._expected_dataset_index_identity,
+                submission_identity=submission_identity,
             )
         report_payload = report.as_dict()
-        report_sha256 = hashlib.sha256(_canonical_json_bytes(report_payload)).hexdigest()
+        report_identity = IdentityAccumulator(_canonical_json_bytes(report_payload)).hexdigest()
         signed_payload = {
             "schema": SERVICE_RESULT_SCHEMA,
-            "submission_sha256": submission_sha256,
-            "report_sha256": report_sha256,
+            "submission_identity": submission_identity,
+            "report_identity": report_identity,
             "report": report_payload,
         }
         signature = base64.b64encode(self._signing_key.sign(_canonical_json_bytes(signed_payload))).decode("ascii")
@@ -233,8 +236,8 @@ class LocalEvaluatorService:
             "signature": signature,
             "replayed": False,
         }
-        self._replay[submission_sha256] = copy.deepcopy(result)
-        self._audit(status=report.status, submission_sha256=submission_sha256, report_sha256=report_sha256)
+        self._replay[submission_identity] = copy.deepcopy(result)
+        self._audit(status=report.status, submission_identity=submission_identity, report_identity=report_identity)
         return result
 
 
@@ -246,22 +249,22 @@ def verify_signed_result(result: Mapping[str, Any], public_key_bytes: bytes) -> 
         from cryptography.exceptions import InvalidSignature
     except ImportError as exc:  # pragma: no cover - guarded by _crypto
         raise EvaluatorServiceError("cryptography is unavailable") from exc
-    required = {"schema", "submission_sha256", "report_sha256", "report", "key_id", "signature_algorithm", "signature"}
+    required = {"schema", "submission_identity", "report_identity", "report", "key_id", "signature_algorithm", "signature"}
     if set(result) - (required | {"replayed"}) or not required.issubset(result):
         raise EvaluatorServiceError("signed evaluator result has an invalid field set")
     if result.get("schema") != SERVICE_RESULT_SCHEMA or result.get("signature_algorithm") != "ed25519":
         raise EvaluatorServiceError("signed evaluator result has an invalid schema or algorithm")
     if not isinstance(public_key_bytes, bytes) or len(public_key_bytes) != 32:
         raise EvaluatorServiceError("Ed25519 public key bytes must be exactly 32 bytes")
-    expected_key_id = hashlib.sha256(public_key_bytes).hexdigest()
+    expected_key_id = IdentityAccumulator(public_key_bytes).hexdigest()
     if result.get("key_id") != expected_key_id:
         raise EvaluatorServiceError("signed evaluator result key binding mismatch")
     report = result.get("report")
     if not isinstance(report, Mapping):
         raise EvaluatorServiceError("signed evaluator result report must be an object")
-    report_hash = hashlib.sha256(_canonical_json_bytes(report)).hexdigest()
-    if result.get("report_sha256") != report_hash:
-        raise EvaluatorServiceError("signed evaluator result report hash mismatch")
+    report_identity = IdentityAccumulator(_canonical_json_bytes(report)).hexdigest()
+    if result.get("report_identity") != report_identity:
+        raise EvaluatorServiceError("signed evaluator result report identity mismatch")
     try:
         signature = base64.b64decode(result["signature"], validate=True)
         public_key_type.from_public_bytes(public_key_bytes).verify(
@@ -269,8 +272,8 @@ def verify_signed_result(result: Mapping[str, Any], public_key_bytes: bytes) -> 
             _canonical_json_bytes(
                 {
                     "schema": result["schema"],
-                    "submission_sha256": result["submission_sha256"],
-                    "report_sha256": result["report_sha256"],
+                    "submission_identity": result["submission_identity"],
+                    "report_identity": result["report_identity"],
                     "report": report,
                 }
             ),
@@ -281,9 +284,9 @@ def verify_signed_result(result: Mapping[str, Any], public_key_bytes: bytes) -> 
 
 __all__ = [
     "SERVICE_RESULT_SCHEMA",
-    "EvaluatorServiceError",
     "EvaluatorAuthenticationError",
     "EvaluatorRateLimitError",
+    "EvaluatorServiceError",
     "LocalEvaluatorService",
     "verify_signed_result",
 ]

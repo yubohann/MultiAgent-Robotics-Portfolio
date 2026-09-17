@@ -59,7 +59,7 @@ def main() -> int:
     root = split.get("payload", split)
     if not isinstance(root, dict):
         raise ValueError("P05 split manifest payload must be an object")
-    split_hash = str(root["split_manifest_sha256"])
+    split_id = str(root["split_manifest_id"])
     samples = tuple(
         sample
         for path in args.rollout
@@ -70,7 +70,7 @@ def main() -> int:
     )
     model_checkpoint, model_provenance = train_marl_ipp_port_baseline(
         samples,
-        split_manifest_sha256=split_hash,
+        split_manifest_id=split_id,
         source_root=args.source_root.expanduser().resolve(),
         source_checkpoint=args.source_checkpoint.expanduser().resolve(),
         updates=args.updates,

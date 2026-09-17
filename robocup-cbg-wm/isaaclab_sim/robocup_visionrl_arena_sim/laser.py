@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-
 from ._bootstrap import (
     ARMOR_REMOVALS,
     BASE_ARMOR,
@@ -21,14 +20,14 @@ from ._bootstrap import (
     MATCH_STATE,
     PUSHABLE_OBSTACLES,
     ROBOT_COLLISION_RADIUS,
-    SHOOTER_POSE,
     SHOOT_HIT_RADIUS,
     SHOOT_RANGE,
+    SHOOTER_POSE,
     TARGET_CONTACT_RADIUS,
     TARGET_FALLS,
     TARGET_REGISTRY,
     args_cli,
-    get_current_stage
+    get_current_stage,
 )
 from .rules import (
     base_attack_pose_quality,
@@ -36,7 +35,7 @@ from .rules import (
     normal_hits_against,
     normalized_laser_dwell_factor,
     shooting_range_limits,
-    target_name_from_path
+    target_name_from_path,
 )
 from .spawn import segment_intersects_aabb, unregister_blocker
 from .transforms import (
@@ -44,8 +43,9 @@ from .transforms import (
     local_to_world,
     quat_from_euler,
     set_visibility,
-    set_xform
+    set_xform,
 )
+
 
 def line_blocked_by_wall(origin_xy: tuple[float, float], target_xy: tuple[float, float]) -> bool:
     for blocker_path, center, half_size in LASER_BLOCKERS:

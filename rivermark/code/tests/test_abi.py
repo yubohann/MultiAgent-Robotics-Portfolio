@@ -17,7 +17,7 @@ from rivermark_benchmark.abi import (
     AbiError,
     assess_observation_abi_compatibility,
     load_observation_abi,
-    observation_abi_sha256,
+    observation_abi_identity,
     validate_formal_observation_abi,
     validate_observation_abi,
 )
@@ -81,22 +81,22 @@ def _abi() -> dict[str, object]:
 
 
 class ObservationAbiTests(unittest.TestCase):
-    def test_valid_abi_is_stable_and_hashable(self) -> None:
+    def test_valid_abi_is_stable_and_identifiable(self) -> None:
         payload = _abi()
         self.assertEqual(validate_observation_abi(payload), ())
-        first = observation_abi_sha256(payload)
+        first = observation_abi_identity(payload)
         changed = copy.deepcopy(payload)
         changed["streams"][0]["fields"][0]["units"] = "pixel"
-        self.assertNotEqual(first, observation_abi_sha256(changed))
+        self.assertNotEqual(first, observation_abi_identity(changed))
 
     def test_signed_int8_action_mode_is_supported(self) -> None:
         payload = _abi()
         payload["streams"][1]["fields"][0]["dtype"] = "int8"
 
         self.assertEqual(validate_observation_abi(payload), ())
-        self.assertEqual(len(observation_abi_sha256(payload)), 64)
+        self.assertEqual(len(observation_abi_identity(payload)), 16)
 
-    def test_action_causality_and_coordinate_tampering_fail_closed(self) -> None:
+    def test_action_causality_and_coordinate_alteration_strict(self) -> None:
         payload = _abi()
         payload["action_timing"]["sensor_read"] = "before_simulation_step"
         payload["coordinate_frames"]["quaternion_order"] = "xyzw"
@@ -158,7 +158,7 @@ class ObservationAbiTests(unittest.TestCase):
         self.assertFalse(report.formal_admissible)
         self.assertEqual(report.issues, ())
 
-    def test_newer_producer_and_semantic_change_fail_closed(self) -> None:
+    def test_newer_producer_and_semantic_change_strict(self) -> None:
         producer = copy.deepcopy(_abi())
         producer["version"] = "1.1.0"
         for stream in producer["streams"]:

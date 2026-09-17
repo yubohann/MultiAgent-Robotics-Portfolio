@@ -13,11 +13,11 @@ from aerocity_method.runtime.hm3d_belief import FREE, PublicRangeRayOutcome, Spa
 from aerocity_method.runtime.hm3d_realised_qd import (
     HM3D_CURRENT_QD_DESCRIPTOR_FAMILY_ID,
     HM3D_REALISED_QD_ARCHIVE_SPEC,
+    OutcomeGroundedQDSelector,
+    OutcomeQDFeatureVector,
     PlannedQDSelector,
     PublicExplorationNeed,
     RealisedQDDescriptor,
-    OutcomeGroundedQDSelector,
-    OutcomeQDFeatureVector,
     audit_intent_realised_alignment,
     audit_pre_registered_qd_descriptor_families,
     audit_public_candidate_intent_richness,
@@ -28,11 +28,11 @@ from aerocity_method.runtime.hm3d_realised_qd import (
     audit_realised_qd_richness,
     audit_value_protected_candidate_diversity,
     descriptor_values_for_qd_family,
+    outcome_qd_feature_vector_from_public_outcomes,
     public_exploration_need_from_public_belief,
     public_free_footprint_from_range_outcomes,
     public_observation_workload_balance_from_range_outcomes,
     realised_descriptor_from_public_outcomes,
-    outcome_qd_feature_vector_from_public_outcomes,
 )
 
 
@@ -62,8 +62,8 @@ def _outcome(
     )
 
 
-def _execution_hash(index: int) -> str:
-    return f"{index:064x}"
+def _execution_id(index: int) -> str:
+    return f"outcome-test-{index}"
 
 
 def _need(values: tuple[float, float, float]) -> PublicExplorationNeed:
@@ -71,8 +71,8 @@ def _need(values: tuple[float, float, float]) -> PublicExplorationNeed:
         vertical_exploration_deficit=values[0],
         spatial_dispersion_deficit=values[1],
         duplicate_observation_deficit=values[2],
-        source_public_belief_sha256="a" * 64,
-        source_agent_footprints_sha256="b" * 64,
+        source_public_belief_id="a" * 64,
+        source_agent_footprints_id="b" * 64,
         source_public_outcome_count=4,
     )
 
@@ -97,8 +97,8 @@ def _seed_outcome_archive(archive: QDArchive) -> None:
         archive.add_or_update(
             Elite(
                 candidate_id=f"outcome-history-{index}",
-                manifest_hash=_execution_hash(100 + index),
-                behavior_hash=_execution_hash(200 + index),
+                manifest_id=f"manifest-test-{index}",
+                behavior_id=f"behavior-test-{index}",
                 realised_descriptor=descriptor,
                 quality=1.0,
                 cost=1.0,
@@ -424,7 +424,7 @@ def test_qd_reproducibility_admits_stable_independent_public_replays() -> None:
     )
     audit = audit_realised_qd_reproducibility(
         {
-            _execution_hash(500 + index): (
+            _execution_id(500 + index): (
                 RealisedQDDescriptor(*mode),
                 RealisedQDDescriptor(*mode),
             )
@@ -442,7 +442,7 @@ def test_qd_reproducibility_admits_stable_independent_public_replays() -> None:
 def test_qd_reproducibility_rejects_cell_drift_under_public_replay() -> None:
     audit = audit_realised_qd_reproducibility(
         {
-            _execution_hash(600 + index): (
+            _execution_id(600 + index): (
                 RealisedQDDescriptor(0.05, 0.05, 0.05),
                 RealisedQDDescriptor(0.95, 0.95, 0.95),
             )
@@ -458,7 +458,7 @@ def test_qd_reproducibility_rejects_cell_drift_under_public_replay() -> None:
 def test_qd_reproducibility_rejects_history_without_repeated_candidate_manifests() -> None:
     audit = audit_realised_qd_reproducibility(
         {
-            _execution_hash(700 + index): (RealisedQDDescriptor(0.2, 0.4, 0.6),)
+            _execution_id(700 + index): (RealisedQDDescriptor(0.2, 0.4, 0.6),)
             for index in range(12)
         }
     )
@@ -693,7 +693,7 @@ def test_outcome_grounded_selector_refuses_warmup_then_prefers_an_active_public_
         RealisedQDDescriptor(0.2, 0.2, 0.2),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(1),
+        execution_outcome_id=_execution_id(1),
         execution_feasible=True,
     )
     selector.observe(
@@ -701,7 +701,7 @@ def test_outcome_grounded_selector_refuses_warmup_then_prefers_an_active_public_
         RealisedQDDescriptor(0.9, 0.9, 0.9),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(2),
+        execution_outcome_id=_execution_id(2),
         execution_feasible=True,
     )
     selector.observe(
@@ -709,7 +709,7 @@ def test_outcome_grounded_selector_refuses_warmup_then_prefers_an_active_public_
         RealisedQDDescriptor(0.9, 0.9, 0.9),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(3),
+        execution_outcome_id=_execution_id(3),
         execution_feasible=True,
     )
 
@@ -717,9 +717,9 @@ def test_outcome_grounded_selector_refuses_warmup_then_prefers_an_active_public_
         (low, high), public_exploration_need=_need((0.2, 0.2, 0.2))
     )
 
-    assert selected.manifest_hash == high.manifest_hash
+    assert selected.manifest_id == high.manifest_id
     assert selection.evidence_count == 3
-    assert selection.selected_manifest_hash == high.manifest_hash
+    assert selection.selected_manifest_id == high.manifest_id
     assert selection.archive_entry_count == 12
     assert archive.get(archive.spec.cell((0.2, 0.2, 0.2))) is not None
 
@@ -733,7 +733,7 @@ def test_outcome_grounded_selector_refuses_an_underpopulated_archive() -> None:
         RealisedQDDescriptor(0.1, 0.1, 0.1),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(10),
+        execution_outcome_id=_execution_id(10),
         execution_feasible=True,
     )
 
@@ -749,13 +749,13 @@ def test_outcome_grounded_selector_refuses_a_non_outcome_digest() -> None:
         neighbours=1,
     )
 
-    with pytest.raises(ValueError, match="execution outcome hash"):
+    with pytest.raises(ValueError, match="execution outcome id"):
         selector.observe(
             low,
             RealisedQDDescriptor(0.1, 0.1, 0.1),
             public_quality=1.0,
             public_cost=1.0,
-            execution_outcome_sha256="planned-route-hash",
+            execution_outcome_id="planned-route-id",
             execution_feasible=True,
         )
 
@@ -776,7 +776,7 @@ def test_outcome_grounded_selector_excludes_incomplete_or_unsafe_execution() -> 
         RealisedQDDescriptor(0.1, 0.1, 0.1),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(11),
+        execution_outcome_id=_execution_id(11),
         execution_feasible=False,
     )
 
@@ -803,7 +803,7 @@ def test_outcome_grounded_selector_never_trades_large_public_value_for_novelty()
         RealisedQDDescriptor(0.1, 0.1, 0.1),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(4),
+        execution_outcome_id=_execution_id(4),
         execution_feasible=True,
     )
     selector.observe(
@@ -811,7 +811,7 @@ def test_outcome_grounded_selector_never_trades_large_public_value_for_novelty()
         RealisedQDDescriptor(0.9, 0.9, 0.9),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(5),
+        execution_outcome_id=_execution_id(5),
         execution_feasible=True,
     )
     selector.observe(
@@ -819,7 +819,7 @@ def test_outcome_grounded_selector_never_trades_large_public_value_for_novelty()
         RealisedQDDescriptor(0.9, 0.9, 0.9),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(6),
+        execution_outcome_id=_execution_id(6),
         execution_feasible=True,
     )
 
@@ -852,7 +852,7 @@ def test_outcome_grounded_selector_abstains_when_outcomes_are_too_uncertain() ->
         RealisedQDDescriptor(0.0, 0.0, 0.0),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(7),
+        execution_outcome_id=_execution_id(7),
         execution_feasible=True,
     )
     selector.observe(
@@ -860,7 +860,7 @@ def test_outcome_grounded_selector_abstains_when_outcomes_are_too_uncertain() ->
         RealisedQDDescriptor(0.7, 0.7, 0.7),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(8),
+        execution_outcome_id=_execution_id(8),
         execution_feasible=True,
     )
     selector.observe(
@@ -868,7 +868,7 @@ def test_outcome_grounded_selector_abstains_when_outcomes_are_too_uncertain() ->
         RealisedQDDescriptor(1.0, 1.0, 1.0),
         public_quality=1.0,
         public_cost=1.0,
-        execution_outcome_sha256=_execution_hash(9),
+        execution_outcome_id=_execution_id(9),
         execution_feasible=True,
     )
 
@@ -903,7 +903,7 @@ def test_public_exploration_need_uses_only_public_sparse_range_beliefs() -> None
     assert need.vertical_exploration_deficit == pytest.approx(1.0)
     assert need.spatial_dispersion_deficit > 0.7
     assert need.duplicate_observation_deficit > 0.0
-    assert need.source_public_belief_sha256 == belief.content_sha256
+    assert need.source_public_belief_id == belief.content_id
     assert "ESDF" not in str(need.to_dict())
 
 
@@ -915,7 +915,7 @@ def test_outcome_grounded_qd_changes_only_for_a_better_current_public_need() -> 
             (first, second), ((0.9, 0.2, 0.2), (0.2, 0.9, 0.2)), strict=True
         )
     )
-    base, alternative = sorted(candidates, key=lambda candidate: candidate.manifest_hash)
+    base, alternative = sorted(candidates, key=lambda candidate: candidate.manifest_id)
     alternative_axis = max(
         range(3),
         key=lambda axis: alternative.planned_descriptor[axis] - base.planned_descriptor[axis],
@@ -933,7 +933,7 @@ def test_outcome_grounded_qd_changes_only_for_a_better_current_public_need() -> 
             RealisedQDDescriptor(*candidate.planned_descriptor),
             public_quality=1.0,
             public_cost=1.0,
-            execution_outcome_sha256=_execution_hash(50 + index),
+            execution_outcome_id=_execution_id(50 + index),
             execution_feasible=True,
         )
 
@@ -962,7 +962,7 @@ def test_outcome_grounded_qd_abstains_when_current_public_need_is_closed() -> No
             RealisedQDDescriptor(*candidate.planned_descriptor),
             public_quality=1.0,
             public_cost=1.0,
-            execution_outcome_sha256=_execution_hash(60 + index),
+            execution_outcome_id=_execution_id(60 + index),
             execution_feasible=True,
         )
 
@@ -991,5 +991,5 @@ def test_planned_qd_is_explicitly_a_diagnostic_intent_archive() -> None:
 
     selected, selection = selector.select((low, high))
 
-    assert selected.manifest_hash == low.manifest_hash
+    assert selected.manifest_id == low.manifest_id
     assert selection.to_dict()["archive_semantics"] == "planned_intent_diagnostic_only"

@@ -22,7 +22,7 @@ from rivermark_benchmark.isaac_pack_spec import (
 )
 from rivermark_benchmark.isaac_public_manifest import (
     build_public_scene_manifest,
-    public_manifest_sha256,
+    public_manifest_identity,
 )
 
 
@@ -171,7 +171,7 @@ def _receipt() -> dict[str, object]:
         "capture_backend": {
             "kind": "isaaclab",
             "build": "isaaclab:test",
-            "sensor_physics_smoke_receipt_sha256": "b" * 64,
+            "sensor_physics_smoke_receipt_identity": "b" * 16,
         },
     }
 
@@ -185,19 +185,19 @@ def _scene() -> dict[str, object]:
         "static_scene_authority_verified": True,
         "legacy_route_or_target_imported": False,
         "unresolved_reference_count": 0,
-        "private_evaluator_manifest_sha256": "9" * 64,
+        "private_evaluator_manifest_identity": "9" * 16,
         "source_scene": r"C:\private\rivermark.usd",
         "scene_contract": {
             "schema": "citylite-contract-v1",
             "gate_status": "pass_city_lite_static_construction",
-            "payload_sha256": "c" * 64,
-            "sha256": "1" * 64,
+            "payload_identity": "c" * 16,
+            "identity": "1" * 16,
         },
         "rivermark_layer_inventory": {
             "schema": "resolved-layer-inventory-v1",
-            "inventory_sha256": "d" * 64,
-            "local_authority_inventory_sha256": "2" * 64,
-            "rivermarksrc51_external_inventory_sha256": "3" * 64,
+            "inventory_identity": "d" * 16,
+            "local_authority_inventory_identity": "2" * 16,
+            "rivermarksrc51_external_inventory_identity": "3" * 16,
             "local_authority_layer_count": 2,
             "rivermarksrc51_external_layer_count": 3,
             "input_resolved_layer_count": 5,
@@ -235,7 +235,7 @@ def test_builder_derives_closed_eight_stream_spec_without_clearance_claim() -> N
         public_task=_public_task(),
         observation_abi=_abi(streams),
         source_streams=streams,
-        capture_receipt_sha256="e" * 64,
+        capture_receipt_identity="e" * 16,
         observation_abi_source="observation_abi.json",
         dataset_version="0.2.0-dev",
     )
@@ -250,8 +250,8 @@ def test_builder_derives_closed_eight_stream_spec_without_clearance_claim() -> N
     assert by_id["rgb"]["path"] == by_id["depth"]["path"]
     assert "fields" not in by_id["rgb"]
     assert by_id["rgb"]["sample_count"] == 2
-    assert payload["observation_abi"]["capture_receipt_sha256"] == "e" * 64
-    assert payload["layout"]["layout_hash"] == public_manifest_sha256(
+    assert payload["observation_abi"]["capture_receipt_identity"] == "e" * 16
+    assert payload["layout"]["layout_identity"] == public_manifest_identity(
         build_public_scene_manifest(_scene())
     )
     assert "private" not in json.dumps(payload, sort_keys=True).lower()
@@ -268,7 +268,7 @@ def test_builder_rejects_dirty_capture() -> None:
             public_task=_public_task(),
             observation_abi=_abi(streams),
             source_streams=streams,
-            capture_receipt_sha256="e" * 64,
+            capture_receipt_identity="e" * 16,
             observation_abi_source="observation_abi.json",
             dataset_version="0.2.0-dev",
         )
@@ -285,7 +285,7 @@ def test_builder_rejects_private_task_and_agent_count_mismatch() -> None:
             public_task=private_task,
             observation_abi=_abi(streams),
             source_streams=streams,
-            capture_receipt_sha256="e" * 64,
+            capture_receipt_identity="e" * 16,
             observation_abi_source="observation_abi.json",
             dataset_version="0.2.0-dev",
         )
@@ -299,7 +299,7 @@ def test_builder_rejects_private_task_and_agent_count_mismatch() -> None:
             public_task=wrong_count,
             observation_abi=_abi(streams),
             source_streams=streams,
-            capture_receipt_sha256="e" * 64,
+            capture_receipt_identity="e" * 16,
             observation_abi_source="observation_abi.json",
             dataset_version="0.2.0-dev",
         )
@@ -320,7 +320,7 @@ def test_writer_is_atomic_and_refuses_overwrite() -> None:
                 output,
                 dataset_version="0.2.0-dev",
             )
-        assert len(digest) == 64
+        assert len(digest) == 16
         assert json.loads(output.read_text(encoding="utf-8")) == payload
         with pytest.raises(IsaacPackSpecError, match="refusing to overwrite"):
             write_pack_spec(

@@ -158,7 +158,7 @@ def extract_frontier_clusters(
         rows.append(
             FrontierCluster(
                 frontier_id=f"{belief.agent_id}-frontier-{index}",
-                belief_version_sha256=version.digest,
+                belief_version_id=version.content_id,
                 centroid_m=centroid,  # type: ignore[arg-type]
                 outward_normal=_normal_for_cluster(belief, keys),
                 viewpoint_candidates_m=viewpoints,

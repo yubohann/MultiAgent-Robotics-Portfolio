@@ -861,7 +861,7 @@ def build_api_map(d: Diagram) -> Graph:
         cx = 90 + (idx % 4) * 800
         cy = 190 + (idx // 4) * 460
         g.vertex(f"{name}\n{route_file}", cx, cy, card_w, 72, box_style(BLUE_FILL, BLUE, 25, True, "align=left;spacingLeft=16;"))
-        body = f"API\n" + "\n".join(f"• {api}" for api in apis) + f"\n\n服务\n{service}\n\n落表\n{tables}"
+        body = "API\n" + "\n".join(f"• {api}" for api in apis) + f"\n\n服务\n{service}\n\n落表\n{tables}"
         g.vertex(body, cx, cy + 72, card_w, card_h - 72, box_style("#ffffff", BLUE, 19, False, "align=left;verticalAlign=top;spacingLeft=18;spacingTop=12;"))
     add_detail_table(g, detail_rows("api"), 90, 1160, 3120, "统一 API 合同")
     return g

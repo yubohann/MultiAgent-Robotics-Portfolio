@@ -4,11 +4,9 @@ import argparse
 import math
 import os
 import sys
-import time
 from pathlib import Path
 
 from isaaclab.app import AppLauncher
-
 
 parser = argparse.ArgumentParser(description="IsaacLab replay for the large-scale 50v50 battle benchmark.")
 parser.add_argument("--trace_npz", type=str, default="docs/rl_data/large_scale_50v50/isaaclab_replay_trace.npz")
@@ -28,10 +26,9 @@ import cv2
 import isaaclab.sim as sim_utils
 import numpy as np
 import torch
-from isaacsim.core.utils.stage import get_current_stage
 from isaaclab.sensors.camera import Camera, CameraCfg
+from isaacsim.core.utils.stage import get_current_stage
 from pxr import Gf, UsdGeom
-
 
 ROOT = Path(__file__).resolve().parents[1]
 TRACE_PATH = (ROOT / args_cli.trace_npz).resolve() if not Path(args_cli.trace_npz).is_absolute() else Path(args_cli.trace_npz)
@@ -248,7 +245,7 @@ def main():
     sim_dt = sim.get_physics_dt()
     try:
         for out_idx in range(total_frames):
-            trace_idx = int(round(out_idx * (len(trace["yellow_pos"]) - 1) / max(1, total_frames - 1)))
+            trace_idx = round(out_idx * (len(trace["yellow_pos"]) - 1) / max(1, total_frames - 1))
             update_scene(trace, trace_idx)
             sim.step()
             recorder.write(sim_dt, trace_idx)

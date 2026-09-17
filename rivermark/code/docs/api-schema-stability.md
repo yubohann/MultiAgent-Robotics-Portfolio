@@ -26,15 +26,15 @@ and narrative documentation follows it.
    unknown optional fields, and writers continue to emit required fields for the
    declared schema version.
 3. Removing a required field or changing units, coordinate frames, action
-   timing, dtype and shape, split semantics, or hash meaning requires a new
+   timing, dtype and shape, split semantics, or field meaning requires a new
    major schema version and an explicit migration document.
 4. ABI compatibility is checked with
    `assess_observation_abi_compatibility`. A passing compatibility report
    describes ABI agreement, and formal admission and license decisions follow
    their own processes.
-5. A release supplies bytes through a new version. Defective or withdrawn shards
-   use the hash-bound defect and tombstone mechanism in the release manifest,
-   and a newer release carries corrected bytes.
+5. A release never replaces bytes in place. A new version supplies corrected
+   bytes, and defective or withdrawn shards are recorded as defects in the
+   release manifest.
 
 ## Deprecation
 
@@ -43,13 +43,13 @@ The notice names the replacement, first affected version, removal version or the
 condition that permits removal, and a migration example. Deprecation of
 development interfaces may conclude at the next minor revision. Stable
 interfaces require at least one release with the deprecation notice before
-removal. Security or integrity defects may require immediate fail-closed
+removal. Security or integrity defects may require immediate strict
 removal, with the reason recorded in the release notes.
 
 ## Version pinning and reports
 
-Research results bind the dataset version, source revision, ABI hash, scorer
-version, configuration hash, checkpoint hash where applicable, and split
+Research results bind the dataset version, source revision, ABI identity, scorer
+version, configuration identity, checkpoint identity where applicable, and split
 authority. Determinism reports include the exact command and environment
 fingerprint. A passing CPU smoke covers the CPU path, while native Isaac and
 hardware execution need their own receipts.

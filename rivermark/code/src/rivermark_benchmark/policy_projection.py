@@ -1,9 +1,8 @@
-"""Fail-closed policy-observation index for validated native T1 captures."""
+"""Strict policy-observation index for validated native T1 captures."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -17,8 +16,9 @@ from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .citylite_task import LIDAR_RAY_COUNT, ONBOARD_IMAGE_HEIGHT, ONBOARD_IMAGE_WIDTH
-from .formal_dataset import sha256_file
+from .formal_dataset import identity_file
 from .frame_archive import ChunkedFrameArchive, FrameArchiveError
 
 POLICY_PROJECTION_SCHEMA = "org.rivermark.policy-observation-projection.v1"
@@ -28,7 +28,7 @@ _CAPTURE_SCHEMA = "org.rivermark.isaac-swarm-capture.v1"
 _VALIDATION_SCHEMA = "org.rivermark.isaac-independent-validation.v1"
 _AGENT_COUNT = 8
 _ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _REVISION = re.compile(r"^[0-9a-f]{40}$")
 _SPLITS = frozenset({"train", "inner_dev", "validation", "blind_test", "ood_test"})
 _FORBIDDEN_PUBLIC_TOKENS = (
@@ -102,7 +102,7 @@ _PUBLIC_MESSAGE_FIELDS = frozenset(
 )
 _PUBLIC_BINDING_FIELDS = (
     "protocol_id",
-    "protocol_sha256",
+    "protocol_identity",
     "cell_id",
     "split",
     "episode_index",
@@ -117,8 +117,8 @@ class PolicyProjectionError(ValueError):
 @dataclass(frozen=True)
 class PolicyProjectionResult:
     output_root: Path
-    manifest_sha256: str
-    observations_sha256: str
+    manifest_identity: str
+    observations_identity: str
     observation_count: int
 
 
@@ -133,8 +133,8 @@ class CandidateAbiIssue:
 class PolicySourceInspection:
     """Read-only evidence summary for the frozen policy-visible source set."""
 
-    capture_receipt_sha256: str
-    independent_validation_sha256: str
+    capture_receipt_identity: str
+    independent_validation_identity: str
     source_revision: str
     collection_binding: Mapping[str, Any]
     frame_count: int
@@ -183,27 +183,27 @@ def _contained_file(root: Path, relative: str) -> Path:
     return candidate
 
 
-def _verify_source_hash(
+def _verify_source_identity(
     receipt: Mapping[str, Any], root: Path, relative: str
 ) -> dict[str, Any]:
     path = _contained_file(root, relative)
-    artifact_hashes = receipt.get("artifact_hashes")
-    expected = artifact_hashes.get(relative) if isinstance(artifact_hashes, Mapping) else None
+    artifact_identities = receipt.get("artifact_identities")
+    expected = artifact_identities.get(relative) if isinstance(artifact_identities, Mapping) else None
     if not isinstance(expected, Mapping):
         raise PolicyProjectionError(f"capture receipt does not bind {relative}")
-    expected_hash = expected.get("sha256")
+    expected_identity = expected.get("identity")
     expected_bytes = expected.get("bytes")
-    actual_hash = sha256_file(path)
+    actual_identity = identity_file(path)
     if (
-        not isinstance(expected_hash, str)
-        or not _SHA256.fullmatch(expected_hash)
+        not isinstance(expected_identity, str)
+        or not _IDENTITY.fullmatch(expected_identity)
         or isinstance(expected_bytes, bool)
         or not isinstance(expected_bytes, int)
         or expected_bytes != path.stat().st_size
-        or expected_hash != actual_hash
+        or expected_identity != actual_identity
     ):
         raise PolicyProjectionError(f"capture artifact differs from its receipt: {relative}")
-    return {"path": relative, "bytes": path.stat().st_size, "sha256": actual_hash}
+    return {"path": relative, "bytes": path.stat().st_size, "identity": actual_identity}
 
 
 def _public_binding(receipt: Mapping[str, Any]) -> dict[str, Any]:
@@ -223,9 +223,9 @@ def _public_binding(receipt: Mapping[str, Any]) -> dict[str, Any]:
                 or not 0 <= value <= 0xFFFFFFFF
             ):
                 raise PolicyProjectionError("protocol binding episode_seed must be uint32")
-        elif field == "protocol_sha256":
-            if not isinstance(value, str) or not _SHA256.fullmatch(value):
-                raise PolicyProjectionError("protocol binding hash is invalid")
+        elif field == "protocol_identity":
+            if not isinstance(value, str) or not _IDENTITY.fullmatch(value):
+                raise PolicyProjectionError("protocol binding identity is invalid")
         elif field == "split":
             if value not in _SPLITS:
                 raise PolicyProjectionError("protocol binding split is invalid")
@@ -257,7 +257,7 @@ def _verify_capture_boundary(
     if not isinstance(receipt.get("source_revision"), str) or not _REVISION.fullmatch(
         receipt["source_revision"]
     ):
-        raise PolicyProjectionError("capture source revision is not a Git commit hash")
+        raise PolicyProjectionError("capture source revision is not a Git commit identity")
     boundary = receipt.get("claim_boundary")
     if (
         not isinstance(boundary, Mapping)
@@ -278,21 +278,21 @@ def _verify_capture_boundary(
         or physics.get("same_world_agent_count") != _AGENT_COUNT
     ):
         raise PolicyProjectionError("policy projection requires exactly eight agents")
-    receipt_hash = sha256_file(receipt_path)
+    receipt_identity = identity_file(receipt_path)
     if (
         validation.get("schema") != _VALIDATION_SCHEMA
         or validation.get("status") != "passed"
         or validation.get("issues") != []
-        or validation.get("capture_receipt_sha256") != receipt_hash
+        or validation.get("capture_receipt_identity") != receipt_identity
     ):
         raise PolicyProjectionError("independent validation is absent, failed, or stale")
-    validation_hash = sha256_file(validation_path)
+    validation_identity = identity_file(validation_path)
     partition_path = _contained_file(root, _PARTITION_METADATA_PATH)
-    _verify_source_hash(receipt, root, _PARTITION_METADATA_PATH)
+    _verify_source_identity(receipt, root, _PARTITION_METADATA_PATH)
     partition = _load_json(partition_path, "partition metadata")
     if partition.get("partition") != "learning_labels" or partition.get("policy_visible") is not False:
         raise PolicyProjectionError("capture label partition is not explicitly isolated")
-    return receipt, receipt_hash, validation_hash, _public_binding(receipt)
+    return receipt, receipt_identity, validation_identity, _public_binding(receipt)
 
 
 def _npz_descriptors(
@@ -393,7 +393,7 @@ def _inspect_sources(
         "state_action": _STATE_PATH,
     }
     artifacts = {
-        name: _verify_source_hash(receipt, root, relative)
+        name: _verify_source_identity(receipt, root, relative)
         for name, relative in source_paths.items()
     }
 
@@ -574,13 +574,13 @@ def _inspect_sources(
 
 
 def _observation_id(
-    *, receipt_sha256: str, timestamp_ns: int, frame_index: int, agent_id: int
+    *, receipt_identity: str, timestamp_ns: int, frame_index: int, agent_id: int
 ) -> str:
-    digest = hashlib.sha256(
+    digest = IdentityAccumulator(
         _canonical_bytes(
             {
                 "schema": POLICY_OBSERVATION_SCHEMA,
-                "receipt_sha256": receipt_sha256,
+                "receipt_identity": receipt_identity,
                 "timestamp_ns": timestamp_ns,
                 "frame_index": frame_index,
                 "agent_id": agent_id,
@@ -591,23 +591,17 @@ def _observation_id(
 
 
 def inspect_policy_observation_sources(capture_root: Path) -> PolicySourceInspection:
-    """Validate the T1 public source boundary without creating an index.
-
-    This is the same byte-, field-, shape-, dtype-, timing-, and partition
-    inspection used by :func:`project_policy_observations`.  It deliberately
-    returns no arrays and never exposes learning-label or evaluator-private
-    content.
-    """
+    """Validate the T1 public source boundary without creating an index."""
 
     capture = Path(capture_root).expanduser().resolve()
     if not capture.is_dir():
         raise PolicyProjectionError(f"capture directory is missing: {capture}")
-    receipt, receipt_hash, validation_hash, binding = _verify_capture_boundary(capture)
+    receipt, receipt_identity, validation_identity, binding = _verify_capture_boundary(capture)
     timestamps, _, artifacts, streams = _inspect_sources(capture, receipt)
     state_shape = streams["state"]["arrays"]["root_pos_w_m"]["shape"]
     return PolicySourceInspection(
-        capture_receipt_sha256=receipt_hash,
-        independent_validation_sha256=validation_hash,
+        capture_receipt_identity=receipt_identity,
+        independent_validation_identity=validation_identity,
         source_revision=str(receipt["source_revision"]),
         collection_binding=dict(binding),
         frame_count=len(timestamps),
@@ -628,7 +622,7 @@ def inspect_candidate_pack_streams(
     if inspection is None:
         inspection = inspect_policy_observation_sources(capture)
     receipt = _load_json(_contained_file(capture, "capture_receipt.json"), "capture_receipt.json")
-    if sha256_file(capture / "capture_receipt.json") != inspection.capture_receipt_sha256:
+    if identity_file(capture / "capture_receipt.json") != inspection.capture_receipt_identity:
         raise PolicyProjectionError("source inspection belongs to another capture receipt")
 
     paths = {
@@ -637,7 +631,7 @@ def inspect_candidate_pack_streams(
         "state": _STATE_PATH,
     }
     for relative in paths.values():
-        _verify_source_hash(receipt, capture, relative)
+        _verify_source_identity(receipt, capture, relative)
     task = _npz_descriptors(capture / _PUBLIC_TASK_PATH, _PUBLIC_TASK_FIELDS)
     messages = _npz_descriptors(capture / _PUBLIC_MESSAGES_PATH, _PUBLIC_MESSAGE_FIELDS)
     state = _npz_descriptors(capture / _STATE_PATH, _STATE_FIELDS)
@@ -985,12 +979,7 @@ def project_policy_observations(
     capture_root: Path,
     output_root: Path,
 ) -> PolicyProjectionResult:
-    """Write a deterministic external index over the policy allow-list.
-
-    The source capture remains untouched and no sensor array is copied.  A
-    policy runner must still receive only the selected fields; giving arbitrary
-    policy code filesystem access to the raw capture bypasses this guard.
-    """
+    """Write a deterministic external index over the policy allow-list."""
 
     capture = Path(capture_root).expanduser().resolve()
     destination = Path(output_root).expanduser().resolve()
@@ -1001,7 +990,7 @@ def project_policy_observations(
     if destination.exists():
         raise PolicyProjectionError(f"projection output already exists: {destination}")
 
-    receipt, receipt_hash, validation_hash, binding = _verify_capture_boundary(capture)
+    receipt, receipt_identity, validation_identity, binding = _verify_capture_boundary(capture)
     timestamps, state_indices, artifacts, streams = _inspect_sources(capture, receipt)
     destination.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=f".{destination.name}.", dir=destination.parent))
@@ -1014,7 +1003,7 @@ def project_policy_observations(
                     record = {
                         "schema": POLICY_OBSERVATION_SCHEMA,
                         "observation_id": _observation_id(
-                            receipt_sha256=receipt_hash,
+                            receipt_identity=receipt_identity,
                             timestamp_ns=int(timestamp_ns),
                             frame_index=frame_index,
                             agent_id=agent_id,
@@ -1034,7 +1023,7 @@ def project_policy_observations(
                     observation_count += 1
             handle.flush()
             os.fsync(handle.fileno())
-        observations_hash = sha256_file(observation_path)
+        observations_identity = identity_file(observation_path)
         manifest = {
             "schema": POLICY_PROJECTION_SCHEMA,
             "status": "projected",
@@ -1042,8 +1031,8 @@ def project_policy_observations(
             "formal_benchmark_admission": False,
             "t2_score_permitted": False,
             "enforcement_scope": "allow-list provenance only; not an operating-system sandbox",
-            "source_capture_receipt_sha256": receipt_hash,
-            "independent_validation_sha256": validation_hash,
+            "source_capture_receipt_identity": receipt_identity,
+            "independent_validation_identity": validation_identity,
             "source_revision": receipt.get("source_revision"),
             "collection_binding": binding,
             "agent_count": _AGENT_COUNT,
@@ -1051,7 +1040,7 @@ def project_policy_observations(
             "observation_count": observation_count,
             "observations": {
                 "path": "observations.jsonl",
-                "sha256": observations_hash,
+                "identity": observations_identity,
                 "bytes": observation_path.stat().st_size,
             },
             "source_artifacts": artifacts,
@@ -1072,8 +1061,8 @@ def project_policy_observations(
 
     return PolicyProjectionResult(
         output_root=destination,
-        manifest_sha256=sha256_file(destination / "projection_manifest.json"),
-        observations_sha256=observations_hash,
+        manifest_identity=identity_file(destination / "projection_manifest.json"),
+        observations_identity=observations_identity,
         observation_count=observation_count,
     )
 
@@ -1095,8 +1084,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "development_only": True,
                 "t2_score_permitted": False,
                 "output_root": str(result.output_root),
-                "manifest_sha256": result.manifest_sha256,
-                "observations_sha256": result.observations_sha256,
+                "manifest_identity": result.manifest_identity,
+                "observations_identity": result.observations_identity,
                 "observation_count": result.observation_count,
             },
             indent=2,

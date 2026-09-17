@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 
-
 from ._bootstrap import (
     ARENA_SIZE,
     BASE_ARMOR,
@@ -39,16 +38,16 @@ from ._bootstrap import (
     ROBOT_COLLISION_RADIUS,
     ROBOT_WIDTH,
     ROUTE_CLEARANCE,
-    SHOOTER_FORWARD_OFFSET,
     SHOOT_IDEAL_DISTANCE,
     SHOOT_RANGE,
+    SHOOTER_FORWARD_OFFSET,
     TARGET_REGISTRY,
     WHEEL_ACCEL_LIMIT,
     WHEEL_RADIUS,
     WHEEL_SPEED_LIMIT,
     WHEEL_WIDTH,
     YELLOW_DEMO_START_XY,
-    YELLOW_START_XY
+    YELLOW_START_XY,
 )
 from .costmap import (
     apply_costmap_recovery,
@@ -59,14 +58,14 @@ from .costmap import (
     push_pushable_obstacle,
     slew_rate,
     warn_costmap,
-    wrap_angle
+    wrap_angle,
 )
 from .laser import (
     apply_fire_rule,
     laser_accuracy_from_geometry,
     line_blocked_by_wall,
     reset_laser_lock,
-    update_laser_lock
+    update_laser_lock,
 )
 from .replay import point_blocked, pushable_collision_path, segment_blocked
 from .rules import (
@@ -80,9 +79,10 @@ from .rules import (
     static_fire_pose,
     target_name_from_path,
     team_base_xy,
-    team_score
+    team_score,
 )
 from .spawn import target_path_from_name
+
 
 class StrategyTeamController:
     def __init__(
@@ -116,7 +116,6 @@ class StrategyTeamController:
         self.recover_spin_direction = 1.0
         self.last_progress_distance = float("inf")
         self.last_progress_t = 0.0
-        self.current_fire_xy: tuple[float, float] | None = None
         self.block_until = 0.0
         self.last_strategy_print = -99.0
         self.localization_confidence = 1.0
@@ -196,7 +195,6 @@ class StrategyTeamController:
                 self.path = self._plan_path(start_xy, block_xy)
                 self.waypoint_index = 1
                 self.current_target_path = ""
-                self.current_fire_xy = block_xy
                 self.block_until = t + BLOCK_HOLD_S
                 self.state = "drive_block"
                 self.blocked_since = 0.0
@@ -209,7 +207,6 @@ class StrategyTeamController:
             fire_xy = strategy["fire_xy"]
             assert isinstance(fire_xy, tuple)
             self.current_target_path = target_path
-            self.current_fire_xy = fire_xy
             start_xy = (self.pose[0][0], self.pose[0][1])
             self.path = self._plan_path(start_xy, fire_xy)
             self.waypoint_index = 1
@@ -461,9 +458,7 @@ class StrategyTeamController:
         min_range, max_range = shooting_range_limits(base_target)
         if shot_distance < min_range or shot_distance > max_range:
             return True
-        if line_blocked_by_wall(fire_xy, target_xy):
-            return True
-        return False
+        return bool(line_blocked_by_wall(fire_xy, target_xy))
 
     def _score_attack(self, candidate: dict[str, object], t: float) -> float:
         opponent = opponent_team(self.team)
@@ -518,9 +513,9 @@ class StrategyTeamController:
             if not point_blocked(candidate):
                 return candidate
 
-        fallback = (0.18, -0.18) if self.team == "yellow" else (-0.18, 0.18)
-        if not point_blocked(fallback):
-            return fallback
+        cover_point = (0.18, -0.18) if self.team == "yellow" else (-0.18, 0.18)
+        if not point_blocked(cover_point):
+            return cover_point
         return None
 
     def _opponent_pose(self) -> tuple[tuple[float, float, float], float] | None:
@@ -714,13 +709,7 @@ class StrategyTeamController:
 
 
 class PolicyReplayController(StrategyTeamController):
-    """Motor-level replay of the learned high-level policy.
-
-    The policy layer selects the next opponent target from a self-play style
-    tactical sequence, while the inherited controller performs differential
-    drive tracking, acceleration limiting, costmap avoidance, aiming and
-    shooter gating.
-    """
+    """Motor-level replay of the learned high-level policy."""
 
     def _plan_path(self, start_xy: tuple[float, float], goal_xy: tuple[float, float]) -> list[tuple[float, float]]:
         staged = demo_policy_corridor(self.team, start_xy, goal_xy)

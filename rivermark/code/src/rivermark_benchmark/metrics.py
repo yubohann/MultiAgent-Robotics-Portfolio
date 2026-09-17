@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
-
 
 METRIC_VERSION = "org.rivermark.benchmark.metrics.v1"
 
@@ -58,13 +58,7 @@ def normalized_confirmed_auc(
     target_count: int,
     time_budget_s: float,
 ) -> float:
-    """Compute normalized area under confirmed-target recall over time.
-
-    The trace is sampled at evaluator timestamps.  A missing initial sample is
-    treated as zero confirmations at time zero; a trace ending before the
-    budget is held constant through the budget.  This convention is explicit
-    so decimated sensor streams cannot silently change the score.
-    """
+    """Compute normalized area under confirmed-target recall over time."""
 
     times = _series(timestamps_s, "timestamps_s")
     counts = _series(confirmed_counts, "confirmed_counts")

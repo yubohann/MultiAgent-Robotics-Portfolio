@@ -60,7 +60,7 @@
     }
   ],
   "randomization": {
-    "seed_derivation": "sha256_utf8_lines_uint32_v1",
+    "seed_derivation": "identity_utf8_lines_uint32_v1",
     "episode_seed_start": 20260728,
     "paired_initial_conditions": false
   },

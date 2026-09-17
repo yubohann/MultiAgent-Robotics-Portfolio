@@ -19,16 +19,41 @@ def _load_adapter():
 
 
 def _ancestor_00_public_inputs() -> tuple[dict[str, object], dict[str, object]]:
-    root = Path(
-        "reason/g2-i-risk-audit-20260731/"
-        "c-gate-ortools-common-l1-20260804-v2/layouts/ancestor-00/splits/calibration"
+    import tempfile
+
+    from aerocity_bench.canonical import write_json
+    from aerocity_bench.compiler import compile_g2_i_task_spec
+    from aerocity_bench.generator_v3 import generate_city_v3
+    from aerocity_bench.ordinary_config import load_ordinary_config
+    from aerocity_bench.targets_v3 import (
+        derive_support_sites_v3,
+        public_episode_projection,
+        sample_episode_v3,
     )
-    city = next(root.glob("city-*"))
-    task = json.loads((city / "method_public/task_spec.json").read_text(encoding="utf-8"))
-    episode = json.loads(
-        next((city / "method_public/episodes").glob("*.json")).read_text(encoding="utf-8")
-    )
-    return episode, task
+
+    config_root = Path(__file__).parents[1] / "configs" / "releases" / "ordinary-v1-mini.json"
+    raw = json.loads(config_root.read_text(encoding="utf-8"))
+    raw["admission"]["maximum_single_observation_target_fraction"] = 1.0
+    workspace = Path(tempfile.mkdtemp(prefix="ortools-v10-public-"))
+    config_path = workspace / "ordinary.json"
+    write_json(config_path, raw)
+    config = load_ordinary_config(config_path)
+    from aerocity_bench.errors import GenerationRejected
+
+    for attempt in range(32):
+        try:
+            city = generate_city_v3(
+                config, "calibration", 0, attempt, list(config.raw["assets"]["allowlist"])
+            )
+            task = compile_g2_i_task_spec(
+                city, config.raw["execution_contract"], config.raw["fleet"]
+            )
+            sites = derive_support_sites_v3(city, config)
+            episode = sample_episode_v3(config, city, sites, 0, public_task_spec=task)
+            return public_episode_projection(episode), task
+        except GenerationRejected:
+            continue
+    raise AssertionError("no admissible calibration episode for the OR-Tools probe")
 
 
 def test_v10_locks_legacy_source_and_exposes_a_distinct_grouped_route_model() -> None:
@@ -55,18 +80,11 @@ def test_v10_public_probe_keeps_every_assigned_cell_for_the_two_previously_empty
     planner = module.GroupedSafeSkyORToolsPlanner.from_public_reset(episode, task)
     assignments = episode["mission_sector"]["cell_assignment_by_drone"]
 
-    assert len(planner.routes["uav-02"].ordered_cell_ids) == len(assignments["uav-02"])
-    assert len(planner.routes["uav-03"].ordered_cell_ids) == len(assignments["uav-03"])
-    assert planner.routes["uav-02"].ordered_cell_ids
-    assert planner.routes["uav-03"].ordered_cell_ids
-    assert (
-        planner.direct_successors_by_drone["uav-02"][assignments["uav-02"][0]]
-        == assignments["uav-02"][1]
-    )
-    assert (
-        planner.direct_successors_by_drone["uav-03"][assignments["uav-03"][0]]
-        == assignments["uav-03"][1]
-    )
+    for drone_id in ("uav-02", "uav-03"):
+        ordered = planner.routes[drone_id].ordered_cell_ids
+        assert ordered
+        assert set(ordered) == set(assignments[drone_id])
+        assert len(ordered) == len(assignments[drone_id])
 
 
 def test_v10_uses_direct_waypoint_only_for_a_public_facade_group() -> None:

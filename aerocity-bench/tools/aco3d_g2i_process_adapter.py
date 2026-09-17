@@ -9,7 +9,6 @@ source provides G2-I's public four-UAV assignment or CF2X execution.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.util
 import json
 import math
@@ -19,6 +18,8 @@ import sys
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
+
+from aerocity_bench.canonical import derived_seed
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 _SOURCE_LOCK_PATH = _REPOSITORY_ROOT / "external" / "aco3d" / "source-lock.json"
@@ -51,14 +52,6 @@ REQUEST_SCHEMA = _BASE.REQUEST_SCHEMA
 RESPONSE_SCHEMA = _BASE.RESPONSE_SCHEMA
 
 
-def _file_hash(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def _source_lock() -> dict[str, Any]:
     raw = json.loads(_SOURCE_LOCK_PATH.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
@@ -88,12 +81,12 @@ def _source_lock() -> dict[str, Any]:
 
 
 def _verify_upstream_source(path: Path) -> None:
-    """Verify a clean, sparse or full checkout before a native-source claim."""
+    """Verify a clean checkout and the locked source file set."""
 
     lock = _source_lock()
     upstream = lock["upstream"]
-    source_hashes = upstream.get("source_file_sha256")
-    if not path.is_dir() or not isinstance(source_hashes, dict):
+    source_files = upstream.get("source_files")
+    if not path.is_dir() or not isinstance(source_files, list) or not source_files:
         raise ValueError("ACO3D upstream source directory is unavailable")
     try:
         head = subprocess.run(
@@ -122,10 +115,10 @@ def _verify_upstream_source(path: Path) -> None:
         raise ValueError("ACO3D upstream source checkout must be clean")
     if remote.rstrip("/") != UPSTREAM_URL.removesuffix(".git") and remote != UPSTREAM_URL:
         raise ValueError("ACO3D upstream remote differs from the source lock")
-    for relative, expected in source_hashes.items():
+    for relative in source_files:
         source_file = path / str(relative)
-        if not source_file.is_file() or _file_hash(source_file) != expected:
-            raise ValueError(f"ACO3D upstream source hash differs: {relative}")
+        if not source_file.is_file():
+            raise ValueError(f"ACO3D upstream source file is missing: {relative}")
 
 
 def _source_distance_matrix(points: list[tuple[float, float, float]]) -> list[list[float]]:
@@ -164,8 +157,7 @@ def _source_tour_cost(
 
 
 def _public_seed(drone_id: str, cell_ids: list[str]) -> int:
-    material = f"aco3d-source-translation-v1|{drone_id}|{'|'.join(cell_ids)}".encode("ascii")
-    return int.from_bytes(hashlib.sha256(material).digest()[:8], byteorder="big", signed=False)
+    return derived_seed("aco3d-source-translation-v1", drone_id, cell_ids)
 
 
 def _source_aco_order(drone_id: str, cells: list[Any]) -> list[str]:

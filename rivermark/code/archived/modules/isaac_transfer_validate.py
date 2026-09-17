@@ -7,13 +7,14 @@ import json
 import math
 import os
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
-from hashlib import sha256
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
+from _identity import IdentityAccumulator
 from .citylite_scene import AGENT_COUNT
 from .isaac_runtime_safety import (
     RUNTIME_SAFETY_FRAME_OUTCOME_CODES,
@@ -36,7 +37,6 @@ from .isaac_transfer import (
     WorldCommandBounds,
     derive_physical_state_8d,
 )
-
 
 TRANSFER_VALIDATION_SCHEMA = (
     "org.rivermark.isaac-state-only-transfer-independent-validation.v1"
@@ -106,7 +106,7 @@ _FLOAT_RTOL = 1.0e-6
 
 @dataclass(frozen=True)
 class TransferValidationIssue:
-    """One fail-closed problem found in a transfer capture."""
+    """One strict problem found in a transfer capture."""
 
     code: str
     path: str
@@ -118,7 +118,7 @@ class IsaacTransferValidationReport:
     """Result of independently replaying one state-only transfer capture."""
 
     capture_root: Path
-    receipt_sha256: str | None
+    receipt_identity: str | None
     checks: Mapping[str, Any]
     issues: tuple[TransferValidationIssue, ...]
 
@@ -143,16 +143,16 @@ def _issue(
     issues.append(TransferValidationIssue(code=code, path=path, message=message))
 
 
-def _sha256_file(path: Path) -> str:
-    digest = sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
 
 
-def _is_sha256(value: Any) -> bool:
-    return isinstance(value, str) and len(value) == 64 and all(
+def _is_identity(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 16 and all(
         character in "0123456789abcdef" for character in value
     )
 
@@ -281,80 +281,80 @@ def _allclose(left: np.ndarray, right: np.ndarray) -> bool:
     return bool(np.allclose(left, right, rtol=_FLOAT_RTOL, atol=_FLOAT_ATOL, equal_nan=False))
 
 
-def _verify_capture_receipt_hash(
+def _verify_capture_receipt_identity(
     root: Path, issues: list[TransferValidationIssue], checks: dict[str, Any]
 ) -> str | None:
     receipt_path = root / "capture_receipt.json"
-    binding_path = root / "capture_receipt.sha256"
+    binding_path = root / "capture_receipt.identity"
     if not receipt_path.is_file():
         _issue(issues, "missing_file", "capture_receipt.json", "capture receipt is missing")
         return None
-    actual = _sha256_file(receipt_path)
-    checks["capture_receipt_sha256"] = actual
+    actual = _identity_file(receipt_path)
+    checks["capture_receipt_identity"] = actual
     if not binding_path.is_file():
-        _issue(issues, "capture_receipt_binding", "capture_receipt.sha256", "receipt hash file is missing")
+        _issue(issues, "capture_receipt_binding", "capture_receipt.identity", "receipt identity file is missing")
         return actual
     try:
         tokens = binding_path.read_text(encoding="ascii").strip().split()
     except (OSError, UnicodeDecodeError) as exc:
-        _issue(issues, "capture_receipt_binding", "capture_receipt.sha256", str(exc))
+        _issue(issues, "capture_receipt_binding", "capture_receipt.identity", str(exc))
         return actual
-    if len(tokens) != 2 or tokens[1] != "capture_receipt.json" or not _is_sha256(tokens[0]):
+    if len(tokens) != 2 or tokens[1] != "capture_receipt.json" or not _is_identity(tokens[0]):
         _issue(
             issues,
             "capture_receipt_binding",
-            "capture_receipt.sha256",
-            "must contain '<sha256>  capture_receipt.json'",
+            "capture_receipt.identity",
+            "must contain '<identity>  capture_receipt.json'",
         )
     elif tokens[0] != actual:
         _issue(
             issues,
             "capture_receipt_binding",
-            "capture_receipt.sha256",
+            "capture_receipt.identity",
             "does not match capture_receipt.json",
         )
     else:
-        checks["capture_receipt_hash_verified"] = True
+        checks["capture_receipt_identity_verified"] = True
     return actual
 
 
-def _verify_artifact_hashes(
+def _verify_artifact_identities(
     root: Path,
     receipt: Mapping[str, Any],
     issues: list[TransferValidationIssue],
     checks: dict[str, Any],
 ) -> dict[str, str]:
-    artifact_hashes = receipt.get("artifact_hashes")
-    if not isinstance(artifact_hashes, Mapping):
-        _issue(issues, "artifact_hashes", "capture_receipt.json.artifact_hashes", "must be an object")
+    artifact_identities = receipt.get("artifact_identities")
+    if not isinstance(artifact_identities, Mapping):
+        _issue(issues, "artifact_identities", "capture_receipt.json.artifact_identities", "must be an object")
         return {}
-    actual_hashes: dict[str, str] = {}
+    actual_identities: dict[str, str] = {}
     verified: dict[str, bool] = {}
     for relative in REQUIRED_ARTIFACTS:
         artifact = root / Path(*relative.split("/"))
-        binding = artifact_hashes.get(relative)
+        binding = artifact_identities.get(relative)
         if not artifact.is_file():
             _issue(issues, "missing_file", relative, "required artifact is missing")
             verified[relative] = False
             continue
-        actual = _sha256_file(artifact)
-        actual_hashes[relative] = actual
+        actual = _identity_file(artifact)
+        actual_identities[relative] = actual
         if not isinstance(binding, Mapping):
-            _issue(issues, "artifact_hash", relative, "artifact is missing from capture receipt")
+            _issue(issues, "artifact_identity", relative, "artifact is missing from capture receipt")
             verified[relative] = False
             continue
-        expected_hash = binding.get("sha256")
+        expected_identity = binding.get("identity")
         expected_bytes = binding.get("bytes")
-        if not _is_sha256(expected_hash):
-            _issue(issues, "artifact_hash", relative, "artifact receipt SHA-256 is invalid")
+        if not _is_identity(expected_identity):
+            _issue(issues, "artifact_identity", relative, "artifact receipt IDENTITY is invalid")
             verified[relative] = False
             continue
         if not _is_int(expected_bytes, minimum=0):
             _issue(issues, "artifact_bytes", relative, "artifact receipt byte count is invalid")
             verified[relative] = False
             continue
-        if expected_hash != actual:
-            _issue(issues, "artifact_hash", relative, "artifact SHA-256 does not match receipt")
+        if expected_identity != actual:
+            _issue(issues, "artifact_identity", relative, "artifact IDENTITY does not match receipt")
             verified[relative] = False
             continue
         if int(expected_bytes) != artifact.stat().st_size:
@@ -362,9 +362,9 @@ def _verify_artifact_hashes(
             verified[relative] = False
             continue
         verified[relative] = True
-    checks["required_artifact_hashes"] = verified
-    checks["required_artifact_hashes_verified"] = bool(verified) and all(verified.values())
-    return actual_hashes
+    checks["required_artifact_identities"] = verified
+    checks["required_artifact_identities_verified"] = bool(verified) and all(verified.values())
+    return actual_identities
 
 
 def _validate_capture_contract(
@@ -417,11 +417,11 @@ def _validate_capture_contract(
                 "must be an object",
             )
 
-    if "evaluator_manifest_sha256" in receipt:
+    if "evaluator_manifest_identity" in receipt:
         _issue(
             issues,
             "private_evaluator",
-            "capture_receipt.json.evaluator_manifest_sha256",
+            "capture_receipt.json.evaluator_manifest_identity",
             "development transfer capture must not contain an evaluator manifest",
         )
     task = receipt.get("task")
@@ -476,8 +476,8 @@ def _validate_capture_contract(
 def _validate_scene_contract(
     scene: Mapping[str, Any] | None,
     *,
-    trace_sha256: str | None,
-    provenance_sha256: str | None,
+    trace_identity: str | None,
+    provenance_identity: str | None,
     issues: list[TransferValidationIssue],
 ) -> None:
     if scene is None:
@@ -490,10 +490,10 @@ def _validate_scene_contract(
         _issue(issues, "scene_transfer_contract", f"{SCENE_PATH}.control_transfer_state_phase", "must be pre_sim_command_state")
     if scene.get("control_transfer_policy_input") != "state_only_8d":
         _issue(issues, "scene_transfer_contract", f"{SCENE_PATH}.control_transfer_policy_input", "must be state_only_8d")
-    if trace_sha256 is not None and scene.get("control_transfer_trace_sha256") != trace_sha256:
-        _issue(issues, "scene_transfer_binding", f"{SCENE_PATH}.control_transfer_trace_sha256", "does not bind the trace bytes")
-    if provenance_sha256 is not None and scene.get("control_transfer_provenance_sha256") != provenance_sha256:
-        _issue(issues, "scene_transfer_binding", f"{SCENE_PATH}.control_transfer_provenance_sha256", "does not bind the provenance bytes")
+    if trace_identity is not None and scene.get("control_transfer_trace_identity") != trace_identity:
+        _issue(issues, "scene_transfer_binding", f"{SCENE_PATH}.control_transfer_trace_identity", "does not bind the trace bytes")
+    if provenance_identity is not None and scene.get("control_transfer_provenance_identity") != provenance_identity:
+        _issue(issues, "scene_transfer_binding", f"{SCENE_PATH}.control_transfer_provenance_identity", "does not bind the provenance bytes")
 
 
 def _validate_transfer_provenance(
@@ -501,7 +501,7 @@ def _validate_transfer_provenance(
     *,
     receipt_transfer: Mapping[str, Any] | None,
     receipt: Mapping[str, Any],
-    actual_hashes: Mapping[str, str],
+    actual_identities: Mapping[str, str],
     issues: list[TransferValidationIssue],
     checks: dict[str, Any],
 ) -> _TransferContract | None:
@@ -524,12 +524,12 @@ def _validate_transfer_provenance(
     for key, expected in expected_scalar_fields.items():
         if provenance.get(key) != expected:
             _issue(issues, "transfer_provenance_contract", f"{TRACE_PROVENANCE_PATH}.{key}", f"must be {expected!r}")
-    for field, relative in (("state_action_sha256", STATE_ACTION_PATH), ("trace_sha256", TRACE_PATH)):
+    for field, relative in (("state_action_identity", STATE_ACTION_PATH), ("trace_identity", TRACE_PATH)):
         value = provenance.get(field)
-        if not _is_sha256(value):
-            _issue(issues, "transfer_provenance_hash", f"{TRACE_PROVENANCE_PATH}.{field}", "must be a SHA-256 digest")
-        elif relative in actual_hashes and value != actual_hashes[relative]:
-            _issue(issues, "transfer_provenance_hash", f"{TRACE_PROVENANCE_PATH}.{field}", "does not bind the artifact bytes")
+        if not _is_identity(value):
+            _issue(issues, "transfer_provenance_identity", f"{TRACE_PROVENANCE_PATH}.{field}", "must be an identity value")
+        elif relative in actual_identities and value != actual_identities[relative]:
+            _issue(issues, "transfer_provenance_identity", f"{TRACE_PROVENANCE_PATH}.{field}", "does not bind the artifact bytes")
     if receipt_transfer is not None and provenance.get("transfer") != receipt_transfer:
         _issue(issues, "transfer_receipt_binding", f"{TRACE_PROVENANCE_PATH}.transfer", "does not equal capture receipt state_only_transfer")
 
@@ -632,9 +632,9 @@ def _validate_transfer_provenance(
                 _issue(issues, "transfer_policy", f"{TRACE_PROVENANCE_PATH}.transfer.policy.{key}", f"must be {expected!r}")
         if policy.get("algorithm") not in {"ppo", "sac"}:
             _issue(issues, "transfer_policy", f"{TRACE_PROVENANCE_PATH}.transfer.policy.algorithm", "must be ppo or sac")
-        for key in ("checkpoint_sha256", "adapter_metadata_sha256"):
-            if not _is_sha256(policy.get(key)):
-                _issue(issues, "transfer_policy", f"{TRACE_PROVENANCE_PATH}.transfer.policy.{key}", "must be a SHA-256 digest")
+        for key in ("checkpoint_identity", "adapter_metadata_identity"):
+            if not _is_identity(policy.get(key)):
+                _issue(issues, "transfer_policy", f"{TRACE_PROVENANCE_PATH}.transfer.policy.{key}", "must be an identity value")
 
     trace_count = provenance.get("trace_decision_count")
     if not _is_int(trace_count, minimum=1):
@@ -783,9 +783,12 @@ def _validate_trace(
     if decision_count < 1:
         _issue(issues, "trace_decision_count", TRACE_PATH, "must contain at least one decision")
         return False
-    if provenance is not None and _is_int(provenance.get("trace_decision_count"), minimum=1):
-        if int(provenance["trace_decision_count"]) != decision_count:
-            _issue(issues, "trace_decision_count", TRACE_PATH, "does not match provenance trace_decision_count")
+    if (
+        provenance is not None
+        and _is_int(provenance.get("trace_decision_count"), minimum=1)
+        and int(provenance["trace_decision_count"]) != decision_count
+    ):
+        _issue(issues, "trace_decision_count", TRACE_PATH, "does not match provenance trace_decision_count")
     if expected_count is not None and decision_count != expected_count:
         _issue(issues, "trace_decision_count", TRACE_PATH, "does not match the configured fixed cadence")
     if contract is None or not integer_valid or not floating_valid:
@@ -894,7 +897,7 @@ def _validate_runtime_safety(
     runtime: Mapping[str, np.ndarray] | None,
     *,
     receipt: Mapping[str, Any],
-    runtime_sha256: str | None,
+    runtime_identity: str | None,
     state: Mapping[str, np.ndarray] | None,
     state_valid: bool,
     steps: int,
@@ -944,16 +947,16 @@ def _validate_runtime_safety(
     if not isinstance(guard, Mapping):
         _issue(issues, "runtime_safety_guard", "capture_receipt.json.runtime_safety_guard", "must be an object")
     else:
-        if guard.get("schema") != RUNTIME_SAFETY_SCHEMA or guard.get("enabled") is not True or guard.get("fail_closed") is not True or guard.get("status") != "passed":
-            _issue(issues, "runtime_safety_guard", "capture_receipt.json.runtime_safety_guard", "must be a passed fail-closed runtime guard")
+        if guard.get("schema") != RUNTIME_SAFETY_SCHEMA or guard.get("enabled") is not True or guard.get("strict") is not True or guard.get("status") != "passed":
+            _issue(issues, "runtime_safety_guard", "capture_receipt.json.runtime_safety_guard", "must be a passed strict runtime guard")
         evidence = guard.get("evidence")
         if not isinstance(evidence, Mapping):
             _issue(issues, "runtime_safety_guard", "capture_receipt.json.runtime_safety_guard.evidence", "must be an object")
         else:
             if evidence.get("schema") != RUNTIME_SAFETY_TRACE_SCHEMA or evidence.get("path") != RUNTIME_SAFETY_PATH:
                 _issue(issues, "runtime_safety_guard", "capture_receipt.json.runtime_safety_guard.evidence", "must bind the runtime safety trace ABI")
-            if runtime_sha256 is not None and evidence.get("sha256") != runtime_sha256:
-                _issue(issues, "runtime_safety_guard", "capture_receipt.json.runtime_safety_guard.evidence.sha256", "does not bind runtime safety bytes")
+            if runtime_identity is not None and evidence.get("identity") != runtime_identity:
+                _issue(issues, "runtime_safety_guard", "capture_receipt.json.runtime_safety_guard.evidence.identity", "does not bind runtime safety bytes")
             if evidence.get("physics_frame_count") != frame_count:
                 _issue(issues, "runtime_safety_guard", "capture_receipt.json.runtime_safety_guard.evidence.physics_frame_count", "does not match trace frame count")
         guard_checks = guard.get("checks")
@@ -979,7 +982,7 @@ def _validate_runtime_safety(
 
 
 def validate_isaac_state_only_transfer(capture_root: Path) -> IsaacTransferValidationReport:
-    """Validate a hash-bound development-only state-only transfer capture.
+    """Validate an identity-bound development-only state-only transfer capture.
 
     The function returns every discovered contract violation instead of raising
     for malformed evidence.  Callers may write a public receipt only when the
@@ -998,11 +1001,11 @@ def validate_isaac_state_only_transfer(capture_root: Path) -> IsaacTransferValid
         _issue(issues, "capture_root", str(root), "capture root must be a directory")
         return IsaacTransferValidationReport(root, None, checks, tuple(issues))
 
-    receipt_sha256 = _verify_capture_receipt_hash(root, issues, checks)
+    receipt_identity = _verify_capture_receipt_identity(root, issues, checks)
     receipt = _read_json(root / "capture_receipt.json", relative="capture_receipt.json", issues=issues)
     if receipt is None:
-        return IsaacTransferValidationReport(root, receipt_sha256, checks, tuple(issues))
-    actual_hashes = _verify_artifact_hashes(root, receipt, issues, checks)
+        return IsaacTransferValidationReport(root, receipt_identity, checks, tuple(issues))
+    actual_identities = _verify_artifact_identities(root, receipt, issues, checks)
     timing = _validate_capture_contract(receipt, issues, checks)
 
     scene = _read_json(root / SCENE_PATH, relative=SCENE_PATH, issues=issues)
@@ -1013,19 +1016,22 @@ def validate_isaac_state_only_transfer(capture_root: Path) -> IsaacTransferValid
     )
     _validate_scene_contract(
         scene,
-        trace_sha256=actual_hashes.get(TRACE_PATH),
-        provenance_sha256=actual_hashes.get(TRACE_PROVENANCE_PATH),
+        trace_identity=actual_identities.get(TRACE_PATH),
+        provenance_identity=actual_identities.get(TRACE_PROVENANCE_PATH),
         issues=issues,
     )
     task = receipt.get("task")
-    if isinstance(task, Mapping) and TRACE_PATH in actual_hashes:
-        if task.get("decision_trace_sha256") != actual_hashes[TRACE_PATH]:
-            _issue(
-                issues,
-                "capture_trace_binding",
-                "capture_receipt.json.task.decision_trace_sha256",
-                "does not bind the transfer trace bytes",
-            )
+    if (
+        isinstance(task, Mapping)
+        and TRACE_PATH in actual_identities
+        and task.get("decision_trace_identity") != actual_identities[TRACE_PATH]
+    ):
+        _issue(
+            issues,
+            "capture_trace_binding",
+            "capture_receipt.json.task.decision_trace_identity",
+            "does not bind the transfer trace bytes",
+        )
 
     state = _load_npz(root / STATE_ACTION_PATH, relative=STATE_ACTION_PATH, issues=issues)
     trace = _load_npz(root / TRACE_PATH, relative=TRACE_PATH, issues=issues)
@@ -1036,7 +1042,7 @@ def validate_isaac_state_only_transfer(capture_root: Path) -> IsaacTransferValid
             provenance,
             receipt_transfer=receipt_transfer,
             receipt=receipt,
-            actual_hashes=actual_hashes,
+            actual_identities=actual_identities,
             issues=issues,
             checks=checks,
         )
@@ -1063,7 +1069,7 @@ def validate_isaac_state_only_transfer(capture_root: Path) -> IsaacTransferValid
         _validate_runtime_safety(
             runtime,
             receipt=receipt,
-            runtime_sha256=actual_hashes.get(RUNTIME_SAFETY_PATH),
+            runtime_identity=actual_identities.get(RUNTIME_SAFETY_PATH),
             state=state,
             state_valid=state_valid,
             steps=steps,
@@ -1078,11 +1084,11 @@ def validate_isaac_state_only_transfer(capture_root: Path) -> IsaacTransferValid
         checks["runtime_safety_timeline_verified"] = False
 
     checks["issue_count"] = len(issues)
-    return IsaacTransferValidationReport(root, receipt_sha256, checks, tuple(issues))
+    return IsaacTransferValidationReport(root, receipt_identity, checks, tuple(issues))
 
 
-def _validator_sha256() -> str:
-    return _sha256_file(Path(__file__).resolve())
+def _validator_identity() -> str:
+    return _identity_file(Path(__file__).resolve())
 
 
 def write_transfer_validation_receipt(
@@ -1090,7 +1096,7 @@ def write_transfer_validation_receipt(
 ) -> Path:
     """Atomically write the public development-only receipt for a valid report."""
 
-    if not report.valid or report.receipt_sha256 is None:
+    if not report.valid or report.receipt_identity is None:
         raise RuntimeError("cannot write a passing validation receipt for an invalid capture")
     payload = {
         "schema": TRANSFER_VALIDATION_SCHEMA,
@@ -1098,9 +1104,9 @@ def write_transfer_validation_receipt(
         "formal_benchmark_admission": False,
         "development_only": True,
         "dataset_episode": False,
-        "capture_receipt_sha256": report.receipt_sha256,
+        "capture_receipt_identity": report.receipt_identity,
         "validator_id": "rivermark-independent-isaac-state-transfer-validator-v1",
-        "validator_source_sha256": _validator_sha256(),
+        "validator_source_identity": _validator_identity(),
         "checks": dict(report.checks),
         "issues": [],
     }
@@ -1142,7 +1148,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = validate_isaac_state_only_transfer(root)
     payload: dict[str, Any] = {
         "valid": report.valid,
-        "capture_receipt_sha256": report.receipt_sha256,
+        "capture_receipt_identity": report.receipt_identity,
         "checks": dict(report.checks),
         "issues": [asdict(issue) for issue in report.issues],
     }

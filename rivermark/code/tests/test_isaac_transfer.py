@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
@@ -21,12 +20,12 @@ from rivermark_benchmark.isaac_transfer import (
     ACTION_FIELDS,
     CITYLITE_ROUTE_ANCHOR_HEADING_TO_PILOT_V1,
     EXCLUDED_POLICY_INPUTS,
-    STATE_FIELDS,
-    CityLiteRouteAnchorTransform,
-    FixedDecisionCadence,
     SB3_ADAPTER_V2_SCHEMA,
+    STATE_FIELDS,
     STATE_ONLY_PROPRIOCEPTION_ABI,
     STATE_ONLY_VELOCITY_ACTION_ABI,
+    CityLiteRouteAnchorTransform,
+    FixedDecisionCadence,
     StateOnlySB3IsaacTransfer,
     StateOnlyTransferError,
     WorldCommandBounds,
@@ -85,7 +84,7 @@ def _metadata() -> dict[str, object]:
             "claim_boundary": "development_state_only_control_wiring_smoke_only",
         },
         "formal_benchmark_admission": False,
-        "checkpoint_sha256": "a" * 64,
+        "checkpoint_identity": "a" * 16,
         "runtime_versions": {
             "python": platform.python_version(),
             "numpy": "test",
@@ -96,7 +95,7 @@ def _metadata() -> dict[str, object]:
 
 
 def _policy(action: np.ndarray, *, metadata: dict[str, object] | None = None, model: _Model | None = None) -> StableBaselines3CheckpointPolicy:
-    """Construct a type-valid stand-in after the real loader's hash gate.
+    """Construct a type-valid stand-in after the real loader's identity gate.
 
     The production factory owns SB3 loading and SHA validation.  This focused
     NumPy test only needs a loaded policy object to exercise the pure bridge.
@@ -106,8 +105,8 @@ def _policy(action: np.ndarray, *, metadata: dict[str, object] | None = None, mo
     policy.metadata = _metadata() if metadata is None else metadata
     policy.model = _Model(action) if model is None else model
     policy.provenance = lambda: {
-        "checkpoint_sha256": "a" * 64,
-        "adapter_metadata_sha256": "b" * 64,
+        "checkpoint_identity": "a" * 16,
+        "adapter_metadata_identity": "b" * 16,
         "external_dependency": "stable_baselines3",
     }
     return policy
@@ -299,14 +298,14 @@ class IsaacStateOnlyTransferTests(unittest.TestCase):
             validate_state_only_sb3_policy(_policy(action, metadata=metadata))
 
         policy = _policy(action)
-        policy.provenance = lambda: {"checkpoint_sha256": "a" * 64}
-        with self._matching_runtime_versions(), self.assertRaisesRegex(StateOnlyTransferError, "metadata SHA-256"):
+        policy.provenance = lambda: {"checkpoint_identity": "a" * 16}
+        with self._matching_runtime_versions(), self.assertRaisesRegex(StateOnlyTransferError, "metadatan identity"):
             validate_state_only_sb3_policy(policy)
 
         policy = _policy(action)
         policy.provenance = lambda: {
-            "checkpoint_sha256": "c" * 64,
-            "adapter_metadata_sha256": "b" * 64,
+            "checkpoint_identity": "c" * 16,
+            "adapter_metadata_identity": "b" * 16,
         }
         with self._matching_runtime_versions(), self.assertRaisesRegex(StateOnlyTransferError, "does not match"):
             validate_state_only_sb3_policy(policy)

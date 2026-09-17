@@ -9,11 +9,11 @@ import dgl
 import torch
 
 from .checkpointing import atomic_write_json, normalize_resume_identity_path
-from .vendor.splitgnn.utils import evaluate
 from .dataset_registry import load_registered_dataset_bundle
 from .device_utils import DEFAULT_DEVICE_REQUEST, resolve_dgl_training_device
 from .fraud_dataset import DatasetBundle
 from .hybrid_task_model import HybridFraudModel, checkpoint_legacy_fusion_only, sanitize_legacy_hybrid_state_dict
+from .vendor.splitgnn.utils import evaluate
 
 
 def _graph_on_device(graph: dgl.DGLHeteroGraph, device: torch.device) -> dgl.DGLHeteroGraph:
@@ -101,8 +101,8 @@ def evaluate_model(
             return_details=True,
             precision_target=float(getattr(model.args, "fixed_precision_target", 0.5)),
         )
-    setattr(model, "_last_eval_branch", selected_branch)
-    setattr(model, "_last_eval_branch_priority", branch_priority)
+    model._last_eval_branch = selected_branch
+    model._last_eval_branch_priority = branch_priority
     return {key: float(value) for key, value in metrics.items()}
 
 

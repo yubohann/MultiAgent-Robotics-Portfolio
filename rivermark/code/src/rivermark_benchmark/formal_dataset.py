@@ -1,10 +1,9 @@
-"""Fail-closed formal dataset admission, indexing, and integrity tooling."""
+"""Strict formal dataset admission, indexing, and integrity tooling."""
 
 from __future__ import annotations
 
 import argparse
 import copy
-import hashlib
 import json
 import math
 import os
@@ -17,21 +16,22 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .abi import observation_abi_sha256, validate_formal_observation_abi
+from ._identity import IdentityAccumulator
+from .abi import observation_abi_identity, validate_formal_observation_abi
 from .collection_protocol import validate_collection_binding
 from .failure_ledger import FailureRecord, append_failure_record
-from .schema import is_safe_relative_path, is_sha256
+from .schema import is_safe_relative_path, is_identity
 from .supply_chain import (
     SupplyChainError,
     load_supply_chain_manifest,
-    supply_chain_sha256,
+    supply_chain_identity,
     verify_supply_chain_manifest,
 )
 from .validate import validate_episode_manifest
 
 FORMAL_CAPTURE_RECEIPT_SCHEMA = "org.rivermark.benchmark.formal-capture-receipt.v1"
 LINEAGE_SCHEMA = "org.rivermark.benchmark.episode-lineage.v1"
-CONTENT_HASH_INDEX_SCHEMA = "org.rivermark.benchmark.content-hash-index.v1"
+CONTENT_IDENTITY_INDEX_SCHEMA = "org.rivermark.benchmark.content-identity-index.v1"
 RELEASE_ADMISSION_SCHEMA = "org.rivermark.benchmark.release-admission.v1"
 DATASET_INDEX_SCHEMA = "org.rivermark.benchmark.dataset-index.v1"
 SPLIT_AUTHORITY_SCHEMA = "org.rivermark.benchmark.split-authority.v1"
@@ -86,9 +86,9 @@ class CandidateIntegrityReport:
     episode_id: str | None
     manifest: Mapping[str, Any] | None
     lineage: Mapping[str, Any] | None
-    manifest_sha256: str | None
-    lineage_sha256: str | None
-    receipt_sha256: str | None
+    manifest_identity: str | None
+    lineage_identity: str | None
+    receipt_identity: str | None
     issues: tuple[DatasetIssue, ...]
 
     @property
@@ -115,18 +115,18 @@ class DatasetIntegrityReport:
         return not self.issues
 
 
-def sha256_file(path: Path) -> str:
-    """Hash a file in bounded memory."""
+def identity_file(path: Path) -> str:
+    """Identity a file in bounded memory."""
 
-    digest = hashlib.sha256()
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
 
 
-def _sha256_text(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+def _identity_text(value: str) -> str:
+    return IdentityAccumulator(value.encode("utf-8")).hexdigest()
 
 
 def _canonical_json_bytes(payload: Any) -> bytes:
@@ -236,12 +236,12 @@ def _validate_lineage(
         _issue(issues, "lineage_episode_id", f"{path}.episode_id", "must be a non-empty identifier")
     axes = lineage.get("axes")
     if not isinstance(axes, Mapping):
-        _issue(issues, "lineage_axes", f"{path}.axes", "must be an object of opaque SHA-256 values")
+        _issue(issues, "lineage_axes", f"{path}.axes", "must be an object of opaque IDENTITY values")
         return
     _expect_exact_keys(axes, LINEAGE_AXES, path=f"{path}.axes", issues=issues)
     for axis in LINEAGE_AXES:
-        if not is_sha256(axes.get(axis)):
-            _issue(issues, "lineage_axis", f"{path}.axes.{axis}", "must be a SHA-256 commitment")
+        if not is_identity(axes.get(axis)):
+            _issue(issues, "lineage_axis", f"{path}.axes.{axis}", "must be an identity record")
     if manifest is None:
         return
     manifest_id = manifest.get("episode_id")
@@ -249,34 +249,34 @@ def _validate_lineage(
         _issue(issues, "lineage_episode_mismatch", f"{path}.episode_id", "does not match episode manifest")
     layout = manifest.get("layout")
     task = manifest.get("task")
-    if isinstance(layout, Mapping) and axes.get("layout_lineage") != layout.get("layout_lineage_hash"):
+    if isinstance(layout, Mapping) and axes.get("layout_lineage") != layout.get("layout_lineage_identity"):
         _issue(
             issues,
             "lineage_layout_mismatch",
             f"{path}.axes.layout_lineage",
-            "must equal layout.layout_lineage_hash",
+            "must equal layout.layout_lineage_identity",
         )
-    if isinstance(task, Mapping) and axes.get("task_manifest") != task.get("task_spec_sha256"):
+    if isinstance(task, Mapping) and axes.get("task_manifest") != task.get("task_spec_identity"):
         _issue(
             issues,
             "lineage_task_mismatch",
             f"{path}.axes.task_manifest",
-            "must equal task.task_spec_sha256",
+            "must equal task.task_spec_identity",
         )
-    if isinstance(manifest_id, str) and axes.get("episode") != _sha256_text(manifest_id):
+    if isinstance(manifest_id, str) and axes.get("episode") != _identity_text(manifest_id):
         _issue(
             issues,
-            "lineage_episode_hash",
+            "lineage_episode_identity",
             f"{path}.axes.episode",
-            "must be SHA-256 of the public episode_id",
+            "must be a short identity of the public episode_id",
         )
 
 
 def _validate_capture_receipt(
     receipt: Mapping[str, Any] | None,
     *,
-    manifest_sha256: str | None,
-    lineage_sha256: str | None,
+    manifest_identity: str | None,
+    lineage_identity: str | None,
     manifest: Mapping[str, Any] | None,
     path: str,
     issues: list[DatasetIssue],
@@ -287,9 +287,9 @@ def _validate_capture_receipt(
         "schema",
         "status",
         "formal_benchmark_admission",
-        "episode_manifest_sha256",
-        "lineage_sha256",
-        "observation_abi_sha256",
+        "episode_manifest_identity",
+        "lineage_identity",
+        "observation_abi_identity",
         "capture_backend",
         "integrity",
         "partitions",
@@ -308,24 +308,24 @@ def _validate_capture_receipt(
         _issue(issues, "receipt_status", f"{path}.status", "formal receipt status must be 'admitted'")
     if receipt.get("formal_benchmark_admission") is not True:
         _issue(issues, "formal_admission", f"{path}.formal_benchmark_admission", "must be true")
-    if not is_sha256(receipt.get("episode_manifest_sha256")):
-        _issue(issues, "receipt_manifest_hash", f"{path}.episode_manifest_sha256", "must be SHA-256")
-    elif manifest_sha256 is not None and receipt.get("episode_manifest_sha256") != manifest_sha256:
-        _issue(issues, "receipt_manifest_mismatch", f"{path}.episode_manifest_sha256", "does not bind this manifest")
-    if not is_sha256(receipt.get("lineage_sha256")):
-        _issue(issues, "receipt_lineage_hash", f"{path}.lineage_sha256", "must be SHA-256")
-    elif lineage_sha256 is not None and receipt.get("lineage_sha256") != lineage_sha256:
-        _issue(issues, "receipt_lineage_mismatch", f"{path}.lineage_sha256", "does not bind this lineage")
-    abi_hash = receipt.get("observation_abi_sha256")
-    if not is_sha256(abi_hash):
-        _issue(issues, "receipt_abi_hash", f"{path}.observation_abi_sha256", "must be SHA-256")
+    if not is_identity(receipt.get("episode_manifest_identity")):
+        _issue(issues, "receipt_manifest_identity", f"{path}.episode_manifest_identity", "must be a short identity")
+    elif manifest_identity is not None and receipt.get("episode_manifest_identity") != manifest_identity:
+        _issue(issues, "receipt_manifest_mismatch", f"{path}.episode_manifest_identity", "does not bind this manifest")
+    if not is_identity(receipt.get("lineage_identity")):
+        _issue(issues, "receipt_lineage_identity", f"{path}.lineage_identity", "must be a short identity")
+    elif lineage_identity is not None and receipt.get("lineage_identity") != lineage_identity:
+        _issue(issues, "receipt_lineage_mismatch", f"{path}.lineage_identity", "does not bind this lineage")
+    abi_identity = receipt.get("observation_abi_identity")
+    if not is_identity(abi_identity):
+        _issue(issues, "receipt_abi_identity", f"{path}.observation_abi_identity", "must be a short identity")
     elif isinstance(manifest, Mapping):
         abi_ref = manifest.get("observation_abi")
-        if isinstance(abi_ref, Mapping) and abi_hash != abi_ref.get("sha256"):
+        if isinstance(abi_ref, Mapping) and abi_identity != abi_ref.get("identity"):
             _issue(
                 issues,
                 "receipt_abi_mismatch",
-                f"{path}.observation_abi_sha256",
+                f"{path}.observation_abi_identity",
                 "does not bind the manifest observation ABI",
             )
 
@@ -354,7 +354,7 @@ def _validate_capture_receipt(
     else:
         _expect_exact_keys(
             backend,
-            {"kind", "build", "sensor_physics_smoke_receipt_sha256"},
+            {"kind", "build", "sensor_physics_smoke_receipt_identity"},
             path=f"{path}.capture_backend",
             issues=issues,
         )
@@ -362,12 +362,12 @@ def _validate_capture_receipt(
             _issue(issues, "receipt_backend", f"{path}.capture_backend.kind", "only isaaclab or hardware is admissible")
         if not _nonempty_string(backend.get("build")):
             _issue(issues, "receipt_backend", f"{path}.capture_backend.build", "must be a non-empty build identifier")
-        if not is_sha256(backend.get("sensor_physics_smoke_receipt_sha256")):
+        if not is_identity(backend.get("sensor_physics_smoke_receipt_identity")):
             _issue(
                 issues,
                 "receipt_backend",
-                f"{path}.capture_backend.sensor_physics_smoke_receipt_sha256",
-                "must be SHA-256",
+                f"{path}.capture_backend.sensor_physics_smoke_receipt_identity",
+                "must be a short identity",
             )
 
     integrity = receipt.get("integrity")
@@ -381,7 +381,7 @@ def _validate_capture_receipt(
         "sensor_decode_audit_passed",
         "policy_leakage_audit_passed",
         "independent_validator_id",
-        "independent_validator_sha256",
+        "independent_validator_identity",
         "pose_closure_threshold_m",
     }
     if collection_binding is not None:
@@ -405,8 +405,8 @@ def _validate_capture_receipt(
                 _issue(issues, "receipt_integrity", f"{path}.integrity.{key}", "must be false")
         if not _nonempty_string(integrity.get("independent_validator_id")):
             _issue(issues, "receipt_integrity", f"{path}.integrity.independent_validator_id", "must be non-empty")
-        if not is_sha256(integrity.get("independent_validator_sha256")):
-            _issue(issues, "receipt_integrity", f"{path}.integrity.independent_validator_sha256", "must be SHA-256")
+        if not is_identity(integrity.get("independent_validator_identity")):
+            _issue(issues, "receipt_integrity", f"{path}.integrity.independent_validator_identity", "must be a short identity")
         if collection_binding is not None and integrity.get("condition_realization_verified") is not True:
             _issue(
                 issues,
@@ -436,7 +436,7 @@ def _validate_capture_receipt(
 
     partitions = receipt.get("partitions")
     partition_keys = {
-        "policy_visible_audit_sha256",
+        "policy_visible_audit_identity",
         "learning_labels_release_allowed",
         "evaluator_private_distributed",
         "evaluator_private_server_only",
@@ -445,8 +445,8 @@ def _validate_capture_receipt(
         _issue(issues, "receipt_partitions", f"{path}.partitions", "must be an object")
     else:
         _expect_exact_keys(partitions, partition_keys, path=f"{path}.partitions", issues=issues)
-        if not is_sha256(partitions.get("policy_visible_audit_sha256")):
-            _issue(issues, "receipt_partitions", f"{path}.partitions.policy_visible_audit_sha256", "must be SHA-256")
+        if not is_identity(partitions.get("policy_visible_audit_identity")):
+            _issue(issues, "receipt_partitions", f"{path}.partitions.policy_visible_audit_identity", "must be a short identity")
         for key, expected in (
             ("learning_labels_release_allowed", None),
             ("evaluator_private_distributed", False),
@@ -482,8 +482,8 @@ def _validate_formal_manifest_rules(manifest: Mapping[str, Any], issues: list[Da
     abi_ref = manifest.get("observation_abi")
     if not isinstance(abi_ref, Mapping):
         _issue(issues, "observation_abi_required", "$.observation_abi", "formal admission requires a bound observation ABI")
-    elif not is_sha256(abi_ref.get("sha256")) or _canonical_relative(abi_ref.get("path")) is None:
-        _issue(issues, "observation_abi_required", "$.observation_abi", "formal admission requires a safe path and SHA-256 ABI binding")
+    elif not is_identity(abi_ref.get("identity")) or _canonical_relative(abi_ref.get("path")) is None:
+        _issue(issues, "observation_abi_required", "$.observation_abi", "formal admission requires a safe path and IDENTITY ABI binding")
     quality = manifest.get("quality")
     if not isinstance(quality, Mapping):
         return
@@ -569,42 +569,42 @@ def _content_index_files(
     issues: list[DatasetIssue],
     issue_path: str,
 ) -> dict[str, str]:
-    """Validate a template binding and return every payload path/hash it covers."""
+    """Validate a template binding and return every payload path/identity it covers."""
 
-    index_relative = _canonical_relative(stream.get("content_hash_index_path"))
-    expected_index_hash = stream.get("content_hash_index_sha256")
-    if index_relative is None or not is_sha256(expected_index_hash):
+    index_relative = _canonical_relative(stream.get("content_identity_index_path"))
+    expected_index_identity = stream.get("content_identity_index_identity")
+    if index_relative is None or not is_identity(expected_index_identity):
         return {}
     index_path = _contained_file(root, index_relative)
     if index_path is None:
-        _issue(issues, "missing_file", f"{issue_path}.content_hash_index_path", "content-hash index is missing")
+        _issue(issues, "missing_file", f"{issue_path}.content_identity_index_path", "content-identity index is missing")
         return {}
-    if sha256_file(index_path) != expected_index_hash:
-        _issue(issues, "file_hash", f"{issue_path}.content_hash_index_path", "content-hash index digest does not match")
+    if identity_file(index_path) != expected_index_identity:
+        _issue(issues, "file_identity", f"{issue_path}.content_identity_index_path", "content-identity index digest does not match")
         return {}
-    index = _read_json(index_path, issues=issues, issue_path=f"{issue_path}.content_hash_index")
+    index = _read_json(index_path, issues=issues, issue_path=f"{issue_path}.content_identity_index")
     if index is None:
         return {}
-    _expect_exact_keys(index, {"schema", "stream_id", "files"}, path=f"{issue_path}.content_hash_index", issues=issues)
-    if index.get("schema") != CONTENT_HASH_INDEX_SCHEMA:
-        _issue(issues, "content_index_schema", f"{issue_path}.content_hash_index.schema", "unsupported content-hash index schema")
+    _expect_exact_keys(index, {"schema", "stream_id", "files"}, path=f"{issue_path}.content_identity_index", issues=issues)
+    if index.get("schema") != CONTENT_IDENTITY_INDEX_SCHEMA:
+        _issue(issues, "content_index_schema", f"{issue_path}.content_identity_index.schema", "unsupported content-identity index schema")
     if index.get("stream_id") != stream.get("stream_id"):
-        _issue(issues, "content_index_stream", f"{issue_path}.content_hash_index.stream_id", "does not bind this stream")
+        _issue(issues, "content_index_stream", f"{issue_path}.content_identity_index.stream_id", "does not bind this stream")
     files = index.get("files")
     if not isinstance(files, list):
-        _issue(issues, "content_index_files", f"{issue_path}.content_hash_index.files", "must be a list")
+        _issue(issues, "content_index_files", f"{issue_path}.content_identity_index.files", "must be a list")
         return {}
     template = _canonical_relative(stream.get("path_template"))
     if template is None:
         return {}
-    result: dict[str, str] = {index_relative: str(expected_index_hash)}
+    result: dict[str, str] = {index_relative: str(expected_index_identity)}
     seen_agents: set[int] = set()
     for file_index, entry in enumerate(files):
-        entry_path = f"{issue_path}.content_hash_index.files[{file_index}]"
+        entry_path = f"{issue_path}.content_identity_index.files[{file_index}]"
         if not isinstance(entry, Mapping):
             _issue(issues, "content_index_entry", entry_path, "must be an object")
             continue
-        _expect_exact_keys(entry, {"agent_id", "path", "sha256"}, path=entry_path, issues=issues)
+        _expect_exact_keys(entry, {"agent_id", "path", "identity"}, path=entry_path, issues=issues)
         agent_id = entry.get("agent_id")
         if not isinstance(agent_id, int) or isinstance(agent_id, bool) or not 0 <= agent_id < agent_count:
             _issue(issues, "content_index_agent", f"{entry_path}.agent_id", "agent id is outside the task range")
@@ -621,26 +621,26 @@ def _content_index_files(
         if relative != expected:
             _issue(issues, "content_index_path", f"{entry_path}.path", "does not match stream path_template")
             continue
-        digest = entry.get("sha256")
-        if not is_sha256(digest):
-            _issue(issues, "sha256", f"{entry_path}.sha256", "must be SHA-256")
+        digest = entry.get("identity")
+        if not is_identity(digest):
+            _issue(issues, "identity", f"{entry_path}.identity", "must be a short identity")
             continue
         payload = _contained_file(root, relative)
         if payload is None:
             _issue(issues, "missing_file", f"{entry_path}.path", "template payload is missing")
             continue
-        if sha256_file(payload) != digest:
-            _issue(issues, "file_hash", f"{entry_path}.path", "template payload digest does not match")
+        if identity_file(payload) != digest:
+            _issue(issues, "file_identity", f"{entry_path}.path", "template payload digest does not match")
             continue
         previous = result.setdefault(relative, str(digest))
         if previous != digest:
-            _issue(issues, "path_hash_conflict", f"{entry_path}.path", "one path has incompatible digests")
+            _issue(issues, "path_identity_conflict", f"{entry_path}.path", "one path has incompatible digests")
     expected_agents = set(range(agent_count))
     if seen_agents != expected_agents:
         _issue(
             issues,
             "content_index_coverage",
-            f"{issue_path}.content_hash_index.files",
+            f"{issue_path}.content_identity_index.files",
             "template bindings must cover every agent exactly once",
         )
     return result
@@ -653,7 +653,7 @@ def _bound_files(
     include_learning_labels: bool,
     issues: list[DatasetIssue],
 ) -> dict[str, str]:
-    """Return all public release files referenced by a manifest, with hashes."""
+    """Return all public release files referenced by a manifest, with identities."""
 
     result: dict[str, str] = {}
 
@@ -665,20 +665,20 @@ def _bound_files(
         if _path_has_reserved_partition(relative):
             _issue(issues, "reserved_release_path", path, "public release path uses a private partition name")
             return
-        if not is_sha256(digest):
-            _issue(issues, "sha256", path, "release binding requires SHA-256")
+        if not is_identity(digest):
+            _issue(issues, "identity", path, "release binding requires IDENTITY")
             return
         file_path = _contained_file(root, relative)
         if file_path is None:
             _issue(issues, "missing_file", path, "bound file is missing")
             return
-        actual = sha256_file(file_path)
+        actual = identity_file(file_path)
         if actual != digest:
-            _issue(issues, "file_hash", path, "bound file hash does not match")
+            _issue(issues, "file_identity", path, "bound file identity does not match")
             return
         previous = result.setdefault(relative, str(digest))
         if previous != digest:
-            _issue(issues, "path_hash_conflict", path, "one path has incompatible digests")
+            _issue(issues, "path_identity_conflict", path, "one path has incompatible digests")
 
     def bind_observation_abi(relative_value: object, digest: object, path: str) -> None:
         relative = _canonical_relative(relative_value)
@@ -688,8 +688,8 @@ def _bound_files(
         if _path_has_reserved_partition(relative):
             _issue(issues, "reserved_release_path", path, "public release path uses a private partition name")
             return
-        if not is_sha256(digest):
-            _issue(issues, "sha256", path, "observation ABI binding requires SHA-256")
+        if not is_identity(digest):
+            _issue(issues, "identity", path, "observation ABI binding requires IDENTITY")
             return
         file_path = _contained_file(root, relative)
         if file_path is None:
@@ -706,27 +706,27 @@ def _bound_files(
         if abi_issues:
             return
         try:
-            actual = observation_abi_sha256(payload)
+            actual = observation_abi_identity(payload)
         except Exception as exc:  # the structural validation above should make this unreachable
-            _issue(issues, "abi_hash", path, f"cannot canonicalize observation ABI: {exc}")
+            _issue(issues, "abi_identity", path, f"cannot canonicalize observation ABI: {exc}")
             return
         if actual != digest:
-            _issue(issues, "abi_hash", f"{path}.sha256", "canonical observation ABI hash does not match")
+            _issue(issues, "abi_identity", f"{path}.identity", "canonical observation ABI identity does not match")
             return
-        actual_file_hash = sha256_file(file_path)
-        previous = result.setdefault(relative, actual_file_hash)
-        if previous != actual_file_hash:
-            _issue(issues, "path_hash_conflict", path, "one path has incompatible file digests")
+        actual_file_identity = identity_file(file_path)
+        previous = result.setdefault(relative, actual_file_identity)
+        if previous != actual_file_identity:
+            _issue(issues, "path_identity_conflict", path, "one path has incompatible file digests")
 
     observation_abi = manifest.get("observation_abi")
     if isinstance(observation_abi, Mapping):
-        bind_observation_abi(observation_abi.get("path"), observation_abi.get("sha256"), "$.observation_abi.path")
+        bind_observation_abi(observation_abi.get("path"), observation_abi.get("identity"), "$.observation_abi.path")
     layout = manifest.get("layout")
     if isinstance(layout, Mapping):
-        bind(layout.get("scene_manifest_ref"), layout.get("scene_manifest_sha256"), "$.layout.scene_manifest_ref")
+        bind(layout.get("scene_manifest_ref"), layout.get("scene_manifest_identity"), "$.layout.scene_manifest_ref")
     task = manifest.get("task")
     if isinstance(task, Mapping):
-        bind(task.get("task_spec_ref"), task.get("task_spec_sha256"), "$.task.task_spec_ref")
+        bind(task.get("task_spec_ref"), task.get("task_spec_identity"), "$.task.task_spec_ref")
         agent_count = task.get("agent_count")
     else:
         agent_count = None
@@ -748,8 +748,8 @@ def _bound_files(
             continue
         if partition not in {"policy_visible", "learning_labels"}:
             continue
-        if "path" in raw_stream or "sha256" in raw_stream:
-            bind(raw_stream.get("path"), raw_stream.get("sha256"), f"{stream_path}.path")
+        if "path" in raw_stream or "identity" in raw_stream:
+            bind(raw_stream.get("path"), raw_stream.get("identity"), f"{stream_path}.path")
         else:
             files = _content_index_files(
                 root,
@@ -764,22 +764,17 @@ def _bound_files(
                     continue
                 previous = result.setdefault(relative, digest)
                 if previous != digest:
-                    _issue(issues, "path_hash_conflict", stream_path, "one path has incompatible digests")
+                    _issue(issues, "path_identity_conflict", stream_path, "one path has incompatible digests")
     return result
 
 
 def verify_candidate_episode(
     episode_root: Path,
     *,
-    trusted_receipt_hashes: Iterable[str] = (),
+    trusted_receipt_identities: Iterable[str] = (),
     require_trusted_receipt: bool = True,
 ) -> CandidateIntegrityReport:
-    """Verify a source capture before it can be projected into a release.
-
-    ``trusted_receipt_hashes`` is intentionally explicit.  A valid-looking
-    receipt without an operator-approved digest is quarantined rather than
-    being promoted into a benchmark release.
-    """
+    """Verify a source capture before it can be projected into a release."""
 
     root = episode_root.resolve()
     issues: list[DatasetIssue] = []
@@ -789,9 +784,9 @@ def verify_candidate_episode(
     manifest = _read_json(manifest_path, issues=issues, issue_path=_MANIFEST_PATH)
     lineage = _read_json(lineage_path, issues=issues, issue_path=_LINEAGE_PATH)
     receipt = _read_json(receipt_path, issues=issues, issue_path=_RECEIPT_PATH)
-    manifest_hash = sha256_file(manifest_path) if manifest_path.is_file() else None
-    lineage_hash = sha256_file(lineage_path) if lineage_path.is_file() else None
-    receipt_hash = sha256_file(receipt_path) if receipt_path.is_file() else None
+    manifest_identity = identity_file(manifest_path) if manifest_path.is_file() else None
+    lineage_identity = identity_file(lineage_path) if lineage_path.is_file() else None
+    receipt_identity = identity_file(receipt_path) if receipt_path.is_file() else None
     if manifest is not None:
         for issue in validate_episode_manifest(manifest, base_dir=root, check_files=True):
             _issue(issues, f"manifest_{issue.code}", issue.path, issue.message)
@@ -799,21 +794,20 @@ def verify_candidate_episode(
     _validate_lineage(lineage, manifest=manifest, path="$lineage", issues=issues)
     _validate_capture_receipt(
         receipt,
-        manifest_sha256=manifest_hash,
-        lineage_sha256=lineage_hash,
+        manifest_identity=manifest_identity,
+        lineage_identity=lineage_identity,
         manifest=manifest,
         path="$formal_capture_receipt",
         issues=issues,
     )
-    trusted = set(trusted_receipt_hashes)
-    if require_trusted_receipt:
-        if receipt_hash is None or receipt_hash not in trusted:
-            _issue(
-                issues,
-                "untrusted_capture_receipt",
-                _RECEIPT_PATH,
-                "formal receipt hash is not in the explicit operator allowlist",
-            )
+    trusted = set(trusted_receipt_identities)
+    if require_trusted_receipt and (receipt_identity is None or receipt_identity not in trusted):
+        _issue(
+            issues,
+            "untrusted_capture_receipt",
+            _RECEIPT_PATH,
+            "formal receipt identity is not in the explicit operator allowlist",
+        )
     if manifest is not None:
         # Source captures may retain non-distributed learning labels for an
         # internal training workflow.  They must still be manifest-bound and
@@ -831,9 +825,9 @@ def verify_candidate_episode(
         episode_id=episode_id,
         manifest=manifest,
         lineage=lineage,
-        manifest_sha256=manifest_hash,
-        lineage_sha256=lineage_hash,
-        receipt_sha256=receipt_hash,
+        manifest_identity=manifest_identity,
+        lineage_identity=lineage_identity,
+        receipt_identity=receipt_identity,
         issues=tuple(issues),
     )
 
@@ -880,18 +874,18 @@ def quarantine_candidate(
     issues: Iterable[DatasetIssue],
     *,
     episode_id: str | None = None,
-    manifest_sha256: str | None = None,
-    receipt_sha256: str | None = None,
+    manifest_identity: str | None = None,
+    receipt_identity: str | None = None,
 ) -> Path:
     """Retain an immutable, non-sensitive failure record without moving data."""
 
     normalized_issues = tuple(issues)
-    fingerprint = hashlib.sha256(
+    fingerprint = IdentityAccumulator(
         _canonical_json_bytes(
             {
                 "episode_id": episode_id,
-                "manifest_sha256": manifest_sha256,
-                "receipt_sha256": receipt_sha256,
+                "manifest_identity": manifest_identity,
+                "receipt_identity": receipt_identity,
                 "issues": [asdict(issue) for issue in normalized_issues],
             }
         )
@@ -903,8 +897,8 @@ def quarantine_candidate(
         "episode_id": episode_id,
         "candidate_directory_name": _safe_episode_label(candidate_root.name, "candidate"),
         "source_retained": True,
-        "source_manifest_sha256": manifest_sha256,
-        "source_capture_receipt_sha256": receipt_sha256,
+        "source_manifest_identity": manifest_identity,
+        "source_capture_receipt_identity": receipt_identity,
         "reasons": [asdict(issue) for issue in normalized_issues],
     }
     if record_path.exists():
@@ -921,7 +915,7 @@ def _lineage_axes(lineage: Mapping[str, Any] | None) -> Mapping[str, str] | None
     if not isinstance(lineage, Mapping):
         return None
     axes = lineage.get("axes")
-    if not isinstance(axes, Mapping) or not all(is_sha256(axes.get(axis)) for axis in LINEAGE_AXES):
+    if not isinstance(axes, Mapping) or not all(is_identity(axes.get(axis)) for axis in LINEAGE_AXES):
         return None
     return {axis: str(axes[axis]) for axis in LINEAGE_AXES}
 
@@ -1010,7 +1004,7 @@ def _split_authority_payload(entries: Sequence[tuple[str, str, Mapping[str, str]
     for indices in groups.values():
         episode_ids = sorted(entries[index][0] for index in indices)
         split = entries[indices[0]][1]
-        group_id = hashlib.sha256(_canonical_json_bytes({"episode_ids": episode_ids, "split": split})).hexdigest()
+        group_id = IdentityAccumulator(_canonical_json_bytes({"episode_ids": episode_ids, "split": split})).hexdigest()
         authority_groups.append({"group_id": group_id, "split": split, "episode_ids": episode_ids})
     return {
         "schema": SPLIT_AUTHORITY_SCHEMA,
@@ -1021,13 +1015,7 @@ def _split_authority_payload(entries: Sequence[tuple[str, str, Mapping[str, str]
 
 
 def plan_split_authority(candidate_roots: Iterable[Path]) -> tuple[dict[str, Any] | None, tuple[DatasetIssue, ...]]:
-    """Validate predeclared split assignments before formal collection.
-
-    Split assignment is intentionally not mutated after capture: changing
-    ``manifest.split`` would invalidate the independently bound receipt.  This
-    function checks the assignments encoded in candidate manifests and emits a
-    deterministic authority document only if all lineage groups are disjoint.
-    """
+    """Validate predeclared split assignments before formal collection."""
 
     reports = [
         verify_candidate_episode(root, require_trusted_receipt=False)
@@ -1057,18 +1045,6 @@ def plan_split_authority(candidate_roots: Iterable[Path]) -> tuple[dict[str, Any
     return _split_authority_payload(entries, next(iter(versions))), ()
 
 
-def _release_files(root: Path) -> set[str]:
-    files: set[str] = set()
-    if not root.exists():
-        return files
-    for path in root.rglob("*"):
-        if path.is_symlink():
-            files.add(f"__symlink__:{path.relative_to(root).as_posix()}")
-        elif path.is_file():
-            files.add(path.relative_to(root).as_posix())
-    return files
-
-
 def _validate_file_inventory(
     root: Path,
     *,
@@ -1076,14 +1052,7 @@ def _validate_file_inventory(
     scope: str,
     issues: list[DatasetIssue],
 ) -> None:
-    """Reject unbound files, symlinks, and private-looking directories.
-
-    A manifest hash is not enough if a directory can silently carry additional
-    content.  Formal captures and public releases are therefore closed worlds:
-    every regular file must be either metadata required by this module or a
-    manifest-bound payload.  Evaluator-private material belongs in the
-    separately controlled evaluator store, never beside a candidate episode.
-    """
+    """Reject unbound files, symlinks, and private-looking directories."""
 
     if not root.exists():
         return
@@ -1137,9 +1106,9 @@ def _validate_admission_record(
     admission: Mapping[str, Any] | None,
     *,
     manifest: Mapping[str, Any] | None,
-    manifest_sha256: str | None,
-    receipt_sha256: str | None,
-    lineage_sha256: str | None,
+    manifest_identity: str | None,
+    receipt_identity: str | None,
+    lineage_identity: str | None,
     receipt: Mapping[str, Any] | None,
     issues: list[DatasetIssue],
 ) -> None:
@@ -1150,11 +1119,11 @@ def _validate_admission_record(
         "episode_id",
         "split",
         "formal_benchmark_admission",
-        "source_episode_manifest_sha256",
-        "release_episode_manifest_sha256",
-        "formal_capture_receipt_sha256",
-        "lineage_sha256",
-        "supply_chain_manifest_sha256",
+        "source_episode_manifest_identity",
+        "release_episode_manifest_identity",
+        "formal_capture_receipt_identity",
+        "lineage_identity",
+        "supply_chain_manifest_identity",
         "supply_chain_release_id",
         "included_partitions",
         "withheld_learning_modalities",
@@ -1177,17 +1146,17 @@ def _validate_admission_record(
             _issue(issues, "admission_episode", "$admission.episode_id", "does not match release manifest")
         if admission.get("split") != manifest.get("split"):
             _issue(issues, "admission_split", "$admission.split", "does not match release manifest")
-    if admission.get("release_episode_manifest_sha256") != manifest_sha256:
-        _issue(issues, "admission_manifest_hash", "$admission.release_episode_manifest_sha256", "does not bind release manifest")
-    if admission.get("formal_capture_receipt_sha256") != receipt_sha256:
-        _issue(issues, "admission_receipt_hash", "$admission.formal_capture_receipt_sha256", "does not bind formal receipt")
-    if admission.get("lineage_sha256") != lineage_sha256:
-        _issue(issues, "admission_lineage_hash", "$admission.lineage_sha256", "does not bind lineage")
-    if not is_sha256(admission.get("supply_chain_manifest_sha256")):
+    if admission.get("release_episode_manifest_identity") != manifest_identity:
+        _issue(issues, "admission_manifest_identity", "$admission.release_episode_manifest_identity", "does not bind release manifest")
+    if admission.get("formal_capture_receipt_identity") != receipt_identity:
+        _issue(issues, "admission_receipt_identity", "$admission.formal_capture_receipt_identity", "does not bind formal receipt")
+    if admission.get("lineage_identity") != lineage_identity:
+        _issue(issues, "admission_lineage_identity", "$admission.lineage_identity", "does not bind lineage")
+    if not is_identity(admission.get("supply_chain_manifest_identity")):
         _issue(
             issues,
-            "admission_supply_chain_hash",
-            "$admission.supply_chain_manifest_sha256",
+            "admission_supply_chain_identity",
+            "$admission.supply_chain_manifest_identity",
             "must bind a release-verified supply-chain manifest",
         )
     release_id = admission.get("supply_chain_release_id")
@@ -1198,11 +1167,11 @@ def _validate_admission_record(
             "$admission.supply_chain_release_id",
             "must be a valid release identifier",
         )
-    source_hash = admission.get("source_episode_manifest_sha256")
-    if not is_sha256(source_hash):
-        _issue(issues, "admission_source_hash", "$admission.source_episode_manifest_sha256", "must be SHA-256")
-    elif isinstance(receipt, Mapping) and receipt.get("episode_manifest_sha256") != source_hash:
-        _issue(issues, "admission_source_hash", "$admission.source_episode_manifest_sha256", "does not match capture receipt")
+    source_identity = admission.get("source_episode_manifest_identity")
+    if not is_identity(source_identity):
+        _issue(issues, "admission_source_identity", "$admission.source_episode_manifest_identity", "must be a short identity")
+    elif isinstance(receipt, Mapping) and receipt.get("episode_manifest_identity") != source_identity:
+        _issue(issues, "admission_source_identity", "$admission.source_episode_manifest_identity", "does not match capture receipt")
     if admission.get("evaluator_private_payload_included") is not False:
         _issue(issues, "admission_private_payload", "$admission.evaluator_private_payload_included", "must be false")
     admission_binding = admission.get("collection_binding")
@@ -1243,9 +1212,9 @@ def _verify_release_episode(episode_root: Path) -> tuple[dict[str, Any] | None, 
     receipt = _read_json(receipt_path, issues=issues, issue_path=_RECEIPT_PATH)
     lineage = _read_json(lineage_path, issues=issues, issue_path=_LINEAGE_PATH)
     admission = _read_json(admission_path, issues=issues, issue_path=_ADMISSION_PATH)
-    manifest_hash = sha256_file(manifest_path) if manifest_path.is_file() else None
-    receipt_hash = sha256_file(receipt_path) if receipt_path.is_file() else None
-    lineage_hash = sha256_file(lineage_path) if lineage_path.is_file() else None
+    manifest_identity = identity_file(manifest_path) if manifest_path.is_file() else None
+    receipt_identity = identity_file(receipt_path) if receipt_path.is_file() else None
+    lineage_identity = identity_file(lineage_path) if lineage_path.is_file() else None
     if manifest is not None:
         for issue in validate_episode_manifest(manifest, base_dir=root, check_files=True):
             _issue(issues, f"manifest_{issue.code}", issue.path, issue.message)
@@ -1253,8 +1222,8 @@ def _verify_release_episode(episode_root: Path) -> tuple[dict[str, Any] | None, 
     _validate_lineage(lineage, manifest=manifest, path="$lineage", issues=issues)
     _validate_capture_receipt(
         receipt,
-        manifest_sha256=(admission.get("source_episode_manifest_sha256") if isinstance(admission, Mapping) else None),
-        lineage_sha256=lineage_hash,
+        manifest_identity=(admission.get("source_episode_manifest_identity") if isinstance(admission, Mapping) else None),
+        lineage_identity=lineage_identity,
         manifest=manifest,
         path="$formal_capture_receipt",
         issues=issues,
@@ -1262,9 +1231,9 @@ def _verify_release_episode(episode_root: Path) -> tuple[dict[str, Any] | None, 
     _validate_admission_record(
         admission,
         manifest=manifest,
-        manifest_sha256=manifest_hash,
-        receipt_sha256=receipt_hash,
-        lineage_sha256=lineage_hash,
+        manifest_identity=manifest_identity,
+        receipt_identity=receipt_identity,
+        lineage_identity=lineage_identity,
         receipt=receipt,
         issues=issues,
     )
@@ -1293,24 +1262,24 @@ def _index_record(
         "split": manifest["split"],
         "dataset_version": manifest["dataset_version"],
         "episode_manifest_path": (Path(manifest["split"]) / manifest["episode_id"] / _MANIFEST_PATH).as_posix(),
-        "release_episode_manifest_sha256": sha256_file(manifest_path),
-        "source_episode_manifest_sha256": admission["source_episode_manifest_sha256"],
-        "formal_capture_receipt_sha256": sha256_file(receipt_path),
-        "lineage_sha256": sha256_file(episode_root / _LINEAGE_PATH),
-        "supply_chain_manifest_sha256": admission["supply_chain_manifest_sha256"],
+        "release_episode_manifest_identity": identity_file(manifest_path),
+        "source_episode_manifest_identity": admission["source_episode_manifest_identity"],
+        "formal_capture_receipt_identity": identity_file(receipt_path),
+        "lineage_identity": identity_file(episode_root / _LINEAGE_PATH),
+        "supply_chain_manifest_identity": admission["supply_chain_manifest_identity"],
         "supply_chain_release_id": admission["supply_chain_release_id"],
         "layout_id": manifest["layout"]["layout_id"],
-        "layout_hash": manifest["layout"]["layout_hash"],
-        "layout_lineage_hash": manifest["layout"]["layout_lineage_hash"],
+        "layout_identity": manifest["layout"]["layout_identity"],
+        "layout_lineage_identity": manifest["layout"]["layout_lineage_identity"],
         "task_variant_id": manifest["task"]["task_variant_id"],
-        "task_spec_sha256": manifest["task"]["task_spec_sha256"],
+        "task_spec_identity": manifest["task"]["task_spec_identity"],
         "information_profile": manifest["task"]["information_profile"],
         "agent_count": manifest["task"]["agent_count"],
         "policy_modalities": sorted(manifest["policy_visible"]["modalities"]),
         "learning_labels_distributed": manifest["learning_labels"]["distributed"],
         "learning_label_modalities": sorted(manifest["learning_labels"]["modalities"]),
-        "evaluator_private_manifest_sha256": manifest["evaluator_private"]["manifest_sha256"],
-        "lineage_group_commitment": hashlib.sha256(
+        "evaluator_private_manifest_identity": manifest["evaluator_private"]["manifest_identity"],
+        "lineage_group_commitment": IdentityAccumulator(
             _canonical_json_bytes({axis: lineage[axis] for axis in _GROUPING_AXES})
         ).hexdigest(),
     }
@@ -1356,9 +1325,9 @@ def rebuild_dataset_index(dataset_root: Path, *, write: bool = True) -> DatasetI
     versions = {record["dataset_version"] for record in records}
     if len(versions) > 1:
         _issue(issues, "dataset_version", "$.dataset_version", "one release root cannot mix dataset versions")
-    supply_chain_hashes = {record["supply_chain_manifest_sha256"] for record in records}
+    supply_chain_identities = {record["supply_chain_manifest_identity"] for record in records}
     supply_chain_release_ids = {record["supply_chain_release_id"] for record in records}
-    if len(supply_chain_hashes) > 1 or len(supply_chain_release_ids) > 1:
+    if len(supply_chain_identities) > 1 or len(supply_chain_release_ids) > 1:
         _issue(
             issues,
             "supply_chain_mismatch",
@@ -1427,12 +1396,12 @@ class DatasetCollector:
         self,
         dataset_root: Path,
         *,
-        trusted_receipt_hashes: Iterable[str],
+        trusted_receipt_identities: Iterable[str],
         supply_chain_manifest: Path,
         failure_ledger_path: Path | None = None,
     ) -> None:
         self.dataset_root = dataset_root.resolve()
-        self.trusted_receipt_hashes = frozenset(trusted_receipt_hashes)
+        self.trusted_receipt_identities = frozenset(trusted_receipt_identities)
         self.supply_chain_manifest = supply_chain_manifest.resolve()
         self.failure_ledger_path = (
             failure_ledger_path.resolve()
@@ -1471,7 +1440,7 @@ class DatasetCollector:
             return None, None, issues or (
                 DatasetIssue("supply_chain_invalid", "$supply_chain", "release validation failed"),
             )
-        if supply_chain_sha256(payload) != supply_report.get("manifest_sha256"):
+        if supply_chain_identity(payload) != supply_report.get("manifest_identity"):
             return (
                 None,
                 None,
@@ -1501,21 +1470,21 @@ class DatasetCollector:
                     f"dataset release is missing asset decisions for {missing_kinds}",
                 )
             )
-        data_hashes = {
-            asset.get("sha256")
+        data_identities = {
+            asset.get("identity")
             for asset in assets
             if isinstance(asset, Mapping) and asset.get("kind") == "data"
         }
-        if report.receipt_sha256 not in data_hashes:
+        if report.receipt_identity not in data_identities:
             binding_issues.append(
                 DatasetIssue(
                     "supply_chain_candidate_binding",
                     "$supply_chain.assets",
-                    "a cleared data asset must bind this formal capture receipt SHA-256",
+                    "a cleared data asset must bind this formal capture receipt IDENTITY",
                 )
             )
         release_id = supply_report.get("release_id")
-        manifest_sha256 = supply_report.get("manifest_sha256")
+        manifest_identity = supply_report.get("manifest_identity")
         if not isinstance(release_id, str) or not _RELEASE_ID.fullmatch(release_id):
             binding_issues.append(
                 DatasetIssue(
@@ -1524,17 +1493,17 @@ class DatasetCollector:
                     "release identifier is invalid",
                 )
             )
-        if not is_sha256(manifest_sha256):
+        if not is_identity(manifest_identity):
             binding_issues.append(
                 DatasetIssue(
-                    "supply_chain_hash",
+                    "supply_chain_identity",
                     "$supply_chain",
-                    "canonical supply-chain hash is invalid",
+                    "canonical supply-chain identity is invalid",
                 )
             )
         if binding_issues:
             return None, None, tuple(binding_issues)
-        return str(manifest_sha256), str(release_id), ()
+        return str(manifest_identity), str(release_id), ()
 
     @staticmethod
     def _ledger_category(issues: Sequence[DatasetIssue]) -> str:
@@ -1557,9 +1526,9 @@ class DatasetCollector:
         issues: Sequence[DatasetIssue],
     ) -> None:
         # The random suffix distinguishes a repeated attempt over the same
-        # capture hash while keeping all public identifiers path-free.
-        attempt_seed = f"{report.receipt_sha256 or report.manifest_sha256 or 'unknown'}:{uuid.uuid4().hex}"
-        attempt_id = "attempt-" + hashlib.sha256(attempt_seed.encode("utf-8")).hexdigest()[:32]
+        # capture identity while keeping all public identifiers path-free.
+        attempt_seed = f"{report.receipt_identity or report.manifest_identity or 'unknown'}:{uuid.uuid4().hex}"
+        attempt_id = "attempt-" + IdentityAccumulator(attempt_seed.encode("utf-8")).hexdigest()[:32]
         split = report.manifest.get("split") if isinstance(report.manifest, Mapping) else None
         if not isinstance(split, str) or split not in FORMAL_SPLITS | {"pilot"}:
             split = None
@@ -1579,7 +1548,7 @@ class DatasetCollector:
         if isinstance(collection_binding, Mapping) and not validate_collection_binding(collection_binding):
             binding_kwargs = {
                 "collection_protocol_id": collection_binding.get("protocol_id"),
-                "collection_protocol_sha256": collection_binding.get("protocol_sha256"),
+                "collection_protocol_identity": collection_binding.get("protocol_identity"),
                 "collection_cell_id": collection_binding.get("cell_id"),
                 "collection_episode_index": collection_binding.get("episode_index"),
                 "episode_seed": collection_binding.get("episode_seed"),
@@ -1593,8 +1562,8 @@ class DatasetCollector:
             recorded_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             split=split,
             episode_id=episode_id,
-            source_capture_sha256=report.receipt_sha256,
-            receipt_sha256=report.receipt_sha256,
+            source_capture_identity=report.receipt_identity,
+            receipt_identity=report.receipt_identity,
             reason_code=reason_code,
             **binding_kwargs,
         )
@@ -1603,7 +1572,7 @@ class DatasetCollector:
     def collect(self, candidate_root: Path) -> CollectionResult:
         report = verify_candidate_episode(
             candidate_root,
-            trusted_receipt_hashes=self.trusted_receipt_hashes,
+            trusted_receipt_identities=self.trusted_receipt_identities,
             require_trusted_receipt=True,
         )
         if not report.valid or report.manifest is None or report.lineage is None or report.episode_id is None:
@@ -1612,25 +1581,25 @@ class DatasetCollector:
                 candidate_root,
                 report.issues,
                 episode_id=report.episode_id,
-                manifest_sha256=report.manifest_sha256,
-                receipt_sha256=report.receipt_sha256,
+                manifest_identity=report.manifest_identity,
+                receipt_identity=report.receipt_identity,
             )
             self._record_ledger(report, outcome="quarantined", issues=report.issues)
             return CollectionResult(False, None, quarantine, report.issues)
 
-        supply_chain_sha256, supply_chain_release_id, supply_chain_issues = self._verify_supply_chain(report)
+        supply_chain_identity, supply_chain_release_id, supply_chain_issues = self._verify_supply_chain(report)
         if supply_chain_issues:
             quarantine = quarantine_candidate(
                 self.dataset_root,
                 candidate_root,
                 supply_chain_issues,
                 episode_id=report.episode_id,
-                manifest_sha256=report.manifest_sha256,
-                receipt_sha256=report.receipt_sha256,
+                manifest_identity=report.manifest_identity,
+                receipt_identity=report.receipt_identity,
             )
             self._record_ledger(report, outcome="quarantined", issues=supply_chain_issues)
             return CollectionResult(False, None, quarantine, supply_chain_issues)
-        assert supply_chain_sha256 is not None
+        assert supply_chain_identity is not None
         assert supply_chain_release_id is not None
 
         manifest = report.manifest
@@ -1648,8 +1617,8 @@ class DatasetCollector:
                 candidate_root,
                 (issue,),
                 episode_id=report.episode_id,
-                manifest_sha256=report.manifest_sha256,
-                receipt_sha256=report.receipt_sha256,
+                manifest_identity=report.manifest_identity,
+                receipt_identity=report.receipt_identity,
             )
             self._record_ledger(report, outcome="quarantined", issues=(issue,))
             return CollectionResult(False, None, quarantine, (issue,))
@@ -1674,7 +1643,7 @@ class DatasetCollector:
                 (existing_root / _ADMISSION_PATH).read_text(encoding="utf-8")
             )
             if (
-                existing_admission.get("supply_chain_manifest_sha256") != supply_chain_sha256
+                existing_admission.get("supply_chain_manifest_identity") != supply_chain_identity
                 or existing_admission.get("supply_chain_release_id") != supply_chain_release_id
             ):
                 existing_supply_issues.append(
@@ -1691,8 +1660,8 @@ class DatasetCollector:
                 candidate_root,
                 admission_issues,
                 episode_id=report.episode_id,
-                manifest_sha256=report.manifest_sha256,
-                receipt_sha256=report.receipt_sha256,
+                manifest_identity=report.manifest_identity,
+                receipt_identity=report.receipt_identity,
             )
             self._record_ledger(report, outcome="quarantined", issues=admission_issues)
             return CollectionResult(False, None, quarantine, admission_issues)
@@ -1700,7 +1669,7 @@ class DatasetCollector:
         self._project(
             report,
             destination,
-            supply_chain_manifest_sha256=supply_chain_sha256,
+            supply_chain_manifest_identity=supply_chain_identity,
             supply_chain_release_id=supply_chain_release_id,
         )
         rebuilt = rebuild_dataset_index(self.dataset_root, write=True)
@@ -1714,13 +1683,13 @@ class DatasetCollector:
         report: CandidateIntegrityReport,
         destination: Path,
         *,
-        supply_chain_manifest_sha256: str,
+        supply_chain_manifest_identity: str,
         supply_chain_release_id: str,
     ) -> None:
         assert report.manifest is not None
-        assert report.manifest_sha256 is not None
-        assert report.lineage_sha256 is not None
-        assert report.receipt_sha256 is not None
+        assert report.manifest_identity is not None
+        assert report.lineage_identity is not None
+        assert report.receipt_identity is not None
         source_root = report.episode_root
         projected = _project_manifest_for_release(report.manifest)
         learning = report.manifest.get("learning_labels")
@@ -1743,11 +1712,11 @@ class DatasetCollector:
                 "episode_id": projected["episode_id"],
                 "split": projected["split"],
                 "formal_benchmark_admission": True,
-                "source_episode_manifest_sha256": report.manifest_sha256,
-                "release_episode_manifest_sha256": sha256_file(manifest_path),
-                "formal_capture_receipt_sha256": report.receipt_sha256,
-                "lineage_sha256": report.lineage_sha256,
-                "supply_chain_manifest_sha256": supply_chain_manifest_sha256,
+                "source_episode_manifest_identity": report.manifest_identity,
+                "release_episode_manifest_identity": identity_file(manifest_path),
+                "formal_capture_receipt_identity": report.receipt_identity,
+                "lineage_identity": report.lineage_identity,
+                "supply_chain_manifest_identity": supply_chain_manifest_identity,
                 "supply_chain_release_id": supply_chain_release_id,
                 "included_partitions": ["policy_visible"] + (["learning_labels"] if include_labels else []),
                 "withheld_learning_modalities": withheld,
@@ -1772,13 +1741,13 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     subparsers = parser.add_subparsers(dest="command", required=True)
     verify = subparsers.add_parser("verify-candidate", help="validate one formal source capture")
     verify.add_argument("episode_root", type=Path)
-    verify.add_argument("--trusted-receipt-sha256", action="append", default=[])
+    verify.add_argument("--trusted-receipt-identity", action="append", default=[])
     verify.add_argument("--allow-untrusted-receipt", action="store_true")
     verify.add_argument("--json", action="store_true", dest="as_json")
     collect = subparsers.add_parser("collect", help="admit a trusted capture or write a quarantine record")
     collect.add_argument("episode_root", type=Path)
     collect.add_argument("dataset_root", type=Path)
-    collect.add_argument("--trusted-receipt-sha256", action="append", default=[], required=True)
+    collect.add_argument("--trusted-receipt-identity", action="append", default=[], required=True)
     collect.add_argument("--supply-chain-manifest", type=Path, required=True)
     collect.add_argument("--json", action="store_true", dest="as_json")
     plan = subparsers.add_parser("split-plan", help="validate predeclared, lineage-safe split assignments")
@@ -1800,8 +1769,8 @@ def _report_payload(report: CandidateIntegrityReport | DatasetIntegrityReport | 
             "status": "valid" if report.valid else "invalid",
             "episode_root": str(report.episode_root),
             "episode_id": report.episode_id,
-            "manifest_sha256": report.manifest_sha256,
-            "formal_capture_receipt_sha256": report.receipt_sha256,
+            "manifest_identity": report.manifest_identity,
+            "formal_capture_receipt_identity": report.receipt_identity,
             "issues": [asdict(issue) for issue in report.issues],
         }
     if isinstance(report, DatasetIntegrityReport):
@@ -1824,7 +1793,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "verify-candidate":
         report = verify_candidate_episode(
             args.episode_root,
-            trusted_receipt_hashes=args.trusted_receipt_sha256,
+            trusted_receipt_identities=args.trusted_receipt_identity,
             require_trusted_receipt=not args.allow_untrusted_receipt,
         )
         print(json.dumps(_report_payload(report), indent=2, sort_keys=True))
@@ -1832,7 +1801,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "collect":
         result = DatasetCollector(
             args.dataset_root,
-            trusted_receipt_hashes=args.trusted_receipt_sha256,
+            trusted_receipt_identities=args.trusted_receipt_identity,
             supply_chain_manifest=args.supply_chain_manifest,
         ).collect(args.episode_root)
         print(json.dumps(_report_payload(result), indent=2, sort_keys=True))

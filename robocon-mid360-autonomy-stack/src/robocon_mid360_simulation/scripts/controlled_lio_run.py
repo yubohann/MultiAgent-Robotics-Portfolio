@@ -7,9 +7,8 @@ import argparse
 import json
 import math
 import os
-from pathlib import Path
-import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 import rclpy
@@ -21,10 +20,8 @@ from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import Imu
-
 from run_contract import StreamReadiness
-
+from sensor_msgs.msg import Imu
 
 SEGMENTS = (
     ("stationary", 5.0, (0.0, 0.0, 0.0)),
@@ -131,7 +128,6 @@ class ControlledLioRecorder(Node):
         stream.flush()
 
     def _lidar_callback(self, message: CustomMsg) -> None:
-        now = time.monotonic()
         stamp_ns = _stamp_ns(message)
         points = list(message.points)
         finite = sum(

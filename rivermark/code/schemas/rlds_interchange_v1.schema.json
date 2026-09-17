@@ -17,11 +17,11 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "source_capture_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_capture_receipt_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "source_revision": {"type": "string", "minLength": 1},
-        "observation_abi_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "observation_abi_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "collection_protocol_id": {"type": "string", "minLength": 1},
-        "collection_protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "collection_protocol_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "collection_cell_id": {"type": "string", "minLength": 1},
         "split": {"type": "string", "minLength": 1},
         "episode_index": {"type": "integer", "minimum": 0},
@@ -36,11 +36,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "bytes", "sha256"],
+        "required": ["path", "bytes", "identity"],
         "properties": {
           "path": {"const": "episode.jsonl"},
           "bytes": {"type": "integer", "minimum": 1},
-          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          "identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"}
         }
       }
     }

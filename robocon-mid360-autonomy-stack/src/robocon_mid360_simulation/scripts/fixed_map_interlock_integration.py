@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-"""Exercise the real Gazebo localization chain and supervisor interlock.
-
-The driver publishes operator, perception and peer inputs plus a controlled
-Gazebo pause fault, while FAST-LIO2, the mapper, fixed-map ICP and the
-localization contract publish the pose and lock signals observed here.
-"""
+"""Exercise the real Gazebo localization chain and supervisor interlock."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import math
 import time
 from pathlib import Path
 from typing import Any
@@ -69,7 +63,6 @@ class FixedMapInterlockIntegration(Node):
         self.pause_requested = False
         self.unpause_requested = False
         self.initialpose_sent = False
-        self.started_match = False
         self.heartbeat_sequence = 0
 
         self.initialpose_pub = self.create_publisher(PoseWithCovarianceStamped, "/initialpose", 10)
@@ -389,10 +382,7 @@ class FixedMapInterlockIntegration(Node):
                 self.latest_pose_status.get("tracking_state", "")
             ) == "TRACKING"
             if recovered:
-                # The localization contract publishes readiness asynchronously
-                # after odometry and map recovery, so preflight waits one tick
-                # past TRACKING and the supervisor never sees the older false
-                # readiness sample.
+                # Readiness arrives one tick after TRACKING, so preflight waits for that publication.
                 self._set_phase("WAITING_FOR_RECOVERY_PREFLIGHT")
             return
         if self.phase == "WAITING_FOR_RECOVERY_PREFLIGHT":
@@ -410,9 +400,8 @@ class FixedMapInterlockIntegration(Node):
                 self._send_command("fire_shot")
                 self._set_phase("WAITING_FOR_FIRE_SUCCESS")
             return
-        if self.phase == "WAITING_FOR_FIRE_SUCCESS":
-            if self.fire_success_seen:
-                self._finish("passed")
+        if self.phase == "WAITING_FOR_FIRE_SUCCESS" and self.fire_success_seen:
+            self._finish("passed")
 
 
 def main() -> int:

@@ -20,8 +20,8 @@ from rivermark_benchmark.cf2x_runtime_calibration import (
     _locked_contrib_source_root,
     _persist_prelaunch_failure,
     _runtime_body_physics,
-    calibration_report_sha256,
-    prelaunch_failure_report_sha256,
+    calibration_report_identity,
+    prelaunch_failure_report_identity,
     validate_calibration_report,
 )
 
@@ -36,16 +36,16 @@ def _report() -> dict[str, object]:
             "benchmark_score": False,
             "sensor_payload_retained": False,
         },
-        "asset": {"usd_sha256": "a" * 64},
+        "asset": {"usd_identity": "a" * 16},
         "source": {
             "source_revision": "b" * 40,
-            "source_tree_sha256": "c" * 64,
+            "source_tree_identity": "c" * 16,
             "source_worktree_dirty": False,
         },
-        "runtime_lock_sha256": "d" * 64,
+        "runtime_lock_identity": "d" * 16,
         "runtime_audit": {"status": "passed"},
         "static_usd": {
-            "usd_sha256": "a" * 64,
+            "usd_identity": "a" * 16,
             "bodies": [
                 {
                     "body_name": "body",
@@ -120,30 +120,30 @@ def _report() -> dict[str, object]:
             ],
         },
     }
-    report["report_sha256"] = calibration_report_sha256(report)
+    report["report_identity"] = calibration_report_identity(report)
     return report
 
 
-def test_valid_report_is_self_hash_bound() -> None:
+def test_valid_report_is_self_identity_bound() -> None:
     report = _report()
     assert validate_calibration_report(report) == ()
-    assert report["report_sha256"] == calibration_report_sha256(report)
+    assert report["report_identity"] == calibration_report_identity(report)
 
 
-def test_changing_bound_runtime_parameter_breaks_self_hash() -> None:
+def test_changing_bound_runtime_parameter_breaks_self_identity() -> None:
     report = _report()
     changed = copy.deepcopy(report)
     changed["runtime"]["actuator"]["actuator_dt_s"] = 0.01
     issues = validate_calibration_report(changed)
     assert "runtime actuator dt differs from control dt" in issues
-    assert "report self-hash does not match" in issues
+    assert "report self-identity does not match" in issues
 
 
-def test_invalid_rotor_order_and_force_axis_fail_closed() -> None:
+def test_invalid_rotor_order_and_force_axis_strict() -> None:
     report = _report()
     report["runtime"]["thruster_names"] = ["m1_prop"] * 4
     report["runtime"]["thrust_axis"]["all_positive_body_z"] = False
-    report["report_sha256"] = calibration_report_sha256(report)
+    report["report_identity"] = calibration_report_identity(report)
     issues = validate_calibration_report(report)
     assert "runtime rotor order is invalid" in issues
     assert "runtime thrust axis is not positive body z" in issues
@@ -152,7 +152,7 @@ def test_invalid_rotor_order_and_force_axis_fail_closed() -> None:
 def test_failed_static_runtime_cross_check_cannot_pass() -> None:
     report = _report()
     report["static_runtime_cross_check"]["status"] = "failed"
-    report["report_sha256"] = calibration_report_sha256(report)
+    report["report_identity"] = calibration_report_identity(report)
     assert "static/runtime cross-check did not pass" in validate_calibration_report(report)
 
 
@@ -160,7 +160,7 @@ def test_zero_applied_thrust_cannot_be_called_a_calibration() -> None:
     report = _report()
     report["actuation_probe"]["applied_thrust_after_write_n"] = [0.0] * 4
     report["actuation_probe"]["applied_wrench_after_write_body"][2] = 0.0
-    report["report_sha256"] = calibration_report_sha256(report)
+    report["report_identity"] = calibration_report_identity(report)
     issues = validate_calibration_report(report)
     assert "probe did not apply positive thrust" in issues
     assert "probe did not apply positive body-z force" in issues
@@ -171,9 +171,9 @@ def test_missing_response_or_clean_source_evidence_cannot_pass() -> None:
     report["source"]["source_worktree_dirty"] = True
     report["runtime"]["actuator"].pop("sampled_tau_increase_s")
     report["actuation_probe"]["samples"][0].pop("root_linear_velocity_w_mps")
-    report["report_sha256"] = calibration_report_sha256(report)
+    report["report_identity"] = calibration_report_identity(report)
     issues = validate_calibration_report(report)
-    assert "calibration source provenance is not clean and hash-bound" in issues
+    assert "calibration source provenance is not clean and identity-bound" in issues
     assert "runtime actuator response evidence is invalid" in issues
     assert "probe has no post-step state samples" in issues
 
@@ -181,13 +181,13 @@ def test_missing_response_or_clean_source_evidence_cannot_pass() -> None:
 def test_zero_lower_thrust_bound_is_valid_but_degenerate_or_reversed_ranges_fail() -> None:
     report = _report()
     report["runtime"]["actuator"]["thrust_range_n"] = [0.0, 0.18]
-    report["report_sha256"] = calibration_report_sha256(report)
+    report["report_identity"] = calibration_report_identity(report)
     assert validate_calibration_report(report) == ()
 
     for invalid_range in ([0.0, 0.0], [0.18, 0.0], [-0.01, 0.18]):
         invalid = copy.deepcopy(report)
         invalid["runtime"]["actuator"]["thrust_range_n"] = invalid_range
-        invalid["report_sha256"] = calibration_report_sha256(invalid)
+        invalid["report_identity"] = calibration_report_identity(invalid)
         assert "runtime actuator response evidence is invalid" in validate_calibration_report(invalid)
 
 
@@ -200,7 +200,7 @@ def test_locked_contrib_path_resolves_beside_the_audited_checkout(tmp_path: Path
         _locked_contrib_source_root(source, unsafe_lock)
 
 
-def test_prelaunch_failure_receipt_is_hash_bound_and_never_overwritten(tmp_path: Path) -> None:
+def test_prelaunch_failure_receipt_is_identity_bound_and_never_overwritten(tmp_path: Path) -> None:
     output_dir = tmp_path / "failed-calibration"
     args = SimpleNamespace(output_dir=output_dir)
     path = _persist_prelaunch_failure(args, RuntimeError("locked source is unavailable"))
@@ -209,7 +209,7 @@ def test_prelaunch_failure_receipt_is_hash_bound_and_never_overwritten(tmp_path:
     assert report["schema"] == CF2X_RUNTIME_CALIBRATION_PRELAUNCH_FAILURE_SCHEMA
     assert report["status"] == "failed"
     assert report["claim_boundary"]["app_launcher_started"] is False
-    assert report["report_sha256"] == prelaunch_failure_report_sha256(report)
+    assert report["report_identity"] == prelaunch_failure_report_identity(report)
     original = path.read_bytes()
     assert _persist_prelaunch_failure(args, RuntimeError("different failure")) is None
     assert path.read_bytes() == original

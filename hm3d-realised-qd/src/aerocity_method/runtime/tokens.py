@@ -1,10 +1,10 @@
-"""Public ActionToken authorization without evaluator-private inputs."""
+"""Public ActionToken authorization for a selected candidate manifest."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 
-from aerocity_method.contracts.io import canonical_sha256, require_identifier
+from aerocity_method.contracts.io import require_identifier
 from aerocity_method.contracts.models import (
     ActionToken,
     CandidateFragmentManifest,
@@ -36,8 +36,8 @@ def authorize_manifest(
     manifest = rows[selected_index]
     if not manifest.feasible:
         raise ValueError("cannot authorize an infeasible candidate")
-    if manifest.context_hash != context.digest:
-        raise ValueError("candidate context hash does not match public context")
+    if manifest.context_id != context.context_id:
+        raise ValueError("candidate context does not match the public context")
     episode_decision = {
         (fragment.episode_id, fragment.decision_id) for fragment in manifest.fragments
     }
@@ -51,10 +51,9 @@ def authorize_manifest(
         token_id=token_id,
         episode_id=context.episode_id,
         decision_id=context.decision_id,
-        context_hash=context.digest,
-        manifest_hash=manifest.manifest_hash,
-        legal_mask_hash=canonical_sha256(mask),
-        planned_fragment_hashes=tuple(fragment.digest for fragment in manifest.fragments),
+        context_id=context.context_id,
+        manifest_id=manifest.manifest_id,
+        planned_fragment_ids=manifest.fragment_ids,
         issued_at=issued_at,
         duration=duration,
     )

@@ -21,7 +21,7 @@
   },
   "isaaclab_source": {
     "relative_path": "isaaclab",
-    "tree_sha256": "88f3f4a9a0d3c7e5ee7f2b455e8112579e78ec4dc914cb36e6338d0b0db8dd19",
+    "tree_identity": "88f3f4a9a0d3c7e5",
     "file_count": 438,
     "byte_count": 4587292,
     "version_file": "2.3.2",
@@ -29,7 +29,7 @@
   },
   "isaaclab_contrib_source": {
     "relative_path": "isaaclab_contrib",
-    "tree_sha256": "840bd876a8c106dd95d4ce0e4d7b1f8390fe7e7054423478ba265dc0cd141fef",
+    "tree_identity": "840bd876a8c106dd",
     "file_count": 27,
     "byte_count": 196665,
     "version_file": "2.3.2",
@@ -37,7 +37,7 @@
   },
   "environment_lock": {
     "repository_relative_path": "requirements-isaac-capture.lock",
-      "sha256": "a9f880924eace57fa52c279c45192baf3c582ec98982c3bb77c981f64f4f72e1"
+    "identity": "de55c2f9000001a5"
   },
   "gpu": {
     "vendor": "NVIDIA",
@@ -55,7 +55,7 @@
     "kit_args": "",
     "experience": {
       "path": "apps/isaaclab.python.headless.rendering.kit",
-      "sha256": "423d5cccc0438bb87c278cbc2ddcff1e1ddae61337499c011348236e5e0a9ba5"
+      "identity": "423d5cccc0438bb8"
     }
   },
   "simulation": {
@@ -74,14 +74,14 @@
         "settings": {
           "rendering_mode": "balanced"
         },
-        "sha256": "8214cec177d141bd7cc95a06be1a7eb860d42a17c23049b34dc47b25aea7f118"
+        "identity": "8b46cbaa0000001e"
       },
       "fabric": {
         "settings": {
           "enable_scene_query_support": false,
           "use_fabric": true
         },
-        "sha256": "4b31eac4129d9f7d436921387bf67cd7871a340dd72ca9d499cab853ccd406f1"
+        "identity": "411ba10c00000037"
       },
       "physx": {
         "settings": {
@@ -110,12 +110,12 @@
           "gpu_max_soft_body_contacts": 1048576,
           "gpu_max_particle_contacts": 1048576
         },
-        "sha256": "a35787dab250a4a296dcd69525d0e73c6c9d7be38d25755d59076c72f8732ad5"
+        "identity": "9ee109e000000346"
       }
     }
   },
   "assets": {
-    "city_lite_contract_sha256": "f7837d248b4797592c66d4b8b8bd48380de444eca305b8ef03d297dcf32051ea",
-    "cf2x_usd_sha256": "7372ac0786312c47a92603da3fcd412d560b21c3757a8f0d5e7c2bfb2233d2f4"
+    "city_lite_contract_identity": "f7837d248b479759",
+    "cf2x_usd_identity": "7372ac0786312c47"
   }
 }

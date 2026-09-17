@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import re
 import os
+import re
 from pathlib import Path
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ISAACLAB_ROOT = PROJECT_ROOT.parent
@@ -81,7 +80,7 @@ def ensure_writable_kit_runtime(args_cli, *, app_name: str, base_root: Path | No
         app_name=app_name,
         base_root=base_root,
     )
-    setattr(args_cli, "kit_args", updated_kit_args)
+    args_cli.kit_args = updated_kit_args
 
     if portable_root is None:
         if _portable_runtime_disabled():

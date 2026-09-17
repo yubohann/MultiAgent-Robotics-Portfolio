@@ -27,7 +27,7 @@ class TargetObservation:
 def parse_observation(value: str | dict[str, object]) -> TargetObservation:
     payload = json.loads(value) if isinstance(value, str) else value
     if not isinstance(payload, dict):
-        raise ValueError("target observation must be a JSON object")
+        raise TypeError("target observation must be a JSON object")
     distance = payload.get("distance_m")
     if distance is None and payload.get("distance_mm") is not None:
         distance = float(payload["distance_mm"]) / 1000.0

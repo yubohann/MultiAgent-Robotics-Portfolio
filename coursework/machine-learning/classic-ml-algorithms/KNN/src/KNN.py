@@ -365,7 +365,7 @@ if __name__ == "__main__":
     train_accuracy = calculate_accuracy(y_train, y_train_pred)
     test_accuracy = calculate_accuracy(y_test, y_test_pred)
     
-    print(f"\n=== 准确率 ===")
+    print("\n=== 准确率 ===")
     print(f"训练集: {train_accuracy:.4f}")
     print(f"测试集: {test_accuracy:.4f}")
     
@@ -394,7 +394,7 @@ if __name__ == "__main__":
         print(f"样本特征: {[f'{v:.2f}' for v in sample]}")
         print(f"真实标签: {true_label}")
         print(f"预测标签: {pred_label}")
-        print(f"各类别概率:")
+        print("各类别概率:")
         for class_name in sorted(probabilities.keys()):
             prob = probabilities[class_name]
             print(f"  {class_name}: {prob:.4f}")

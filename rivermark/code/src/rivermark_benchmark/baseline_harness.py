@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import time
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
+from ._identity import IdentityAccumulator
 from .methods import NATIVE_DESCRIPTORS, create_native_policy
 from .provenance import detect_source_provenance
 from .resource_telemetry import ResourceTelemetry
 from .runtime import PilotRuntimeConfig, PilotSwarmRuntime
-
 
 BASELINE_SUITE_SCHEMA = "org.rivermark.benchmark.baseline-suite.v1"
 BASELINE_REPORT_SCHEMA = "org.rivermark.benchmark.baseline-report.v1"
@@ -28,15 +28,15 @@ class BaselineConfigError(ValueError):
 
 
 class BaselineReportError(ValueError):
-    """Raised when a baseline report is incomplete or has been tampered with."""
+    """Raised when a baseline report is incomplete or has been altered with."""
 
 
 def _canonical_bytes(value: Any) -> bytes:
     return (json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n").encode("utf-8")
 
 
-def _sha256_bytes(value: bytes) -> str:
-    return hashlib.sha256(value).hexdigest()
+def _identity_bytes(value: bytes) -> str:
+    return IdentityAccumulator(value).hexdigest()
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -179,12 +179,12 @@ def _public_metrics(evaluation: Any) -> dict[str, Any]:
     return {
         key: value
         for key, value in raw.items()
-        if key != "evaluator_truth_sha256"
+        if key != "evaluator_truth_identity"
     } | {"evaluator_truth_bound": True, "private_truth_digest_emitted": False}
 
 
-def _run_id(suite_hash: str, method_id: str, seed: int, episode_index: int) -> str:
-    return _sha256_bytes(f"{suite_hash}:{method_id}:{seed}:{episode_index}".encode("utf-8"))[:24]
+def _run_id(suite_identity: str, method_id: str, seed: int, episode_index: int) -> str:
+    return _identity_bytes(f"{suite_identity}:{method_id}:{seed}:{episode_index}".encode())[:24]
 
 
 def validate_baseline_report(report: Mapping[str, Any]) -> tuple[str, ...]:
@@ -206,13 +206,13 @@ def validate_baseline_report(report: Mapping[str, Any]) -> tuple[str, ...]:
     except (BaselineConfigError, TypeError) as exc:
         issues.append(f"invalid embedded config: {exc}")
         config = None
-    config_hash = report.get("config_sha256")
+    config_identity = report.get("config_identity")
     if config is not None:
-        expected_hash = _sha256_bytes(_canonical_bytes(config))
-        if config_hash != expected_hash:
-            issues.append("config_sha256 does not match embedded config")
-    elif not isinstance(config_hash, str):
-        issues.append("config_sha256 is missing")
+        expected_identity = _identity_bytes(_canonical_bytes(config))
+        if config_identity != expected_identity:
+            issues.append("config_identity does not match embedded config")
+    elif not isinstance(config_identity, str):
+        issues.append("config_identity is missing")
     attempts = report.get("attempts")
     if not isinstance(attempts, list):
         issues.append("attempts must be a list")
@@ -228,7 +228,7 @@ def validate_baseline_report(report: Mapping[str, Any]) -> tuple[str, ...]:
         issues.append("failed_count does not match attempts")
     method_ids = {item["method_id"] for item in config["methods"]} if config is not None else set()
     seen_ids: set[str] = set()
-    private_keys = {"evaluator_truth_sha256", "hidden_target", "target_positions", "target_coordinates", "private_evaluator"}
+    private_keys = {"evaluator_truth_identity", "hidden_target", "target_positions", "target_coordinates", "private_evaluator"}
     for index, row in enumerate(attempts):
         if not isinstance(row, Mapping):
             issues.append(f"attempts[{index}] must be an object")
@@ -242,7 +242,7 @@ def validate_baseline_report(report: Mapping[str, Any]) -> tuple[str, ...]:
         if not isinstance(episode_index, int) or isinstance(episode_index, bool) or episode_index < 0:
             issues.append(f"attempts[{index}] has an invalid episode_index")
         if config is not None and isinstance(method_id, str) and isinstance(seed, int) and isinstance(episode_index, int):
-            expected_id = _run_id(str(config_hash), method_id, seed, episode_index)
+            expected_id = _run_id(str(config_identity), method_id, seed, episode_index)
             if run_id != expected_id:
                 issues.append(f"attempts[{index}] run_id does not bind method/seed/config")
         if not isinstance(run_id, str) or run_id in seen_ids:
@@ -284,7 +284,7 @@ def run_baseline_suite(config_path: Path, output_path: Path, *, overwrite: bool 
         raise FileExistsError(f"refusing to overwrite existing baseline report: {output_path}")
     config = validate_baseline_config(_load_json(config_path))
     config_bytes = _canonical_bytes(config)
-    config_hash = _sha256_bytes(config_bytes)
+    config_identity = _identity_bytes(config_bytes)
     source = detect_source_provenance()
     telemetry = ResourceTelemetry()
     attempts: list[dict[str, Any]] = []
@@ -298,7 +298,7 @@ def run_baseline_suite(config_path: Path, output_path: Path, *, overwrite: bool 
         descriptor = NATIVE_DESCRIPTORS[method_id]
         for seed in eval_seeds:
             for episode_index in range(episodes_per_seed):
-                run_id = _run_id(config_hash, method_id, seed, episode_index)
+                run_id = _run_id(config_identity, method_id, seed, episode_index)
                 started = time.perf_counter()
                 telemetry.sample(f"before:{run_id}")
                 attempt: dict[str, Any] = {
@@ -403,7 +403,7 @@ def run_baseline_suite(config_path: Path, output_path: Path, *, overwrite: bool 
         "status": "stopped_failure_budget" if stop_reason is not None else "completed",
         "stop_reason": stop_reason,
         "config": config,
-        "config_sha256": config_hash,
+        "config_identity": config_identity,
         "source_provenance": source.as_dict(),
         "evaluator": {
             "id": "kinematic-private-search-evaluator-v1",

@@ -17,7 +17,7 @@ from aerocity_method.adapters.hm3d_baselines import (
     build_public_candidate_pool,
     identity_path_guard,
 )
-from aerocity_method.contracts.io import canonical_sha256
+from aerocity_method.contracts.io import payload_label
 from aerocity_method.contracts.models import PublicMethodContext
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -214,7 +214,7 @@ def _outcome_payload(
         "schema_version": "hm3d-p07-physx-execution-smoke-v1",
         "synthetic": False,
         "formal_result": False,
-        "cf2x_usd_sha256": "f" * 64,
+        "cf2x_usd_id": "f" * 64,
         "fleet_size": 4,
         "action_budget_s": 20.0,
         "execution_deadline_s": execution_deadline_s,
@@ -333,7 +333,7 @@ def test_calibrator_keeps_censored_timeout_and_rejects_it_under_the_shared_budge
         "tracking_clearance_margin_m": 0.15,
     }
     assert calibration["execution_profile"] == {
-        "cf2x_usd_sha256": "f" * 64,
+        "cf2x_usd_id": "f" * 64,
         "fleet_size": 4,
         "physics_dt_s": 1.0 / 120.0,
         "arrival_tolerance_m": 0.1,
@@ -683,7 +683,7 @@ def _decision_calibration(
         },
         "agents": agents,
     }
-    summary["summary_sha256"] = canonical_sha256(summary)
+    summary["summary_id"] = payload_label(summary, prefix="p07-summary")
     return summary
 
 
@@ -692,7 +692,7 @@ def _multi_decision_payload(decisions: list[dict[str, object]]) -> dict[str, obj
         "schema_version": "hm3d-p07-exploration-execution-v1",
         "synthetic": False,
         "formal_result": False,
-        "cf2x_usd_sha256": "f" * 64,
+        "cf2x_usd_id": "f" * 64,
         "fleet_size": 4,
         "action_budget_s": 40.0,
         "arrival_tolerance_m": 0.1,

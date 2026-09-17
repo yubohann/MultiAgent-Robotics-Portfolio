@@ -17,7 +17,7 @@
   <img src="site/assets/robocon-mid360-basketball-demo.gif" alt="Live two-robot basketball demonstration" width="82%">
 </p>
 
-The stack connects a Livox MID-360 simulation, FAST-LIO2 odometry and mapping, fixed-map localization, perception gating, pose command arbitration and a safety-aware competition supervisor in one ROS 2 workspace. The hard part is the chain of trust. Every handoff carries its own validity signal, from per-point LiDAR timing to map lock, target validity and action feedback, and an invalid input is rejected at the gate that owns it.
+The stack connects a Livox MID-360 simulation, FAST-LIO2 odometry and mapping, fixed-map localization, perception gating, pose command arbitration and a safety-aware competition supervisor in one ROS 2 workspace. Every handoff carries its own validity signal, from per-point LiDAR timing to map lock, target validity and action feedback, and an invalid input is rejected at the gate that owns it.
 
 **Status.** `v0.1.0-simulation-prealpha`. The full chain runs on Gazebo simulation and recorded inputs, with explicit synthetic adapters at the perception and mechanism interfaces. Hardware steps follow the calibration and interlock procedures in the source tree.
 

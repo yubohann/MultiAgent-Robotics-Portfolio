@@ -5,11 +5,11 @@ from __future__ import annotations
 import math
 import time
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 from aerocity_method.adapters.hm3d_execution import FragmentExecutionSample
-from aerocity_method.contracts.io import canonical_sha256
 from aerocity_method.contracts.models import CandidateFragmentManifest, FragmentInstance
 from aerocity_method.runtime.communication import (
     RelayGraphSnapshot,
@@ -54,13 +54,13 @@ from aerocity_method.runtime.hm3d_cf2x_execution import (
     _waypoint_reached,
     _yaw_from_delta,
 )
-from aerocity_method.runtime.range_sensing import DENSE_26_RAY_PATTERN
-from aerocity_method.runtime.range_sensing import (
-    resolve_public_range_directions,
-)
 from aerocity_method.runtime.hm3d_multicluster import HM3DClusterLayout
 from aerocity_method.runtime.hm3d_team_collaboration import (
     audit_translation_invariant_team_trajectories,
+)
+from aerocity_method.runtime.range_sensing import (
+    DENSE_26_RAY_PATTERN,
+    resolve_public_range_directions,
 )
 
 Point3 = tuple[float, float, float]
@@ -70,8 +70,8 @@ Point3 = tuple[float, float, float]
 class VectorizedClusterExecutionResult:
     """One independently auditable cluster result from a shared PhysX step loop."""
 
-    manifest_hash: str
-    token_hash: str
+    manifest_id: str
+    token_id: str
     samples: tuple[FragmentExecutionSample, ...]
     engineering_diagnostics: dict[str, object]
     public_range_frames: tuple[PublicRangeObservationFrameOutcome, ...]
@@ -95,7 +95,6 @@ class PrecomputedClusterExecutionBackend:
     public_range_outcomes: tuple[PublicRangeRayOutcome, ...] = field(init=False)
     public_map_sender_ids: tuple[str, ...] = field(init=False)
     final_root_positions_m: tuple[Point3, ...] = field(init=False)
-    last_execution_samples: tuple[FragmentExecutionSample, ...] = field(init=False)
     _consumed: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -104,16 +103,15 @@ class PrecomputedClusterExecutionBackend:
         self.public_range_outcomes = self.result.public_range_outcomes
         self.public_map_sender_ids = self.result.public_map_sender_ids
         self.final_root_positions_m = self.result.final_root_positions_m
-        self.last_execution_samples = self.result.samples
 
     def execute_manifest(
         self, manifest: CandidateFragmentManifest, token: Any
     ) -> tuple[FragmentExecutionSample, ...]:
         if self._consumed:
             raise RuntimeError("precomputed cluster execution result was already consumed")
-        if manifest.manifest_hash != self.result.manifest_hash:
+        if manifest.manifest_id != self.result.manifest_id:
             raise ValueError("precomputed batch result manifest mismatch")
-        if token.digest != self.result.token_hash:
+        if token.token_id != self.result.token_id:
             raise ValueError("precomputed batch result token mismatch")
         self._consumed = True
         return self.result.samples
@@ -170,6 +168,13 @@ class _ClusterRuntime:
     previous_relay_connected: bool | None = None
     last_relay_graph: RelayGraphSnapshot | None = None
     last_communication_measurement_s: float | None = None
+
+
+def _trace_id(path: Sequence[Sequence[float]]) -> str:
+    # Readable trace label: waypoint count and endpoints.
+    if not path:
+        return "trace:empty"
+    return f"trace:{len(path)}-points:{tuple(path[0])}->{tuple(path[-1])}"
 
 
 def _routes(
@@ -669,7 +674,7 @@ class IsaacCF2XVectorizedExecutionBackend:
                         continue
                     transit, observe = runtime.routes[agent_index]
                     source_id = (
-                        f"range-{runtime.manifest.manifest_hash[:12]}-{observe.agent_id}"
+                        f"range-{runtime.manifest.manifest_id[:12]}-{observe.agent_id}"
                         f"-{runtime.sensor_frames_by_agent[agent_index]:04d}"
                     )
                     position_world = positions_w[
@@ -838,13 +843,13 @@ class IsaacCF2XVectorizedExecutionBackend:
             }
             samples.append(
                 FragmentExecutionSample(
-                    planned_fragment_hash=transit.digest,
+                    planned_fragment_id=transit.instance_fragment_id,
                     executed=True,
                     actual_start_s=transit.planned_start,
                     actual_end_s=(runtime.transit_end_s[index] or runtime.execution_deadline_s),
                     command_path_m=transit.path,
                     actual_path_m=transit_trace,
-                    execution_trace_hash=canonical_sha256(transit_trace),
+                    execution_trace_id=_trace_id(transit_trace),
                     collision=runtime.transit_contact[index],
                     out_of_bounds=runtime.transit_oob[index],
                     energy_used_j=runtime.energy_j[index],
@@ -880,7 +885,7 @@ class IsaacCF2XVectorizedExecutionBackend:
                 )
                 samples.append(
                     FragmentExecutionSample(
-                        planned_fragment_hash=observe.digest,
+                        planned_fragment_id=observe.instance_fragment_id,
                         executed=True,
                         actual_start_s=runtime.observation_start_s[index] or observe.planned_start,
                         actual_end_s=(
@@ -888,7 +893,7 @@ class IsaacCF2XVectorizedExecutionBackend:
                         ),
                         command_path_m=observe.path,
                         actual_path_m=observation_trace or (observe.path[0],),
-                        execution_trace_hash=canonical_sha256(observation_trace),
+                        execution_trace_id=_trace_id(observation_trace),
                         collision=runtime.observation_contact[index],
                         out_of_bounds=runtime.observation_oob[index],
                         energy_used_j=0.0,
@@ -912,11 +917,11 @@ class IsaacCF2XVectorizedExecutionBackend:
             else:
                 samples.append(
                     FragmentExecutionSample(
-                        planned_fragment_hash=observe.digest,
+                        planned_fragment_id=observe.instance_fragment_id,
                         executed=False,
                         actual_start_s=runtime.execution_deadline_s,
                         actual_end_s=runtime.execution_deadline_s,
-                        execution_trace_hash=canonical_sha256(observation_trace),
+                        execution_trace_id=_trace_id(observation_trace),
                         failure_reason="observation_not_reached",
                     )
                 )
@@ -930,16 +935,12 @@ class IsaacCF2XVectorizedExecutionBackend:
         for sender_id in senders:
             runtime.message_queue.publish(
                 RelayMessage(
-                    message_id=(f"map-segment-{runtime.manifest.manifest_hash[:12]}-{sender_id}"),
+                    message_id=(f"map-segment-{runtime.manifest.manifest_id[:12]}-{sender_id}"),
                     sender_id=sender_id,
                     source_timestamp_s=runtime.execution_deadline_s,
-                    payload_digest=canonical_sha256(
-                        {
-                            "sender_id": sender_id,
-                            "source_observation_ids": (
-                                runtime.source_observation_ids_by_agent[sender_id]
-                            ),
-                        }
+                    payload_id=(
+                        f"{sender_id}:"
+                        f"{len(runtime.source_observation_ids_by_agent[sender_id])}-observations"
                     ),
                     time_to_live_s=self.communication_message_ttl_s,
                 )
@@ -1077,13 +1078,9 @@ class IsaacCF2XVectorizedExecutionBackend:
                     zip(self.agent_order, runtime.sensor_frames_by_agent, strict=True)
                 ),
                 "frames_by_phase": dict(runtime.range_frames_by_phase),
-                "outcome_hash": canonical_sha256(
-                    [row.to_dict() for row in runtime.public_range_frames]
-                ),
+                "outcome_id": f"range-frames:{len(runtime.public_range_frames)}",
                 "ray_outcome_count": len(runtime.public_range_outcomes),
-                "ray_outcome_hash": canonical_sha256(
-                    [row.to_dict() for row in runtime.public_range_outcomes]
-                ),
+                "ray_outcome_id": f"range-rays:{len(runtime.public_range_outcomes)}",
             },
             "agents": [
                 {
@@ -1147,8 +1144,8 @@ class IsaacCF2XVectorizedExecutionBackend:
             ],
         }
         return VectorizedClusterExecutionResult(
-            manifest_hash=runtime.manifest.manifest_hash,
-            token_hash=runtime.token.digest,
+            manifest_id=runtime.manifest.manifest_id,
+            token_id=runtime.token.token_id,
             samples=tuple(samples),
             engineering_diagnostics=diagnostics,
             public_range_frames=tuple(runtime.public_range_frames),

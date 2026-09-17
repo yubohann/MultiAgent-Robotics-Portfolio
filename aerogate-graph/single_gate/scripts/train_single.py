@@ -16,8 +16,8 @@ def _bootstrap_imports() -> None:
 
 def main() -> None:
     _bootstrap_imports()
-    from single_gate.training import run_training
     from shared.runtime.artifacts import RUNTIME_POLICY, allocate_training_artifacts
+    from single_gate.training import run_training
 
     parser = argparse.ArgumentParser(description="Train the single-agent Graph-FlashSAC gate experiment.")
     parser.add_argument("--train-steps", type=int, default=512)

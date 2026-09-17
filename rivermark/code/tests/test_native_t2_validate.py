@@ -15,7 +15,11 @@ if str(TESTS) not in sys.path:
     sys.path.insert(0, str(TESTS))
 
 from rivermark_benchmark import native_t2_validate
-from rivermark_benchmark.cf2x_runtime_calibration import calibration_report_sha256
+from rivermark_benchmark.cf2x_runtime_calibration import calibration_report_identity
+from rivermark_benchmark.collection_protocol import (
+    native_t2_v2_motion_contract,
+    native_t2_v3_motion_contract,
+)
 from rivermark_benchmark.frame_archive import (
     ChunkedFrameArchive,
     write_chunked_frame_archive,
@@ -37,7 +41,7 @@ from rivermark_benchmark.isaac_transfer import (
 )
 from rivermark_benchmark.isaac_validate import (
     IsaacValidationReport,
-    _native_t2_validator_sha256,
+    _native_t2_validator_identity,
     validate_isaac_capture,
     write_validation_receipt,
 )
@@ -54,16 +58,12 @@ from rivermark_benchmark.native_t2_validate import (
     NativeT2ValidationResult,
     validate_native_t2_capture,
 )
-from rivermark_benchmark.collection_protocol import (
-    native_t2_v2_motion_contract,
-    native_t2_v3_motion_contract,
-)
 from rivermark_benchmark.private_evaluator_manifest import (
     NATIVE_T2_TASK_VARIANT_ID,
     NATIVE_T2_V2_TASK_VARIANT_ID,
     NATIVE_T2_V3_TASK_VARIANT_ID,
 )
-from rivermark_benchmark.runtime_lock import runtime_lock_sha256
+from rivermark_benchmark.runtime_lock import runtime_lock_identity
 from rivermark_benchmark.t2_policy_abi import (
     T2CandidateEventJournal,
     T2NativeStepEvidence,
@@ -71,7 +71,7 @@ from rivermark_benchmark.t2_policy_abi import (
     T2PublicFleetObservation,
     T2PublicSensorObservation,
 )
-from rivermark_benchmark.video import sha256_file
+from rivermark_benchmark.video import identity_file
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -112,7 +112,7 @@ def _native_evidence_summary(root: Path) -> dict[str, object]:
         "claim_boundary": "development_native_t2_canary_only",
         "decision_trace": {
             "path": NATIVE_T2_DECISION_TRACE_RELATIVE_PATH,
-            "sha256": sha256_file(root / NATIVE_T2_DECISION_TRACE_RELATIVE_PATH),
+            "identity": identity_file(root / NATIVE_T2_DECISION_TRACE_RELATIVE_PATH),
             "decision_count": sum(record["record_type"] == "decision" for record in trace_records),
             "physical_step_count": sum(
                 record["record_type"] == "physical_step" for record in trace_records
@@ -120,13 +120,13 @@ def _native_evidence_summary(root: Path) -> dict[str, object]:
         },
         "candidate_events": {
             "path": NATIVE_T2_EVENT_JOURNAL_RELATIVE_PATH,
-            "sha256": sha256_file(root / NATIVE_T2_EVENT_JOURNAL_RELATIVE_PATH),
+            "identity": identity_file(root / NATIVE_T2_EVENT_JOURNAL_RELATIVE_PATH),
             "source_observation_count": len(source_observations),
             "event_count": len(events),
         },
         "camera_extrinsics": {
             "path": NATIVE_T2_CAMERA_EXTRINSICS_RELATIVE_PATH,
-            "sha256": sha256_file(root / NATIVE_T2_CAMERA_EXTRINSICS_RELATIVE_PATH),
+            "identity": identity_file(root / NATIVE_T2_CAMERA_EXTRINSICS_RELATIVE_PATH),
             "frame_count": frame_count,
             "world_camera_closure": "T_world_camera_from_verified_render_facing_usd_pose_converted_to_ros",
         },
@@ -137,16 +137,16 @@ def _rebind_native_fixture(root: Path) -> None:
     receipt_path = root / "capture_receipt.json"
     receipt = _read_json(receipt_path)
     receipt["native_t2_evidence"] = _native_evidence_summary(root)
-    receipt["artifact_hashes"] = {
+    receipt["artifact_identities"] = {
         relative: {
             "bytes": (root / relative).stat().st_size,
-            "sha256": sha256_file(root / relative),
+            "identity": identity_file(root / relative),
         }
         for relative in sorted(NATIVE_T2_EXPECTED_ARTIFACTS)
     }
     _write_json(receipt_path, receipt)
-    (root / "capture_receipt.sha256").write_text(
-        f"{sha256_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+    (root / "capture_receipt.identity").write_text(
+        f"{identity_file(receipt_path)}  capture_receipt.json\n", encoding="ascii"
     )
 
 
@@ -172,7 +172,7 @@ def _native_t2_fixture(
     manifest["task_variant_id"] = NATIVE_T2_TASK_VARIANT_ID
     canary_binding = {
         "protocol_id": "citylite-native-t2-canary-v1",
-        "protocol_sha256": "a" * 64,
+        "protocol_identity": "a" * 16,
         "cell_id": "native-t2-canary-inner-dev-v1",
         "split": "inner_dev",
         "episode_index": 0,
@@ -257,20 +257,20 @@ def _native_t2_fixture(
     }
     _write_json(root / "public_task.json", public_task)
     scene = _read_json(root / "scene.json")
-    scene["public_task_sha256"] = sha256_file(root / "public_task.json")
-    scene["private_evaluator_manifest_sha256"] = sha256_file(private_manifest)
+    scene["public_task_identity"] = identity_file(root / "public_task.json")
+    scene["private_evaluator_manifest_identity"] = identity_file(private_manifest)
     _write_json(root / "scene.json", scene)
 
     report = _report()
     runtime_lock = _lock()
     runtime_lock_path = tmp_path / "runtime-lock.json"
     _write_json(runtime_lock_path, runtime_lock)
-    lock_sha256 = runtime_lock_sha256(runtime_lock)
-    usd_sha256 = "e" * 64
-    report["asset"]["usd_sha256"] = usd_sha256
-    report["static_usd"]["usd_sha256"] = usd_sha256
-    report["runtime_lock_sha256"] = lock_sha256
-    report["report_sha256"] = calibration_report_sha256(report)
+    lock_identity = runtime_lock_identity(runtime_lock)
+    usd_identity = "e" * 16
+    report["asset"]["usd_identity"] = usd_identity
+    report["static_usd"]["usd_identity"] = usd_identity
+    report["runtime_lock_identity"] = lock_identity
+    report["report_identity"] = calibration_report_identity(report)
     calibration_path = tmp_path / "cf2x-calibration.json"
     _write_json(calibration_path, report)
     allocation = np.asarray(report["runtime"]["allocation_matrix"], dtype=np.float64)
@@ -294,7 +294,7 @@ def _native_t2_fixture(
                     "schema": NATIVE_T2_TRACE_SCHEMA,
                     "record_type": "decision",
                     "rollout_physics_step": step,
-                    "decision_sha256": current_decision.sha256,
+                    "decision_identity": current_decision.identity,
                     "decision": current_decision.public_dict(),
                 }
             )
@@ -479,7 +479,7 @@ def _native_t2_fixture(
         "formal_benchmark_admission": False,
         "capture_attempt_id": "attempt-native-t2",
         "decision_trace": NATIVE_T2_DECISION_TRACE_RELATIVE_PATH,
-        "decision_trace_sha256": sha256_file(trace_path),
+        "decision_trace_identity": identity_file(trace_path),
         "source_observations": source_observations,
         "candidate_event_journal": journal.public_dict(),
         "event_time_origin_ns": 0,
@@ -501,25 +501,25 @@ def _native_t2_fixture(
                 "warmup_steps": 0,
                 "capture_stride": 1,
                 "dt_s": dt_s,
-                "drone_usd_sha256": usd_sha256,
+                "drone_usd_identity": usd_identity,
             },
             "claim_boundary": {
                 "formal_benchmark_admission": False,
                 "development_native_t2_canary": True,
             },
-            "runtime_lock": {"sha256": lock_sha256},
+            "runtime_lock": {"identity": lock_identity},
             "city_lite_scene": {
-                "scene_contract_sha256": manifest["city_lite_scene_contract_sha256"],
-                "scene_contract_payload_sha256": manifest[
-                    "city_lite_scene_payload_sha256"
+                "scene_contract_identity": manifest["city_lite_scene_contract_identity"],
+                "scene_contract_payload_identity": manifest[
+                    "city_lite_scene_payload_identity"
                 ],
             },
-            "evaluator_manifest_sha256": sha256_file(private_manifest),
+            "evaluator_manifest_identity": identity_file(private_manifest),
             "collection_binding": canary_binding,
             "cf2x_runtime_calibration": bind_native_t2_calibration(
                 report,
-                expected_usd_sha256=usd_sha256,
-                expected_runtime_lock_sha256=lock_sha256,
+                expected_usd_identity=usd_identity,
+                expected_runtime_lock_identity=lock_identity,
                 expected_control_dt_s=dt_s,
             ),
         }
@@ -584,7 +584,7 @@ def test_native_t2_receipt_is_dispatched_before_legacy_t1_validation(
     assert observed["runtime_lock_path"] == tmp_path / "runtime-lock.json"
 
 
-def test_native_control_mode_dispatches_even_if_task_kind_is_tampered(
+def test_native_control_mode_dispatches_even_if_task_kind_is_altered(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = tmp_path / "capture"
@@ -592,14 +592,14 @@ def test_native_control_mode_dispatches_even_if_task_kind_is_tampered(
     monkeypatch.setattr(
         native_t2_validate,
         "validate_native_t2_capture",
-        lambda *_args, **_kwargs: NativeT2ValidationResult({"tamper_path": True}, ()),
+        lambda *_args, **_kwargs: NativeT2ValidationResult({"alter_path": True}, ()),
     )
 
     report = validate_isaac_capture(root, evaluator_manifest=tmp_path / "private.json")
 
     assert report.valid
     assert report.checks["validation_profile"] == "native_t2_canary"
-    assert report.checks["tamper_path"] is True
+    assert report.checks["alter_path"] is True
 
 
 def test_native_t2_validator_requires_external_private_truth_and_calibration(
@@ -630,7 +630,7 @@ def test_native_validation_receipt_binds_the_dispatch_and_replay_sources(
 ) -> None:
     report = IsaacValidationReport(
         root=tmp_path,
-        receipt_sha256="a" * 64,
+        receipt_identity="a" * 16,
         checks={"validation_profile": "native_t2_canary"},
         issues=(),
     )
@@ -640,7 +640,7 @@ def test_native_validation_receipt_binds_the_dispatch_and_replay_sources(
 
     payload = json.loads(destination.read_text(encoding="utf-8"))
     assert payload["validator_id"] == "rivermark-independent-native-t2-canary-validator-v1"
-    assert payload["validator_source_sha256"] == _native_t2_validator_sha256()
+    assert payload["validator_source_identity"] == _native_t2_validator_identity()
     assert payload["formal_benchmark_admission"] is False
 
 
@@ -743,7 +743,7 @@ def test_native_t2_v2_rejects_missing_or_nonrealized_motion_contract(tmp_path: P
     _write_json(task_path, task)
     scene_path = root / "scene.json"
     scene = _read_json(scene_path)
-    scene["public_task_sha256"] = sha256_file(task_path)
+    scene["public_task_identity"] = identity_file(task_path)
     _write_json(scene_path, scene)
     _rebind_native_fixture(root)
 
@@ -772,7 +772,7 @@ def test_native_t2_v3_receipt_cannot_borrow_v2_motion_contract() -> None:
     ) == native_t2_v3_motion_contract()
 
 
-def test_native_t2_validator_rejects_rebound_allocation_wrench_tampering(
+def test_native_t2_validator_rejects_rebound_allocation_wrench_alteration(
     tmp_path: Path,
 ) -> None:
     root, private_manifest, calibration, runtime_lock = _native_t2_fixture(tmp_path)
@@ -786,7 +786,7 @@ def test_native_t2_validator_rejects_rebound_allocation_wrench_tampering(
     )
     event_path = root / NATIVE_T2_EVENT_JOURNAL_RELATIVE_PATH
     event_payload = _read_json(event_path)
-    event_payload["decision_trace_sha256"] = sha256_file(trace_path)
+    event_payload["decision_trace_identity"] = identity_file(trace_path)
     _write_json(event_path, event_payload)
     _rebind_native_fixture(root)
 
@@ -800,7 +800,7 @@ def test_native_t2_validator_rejects_rebound_allocation_wrench_tampering(
     assert "native_t2_allocation_wrench" in {issue.code for issue in result.issues}
 
 
-def test_native_t2_validator_rejects_rebound_event_replay_tampering(
+def test_native_t2_validator_rejects_rebound_event_replay_alteration(
     tmp_path: Path,
 ) -> None:
     root, private_manifest, calibration, runtime_lock = _native_t2_fixture(tmp_path)
@@ -835,7 +835,7 @@ def test_native_t2_validator_rejects_rebound_zero_match_journal(tmp_path: Path) 
     submission = journal["submission"]
     assert isinstance(submission, dict)
     submission["events"] = []
-    journal["submission_sha256"] = native_t2_validate._canonical_sha256(submission)
+    journal["submission_identity"] = native_t2_validate._canonical_identity(submission)
     _write_json(event_path, payload)
     _rebind_native_fixture(root)
 
@@ -855,7 +855,7 @@ def test_native_t2_validator_rejects_event_debug_private_manifest_path(
     root, private_manifest, calibration, runtime_lock = _native_t2_fixture(tmp_path)
     event_path = root / NATIVE_T2_EVENT_JOURNAL_RELATIVE_PATH
     payload = _read_json(event_path)
-    # This field does not change the replayed submission, so a hash-only or
+    # This field does not change the replayed submission, so an identity-only or
     # replay-only validator would accept it after the receipt is rebound.
     payload["debug"] = {"private_manifest_path": str(private_manifest)}
     _write_json(event_path, payload)
@@ -963,7 +963,7 @@ def test_native_t2_validator_rejects_rebound_moving_overview_camera(
     assert "route_witness" in {issue.code for issue in result.issues}
 
 
-def test_native_t2_validator_rejects_rebound_sensor_phase_timestamp_tampering(
+def test_native_t2_validator_rejects_rebound_sensor_phase_timestamp_alteration(
     tmp_path: Path,
 ) -> None:
     root, private_manifest, calibration, runtime_lock = _native_t2_fixture(tmp_path)

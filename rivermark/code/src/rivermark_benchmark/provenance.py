@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
+from ._identity import IdentityAccumulator
+
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -11,7 +12,7 @@ from pathlib import Path
 @dataclass(frozen=True)
 class SourceProvenance:
     source_revision: str
-    source_tree_sha256: str
+    source_tree_identity: str
     source_worktree_dirty: bool
 
     def as_dict(self) -> dict[str, str | bool]:
@@ -30,8 +31,8 @@ def _git(root: Path, *arguments: str, text: bool = True) -> str | bytes:
     )
 
 
-def _tracked_tree_sha256(root: Path, paths: list[str]) -> str:
-    digest = hashlib.sha256()
+def _tracked_tree_identity(root: Path, paths: list[str]) -> str:
+    digest = IdentityAccumulator()
     for relative in sorted(paths):
         encoded = relative.encode("utf-8", errors="surrogateescape")
         digest.update(len(encoded).to_bytes(4, "big"))
@@ -47,12 +48,7 @@ def _tracked_tree_sha256(root: Path, paths: list[str]) -> str:
 
 
 def detect_source_provenance(root: Path | None = None) -> SourceProvenance:
-    """Return Git revision, tracked-tree content hash, and worktree state.
-
-    A source tree outside Git remains usable for pilot diagnostics, but it is
-    marked dirty and receives a content hash as its revision. Formal capture
-    callers must reject that fallback.
-    """
+    """Return Git revision, tracked-tree content identity, and worktree state."""
 
     resolved = (root or repository_root()).resolve()
     try:
@@ -62,11 +58,11 @@ def detect_source_provenance(root: Path | None = None) -> SourceProvenance:
         status = str(_git(resolved, "status", "--porcelain", "--untracked-files=normal"))
         if not revision or any(character not in "0123456789abcdef" for character in revision):
             raise ValueError("git returned a malformed revision")
-        return SourceProvenance(revision, _tracked_tree_sha256(resolved, paths), bool(status.strip()))
+        return SourceProvenance(revision, _tracked_tree_identity(resolved, paths), bool(status.strip()))
     except (OSError, subprocess.CalledProcessError, UnicodeError, ValueError):
         package = resolved / "src" / "rivermark_benchmark"
         paths = [path.relative_to(resolved).as_posix() for path in package.glob("*.py")]
-        fallback = _tracked_tree_sha256(resolved, paths)
+        fallback = _tracked_tree_identity(resolved, paths)
         return SourceProvenance(fallback, fallback, True)
 
 

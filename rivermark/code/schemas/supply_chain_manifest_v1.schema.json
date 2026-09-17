@@ -19,13 +19,13 @@
     "asset": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["asset_id", "kind", "sha256", "license_spdx", "license_status", "redistributable", "attribution"],
+      "required": ["asset_id", "kind", "identity", "license_spdx", "license_status", "redistributable", "attribution"],
       "properties": {
         "asset_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
         "kind": {"type": "string", "enum": ["code", "scene_layer", "robot_asset", "runtime", "checkpoint", "label", "video", "data"]},
         "path": {"type": "string", "minLength": 1},
         "source_uri": {"type": "string", "format": "uri"},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "license_spdx": {"type": "string", "minLength": 1},
         "license_status": {"type": "string", "enum": ["pending", "internal_only", "redistribution_cleared", "not_applicable"]},
         "redistributable": {"type": "boolean"},
@@ -43,12 +43,12 @@
     "decisionRecord": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["record_id", "approved_by", "approved_at", "evidence_sha256"],
+      "required": ["record_id", "approved_by", "approved_at", "evidence_identity"],
       "properties": {
         "record_id": {"type": "string", "minLength": 1},
         "approved_by": {"type": "string", "minLength": 1},
         "approved_at": {"type": "string", "minLength": 1},
-        "evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        "evidence_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"}
       }
     },
     "dependency": {
@@ -60,19 +60,19 @@
         "version": {"type": "string", "minLength": 1},
         "license_spdx": {"type": "string", "minLength": 1},
         "source_uri": {"type": "string", "format": "uri"},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        "identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"}
       }
     },
     "sbom": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["format", "status", "sha256"],
+      "required": ["format", "status", "identity"],
       "properties": {
         "format": {"type": "string", "enum": ["cyclonedx-json", "spdx-json"]},
         "status": {"type": "string", "enum": ["missing", "present", "verified"]},
         "path": {"type": "string", "minLength": 1},
         "uri": {"type": "string", "format": "uri"},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "spec_version": {"type": "string", "enum": ["1.6", "1.7"]},
         "generator": {"type": "string", "minLength": 1}
       }
@@ -87,11 +87,11 @@
         "key_id": {"type": "string", "minLength": 1},
         "path": {"type": "string", "minLength": 1},
         "uri": {"type": "string", "format": "uri"},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+        "manifest_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
         "public_key_path": {"type": "string", "minLength": 1},
         "public_key_uri": {"type": "string", "format": "uri"},
-        "public_key_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        "public_key_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"}
       }
     }
   }

@@ -16,7 +16,7 @@ Command-before-step timing makes causal scoring possible.
 
 ## Before Launch
 
-A capture starts after preflight checks pass, covering a clean source tree, disk reservation, the Windows system-commit guard, GPU and driver capacity, the City-Lite contract, the CF2X asset hash, the runtime lock, and the scorer-private manifest binding. A repository-wide lease allows one AppLauncher at a time.
+A capture starts after preflight checks pass, covering a clean source tree, disk reservation, the Windows system-commit guard, GPU and driver capacity, the City-Lite contract, the CF2X asset, the runtime lock, and the scorer-private manifest location. A repository-wide lease allows one AppLauncher at a time.
 
 The collection protocol, cell, and episode index are bound before Isaac starts.
 
@@ -32,7 +32,7 @@ rivermark-isaac-capture --output-dir E:\rivermark-runs\run-001 `
 
 The capture resolves the protocol once, stores a path-free binding in the receipt, and derives the episode seed deterministically from the protocol, cell, and episode index. A runtime seed that differs from the bound seed is rejected.
 
-## Fail-Closed Behavior
+## Discard Rules
 
 A capture is discarded when any gate fails, covering missing or stale sensor frames, pose-closure error, unresolved scene references, visual intrusion, unsafe obstacle proximity, route-contract violations, private-truth leakage, insufficient disk, runtime-lock mismatch, and resource-guard breaches. Failed artifacts stay outside the formal dataset and enter a redacted failure ledger.
 
@@ -44,4 +44,4 @@ A capture is discarded when any gate fails, covering missing or stale sensor fra
 
 ## Private Manifest Retention
 
-For every future `fixed_public_route` capture, the operator supplies an existing private retention directory outside both the repository and the capture. The collector snapshots the exact scorer manifest there under its SHA-256 filename and loads the retained snapshot in place of the mutable source. The public receipt records the retention kind, hash, and byte count, while the private root, path, and manifest bytes remain local.
+For every `fixed_public_route` capture, the operator supplies an existing private retention directory outside both the repository and the capture. The collector copies the scorer manifest there and loads the retained copy in place of the mutable source. The public receipt records the retention kind and byte count, while the private root, path, and manifest bytes remain local.

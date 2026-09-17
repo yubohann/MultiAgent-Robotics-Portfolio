@@ -1,6 +1,6 @@
 from glob import glob
-from setuptools import setup
 
+from setuptools import setup
 
 package_name = "mid360_localization_contract"
 

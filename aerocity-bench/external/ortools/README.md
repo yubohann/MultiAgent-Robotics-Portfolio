@@ -19,22 +19,19 @@ py -3.11 -m venv .external-ortools-venv
 .\.external-ortools-venv\Scripts\python.exe -m pip install --require-virtualenv -r external\ortools\requirements.txt
 ```
 
-The exact upstream revision, Apache-2.0 license hash, Python distribution
-version, and Windows wheel hash are in `source-lock.json`.  The benchmark
-runner starts `tools/ortools_g2i_process_adapter.py` as a separate JSONL
-process.  That process only returns high-level waypoints, `OBSERVE`, or
-`RETURN`; shared benchmark controllers remain responsible for flight dynamics,
-collision handling, dwell validation, confirmation, return, and scoring.
+The exact upstream revision, Apache-2.0 license, Python distribution version,
+and Windows wheel filename are in `source-lock.json`.  The benchmark runner
+starts `tools/ortools_g2i_process_adapter.py` as a separate JSONL process.
+That process only returns high-level waypoints, `OBSERVE`, or `RETURN`; shared
+benchmark controllers remain responsible for flight dynamics, collision
+handling, dwell validation, confirmation, return, and scoring.
 
-The local L1 launch manifest also pins the SHA-256 of the dedicated virtual
-environment's `Scripts/python.exe`.  This prevents Isaac's interpreter from
-silently replacing the isolated OR-Tools environment.  Public evidence records
-the interpreter hash but never the local path.
+The local L1 launch manifest also records the dedicated virtual environment's
+`Scripts/python.exe`, so Isaac's interpreter cannot silently replace the
+isolated OR-Tools environment.
 
 The one-time process initialization is capped at 10 seconds and reported
 separately; each post-reset action remains subject to the shared 0.15 second
 planning deadline.
 
-This is a reproducible external-solver baseline, not a C-gate substitute for a
-substantive externally maintained 3-D search method.  It is calibration-only
-until the remaining task, physical, statistics, scene, and release gates close.
+This is a reproducible external-solver baseline for calibration studies.

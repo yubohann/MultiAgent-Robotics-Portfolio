@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
-
-from robocup_visionrl_selfplay_env import AGENTS, RoboCupVisionRLSelfPlayEnv, TACTICAL_ACTION_DIM
+from robocup_visionrl_selfplay_env import (
+    AGENTS,
+    TACTICAL_ACTION_DIM,
+    RoboCupVisionRLSelfPlayEnv,
+)
 
 
 def test_selfplay_reset_and_zero_action_step_are_well_formed():

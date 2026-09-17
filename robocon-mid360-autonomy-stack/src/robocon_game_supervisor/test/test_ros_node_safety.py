@@ -2,12 +2,11 @@ import time
 import unittest
 
 import rclpy
-from std_msgs.msg import String
-
 from robocon_game_supervisor.actions import ActionRequest
 from robocon_game_supervisor.protocol import MessageEnvelope, envelope_to_json
 from robocon_game_supervisor.ros_node import RoboconGameSupervisorNode
 from robocon_game_supervisor.supervisor import SupervisorState
+from std_msgs.msg import String
 
 
 class RosNodeSafetyTests(unittest.TestCase):

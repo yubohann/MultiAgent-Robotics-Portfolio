@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import csv
-import hashlib
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from aerocity_method.contracts.io import canonical_sha256, require_identifier, require_sha256
+from aerocity_method.contracts.io import require_identifier
 
 HM3D_RUNTIME_SCHEMA_VERSION = "hm3d-runtime-preparation-v1"
 OFFICIAL_EXAMPLE_TIER = "official_example_v0.2"
@@ -19,14 +18,9 @@ ENGINEERING_EXAMPLE_STATUS = "ENGINEERING_EXAMPLE_ONLY"
 FORMAL_ASSET_STATUS = "FORMAL_ASSET_CANDIDATE"
 
 
-def file_sha256(path: Path) -> str:
-    """Hash a potentially large asset without loading it into memory."""
-
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def file_id(path: Path) -> str:
+    """Id a locked asset by file name and size, without loading it."""
+    return f"{path.name}:{path.stat().st_size}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,7 +32,7 @@ class HM3DAssetRecord:
     asset_tier: str
     asset_kind: str
     path: str
-    sha256: str
+    asset_id: str
     bytes: int
 
     def __post_init__(self) -> None:
@@ -51,7 +45,7 @@ class HM3DAssetRecord:
             raise ValueError("official examples cannot be represented as a formal split")
         require_identifier(self.asset_kind, "asset_kind")
         require_identifier(self.path, "path")
-        require_sha256(self.sha256, "sha256")
+        require_identifier(self.asset_id, "asset_id")
         if not isinstance(self.bytes, int) or isinstance(self.bytes, bool) or self.bytes <= 0:
             raise ValueError("asset byte count must be a positive integer")
 
@@ -68,7 +62,7 @@ class HM3DAssetRecord:
             "asset_tier": self.asset_tier,
             "asset_kind": self.asset_kind,
             "path": self.path,
-            "sha256": self.sha256,
+            "asset_id": self.asset_id,
             "bytes": self.bytes,
             "status": self.status,
         }
@@ -91,7 +85,7 @@ def lock_asset(
         asset_tier=asset_tier,
         asset_kind=asset_kind,
         path=str(resolved),
-        sha256=file_sha256(resolved),
+        asset_id=file_id(resolved),
         bytes=resolved.stat().st_size,
     )
 
@@ -199,7 +193,7 @@ def summarize_official_metadata(rows: Iterable[dict[str, str]]) -> dict[str, Any
         }
         for row in largest
     ]
-    result["summary_sha256"] = canonical_sha256(result)
+    result["summary_id"] = f"hm3d-official-metadata:{len(materialized)}-scenes"
     return result
 
 
@@ -234,7 +228,7 @@ def geometry_audit(path: Path) -> tuple[Any, dict[str, Any]]:
     report = {
         "schema_version": HM3D_RUNTIME_SCHEMA_VERSION,
         "source_path": str(path.resolve()),
-        "source_sha256": file_sha256(path),
+        "source_file_id": file_id(path),
         "vertex_count": int(len(mesh.vertices)),
         "face_count": int(len(mesh.faces)),
         "bounds_min_m": bounds[0].tolist(),
@@ -245,7 +239,9 @@ def geometry_audit(path: Path) -> tuple[Any, dict[str, Any]]:
         "winding_consistent": bool(mesh.is_winding_consistent),
         "axis_convention": "trimesh-z-up-metres",
     }
-    report["geometry_audit_sha256"] = canonical_sha256(report)
+    report["geometry_audit_id"] = (
+        f"geometry:{report['source_file_id']}:{report['vertex_count']}v:{report['face_count']}f"
+    )
     return mesh, report
 
 
@@ -343,7 +339,10 @@ def build_enclosed_esdf(
         "outside_space_rejected": True,
         "physx_collision_replay_required": True,
     }
-    report["flight_space_manifest_hash"] = canonical_sha256(report)
+    report["flight_space_manifest_id"] = (
+        f"flight-space:{report['resolution_m']}m:{report['free_voxels']}voxels:"
+        f"{report['retained_component_count']}components"
+    )
     return arrays, report
 
 
@@ -411,7 +410,7 @@ def reachable_component_mask(
         for component_id in selected_ids
     }
     voxel_count = int(mask.sum())
-    mask_sha256 = hashlib.sha256(np.ascontiguousarray(mask).tobytes()).hexdigest()
+    mask_id = f"reachable-mask:{voxel_count}voxels:{resolution}m:{selected_ids}"
     metadata = {
         "schema_version": "hm3d-reachable-evaluation-denominator-v1",
         "connectivity": 26,
@@ -424,9 +423,9 @@ def reachable_component_mask(
         "component_voxel_counts": component_voxel_counts,
         "reachable_voxel_count": voxel_count,
         "reachable_volume_m3": float(voxel_count * resolution**3),
-        "mask_sha256": mask_sha256,
+        "mask_id": mask_id,
+        "metadata_id": f"reachable-denominator:{mask_id}",
     }
-    metadata["metadata_sha256"] = canonical_sha256(metadata)
     return mask, metadata
 
 
@@ -486,7 +485,7 @@ __all__ = [
     "OFFICIAL_EXAMPLE_TIER",
     "audit_asset_scope",
     "build_enclosed_esdf",
-    "file_sha256",
+    "file_id",
     "geometry_audit",
     "grid_points",
     "load_official_metadata",

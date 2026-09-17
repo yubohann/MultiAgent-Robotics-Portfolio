@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
+
 import torch
+import torch.nn.functional as F
+
 
 def sanitize_legacy_hybrid_state_dict(
     state_dict: dict[str, torch.Tensor],

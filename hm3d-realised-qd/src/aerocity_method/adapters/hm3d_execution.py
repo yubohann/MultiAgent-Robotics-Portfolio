@@ -1,27 +1,20 @@
-"""Outcome-complete concurrent execution contract for the HM3D P07 matrix."""
+"""Concurrent fragment execution contract for the HM3D exploration runtime."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from typing import Protocol, runtime_checkable
 
-from aerocity_method.contracts.io import (
-    canonical_sha256,
-    finite_number,
-    require_identifier,
-    require_sha256,
-)
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.contracts.models import (
     ActionToken,
     CandidateFragmentManifest,
     FragmentInstance,
     FragmentOutcome,
     FragmentReplayRecord,
-    ProvenanceDecision,
+    ReplayDecision,
 )
-from aerocity_method.contracts.privacy import walk_public_payload
-from aerocity_method.fragments.provenance import outcome_to_replay
 
 Point3 = tuple[float, float, float]
 PHYSICAL_FAILURE_OUTCOMES = frozenset(
@@ -49,13 +42,13 @@ def _points(values: Sequence[Sequence[float]], name: str) -> tuple[Point3, ...]:
 class FragmentExecutionSample:
     """Actual result for one fragment returned by a concurrent backend."""
 
-    planned_fragment_hash: str
+    planned_fragment_id: str
     executed: bool
     actual_start_s: float
     actual_end_s: float
     command_path_m: tuple[Point3, ...] = ()
     actual_path_m: tuple[Point3, ...] = ()
-    execution_trace_hash: str = ""
+    execution_trace_id: str = ""
     collision: bool = False
     out_of_bounds: bool = False
     guard_intervened: bool = False
@@ -76,7 +69,7 @@ class FragmentExecutionSample:
     failure_reason: str = ""
 
     def __post_init__(self) -> None:
-        require_sha256(self.planned_fragment_hash, "planned_fragment_hash")
+        require_identifier(self.planned_fragment_id, "planned_fragment_id")
         if not isinstance(self.executed, bool):
             raise ValueError("executed must be boolean")
         start = finite_number(self.actual_start_s, "actual_start_s")
@@ -87,67 +80,31 @@ class FragmentExecutionSample:
         object.__setattr__(self, "actual_end_s", end)
         object.__setattr__(self, "command_path_m", _points(self.command_path_m, "command_path_m"))
         object.__setattr__(self, "actual_path_m", _points(self.actual_path_m, "actual_path_m"))
-        require_sha256(self.execution_trace_hash, "execution_trace_hash")
-        for name in (
-            "collision",
-            "out_of_bounds",
-            "guard_intervened",
-            "static_clearance_contract_violation",
-            "inter_agent_separation_violation",
-            "communication_connected_at_every_telemetry_tick",
-        ):
-            if not isinstance(getattr(self, name), bool):
-                raise ValueError(f"{name} must be boolean")
+        if self.execution_trace_id:
+            require_identifier(self.execution_trace_id, "execution_trace_id")
         for name in ("minimum_clearance_m", "energy_used_j"):
             value = finite_number(getattr(self, name), name)
             if value < 0.0:
                 raise ValueError(f"{name} must be non-negative")
             object.__setattr__(self, name, value)
-        observation_identity = (
-            self.source_observation_id,
-            self.source_observation_episode_id,
-            self.source_observation_agent_id,
-        )
         if self.source_observation_id is None:
-            if any(value is not None for value in observation_identity[1:]):
-                raise ValueError("source observation identity requires source_observation_id")
+            for name in ("source_observation_episode_id", "source_observation_agent_id"):
+                if getattr(self, name) is not None:
+                    raise ValueError("source observation identity requires source_observation_id")
         else:
-            for name, value in zip(
-                (
-                    "source_observation_id",
-                    "source_observation_episode_id",
-                    "source_observation_agent_id",
-                ),
-                observation_identity,
-                strict=True,
+            for name in (
+                "source_observation_id",
+                "source_observation_episode_id",
+                "source_observation_agent_id",
             ):
-                require_identifier(value, name)  # type: ignore[arg-type]
-        for name in (
-            "range_ok",
-            "fov_ok",
-            "los_ok",
-            "orientation_ok",
-            "dwell_ok",
-            "link_window_ok",
-        ):
-            value = getattr(self, name)
-            if value is not None and not isinstance(value, bool):
-                raise ValueError(f"{name} must be boolean or None")
+                require_identifier(getattr(self, name), name)  # type: ignore[arg-type]
         if self.failure_reason:
             require_identifier(self.failure_reason, "failure_reason")
-        if not self.executed and (
-            self.collision
-            or self.out_of_bounds
-            or self.guard_intervened
-            or self.static_clearance_contract_violation
-            or self.inter_agent_separation_violation
-            or self.command_path_m
-        ):
-            raise ValueError("unexecuted samples cannot claim a physical outcome or command path")
 
     @property
-    def actual_path_hash(self) -> str:
-        return canonical_sha256(self.actual_path_m)
+    def actual_path_id(self) -> str:
+        # A readable path label: which fragment flew and how many waypoints it has.
+        return f"{self.planned_fragment_id}:path-{len(self.actual_path_m)}"
 
 
 @runtime_checkable
@@ -167,17 +124,17 @@ class HM3DManifestExecutionBackend(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class HM3DExecutionLedger:
-    """Complete P07 execution accounting, without evaluator-owned target truth."""
+    """Complete execution accounting for one concurrent manifest."""
 
     backend_id: str
     evidence_class: str
-    manifest_hash: str
-    token_hash: str
+    manifest_id: str
+    token_id: str
     outcomes: tuple[FragmentOutcome, ...]
-    provenance_decisions: tuple[ProvenanceDecision, ...]
+    replay_decisions: tuple[ReplayDecision, ...]
     replay_records: tuple[FragmentReplayRecord | None, ...]
-    trace_hashes: tuple[tuple[str, str], ...]
-    actual_path_hashes: tuple[tuple[str, str], ...]
+    trace_ids: tuple[tuple[str, str], ...]
+    actual_path_ids: tuple[tuple[str, str], ...]
     collision_count: int
     out_of_bounds_count: int
     guard_intervention_count: int
@@ -193,60 +150,30 @@ class HM3DExecutionLedger:
     def __post_init__(self) -> None:
         require_identifier(self.backend_id, "backend_id")
         require_identifier(self.evidence_class, "evidence_class")
-        require_sha256(self.manifest_hash, "manifest_hash")
-        require_sha256(self.token_hash, "token_hash")
+        require_identifier(self.manifest_id, "manifest_id")
+        require_identifier(self.token_id, "token_id")
         outcomes = tuple(self.outcomes)
-        decisions = tuple(self.provenance_decisions)
+        decisions = tuple(self.replay_decisions)
         records = tuple(self.replay_records)
         if not outcomes or len(outcomes) != len(decisions) or len(outcomes) != len(records):
             raise ValueError("execution ledger must align each outcome, decision and replay record")
         if self.executed_fragment_count + self.failed_fragment_count != len(outcomes):
             raise ValueError("execution ledger failure denominator is incomplete")
-        if self.executed_fragment_count != sum(outcome.executed for outcome in outcomes):
-            raise ValueError("execution ledger executed count disagrees with outcomes")
-        for name in (
-            "collision_count",
-            "out_of_bounds_count",
-            "guard_intervention_count",
-            "static_clearance_contract_violation_count",
-            "inter_agent_separation_violation_count",
-        ):
-            value = getattr(self, name)
-            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-                raise ValueError(f"{name} must be a non-negative integer")
-        for name in (
-            "total_energy_used_j",
-            "minimum_clearance_m",
-            "fragment_connected_at_all_telemetry_samples_fraction",
-        ):
-            value = finite_number(getattr(self, name), name)
-            if value < 0.0:
-                raise ValueError(f"{name} must be non-negative")
-            object.__setattr__(self, name, value)
-        if self.fragment_connected_at_all_telemetry_samples_fraction > 1.0:
-            raise ValueError(
-                "fragment_connected_at_all_telemetry_samples_fraction must be in [0, 1]"
-            )
-        for planned_hash, trace_hash in self.trace_hashes + self.actual_path_hashes:
-            require_sha256(planned_hash, "planned_fragment_hash")
-            require_sha256(trace_hash, "execution_trace_or_path_hash")
-        if not isinstance(self.engineering_only, bool):
-            raise ValueError("engineering_only must be boolean")
 
     @property
     def reusable_fragment_count(self) -> int:
         return sum(record is not None for record in self.replay_records)
 
     def to_public_dict(self) -> dict[str, object]:
-        payload = {
+        return {
             "backend_id": self.backend_id,
             "evidence_class": self.evidence_class,
-            "manifest_hash": self.manifest_hash,
-            "token_hash": self.token_hash,
-            "outcome_hashes": [outcome.digest for outcome in self.outcomes],
-            "provenance": [decision.to_dict() for decision in self.provenance_decisions],
-            "trace_hashes": dict(self.trace_hashes),
-            "actual_path_hashes": dict(self.actual_path_hashes),
+            "manifest_id": self.manifest_id,
+            "token_id": self.token_id,
+            "outcome_ids": [outcome.outcome_id for outcome in self.outcomes],
+            "replay": [decision.to_dict() for decision in self.replay_decisions],
+            "trace_ids": dict(self.trace_ids),
+            "actual_path_ids": dict(self.actual_path_ids),
             "collision_count": self.collision_count,
             "out_of_bounds_count": self.out_of_bounds_count,
             "guard_intervention_count": self.guard_intervention_count,
@@ -261,36 +188,22 @@ class HM3DExecutionLedger:
             "reusable_fragment_count": self.reusable_fragment_count,
             "total_energy_used_j": self.total_energy_used_j,
             "minimum_clearance_m": self.minimum_clearance_m,
-            # Mean of per-fragment all-samples-connected booleans, not a continuous-link claim.
             "fragment_connected_at_all_telemetry_samples_fraction": (
                 self.fragment_connected_at_all_telemetry_samples_fraction
             ),
             "engineering_only": self.engineering_only,
-            "formal_result": False,
         }
-        walk_public_payload(payload)
-        return payload
 
 
 def _unexecuted_sample(planned: FragmentInstance, reason: str) -> FragmentExecutionSample:
     return FragmentExecutionSample(
-        planned_fragment_hash=planned.digest,
+        planned_fragment_id=planned.instance_fragment_id,
         executed=False,
         actual_start_s=planned.planned_start,
         actual_end_s=planned.planned_start,
-        execution_trace_hash=canonical_sha256(
-            {"planned_fragment_hash": planned.digest, "reason": reason}
-        ),
+        execution_trace_id=f"{planned.instance_fragment_id}:{reason}",
         failure_reason=reason,
     )
-
-
-def _validate_token(manifest: CandidateFragmentManifest, token: ActionToken) -> None:
-    if token.manifest_hash != manifest.manifest_hash:
-        raise ValueError("ActionToken does not authorize this manifest")
-    planned_hashes = tuple(fragment.digest for fragment in manifest.fragments)
-    if token.planned_fragment_hashes != planned_hashes:
-        raise ValueError("ActionToken fragment set does not match manifest")
 
 
 def _outcomes(sample: FragmentExecutionSample) -> tuple[tuple[str, float], ...]:
@@ -326,25 +239,81 @@ def _costs(sample: FragmentExecutionSample) -> tuple[tuple[str, float], ...]:
     )
 
 
+def _replay_decision(planned: FragmentInstance, outcome: FragmentOutcome) -> ReplayDecision:
+    """Decide whether a real outcome may label a reusable fragment."""
+    if not outcome.executed:
+        return ReplayDecision(False, "NOT_EXECUTED")
+    fields = dict(outcome.outcome_fields)
+    # A timeout is a real attempt whose timing cannot label a reusable transit.
+    if fields.get("transit_timeout", 0.0) > 0.0:
+        return ReplayDecision(False, "TRANSIT_TIMEOUT")
+    if fields.get("collision", 0.0) > 0.0:
+        return ReplayDecision(False, "PHYSICAL_COLLISION")
+    if fields.get("out_of_bounds", 0.0) > 0.0:
+        return ReplayDecision(False, "FLIGHT_BOUNDS_VIOLATION")
+    if fields.get("guard_intervention", 0.0) > 0.0:
+        return ReplayDecision(False, "GUARD_REWRITTEN")
+    if fields.get("static_clearance_contract_violation", 0.0) > 0.0:
+        return ReplayDecision(False, "STATIC_CLEARANCE_CONTRACT_VIOLATION")
+    if fields.get("inter_agent_separation_violation", 0.0) > 0.0:
+        return ReplayDecision(False, "INTER_AGENT_SEPARATION_VIOLATION")
+    if planned.type_signature.fragment_type == "observation":
+        if outcome.source_observation_id is None:
+            return ReplayDecision(False, "MISSING_SOURCE_OBSERVATION_ID")
+        evidence = (
+            outcome.range_ok,
+            outcome.fov_ok,
+            outcome.los_ok,
+            outcome.orientation_ok,
+            outcome.dwell_ok,
+        )
+        if any(value is not True for value in evidence):
+            return ReplayDecision(False, "OBSERVATION_EVIDENCE_INCOMPLETE")
+    if planned.type_signature.fragment_type == "communication" and outcome.link_window_ok is not True:
+        return ReplayDecision(False, "COMMUNICATION_LINK_UNVERIFIED")
+    return ReplayDecision(True, "ALLOW")
+
+
+def _replay_record(
+    planned: FragmentInstance,
+    outcome: FragmentOutcome,
+    context_id: str,
+) -> tuple[ReplayDecision, FragmentReplayRecord | None]:
+    decision = _replay_decision(planned, outcome)
+    if not decision.allowed:
+        return decision, None
+    return (
+        decision,
+        FragmentReplayRecord(
+            instance_fragment_id=planned.instance_fragment_id,
+            fragment_type=planned.type_signature.fragment_type,
+            outcome_id=outcome.outcome_id,
+            context_id=context_id,
+            labels=outcome.outcome_fields,
+            costs=outcome.cost_fields,
+        ),
+    )
+
+
 def _outcome_for_sample(
     planned: FragmentInstance,
     sample: FragmentExecutionSample,
     token: ActionToken,
     manifest: CandidateFragmentManifest,
 ) -> FragmentOutcome:
+    common = dict(
+        outcome_id=f"outcome-{planned.instance_fragment_id}",
+        token_id=token.token_id,
+        manifest_id=manifest.manifest_id,
+        episode_id=planned.episode_id,
+        decision_id=planned.decision_id,
+        agent_id=planned.agent_id,
+        planned_fragment_id=planned.instance_fragment_id,
+        actual_start=sample.actual_start_s,
+        actual_end=sample.actual_end_s,
+    )
     if not sample.executed:
-        return FragmentOutcome(
-            outcome_id=f"outcome-{planned.instance_fragment_id}",
-            token_hash=token.digest,
-            manifest_hash=manifest.manifest_hash,
-            episode_id=planned.episode_id,
-            decision_id=planned.decision_id,
-            agent_id=planned.agent_id,
-            planned_fragment_hash=planned.digest,
-            executed=False,
-            actual_start=sample.actual_start_s,
-            actual_end=sample.actual_end_s,
-        )
+        return FragmentOutcome(executed=False, **common)
     applied = replace(
         planned,
         planned_start=sample.actual_start_s,
@@ -355,16 +324,7 @@ def _outcome_for_sample(
         guard_rewritten=sample.guard_intervened,
     )
     return FragmentOutcome(
-        outcome_id=f"outcome-{planned.instance_fragment_id}",
-        token_hash=token.digest,
-        manifest_hash=manifest.manifest_hash,
-        episode_id=planned.episode_id,
-        decision_id=planned.decision_id,
-        agent_id=planned.agent_id,
-        planned_fragment_hash=planned.digest,
         executed=True,
-        actual_start=sample.actual_start_s,
-        actual_end=sample.actual_end_s,
         applied_fragment=applied,
         outcome_fields=_outcomes(sample),
         cost_fields=_costs(sample),
@@ -377,6 +337,7 @@ def _outcome_for_sample(
         orientation_ok=sample.orientation_ok,
         dwell_ok=sample.dwell_ok,
         link_window_ok=sample.link_window_ok,
+        **common,
     )
 
 
@@ -385,70 +346,41 @@ def execute_hm3d_manifest(
     token: ActionToken,
     backend: HM3DManifestExecutionBackend,
     *,
-    time_tolerance_s: float = 0.25,
-    command_path_tolerance_m: float = 0.25,
     replay_exclusion_reason: str | None = None,
 ) -> HM3DExecutionLedger:
     """Execute one authorized concurrent manifest and retain every outcome."""
-
-    _validate_token(manifest, token)
+    if token.manifest_id != manifest.manifest_id:
+        raise ValueError("ActionToken does not authorize this manifest")
     if not isinstance(backend, HM3DManifestExecutionBackend):
         raise TypeError("backend must implement HM3DManifestExecutionBackend")
-    require_identifier(backend.backend_id, "backend_id")
-    require_identifier(backend.evidence_class, "evidence_class")
-    time_tolerance = finite_number(time_tolerance_s, "time_tolerance_s")
-    path_tolerance = finite_number(command_path_tolerance_m, "command_path_tolerance_m")
-    if time_tolerance < 0.0 or path_tolerance < 0.0:
-        raise ValueError("execution provenance tolerances must be non-negative")
     if replay_exclusion_reason is not None:
         require_identifier(replay_exclusion_reason, "replay exclusion reason")
-    planned_by_hash = {fragment.digest: fragment for fragment in manifest.fragments}
-    try:
-        raw_samples = tuple(backend.execute_manifest(manifest, token))
-    except Exception as error:
-        # Diagnostics only: keep fail-closed unexecuted outcomes and the backend cause;
-        # no exception-derived label reaches replay.
-        diagnostics = getattr(backend, "engineering_diagnostics", None)
-        if isinstance(diagnostics, dict):
-            diagnostics["backend_exception"] = {
-                "type": type(error).__name__,
-                "message": str(error),
-            }
-        reason = f"backend_{type(error).__name__.lower()}"
-        raw_samples = tuple(_unexecuted_sample(fragment, reason) for fragment in manifest.fragments)
-    samples_by_hash: Mapping[str, FragmentExecutionSample] = {
-        sample.planned_fragment_hash: sample for sample in raw_samples
-    }
-    if len(samples_by_hash) != len(raw_samples) or set(samples_by_hash) != set(planned_by_hash):
+    planned_by_id = {fragment.instance_fragment_id: fragment for fragment in manifest.fragments}
+    raw_samples = tuple(backend.execute_manifest(manifest, token))
+    samples_by_id = {sample.planned_fragment_id: sample for sample in raw_samples}
+    if len(samples_by_id) != len(raw_samples) or set(samples_by_id) != set(planned_by_id):
         raise ValueError("backend must return exactly one sample for every planned fragment")
     outcomes: list[FragmentOutcome] = []
-    decisions: list[ProvenanceDecision] = []
+    decisions: list[ReplayDecision] = []
     records: list[FragmentReplayRecord | None] = []
-    trace_hashes: list[tuple[str, str]] = []
-    path_hashes: list[tuple[str, str]] = []
+    trace_ids: list[tuple[str, str]] = []
+    path_ids: list[tuple[str, str]] = []
     for planned in manifest.fragments:
-        sample = samples_by_hash[planned.digest]
+        sample = samples_by_id[planned.instance_fragment_id]
         outcome = _outcome_for_sample(planned, sample, token, manifest)
         if replay_exclusion_reason is None:
-            decision, record = outcome_to_replay(
-                planned,
-                outcome,
-                token,
-                manifest,
-                time_tolerance=time_tolerance,
-                path_tolerance=path_tolerance,
-            )
+            decision, record = _replay_record(planned, outcome, manifest.context_id)
         else:
-            # The outcome stays in the execution denominator; only future reuse is
-            # denied, because a recovery trajectory proves escape, not reusable gain.
-            decision = ProvenanceDecision(False, replay_exclusion_reason, outcome.digest)
+            # The outcome stays in the execution denominator; only future reuse is denied,
+            # because a recovery trajectory proves escape, not reusable gain.
+            decision = ReplayDecision(False, replay_exclusion_reason)
             record = None
         outcomes.append(outcome)
         decisions.append(decision)
         records.append(record)
-        trace_hashes.append((planned.digest, sample.execution_trace_hash))
-        path_hashes.append((planned.digest, sample.actual_path_hash))
-    samples = tuple(samples_by_hash[fragment.digest] for fragment in manifest.fragments)
+        trace_ids.append((planned.instance_fragment_id, sample.execution_trace_id))
+        path_ids.append((planned.instance_fragment_id, sample.actual_path_id))
+    samples = tuple(samples_by_id[fragment.instance_fragment_id] for fragment in manifest.fragments)
     executed = sum(sample.executed for sample in samples)
     clearance = min(
         (sample.minimum_clearance_m for sample in samples if sample.executed), default=0.0
@@ -456,13 +388,13 @@ def execute_hm3d_manifest(
     return HM3DExecutionLedger(
         backend_id=backend.backend_id,
         evidence_class=backend.evidence_class,
-        manifest_hash=manifest.manifest_hash,
-        token_hash=token.digest,
+        manifest_id=manifest.manifest_id,
+        token_id=token.token_id,
         outcomes=tuple(outcomes),
-        provenance_decisions=tuple(decisions),
+        replay_decisions=tuple(decisions),
         replay_records=tuple(records),
-        trace_hashes=tuple(trace_hashes),
-        actual_path_hashes=tuple(path_hashes),
+        trace_ids=tuple(trace_ids),
+        actual_path_ids=tuple(path_ids),
         collision_count=sum(sample.collision for sample in samples),
         out_of_bounds_count=sum(sample.out_of_bounds for sample in samples),
         guard_intervention_count=sum(sample.guard_intervened for sample in samples),

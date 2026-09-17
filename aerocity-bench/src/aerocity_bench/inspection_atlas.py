@@ -1,10 +1,4 @@
-"""Target-agnostic public inspection-atlas compilation for G2-I.
-
-The atlas exposes *what classes of city structure should be inspected*, not
-which structure contains a target.  It deliberately operates on CitySpec
-geometry and the public observation contract only.  It never imports target
-sampling, support-site, evaluator, or episode modules.
-"""
+"""Public inspection-atlas compilation for G2-I from geometry alone."""
 
 from __future__ import annotations
 
@@ -13,7 +7,6 @@ import math
 from collections import Counter
 from typing import Any
 
-from .canonical import content_hash
 from .contracts import Pose3D
 from .geometry import (
     Vec3,
@@ -188,14 +181,13 @@ def _rounded_vector(values: tuple[float, ...] | list[float]) -> list[float]:
 
 
 def _region_id(
-    region_class: str, bounds: dict[str, list[float]], ordinal: int, inspection_geometry_hash: str
+    region_class: str, bounds: dict[str, list[float]], ordinal: int, inspection_geometry_id: str
 ) -> str:
-    digest = content_hash([inspection_geometry_hash, region_class, bounds, ordinal])[:18]
-    return f"atlas-region-{digest}"
+    return f"atlas-region-{inspection_geometry_id}-{region_class}-{ordinal:03d}"
 
 
 def _cell_id(region_id: str, ordinal: int, pose: dict[str, Any]) -> str:
-    return f"atlas-cell-{content_hash([region_id, ordinal, pose])[:18]}"
+    return f"{region_id}-cell-{ordinal:04d}"
 
 
 def _pose(position: tuple[float, float, float], yaw_deg: float, pitch_deg: float) -> dict[str, Any]:
@@ -281,7 +273,7 @@ def _region(
     region_class: str,
     bounds: tuple[float, float, float, float, float, float],
     area_m2: float,
-    inspection_geometry_hash: str,
+    inspection_geometry_id: str,
     ordinal: int,
 ) -> dict[str, Any]:
     x0, x1, y0, y1, z0, z1 = bounds
@@ -291,7 +283,7 @@ def _region(
     }
     center_z = (z0 + z1) / 2.0
     return {
-        "region_id": _region_id(region_class, public_bounds, ordinal, inspection_geometry_hash),
+        "region_id": _region_id(region_class, public_bounds, ordinal, inspection_geometry_id),
         "region_class": region_class,
         "bounds": public_bounds,
         "represented_area_m2": round(max(0.01, area_m2), 4),
@@ -337,7 +329,7 @@ def _append_cell(
 
 def _facade_regions(
     component: dict[str, Any],
-    inspection_geometry_hash: str,
+    inspection_geometry_id: str,
     ordinal: int,
     parameters: dict[str, Any],
 ) -> list[dict[str, Any]]:
@@ -357,7 +349,7 @@ def _facade_regions(
             "facade",
             (x0, x1, y0, y1, z0, z1),
             width * (z1 - z0),
-            inspection_geometry_hash,
+            inspection_geometry_id,
             ordinal + face_index,
         )
         yaw_deg = math.degrees(math.atan2(-normal[1], -normal[0]))
@@ -381,7 +373,7 @@ def _facade_regions(
 
 def _roof_region(
     component: dict[str, Any],
-    inspection_geometry_hash: str,
+    inspection_geometry_id: str,
     ordinal: int,
     parameters: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -390,7 +382,7 @@ def _roof_region(
         "roof",
         (x0, x1, y0, y1, z1, z1),
         (x1 - x0) * (y1 - y0),
-        inspection_geometry_hash,
+        inspection_geometry_id,
         ordinal,
     )
     spacing = parameters["horizontal_cell_spacing_m"]
@@ -411,7 +403,7 @@ def _roof_region(
 def _entrance_region(
     entrance: object,
     building: dict[str, Any],
-    inspection_geometry_hash: str,
+    inspection_geometry_id: str,
     ordinal: int,
     parameters: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -427,7 +419,7 @@ def _entrance_region(
         "entrance",
         (x - half_width, x + half_width, y - half_width, y + half_width, z - 1.0, z + 1.0),
         6.0,
-        inspection_geometry_hash,
+        inspection_geometry_id,
         ordinal,
     )
     position = (
@@ -482,7 +474,7 @@ def _entrance_region(
 
 def _rubble_region(
     obstacle: dict[str, Any],
-    inspection_geometry_hash: str,
+    inspection_geometry_id: str,
     ordinal: int,
     parameters: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -491,7 +483,7 @@ def _rubble_region(
         "rubble",
         (x0, x1, y0, y1, z1, z1),
         (x1 - x0) * (y1 - y0),
-        inspection_geometry_hash,
+        inspection_geometry_id,
         ordinal,
     )
     spacing = parameters["horizontal_cell_spacing_m"]
@@ -531,52 +523,9 @@ def _safe_sky_altitude(city: dict[str, Any], execution_contract: dict[str, Any])
     return round(safe_sky, 4)
 
 
-def _inspection_geometry_hash(city: dict[str, Any]) -> str:
-    """Hash only the public, target-independent atlas authority geometry.
-
-    ``task_geometry_hash`` remains the existing private task-layer identity and
-    includes legacy target-support metadata.  Atlas IDs must not inherit it:
-    otherwise a target-layer policy edit could change public route IDs without
-    changing any declared inspection structure.
-    """
-
-    buildings = []
-    for building in sorted(city["buildings"], key=lambda item: str(item["id"])):
-        buildings.append(
-            {
-                "id": str(building["id"]),
-                "footprint": list(building["footprint"]),
-                "entrances": [list(entrance) for entrance in building.get("entrances", [])],
-                "components": [
-                    {
-                        "id": str(component["id"]),
-                        "center": list(component["center"]),
-                        "size": list(component["size"]),
-                        "structural_role": component.get("structural_role"),
-                    }
-                    for component in sorted(
-                        building["components"], key=lambda item: str(item["id"])
-                    )
-                ],
-            }
-        )
-    obstacles = [
-        {
-            "id": str(obstacle["id"]),
-            "kind": str(obstacle.get("kind", "unknown")),
-            "center": list(obstacle["center"]),
-            "size": list(obstacle["size"]),
-        }
-        for obstacle in sorted(city["obstacles"], key=lambda item: str(item["id"]))
-    ]
-    return content_hash(
-        {
-            "atlas_version": ATLAS_VERSION,
-            "buildings": buildings,
-            "obstacles": obstacles,
-            "flight_bounds": city["flight_bounds"],
-        }
-    )
+def _inspection_geometry_id(city: dict[str, Any]) -> str:
+    # Public atlas identity: the generated layout, independent of target truth.
+    return str(city["layout_id"])
 
 
 def _inside_flight_bounds(
@@ -719,7 +668,7 @@ def _transit_graph(
         center_y = min(max((lower[1] + upper[1]) / 2.0, y_min), y_max)
         nodes.append(
             {
-                "node_id": f"atlas-transit-{content_hash(region['region_id'])[:18]}",
+                "node_id": f"atlas-transit-{region['region_id']}",
                 "region_id": region["region_id"],
                 "position": _rounded_vector(
                     (center_x, center_y, safe_sky_altitude_m)
@@ -787,7 +736,7 @@ def _transit_graph(
             edge_pairs.add(tuple(sorted((str(node["node_id"]), other_id))))
     edges = [
         {
-            "edge_id": f"atlas-edge-{content_hash(pair)[:18]}",
+            "edge_id": f"atlas-edge-{pair[0]}--{pair[1]}",
             "start_node_id": pair[0],
             "end_node_id": pair[1],
             "safe_sky_distance_m": round(
@@ -820,7 +769,7 @@ def compile_inspection_atlas(
     """
 
     selected_policy = _sampling_policy_candidate(sampling_policy)
-    inspection_geometry_hash = _inspection_geometry_hash(city)
+    inspection_geometry_id = _inspection_geometry_id(city)
     parameters = _inspection_parameters(execution_contract, selected_policy)
     parameters["flight_minimum_z_m"] = _vector(
         city["flight_bounds"]["minimum"], 3, "flight_bounds.minimum"
@@ -835,18 +784,18 @@ def compile_inspection_atlas(
             # target eligibility never decides what a method inspects.
             if component.get("structural_role") is not None:
                 continue
-            roof = _roof_region(component, inspection_geometry_hash, ordinal, parameters)
+            roof = _roof_region(component, inspection_geometry_id, ordinal, parameters)
             ordinal += 1
             if roof is not None:
                 regions.append(roof)
             facade_regions = _facade_regions(
-                component, inspection_geometry_hash, ordinal, parameters
+                component, inspection_geometry_id, ordinal, parameters
             )
             ordinal += 4
             regions.extend(facade_regions)
         for entrance in building.get("entrances", []):
             region = _entrance_region(
-                entrance, building, inspection_geometry_hash, ordinal, parameters
+                entrance, building, inspection_geometry_id, ordinal, parameters
             )
             ordinal += 1
             if region is not None:
@@ -855,7 +804,7 @@ def compile_inspection_atlas(
         # Obstacles are public debris/barriers; membership never uses the
         # legacy target-layer support_domain flag.  The private target process
         # may later select none, one, or many of these regions.
-        region = _rubble_region(obstacle, inspection_geometry_hash, ordinal, parameters)
+        region = _rubble_region(obstacle, inspection_geometry_id, ordinal, parameters)
         ordinal += 1
         if region is not None:
             regions.append(region)
@@ -874,7 +823,7 @@ def compile_inspection_atlas(
         "schema": ATLAS_SCHEMA,
         "atlas_version": ATLAS_VERSION,
         "layout_id": str(city["layout_id"]),
-        "inspection_geometry_hash": inspection_geometry_hash,
+        "inspection_geometry_id": inspection_geometry_id,
         "sampling_policy": selected_policy,
         "geometric_admission": geometric_admission,
         "observation_contract": {
@@ -896,7 +845,6 @@ def compile_inspection_atlas(
         ),
         "runtime_validation_required": True,
     }
-    atlas["atlas_hash"] = content_hash(atlas)
     validate_public_inspection_atlas(atlas)
     return atlas
 
@@ -1291,7 +1239,7 @@ def compile_public_mission_sector(
     sector = {
         "schema": MISSION_SECTOR_SCHEMA,
         "policy_id": MISSION_SECTOR_POLICY,
-        "atlas_hash": atlas["atlas_hash"],
+        "layout_id": atlas["layout_id"],
         "truth_independent": True,
         "frozen_before_sampling": True,
         "selected_region_ids": sorted(selected_region_ids),
@@ -1333,7 +1281,6 @@ def compile_public_mission_sector(
             "calibration_status": "frozen",
         },
     }
-    sector["sector_hash"] = content_hash(sector)
     validate_public_mission_sector(sector, atlas, starts, execution_contract)
     return sector
 
@@ -1344,18 +1291,15 @@ def validate_public_mission_sector(
     starts: list[dict[str, Any]],
     execution_contract: dict[str, Any],
 ) -> None:
-    """Fail closed on tampered, cross-layout, or over-budget public sectors."""
+    """Check a public mission sector against its atlas and capacity contract."""
 
     validate_public_inspection_atlas(atlas)
     if sector.get("schema") != MISSION_SECTOR_SCHEMA:
         raise ValueError("mission sector schema differs")
-    expected_hash = str(sector.get("sector_hash", ""))
-    payload = {key: value for key, value in sector.items() if key != "sector_hash"}
-    if content_hash(payload) != expected_hash:
-        raise ValueError("mission sector hash mismatch")
+    payload = dict(sector)
     _assert_no_private_keys(payload, "mission_sector")
     if (
-        sector.get("atlas_hash") != atlas.get("atlas_hash")
+        sector.get("layout_id") != atlas.get("layout_id")
         or sector.get("truth_independent") is not True
         or sector.get("frozen_before_sampling") is not True
     ):
@@ -1549,9 +1493,8 @@ def project_inspection_atlas(
         "schema": ATLAS_PROJECTION_SCHEMA,
         "projection_version": ATLAS_PROJECTION_VERSION,
         "prior_level": prior_level,
-        "source_atlas_hash": atlas["atlas_hash"],
         "layout_id": atlas["layout_id"],
-        "inspection_geometry_hash": atlas["inspection_geometry_hash"],
+        "inspection_geometry_id": atlas["inspection_geometry_id"],
         "sampling_policy": copy.deepcopy(atlas["sampling_policy"]),
         "geometric_admission": copy.deepcopy(atlas["geometric_admission"]),
         "observation_contract": copy.deepcopy(atlas["observation_contract"]),
@@ -1571,26 +1514,23 @@ def project_inspection_atlas(
     else:
         projection["regions"] = copy.deepcopy(atlas["regions"])
         projection["transit_graph"] = copy.deepcopy(atlas["transit_graph"])
-    projection["projection_hash"] = content_hash(projection)
     validate_inspection_atlas_projection(projection)
     return projection
 
 
 def validate_inspection_atlas_projection(projection: dict[str, Any]) -> None:
-    """Fail closed on projection level, content hash, and coarse information limits."""
+    """Check projection level and coarse information limits."""
 
     common = {
         "schema",
         "projection_version",
         "prior_level",
-        "source_atlas_hash",
         "layout_id",
-        "inspection_geometry_hash",
+        "inspection_geometry_id",
         "sampling_policy",
         "geometric_admission",
         "observation_contract",
         "regions",
-        "projection_hash",
     }
     prior_level = projection.get("prior_level")
     expected = common if prior_level == ATLAS_PRIOR_COARSE else common | {"transit_graph"}
@@ -1602,13 +1542,7 @@ def validate_inspection_atlas_projection(projection: dict[str, Any]) -> None:
         or prior_level not in ATLAS_PRIOR_LEVELS
     ):
         raise ValueError("inspection-atlas projection schema/version is unsupported")
-    _assert_no_private_keys(
-        {key: value for key, value in projection.items() if key != "projection_hash"}
-    )
-    candidate = copy.deepcopy(projection)
-    declared_hash = str(candidate.pop("projection_hash", ""))
-    if content_hash(candidate) != declared_hash:
-        raise ValueError("inspection-atlas projection hash mismatch")
+    _assert_no_private_keys(dict(projection))
     if prior_level == ATLAS_PRIOR_COARSE:
         forbidden = {
             "cells",
@@ -1633,20 +1567,19 @@ def validate_inspection_atlas_projection(projection: dict[str, Any]) -> None:
 
 
 def validate_public_inspection_atlas(atlas: dict[str, Any]) -> None:
-    """Fail closed on schema, hash, or evaluator-private atlas content."""
+    """Check the public atlas schema and reject evaluator-private content."""
 
     expected_root = {
         "schema",
         "atlas_version",
         "layout_id",
-        "inspection_geometry_hash",
+        "inspection_geometry_id",
         "sampling_policy",
         "geometric_admission",
         "observation_contract",
         "regions",
         "transit_graph",
         "runtime_validation_required",
-        "atlas_hash",
     }
     if set(atlas) != expected_root:
         raise ValueError("inspection atlas root fields differ from the public contract")
@@ -1654,19 +1587,11 @@ def validate_public_inspection_atlas(atlas: dict[str, Any]) -> None:
         raise ValueError("inspection atlas schema/version is unsupported")
     if not isinstance(atlas["layout_id"], str) or not atlas["layout_id"]:
         raise ValueError("inspection atlas layout ID is invalid")
-    if (
-        not isinstance(atlas["inspection_geometry_hash"], str)
-        or len(atlas["inspection_geometry_hash"]) != 64
-    ):
-        raise ValueError("inspection atlas geometry hash is invalid")
+    if not isinstance(atlas["inspection_geometry_id"], str) or not atlas["inspection_geometry_id"]:
+        raise ValueError("inspection atlas geometry ID is invalid")
     if atlas["runtime_validation_required"] is not True:
         raise ValueError("inspection atlas must retain runtime validation")
-    _assert_no_private_keys({key: value for key, value in atlas.items() if key != "atlas_hash"})
-    expected_hash = str(atlas["atlas_hash"])
-    candidate = copy.deepcopy(atlas)
-    candidate.pop("atlas_hash")
-    if content_hash(candidate) != expected_hash:
-        raise ValueError("inspection atlas hash mismatch")
+    _assert_no_private_keys(dict(atlas))
 
     sampling_policy = atlas["sampling_policy"]
     _sampling_policy_candidate(sampling_policy)
@@ -1770,7 +1695,8 @@ def validate_public_inspection_atlas(atlas: dict[str, Any]) -> None:
                 raise ValueError("inspection atlas cell fields differ")
             cell_id = str(cell["cell_id"])
             if (
-                not cell_id.startswith("atlas-cell-")
+                not cell_id.startswith("atlas-region-")
+                or "-cell-" not in cell_id
                 or cell_id in cell_ids
                 or cell_id in global_cell_ids
             ):

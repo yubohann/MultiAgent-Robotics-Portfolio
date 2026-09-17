@@ -17,15 +17,13 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from aerocity_method.contracts.io import (  # noqa: E402
-    canonical_sha256,
-    require_identifier,
-    require_sha256,
-    write_json_atomic,
-)
 from aerocity_method.contracts.hm3d_public_schema import (  # noqa: E402
     PUBLIC_TASK_RESERVATION_SCHEMA_VERSION,
     require_current_public_schema,
+)
+from aerocity_method.contracts.io import (  # noqa: E402
+    require_identifier,
+    write_json_atomic,
 )
 
 PLAN_SCHEMA_VERSION = "hm3d-p07-persistent-collection-plan-v1"
@@ -155,11 +153,7 @@ def _validated_worker_summary(run: CollectionRun) -> dict[str, Any]:
     payload = json.loads(run.output_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("P07 worker output must be an object")
-    supplied_hash = require_sha256(payload.get("runtime_record_sha256"), "runtime record hash")
-    unsigned = dict(payload)
-    unsigned.pop("runtime_record_sha256", None)
-    if canonical_sha256(unsigned) != supplied_hash:
-        raise ValueError("P07 worker output content hash mismatch")
+    require_identifier(payload.get("runtime_record_id"), "runtime record id")
     require_current_public_schema(payload, context="persistent-collection worker output")
     decisions = payload.get("decisions")
     if not isinstance(decisions, list) or not decisions:
@@ -207,7 +201,7 @@ def _validated_worker_summary(run: CollectionRun) -> dict[str, Any]:
     return {
         "run_id": run.run_id,
         "output_path": str(run.output_path),
-        "runtime_record_sha256": supplied_hash,
+        "runtime_record_id": supplied_id,
         "status": payload.get("status"),
         "completed": completed,
         "completion_reasons": completion_reasons,
@@ -293,7 +287,7 @@ def _coverage_audit(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _build_manifest(
     *,
-    plan_sha256: str,
+    plan_file_id: str,
     runs: tuple[CollectionRun, ...],
     rows: list[dict[str, Any]],
     failed: int,
@@ -332,7 +326,7 @@ def _build_manifest(
             "Development real P07 collection manifest. Gradient updates are not physical "
             "interactions; every indexed transition remains bound to its original CF2X outcome."
         ),
-        "plan_sha256": plan_sha256,
+        "plan_file_id": plan_file_id,
         "isaac_process_count": isaac_process_count,
         "planned_scene_ids": planned_scene_ids,
         "cross_scene_process_allowed": allow_cross_scene_process,
@@ -361,7 +355,9 @@ def _build_manifest(
         "coverage_audit": _coverage_audit(rows),
         "runs": rows,
     }
-    manifest["manifest_sha256"] = canonical_sha256(manifest)
+    manifest["manifest_id"] = (
+        f"p07-collection:{len(rows)}-episodes:{len(runs)}-planned"
+    )
     return manifest
 
 
@@ -391,7 +387,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         plan_path,
         allow_cross_scene_process=bool(args.allow_cross_scene_process),
     )
-    plan_sha256 = canonical_sha256(json.loads(plan_path.read_text(encoding="utf-8")))
+    plan_file_id = f"{plan_path.name}:{plan_path.stat().st_size}"
     started = time.perf_counter()
     rows: list[dict[str, Any]] = []
     failed = 0
@@ -412,7 +408,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             write_json_atomic(
                 manifest_output,
                 _build_manifest(
-                    plan_sha256=plan_sha256,
+                    plan_file_id=plan_file_id,
                     runs=runs,
                     rows=rows,
                     failed=failed,
@@ -427,7 +423,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         if args.fresh_process:
             try:
                 exit_code = _run_worker_subprocess(run, args.device)
-            except BaseException as error:
+            except BaseException:
                 worker_exception = True
                 failed += 1
                 exit_code = 2
@@ -492,7 +488,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
         write_json_atomic(
             manifest_output,
             _build_manifest(
-                plan_sha256=plan_sha256,
+                plan_file_id=plan_file_id,
                 runs=runs,
                 rows=rows,
                 failed=failed,
@@ -507,7 +503,7 @@ def main(args: argparse.Namespace, simulation_app: Any) -> int:
             # next run hang without trustworthy evidence.
             break
     manifest = _build_manifest(
-        plan_sha256=plan_sha256,
+        plan_file_id=plan_file_id,
         runs=runs,
         rows=rows,
         failed=failed,

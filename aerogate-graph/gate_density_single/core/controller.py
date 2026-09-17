@@ -10,21 +10,14 @@ from typing import Any
 import numpy as np
 
 from gate_density_single.core.action_shield import apply_action_shield
+from gate_density_single.core.eval_support import (
+    DRONE_RADIUS_M,
+    SAFETY_MARGIN_M,
+    SHIELD_GUARD_MARGIN_M,
+    clamp01,
+)
 from gate_density_single.core.gate_layout import _moving_gate_centers, _moving_gate_swept_clearance_m
-
-
-def bind_controller_runtime(namespace: dict[str, Any]) -> None:
-    """Bind constants and small helpers kept by the CLI entry module."""
-
-    for name in (
-        "DRONE_RADIUS_M",
-        "SAFETY_MARGIN_M",
-        "SHIELD_GUARD_MARGIN_M",
-        "WORLD_Y_BOUNDS_M",
-        "_clamp01",
-    ):
-        if name in namespace:
-            globals()[name] = namespace[name]
+from gate_density_single.core.guidance_client import LocalGateGuidanceClient
 
 
 class GateDensityController:
@@ -283,7 +276,7 @@ class GateDensityController:
             )
             if reference is not None and int(step) - int(reference[0]) >= 30:
                 recent_progress_m = float(position[0]) - float(reference[1])
-                stall_boost = _clamp01((0.90 - recent_progress_m) / 0.90)
+                stall_boost = clamp01((0.90 - recent_progress_m) / 0.90)
         self._maybe_replan_for_dynamic_gates(step=step, clearance_m=clearance_m)
         if not self.path:
             self._plan()
@@ -462,17 +455,11 @@ class GateDensityController:
         position_xy: tuple[float, float],
         clearance_m: float,
     ) -> np.ndarray:
-        """Blend visible guidance with the planner under a safety check.
-        The planner keeps control when heading agreement is weak or the drone sits near the lateral
-        bounds, and visible guidance can still trim speed or trigger a replan.
-        """
+        """Blend visible guidance with the planner under a safety check."""
 
         guidance = self._last_route_guidance or {}
-        confidence = float(np.clip(float(guidance.get("confidence", 0.0)), 0.0, 1.0))
         risk_level = float(np.clip(float(guidance.get("risk_level", 0.5)), 0.0, 1.0))
         replan_urgency = float(np.clip(float(guidance.get("replan_urgency", 0.0)), 0.0, 1.0))
-        waypoint_bias_y = float(np.clip(float(guidance.get("waypoint_bias_y", 0.0)), -0.8, 0.8))
-        dynamic_margin_m = float(np.clip(float(guidance.get("dynamic_clearance_margin_m", 0.0)), 0.0, 0.6))
         planner_norm = float(np.linalg.norm(planner_action))
         guidance_norm = float(np.linalg.norm(guidance_action))
         if planner_norm <= 1e-6 or guidance_norm <= 1e-6:
@@ -488,7 +475,7 @@ class GateDensityController:
         guidance_heading = guidance_action / guidance_norm
         heading_agreement = float(np.dot(planner_heading, guidance_heading))
         y_abs = abs(float(position_xy[1]))
-        y_bounds = tuple(getattr(self.env.env_config, "world_y_bounds_m", WORLD_Y_BOUNDS_M))
+        y_bounds = tuple(self.env.env_config.world_y_bounds_m)
         y_limit = max(abs(float(y_bounds[0])), abs(float(y_bounds[1])))
         pushing_outward = (float(position_xy[1]) > 0.0 and float(guidance_action[1]) > float(planner_action[1])) or (
             float(position_xy[1]) < 0.0 and float(guidance_action[1]) < float(planner_action[1])
@@ -499,8 +486,6 @@ class GateDensityController:
             self.route_guidance_used_count += 1
             return planner_action.astype(np.float32)
 
-        # Use the margin as a pre-brake near critical clearance.
-        _unused_dynamic_margin_m = dynamic_margin_m
         if (not near_boundary) and float(clearance_m) < 0.14 and risk_level >= 0.55:
             if float(clearance_m) < 0.07 and risk_level >= 0.75:
                 critical_speed = 0.68
@@ -516,8 +501,6 @@ class GateDensityController:
             speed_scale = 1.0
         speed_adjusted_planner = np.clip(planner_action * speed_scale, -1.0, 1.0).astype(np.float32)
         # Visible guidance only affects speed and rare replans.
-        _unused_waypoint_bias_y = waypoint_bias_y
-        _unused_confidence = confidence
         blend = 0.0
         self.route_guidance_used_count += 1
         return np.clip((1.0 - blend) * speed_adjusted_planner + blend * guidance_action, -1.0, 1.0).astype(np.float32)
@@ -658,7 +641,7 @@ class GateDensityController:
             weights.append(1.0)
         weighted = np.zeros((2,), dtype=np.float32)
         total = float(sum(weights))
-        for action, weight in zip(actions, weights):
+        for action, weight in zip(actions, weights, strict=False):
             weighted += action * float(weight / max(total, 1e-6))
         return self._apply_action_shield(np.clip(weighted, -1.0, 1.0).astype(np.float32))
 

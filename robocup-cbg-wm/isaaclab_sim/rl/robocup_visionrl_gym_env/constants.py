@@ -28,10 +28,7 @@ ROBOT_PUSHABLE_CLEARANCE_RADIUS = ROBOT_RADIUS + 0.030
 # rendered wheel and body footprint so videos and strict audits agree.
 ROBOT_PUSHABLE_VISUAL_HALF_EXTENTS = (ROBOT_LENGTH * 0.5 + 0.110, ROBOT_WIDTH * 0.5 + 0.087)
 ROUTE_CLEARANCE = ROBOT_WIDTH * 0.5 + 0.04
-# Real-laser contract for the RL rule environments and the IsaacLab replay.
-# Distances are measured from the fixed shooter outlet rather than base_link.
-# Normal targets stay a close 5-50 cm shot, and recessed base targets accept a
-# wider outlet-to-target range with a separate line-of-sight check.
+# Real-laser contract: outlet-to-target distances, 5-50 cm normal and wider for base targets with a line-of-sight check.
 NORMAL_SHOOT_MIN_RANGE = 0.05
 NORMAL_SHOOT_RANGE = 0.50
 NORMAL_SHOOT_IDEAL_DISTANCE = 0.30

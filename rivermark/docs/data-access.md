@@ -15,7 +15,7 @@ python -m rivermark_benchmark.researcher_entry $out
 python -m rivermark_benchmark.fixture verify "$out\fixture\fixture_manifest.json"
 ```
 
-The smoke checks the fixture manifest and payload hashes, loader shape and timestamp consistency, a public metric submission, and the private-truth separation. The report records the exact source revision and Python and NumPy versions, describing the CPU path.
+The smoke checks the fixture manifest and payload identities, loader shape and timestamp consistency, a public metric submission, and the private-truth separation. The report records the exact source revision and Python and NumPy versions, describing the CPU path.
 
 ## Lazy episode reads
 
@@ -29,7 +29,7 @@ for frame in capture.iter_frames("onboard", fields=("rgb",), stride=4):
     train_step(frame.values["rgb"], frame.timestamp_ns)
 ```
 
-Canonical modality names are `rgb`, `depth`, `semantic`, `lidar`, `radar`, `imu`, `state`, `action`, and `language`. Selections are validated and fail closed on unknown, duplicate, empty, or out-of-range values. A raw capture becomes formal data when the admission tool accepts its independent receipt.
+Canonical modality names are `rgb`, `depth`, `semantic`, `lidar`, `radar`, `imu`, `state`, `action`, and `language`. Selections are validated and stop the run on unknown, duplicate, empty, or out-of-range values. A raw capture becomes formal data when the admission tool accepts its independent receipt.
 
 ## Projections
 
@@ -49,4 +49,4 @@ rivermark-release-data download .\release_manifest.json $out\release `
   --split validation --modality state --require-https --dry-run
 ```
 
-`--dry-run` reports the selected shard paths, sizes, hashes, and total bytes, leaving the destination untouched. The transfer is sequential, resumable, hash-verified, and atomic. Until a cleared payload lands, these commands rehearse the interface and the formal index reads `episode_count: 0`.
+`--dry-run` reports the selected shard paths, sizes, identities, and total bytes, leaving the destination untouched. The transfer is sequential, resumable, verified, and atomic. Until a cleared payload lands, these commands rehearse the interface and the formal index reads `episode_count: 0`.

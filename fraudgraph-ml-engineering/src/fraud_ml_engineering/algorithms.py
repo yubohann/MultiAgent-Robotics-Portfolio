@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import copy
-from contextlib import nullcontext
 import gc
-import json
 import os
 import sys
 import time
 import warnings
+from collections.abc import Iterable
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List
+from typing import TYPE_CHECKING, Any, ClassVar
 
 try:
     import dgl
@@ -36,7 +36,7 @@ _RL_IMPORT_ERROR: Exception | None = None
 try:
     import gymnasium as gym
     from gymnasium import spaces
-except Exception as error:  # pragma: no cover - runtime env dependent
+except (ImportError, OSError) as error:  # pragma: no cover - runtime env dependent
     gym = None
     spaces = None
     _RL_IMPORT_ERROR = error
@@ -44,7 +44,7 @@ except Exception as error:  # pragma: no cover - runtime env dependent
 try:
     from stable_baselines3.common.buffers import ReplayBuffer
     from stable_baselines3.common.noise import NormalActionNoise
-except Exception as error:  # pragma: no cover - runtime env dependent
+except (ImportError, OSError) as error:  # pragma: no cover - runtime env dependent
     ReplayBuffer = None
     NormalActionNoise = None
     if _RL_IMPORT_ERROR is None:
@@ -57,7 +57,7 @@ else:
 
 try:
     from torch.utils.tensorboard import SummaryWriter
-except Exception:  # pragma: no cover - runtime env dependent
+except (ImportError, OSError):  # pragma: no cover - runtime env dependent
     SummaryWriter = None
 
 warnings.filterwarnings(
@@ -66,65 +66,77 @@ warnings.filterwarnings(
     category=UserWarning,
 )
 
+from .amlsim_dataset import AMLSIM_DEFAULT_ROOT
 from .checkpointing import (
     atomic_torch_save as checkpoint_atomic_torch_save,
-    atomic_write_json as checkpoint_atomic_write_json,
-    generate_run_id as checkpoint_generate_run_id,
-    normalize_resume_identity_path as checkpoint_normalize_resume_identity_path,
-    resume_identity_payload as checkpoint_resume_identity_payload,
-    resume_reference_best_metrics as checkpoint_resume_reference_best_metrics,
-    run_metadata_payload as checkpoint_run_metadata_payload,
-    should_inherit_resume_best_metrics as checkpoint_should_inherit_resume_best_metrics,
-    validated_resume_state_dict as checkpoint_validated_resume_state_dict,
 )
-from .amlsim_dataset import AMLSIM_DEFAULT_ROOT
-from .dataset_registry import (
-    attach_bundle_protocol,
-    load_registered_dataset_bundle,
-    registered_dataset_names,
+from .checkpointing import (
+    atomic_write_json as checkpoint_atomic_write_json,
+)
+from .checkpointing import (
+    generate_run_id as checkpoint_generate_run_id,
+)
+from .checkpointing import (
+    normalize_resume_identity_path as checkpoint_normalize_resume_identity_path,
+)
+from .checkpointing import (
+    resume_reference_best_metrics as checkpoint_resume_reference_best_metrics,
+)
+from .checkpointing import (
+    run_metadata_payload as checkpoint_run_metadata_payload,
+)
+from .checkpointing import (
+    should_inherit_resume_best_metrics as checkpoint_should_inherit_resume_best_metrics,
+)
+from .checkpointing import (
+    validated_resume_state_dict as checkpoint_validated_resume_state_dict,
 )
 from .cli_contract import (
     DATASET_SELECTION_ALIASES,
     DATASET_SELECTION_CHOICES,
     DEFAULT_HYBRID_MAINLINE_ROUNDS,
-    LEGACY_BATCH_DATASETS,
     SUPPORTED_HYBRID_DATASETS,
 )
+from .dataset_registry import (
+    load_registered_dataset_bundle,
+)
+from .defi_rug_pull_dataset import DEFI_RUG_PULL_DEFAULT_ROOT
 from .device_utils import DEFAULT_DEVICE_REQUEST, resolve_dgl_training_device
-from .vendor.splitgnn.utils import evaluate, setup_seed
-from .defi_rug_pull_dataset import DEFI_RUG_PULL_DEFAULT_ROOT, load_defi_rug_pull_dataset
 from .elliptic_dataset import ELLIPTIC_DEFAULT_ROOT
-from .ethereum_phishing_dataset import ETHEREUM_PHISHING_DEFAULT_ROOT, load_ethereum_phishing_dataset
-from .ethereum_ponzi_dataset import ETHEREUM_PONZI_DEFAULT_ROOT, load_ethereum_ponzi_dataset
+from .ethereum_phishing_dataset import ETHEREUM_PHISHING_DEFAULT_ROOT
+from .ethereum_ponzi_dataset import ETHEREUM_PONZI_DEFAULT_ROOT
 from .evaluator import (
     collect_model_diagnostics as platform_collect_model_diagnostics,
+)
+from .evaluator import (
     evaluate_model as platform_evaluate_model,
+)
+from .evaluator import (
     evaluate_saved_hybrid_checkpoint as platform_evaluate_saved_hybrid_checkpoint,
 )
-from .fraud_dataset import DatasetBundle, load_splitgnn_dataset
+from .fraud_dataset import DatasetBundle
 from .hybrid_task_model import (
     HybridFraudModel,
     _novelty_scores,
     checkpoint_legacy_fusion_only,
     sanitize_legacy_hybrid_state_dict,
 )
-from .ieee_cis_dataset import load_ieee_cis_dataset
+from .vendor.splitgnn.utils import setup_seed
+
 try:
     from .model import FRModel
-except Exception as error:  # pragma: no cover - runtime env dependent
+except (ImportError, OSError) as error:  # pragma: no cover - runtime env dependent
     FRModel = None
     if _RL_IMPORT_ERROR is None:
         _RL_IMPORT_ERROR = error
+from .model_state_utils import snapshot_model_state_to_cpu
 from .paper_baseline_optimization import ieee_full_gpu_cuda_ready, stabilize_ieee_full_runtime
 from .paper_runner_runtime import StageTimer
-from .model_state_utils import snapshot_model_state_to_cpu
+from .paths import ARTIFACTS_ROOT, CONFIG_ROOT, GRAPH_ROOT, REPO_ROOT
 from .resource_guard import estimate_runtime_resource_plan, recommend_smaller_phishing_limits
 from .trainer_local import (
-    apply_dp_noise_to_state_dict as platform_apply_dp_noise_to_state_dict,
-    ema_update_model as platform_ema_update_model,
     local_train_round as platform_local_train_round,
 )
-from .paths import ARTIFACTS_ROOT, CONFIG_ROOT, GRAPH_ROOT, REPO_ROOT
 
 PROJECT_ROOT = REPO_ROOT
 SPLITGNN_ROOT = REPO_ROOT / "src" / "fraud_ml_engineering" / "vendor" / "splitgnn"
@@ -387,10 +399,6 @@ def resolve_splitgnn_runtime_policy(
     }
 
 
-def _resume_identity_payload(config: dict | SimpleNamespace | None) -> dict:
-    return checkpoint_resume_identity_payload(config)
-
-
 def _validated_resume_state_dict(
     current_args: SimpleNamespace,
     warm_start_payload: dict,
@@ -410,8 +418,8 @@ def _resume_reference_best_metrics(warm_start_payload: dict) -> dict[str, float]
 
 
 def _should_inherit_resume_best_metrics(
-    current_valid_metrics: Dict[str, float],
-    stored_best_metrics: Dict[str, float],
+    current_valid_metrics: dict[str, float],
+    stored_best_metrics: dict[str, float],
 ) -> tuple[bool, str]:
     return checkpoint_should_inherit_resume_best_metrics(current_valid_metrics, stored_best_metrics)
 
@@ -1273,7 +1281,7 @@ def _dataset_controller_reward_profile(dataset_name: str) -> dict:
     return profile
 
 
-def _round_stability_flags(dataset_name: str, metrics_history: List[dict]) -> dict:
+def _round_stability_flags(dataset_name: str, metrics_history: list[dict]) -> dict:
     """Summarize collapse and plateau signals from recent validation metrics."""
     if not metrics_history:
         return {
@@ -1370,7 +1378,7 @@ def _dataset_scheduler_profile(dataset_name: str) -> dict:
 def _adaptive_edge_loss_weight(
     dataset_name: str,
     base_edge_loss_weight: float,
-    metrics_history: List[dict],
+    metrics_history: list[dict],
     stability_flags: dict,
     progress: float,
 ) -> float:
@@ -1408,7 +1416,7 @@ def _adaptive_edge_loss_weight(
 def _adaptive_learning_rate(
     dataset_name: str,
     base_learning_rate: float,
-    metrics_history: List[dict],
+    metrics_history: list[dict],
     stability_flags: dict,
     progress: float,
 ) -> float:
@@ -1426,10 +1434,6 @@ def _adaptive_learning_rate(
         resolved = float(np.clip(resolved, lower_bound, upper_bound))
         resolved = float(0.70 * previous_lr + 0.30 * resolved)
     return resolved
-
-
-def _apply_dp_noise_to_state_dict(state_dict: Dict[str, torch.Tensor], noise_std: float) -> Dict[str, torch.Tensor]:
-    return platform_apply_dp_noise_to_state_dict(state_dict, noise_std)
 
 
 def _controller_reward_from_round(
@@ -1478,7 +1482,7 @@ def _controller_reward_from_round(
     selection_phase = float(round_plan.get("selection_phase", 0.5))
 
     max_local_epochs = max(
-        int(round(base_local_epochs * float(profile["max_local_epoch_multiplier"]))),
+        round(base_local_epochs * float(profile["max_local_epoch_multiplier"])),
         int(base_local_epochs) + 2,
         4,
     )
@@ -1632,7 +1636,7 @@ def _proxy_controller_reward(state: np.ndarray, action: np.ndarray, step_index: 
 class HybridControlEnv(_GymEnvBase):
     """Lightweight RL environment for controller pretraining."""
 
-    metadata = {"render_modes": []}
+    metadata: ClassVar[dict[str, list[str]]] = {"render_modes": []}
 
     def __init__(self, episode_length: int = 12):
         _require_rl_dependencies()
@@ -1733,7 +1737,7 @@ def create_replay_buffer() -> ReplayBuffer:
     )
 
 
-def init_model(rl_timesteps: int = 512, seed: int = 42) -> List[FRModel]:
+def init_model(rl_timesteps: int = 512, seed: int = 42) -> list[FRModel]:
     """Initialize a small ensemble of TD3 controllers."""
     _require_rl_dependencies()
     probe_env = HybridControlEnv()
@@ -1758,14 +1762,14 @@ def init_model(rl_timesteps: int = 512, seed: int = 42) -> List[FRModel]:
     ]
 
 
-def _close_rl_models(models: List[FRModel]) -> None:
+def _close_rl_models(models: list[FRModel]) -> None:
     """Close controller environments and release resources."""
     for model in models:
         try:
             env = model.get_env()
             if env is not None:
                 env.close()
-        except Exception:
+        except (AttributeError, OSError, RuntimeError):
             continue
 
 
@@ -1803,17 +1807,7 @@ def sample_replay_buffer(replay_buffer: ReplayBuffer, batch_size: int) -> Replay
     return temp
 
 
-def fed_avg(weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
-    """Compute the standard FedAvg weighted average."""
-    weight_avg = copy.deepcopy(weights[0])
-    for key in weight_avg.keys():
-        for index in range(1, len(weights)):
-            weight_avg[key] += weights[index][key]
-        weight_avg[key] = torch.div(weight_avg[key], len(weights))
-    return weight_avg
-
-
-def train_controller_models(rl_timesteps: int = 512, seed: int | None = None) -> List[FRModel]:
+def train_controller_models(rl_timesteps: int = 512, seed: int | None = None) -> list[FRModel]:
     """Pretrain the controller ensemble on the proxy environment."""
     _require_rl_dependencies()
     base_seed = 42 if seed is None else int(seed)
@@ -2158,7 +2152,7 @@ def _build_training_args(
         total_prefinetune_rounds = default_graph_warmup_rounds + default_fusion_bootstrap_rounds
         if total_prefinetune_rounds > max_prefinetune_rounds:
             graph_ratio = float(default_graph_warmup_rounds / max(total_prefinetune_rounds, 1))
-            default_graph_warmup_rounds = int(round(max_prefinetune_rounds * graph_ratio))
+            default_graph_warmup_rounds = round(max_prefinetune_rounds * graph_ratio)
             default_graph_warmup_rounds = int(np.clip(default_graph_warmup_rounds, 0, max_prefinetune_rounds))
             default_fusion_bootstrap_rounds = max_prefinetune_rounds - default_graph_warmup_rounds
     args.graph_warmup_rounds = (
@@ -2424,7 +2418,7 @@ def _build_round_observation(
     bundle: DatasetBundle,
     round_index: int,
     total_rounds: int,
-    metrics_history: List[dict],
+    metrics_history: list[dict],
 ) -> np.ndarray:
     """Build the controller observation vector for the current round."""
     train_mask = bundle.graph.ndata["train_mask"].bool()
@@ -2449,7 +2443,7 @@ def _build_round_observation(
     )
 
 
-def _client_participation_counts(bundle: DatasetBundle, metrics_history: List[dict]) -> Dict[int, int]:
+def _client_participation_counts(bundle: DatasetBundle, metrics_history: list[dict]) -> dict[int, int]:
     """Count how often each client has been selected recently."""
     counts = {client.client_id: 0 for client in bundle.clients}
     for round_metrics in metrics_history:
@@ -2469,7 +2463,7 @@ def _stochastic_round(value: float, minimum: int, maximum: int) -> int:
 
 def _deterministic_support_requirements(
     profile: dict,
-    metrics_history: List[dict],
+    metrics_history: list[dict],
     stability_flags: dict,
     num_clients_total: int,
 ) -> tuple[int, int]:
@@ -2510,7 +2504,7 @@ def _deterministic_planner_action(
     bundle: DatasetBundle,
     round_index: int,
     total_rounds: int,
-    metrics_history: List[dict],
+    metrics_history: list[dict],
 ) -> np.ndarray:
     """Rule-based scheduler aligned with fraud metrics."""
     num_clients_total = max(len(bundle.clients), 1)
@@ -2556,14 +2550,14 @@ def _deterministic_planner_action(
 
 
 def _plan_round(
-    rl_models: List[FRModel] | None,
+    rl_models: list[FRModel] | None,
     planner_mode: str,
     bundle: DatasetBundle,
     round_index: int,
     total_rounds: int,
     base_local_epochs: int,
     base_edge_loss_weight: float,
-    metrics_history: List[dict],
+    metrics_history: list[dict],
 ) -> dict:
     """Plan the next federated round from RL or deterministic control."""
     observation = _build_round_observation(bundle, round_index, total_rounds, metrics_history)
@@ -2610,7 +2604,7 @@ def _plan_round(
         previous_local_epochs = float(previous_metrics.get("local_epochs", base_local_epochs))
         previous_grad_clip = float(previous_metrics.get("grad_clip", 1.0))
         max_local_epochs_anchor = max(
-            int(round(base_local_epochs * float(profile["max_local_epoch_multiplier"]))),
+            round(base_local_epochs * float(profile["max_local_epoch_multiplier"])),
             base_local_epochs + 2,
             4,
         )
@@ -2676,7 +2670,7 @@ def _plan_round(
         selected_count = min(selected_count, 2)
 
     max_local_epochs = max(
-        int(round(base_local_epochs * float(profile["max_local_epoch_multiplier"]))),
+        round(base_local_epochs * float(profile["max_local_epoch_multiplier"])),
         base_local_epochs + 2,
         4,
     )
@@ -2746,11 +2740,11 @@ def _plan_round(
         "recent_auc_delta": float(stability_flags.get("recent_auc_delta", 0.0)),
     }
 
-def _state_dict_average(state_dicts: List[Dict[str, torch.Tensor]], weights: List[float]) -> Dict[str, torch.Tensor]:
+def _state_dict_average(state_dicts: list[dict[str, torch.Tensor]], weights: list[float]) -> dict[str, torch.Tensor]:
     """Average model state dicts locally for the single-mainline training path."""
     normalized_weights = [weight / max(sum(weights), 1.0) for weight in weights]
     averaged_state = copy.deepcopy(state_dicts[0])
-    for key in averaged_state.keys():
+    for key in averaged_state:
         reference_tensor = averaged_state[key]
         if torch.is_floating_point(reference_tensor):
             combined = None
@@ -2858,7 +2852,7 @@ def evaluate_saved_hybrid_checkpoint(
 
 
 def _should_update_best_checkpoint(
-    current_metrics: Dict[str, float],
+    current_metrics: dict[str, float],
     *,
     best_round: int,
     best_valid_auc: float,
@@ -2908,9 +2902,7 @@ def _should_update_best_checkpoint(
         return False
     if current_pr_auc > best_valid_pr_auc + pr_auc_margin:
         return True
-    if current_recall_at_precision > best_valid_recall_at_precision + recall_gain_margin:
-        return True
-    return False
+    return current_recall_at_precision > best_valid_recall_at_precision + recall_gain_margin
 
 
 def _recompute_bundle_class_stats(bundle: DatasetBundle) -> None:
@@ -3062,7 +3054,7 @@ def _cap_pseudo_cycle_cache_by_fraction(
     allowed_nodes = int(unlabeled_mask.sum().item())
     if allowed_nodes <= 0:
         normalized_fraction = 0.0
-    max_nodes = int(round(allowed_nodes * normalized_fraction)) if normalized_fraction > 0.0 else 0
+    max_nodes = round(allowed_nodes * normalized_fraction) if normalized_fraction > 0.0 else 0
     mask = cache_payload["mask"].bool() & unlabeled_mask.bool()
     selected_nodes = int(mask.sum().item())
     if selected_nodes <= max_nodes or max_nodes >= selected_nodes:
@@ -3256,9 +3248,9 @@ def _maybe_refresh_pseudo_cycle_cache(
 
 def _apply_active_learning_reveal(
     bundle: DatasetBundle,
-    pending_feedback: List[dict],
+    pending_feedback: list[dict],
     current_round: int,
-) -> tuple[List[dict], List[dict]]:
+) -> tuple[list[dict], list[dict]]:
     if not pending_feedback:
         return pending_feedback, []
 
@@ -3308,7 +3300,7 @@ def _select_active_learning_queries(
     threshold: float,
     current_round: int,
     pending_node_ids: set[int],
-) -> List[dict]:
+) -> list[dict]:
     budget = max(int(getattr(args, "active_learning_budget_per_round", 0)), 0)
     if budget <= 0:
         return []
@@ -3420,15 +3412,11 @@ def _select_active_learning_queries(
     return queries
 
 
-def _ema_update_model(teacher_model: HybridFraudModel, student_model: HybridFraudModel, decay: float) -> None:
-    platform_ema_update_model(teacher_model, student_model, decay)
-
-
 def _local_train(
     global_model: HybridFraudModel,
     graph_teacher_model: HybridFraudModel | None,
     subgraph,
-    global_state: Dict[str, torch.Tensor],
+    global_state: dict[str, torch.Tensor],
     class_weights: torch.Tensor,
     class_counts: torch.Tensor,
     args: SimpleNamespace,
@@ -3439,7 +3427,7 @@ def _local_train(
     learning_rate: float,
     fedprox_mu: float,
     dp_noise_std: float,
-) -> tuple[Dict[str, torch.Tensor], dict]:
+) -> tuple[dict[str, torch.Tensor], dict]:
     return platform_local_train_round(
         global_model=global_model,
         graph_teacher_model=graph_teacher_model,
@@ -3567,7 +3555,7 @@ def _train_one_dataset(
     defi_rug_pull_data_root: str = "",
     defi_rug_pull_negative_users_path: str = "",
     defi_rug_pull_force_preview: bool = False,
-    rl_models: List[FRModel] | None = None,
+    rl_models: list[FRModel] | None = None,
     seed: int | None = None,
     result_root: str = "",
     disable_gnn: bool = False,
@@ -4217,7 +4205,7 @@ def _train_one_dataset(
             "rounds_target": int(_runtime_total_round_budget()),
             "rounds_requested_this_run": int(federated_rounds),
             "latest_round": int(latest_round_value),
-            "rounds_ran": int(len(history)),
+            "rounds_ran": len(history),
             "summary_path": str(summary_path),
             "model_path": str(model_path),
             "run_status_path": str(run_status_path),
@@ -4250,7 +4238,7 @@ def _train_one_dataset(
             "peak_valid_auc_any_round": float(peak_valid_auc_any_round),
             "peak_valid_round_any_round": int(peak_valid_round_any_round),
             "peak_valid_threshold_any_round": float(peak_valid_threshold_any_round),
-            "history_length": int(len(history)),
+            "history_length": len(history),
             "latest_history": latest_history,
         }
         if error_message:
@@ -4381,7 +4369,7 @@ def _train_one_dataset(
         _release_cuda_memory(args.device)
     patience = 0
     has_test_timeseries = False
-    pending_active_learning_feedback: List[dict] = []
+    pending_active_learning_feedback: list[dict] = []
     total_round_budget = int(total_target_rounds) if total_target_rounds is not None else int(
         max(federated_rounds + max(resume_round_offset, 0), federated_rounds)
     )
@@ -4751,8 +4739,8 @@ def _train_one_dataset(
                 "recent_auc_delta": round_plan["recent_auc_delta"],
                 "observation": round_plan["observation"],
                 "round_progress": float((round_index + 1) / max(total_round_budget, 1)),
-                "active_learning_revealed": int(len(revealed_feedback)),
-                "active_learning_pending": int(len(pending_active_learning_feedback)),
+                "active_learning_revealed": len(revealed_feedback),
+                "active_learning_pending": len(pending_active_learning_feedback),
                 "supervised_train_nodes": int(bundle.graph.ndata["train_supervised_mask"].sum().item()),
                 "unlabeled_train_nodes": int(bundle.graph.ndata["train_unlabeled_mask"].sum().item()),
                 "pseudo_cycle_refreshed": bool(pseudo_cycle_refresh["refreshed"]),
@@ -4782,8 +4770,8 @@ def _train_one_dataset(
             )
             if queried_feedback:
                 pending_active_learning_feedback.extend(queried_feedback)
-            round_metrics["active_learning_queried"] = int(len(queried_feedback))
-            round_metrics["active_learning_pending"] = int(len(pending_active_learning_feedback))
+            round_metrics["active_learning_queried"] = len(queried_feedback)
+            round_metrics["active_learning_pending"] = len(pending_active_learning_feedback)
             checkpoint_guard = _checkpoint_selection_guard(dataset_name, valid_metrics)
             round_metrics["checkpoint_selection_eligible"] = bool(checkpoint_guard["eligible"])
             round_metrics["checkpoint_selection_block_reason"] = str(checkpoint_guard["reason"])
@@ -4793,7 +4781,7 @@ def _train_one_dataset(
             current_best_round = best_round if best_round >= 0 else round_index
             print(
                 f"[{dataset_name}] round {round_index + 1}/{total_round_budget} "
-                f"eval_branch={str(round_metrics['valid_selected_branch'])} "
+                f"eval_branch={round_metrics['valid_selected_branch']!s} "
                 f"valid_auc={float(valid_metrics['auc']):.6f} "
                 f"valid_pr_auc={float(valid_metrics['pr_auc']):.6f} "
                 f"valid_f1_macro={float(valid_metrics['f1_macro']):.6f} "
@@ -5155,17 +5143,6 @@ def _train_one_dataset(
         if checkpoint_selection_fallback_used:
             best_state = peak_state
             best_valid_auc = peak_valid_auc_any_round
-            best_valid_pr_auc = (
-                float(best_valid_metrics.get("pr_auc", best_valid_pr_auc))
-                if "best_valid_metrics" in locals()
-                else best_valid_pr_auc
-            )
-            best_valid_recall_at_precision = (
-                float(best_valid_metrics.get("recall_at_precision", best_valid_recall_at_precision))
-                if "best_valid_metrics" in locals()
-                else best_valid_recall_at_precision
-            )
-            best_valid_f1_macro = float(best_valid_metrics.get("f1_macro", best_valid_f1_macro)) if "best_valid_metrics" in locals() else best_valid_f1_macro
             best_round = peak_valid_round_any_round
             best_valid_threshold = peak_valid_threshold_any_round
         _log_progress(dataset_name, "finalize: loading best checkpoint state into global model")
@@ -5384,7 +5361,7 @@ def _train_one_dataset(
             "splitgnn_runtime_policy": bool(getattr(args, "splitgnn_runtime_policy", False)),
             "runtime_policy_notes": list(getattr(args, "runtime_policy_notes", [])),
             "requested_num_clients": int(num_clients),
-            "effective_num_clients": int(len(bundle.clients)),
+            "effective_num_clients": len(bundle.clients),
             "resolved_device": str(args.device),
             "seed": None if getattr(args, "seed", None) is None else int(args.seed),
             "requested_classification_loss": str(getattr(args, "requested_classification_loss", getattr(args, "classification_loss", "cb_focal"))),
@@ -5780,7 +5757,7 @@ def _train_one_dataset(
             try:
                 writer.flush()
                 writer.close()
-            except Exception:
+            except (OSError, RuntimeError, ValueError):
                 pass
         if owns_rl_models:
             _close_rl_models(rl_models)
@@ -6166,27 +6143,6 @@ def train_hybrid_fraud_pipeline(
     report_path = resolved_result_root / "hybrid_fraudgraph_run_summary.json"
     _atomic_write_json(report_path, summaries)
     return summaries
-
-
-def MAFRL(
-    T_SDN: int = DEFAULT_HYBRID_MAINLINE_ROUNDS,
-    T_UCH: int = 2,
-    T_MID: int = 1,
-    eta_1: float = 1.0,
-    eta_2: float = 0.5,
-    **kwargs,
-) -> dict:
-    """Compatibility wrapper for older scripts. ``eta_2`` stays accepted and the active hybrid pipeline
-    ignores it.
-    """
-    _ = eta_2
-    return train_hybrid_fraud_pipeline(
-        federated_rounds=T_SDN,
-        base_local_epochs=T_UCH,
-        extra_local_epochs=T_MID,
-        edge_loss_weight=eta_1,
-        **kwargs,
-    )
 
 
 def run_hybrid_fraud_training(

@@ -3,27 +3,33 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from .provenance import detect_source_provenance
-from .runtime import HighLevelAction, PilotRuntimeConfig, PilotSwarmRuntime, PublicMission, PublicObservation
-
+from .runtime import (
+    HighLevelAction,
+    PilotRuntimeConfig,
+    PilotSwarmRuntime,
+    PublicMission,
+    PublicObservation,
+)
 
 ARCHIVE_SCHEMA = "org.rivermark.pyribs-map-elites.v1"
 SOLUTION_DIM = 4
 ACTION_SCALE = np.asarray((2.3, 2.3, 1.15, 1.35), dtype=np.float32)
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -91,7 +97,7 @@ def _evaluate_solution(solution: np.ndarray, *, seed: int, steps: int) -> tuple[
     displacement = float(np.linalg.norm(trajectory[-1, :2] - trajectory[0, :2]))
     altitude_error = float(np.mean(np.abs(trajectory[:, 2] - 2.8)))
     path_length = float(np.linalg.norm(np.diff(trajectory[:, :2], axis=0), axis=1).sum())
-    width, height = runtime.mission.bounds_xy_m
+    width, _height = runtime.mission.bounds_xy_m
     horizontal_extent = float(np.clip((trajectory[:, 0].max() - trajectory[:, 0].min()) / width, 0.0, 1.0))
     vertical_extent = float(np.clip((trajectory[:, 2].max() - trajectory[:, 2].min()) / (runtime.config.max_altitude_m - runtime.config.min_altitude_m), 0.0, 1.0))
     # This public objective favors useful travel without treating evaluator truth
@@ -183,14 +189,14 @@ def train_map_elites(
         "batch_size": batch_size,
         "rollout_steps": rollout_steps,
         "seed": seed,
-        "elite_count": int(len(data["objective"])),
+        "elite_count": len(data["objective"]),
         "source_revision": source.source_revision,
-        "source_tree_sha256": source.source_tree_sha256,
+        "source_tree_identity": source.source_tree_identity,
         "source_worktree_dirty": source.source_worktree_dirty,
-        "archive_sha256": sha256_file(archive_path),
+        "archive_identity": identity_file(archive_path),
     }
     _atomic_json(metadata_path, metadata)
-    return QdTrainResult(archive_path, metadata_path, int(len(data["objective"])), iterations)
+    return QdTrainResult(archive_path, metadata_path, len(data["objective"]), iterations)
 
 
 class PyribsMapElitesCheckpointPolicy:
@@ -210,8 +216,8 @@ class PyribsMapElitesCheckpointPolicy:
             raise ValueError("unsupported MAP-Elites metadata schema")
         if self.metadata.get("information_profile") != "state_only":
             raise ValueError("MAP-Elites archive must declare state_only")
-        if self.metadata.get("archive_sha256") != sha256_file(self.archive_path):
-            raise ValueError("MAP-Elites archive SHA-256 does not match its metadata")
+        if self.metadata.get("archive_identity") != identity_file(self.archive_path):
+            raise ValueError("MAP-Elites archive IDENTITY does not match its metadata")
         with np.load(self.archive_path, allow_pickle=False) as payload:
             self.solutions = payload["solutions"].astype(np.float32, copy=True)
             self.objectives = payload["objectives"].astype(np.float32, copy=True)
@@ -257,10 +263,10 @@ class PyribsMapElitesCheckpointPolicy:
             "implementation_kind": "trained_pyribs_map_elites_archive",
             "external_dependency": "ribs",
             "archive": str(self.archive_path),
-            "archive_sha256": sha256_file(self.archive_path),
+            "archive_identity": identity_file(self.archive_path),
             "adapter_metadata": str(self.metadata_path),
-            "adapter_metadata_sha256": sha256_file(self.metadata_path),
-            "elite_count": int(len(self.solutions)),
+            "adapter_metadata_identity": identity_file(self.metadata_path),
+            "elite_count": len(self.solutions),
             "objective_uses_evaluator_private_truth": False,
         }
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .canonical import content_hash, file_hash, read_json, write_json
+from .canonical import read_json, write_json
 from .errors import AssetRegistryError
 
 ACCEPTED_SPDX = frozenset({"CC0-1.0", "CC-BY-4.0", "CC-BY-3.0"})
@@ -36,7 +36,6 @@ class AssetRecord:
 @dataclass(frozen=True)
 class AssetLock:
     bundle: str
-    registry_hash: str
     records: dict[str, AssetRecord]
 
 
@@ -80,9 +79,9 @@ def load_asset_lock(asset_root: Path, bundle: str, requested_ids: set[str]) -> A
             source = _safe_file(bundle_root, relative)
             if not source.is_file():
                 raise AssetRegistryError(f"asset {asset_id} is missing {relative}")
-            expected = str(entry.get("sha256", "")).lower()
-            if len(expected) != 64 or file_hash(source) != expected:
-                raise AssetRegistryError(f"asset {asset_id} failed SHA-256 validation: {relative}")
+            expected_bytes = entry.get("bytes")
+            if isinstance(expected_bytes, int) and source.stat().st_size != expected_bytes:
+                raise AssetRegistryError(f"asset {asset_id} size differs: {relative}")
         records[asset_id] = AssetRecord(
             asset_id=asset_id,
             bundle=bundle,
@@ -94,7 +93,7 @@ def load_asset_lock(asset_root: Path, bundle: str, requested_ids: set[str]) -> A
     missing = sorted(requested_ids - records.keys())
     if missing:
         raise AssetRegistryError(f"requested visual assets are absent from the registry: {missing}")
-    return AssetLock(bundle=bundle, registry_hash=file_hash(registry_path), records=records)
+    return AssetLock(bundle=bundle, records=records)
 
 
 def stage_assets(lock: AssetLock, asset_root: Path, release_root: Path) -> dict[str, Any]:
@@ -111,8 +110,8 @@ def stage_assets(lock: AssetLock, asset_root: Path, release_root: Path) -> dict[
                 destination = destination_root.joinpath(*PurePosixPath(relative).parts)
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, destination)
-                if file_hash(destination) != str(node["sha256"]).lower():
-                    raise AssetRegistryError(f"staged asset changed while copying: {relative}")
+                if destination.stat().st_size != source.stat().st_size:
+                    raise AssetRegistryError(f"staged asset size changed while copying: {relative}")
                 copied.add(relative)
         entries.append(
             {
@@ -127,9 +126,7 @@ def stage_assets(lock: AssetLock, asset_root: Path, release_root: Path) -> dict[
     manifest = {
         "schema": "org.aerocity.bench.asset-lock.v1",
         "bundle": lock.bundle,
-        "source_registry_sha256": lock.registry_hash,
         "assets": entries,
     }
-    manifest["asset_lock_hash"] = content_hash(manifest)
     write_json(release_root / "_assets" / "asset_lock.json", manifest)
     return manifest

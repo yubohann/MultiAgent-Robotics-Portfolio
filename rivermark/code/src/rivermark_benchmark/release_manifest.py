@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import ipaddress
 import json
 import os
@@ -17,9 +16,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from ._identity import IdentityAccumulator
+
 RELEASE_MANIFEST_SCHEMA = "org.rivermark.benchmark.release-manifest.v1"
 DOWNLOAD_PLAN_SCHEMA = "org.rivermark.benchmark.download-plan.v1"
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _SEMVER = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")
 _SPLITS = frozenset({"pilot", "train", "inner_dev", "validation", "blind_test", "ood_test"})
 _TOP_KEYS = frozenset(
@@ -30,7 +31,7 @@ _TOP_KEYS = frozenset(
         "license_status",
         "created_at",
         "source_revision",
-        "supply_chain_manifest_sha256",
+        "supply_chain_manifest_identity",
         "metadata_uri",
         "accounting",
         "defects",
@@ -52,8 +53,8 @@ _SHARD_KEYS = frozenset(
         "path",
         "url",
         "size_bytes",
-        "sha256",
-        "source_capture_sha256",
+        "identity",
+        "source_capture_identity",
         "license_status",
     }
 )
@@ -63,7 +64,7 @@ _GENERIC_STREAM_SCHEMA = "org.rivermark.benchmark.episode-stream.v1"
 _FAILURE_LEDGER_SCHEMA = "org.rivermark.benchmark.failure-ledger.v1"
 _ACCOUNTING_KEYS = frozenset({"failure_ledger", "failure_summary"})
 _ACCOUNTING_LEDGER_KEYS = frozenset(
-    {"path", "url", "size_bytes", "sha256", "schema", "media_type", "compression", "license_status"}
+    {"path", "url", "size_bytes", "identity", "schema", "media_type", "compression", "license_status"}
 )
 _ACCOUNTING_SUMMARY_KEYS = frozenset(
     {
@@ -73,7 +74,7 @@ _ACCOUNTING_SUMMARY_KEYS = frozenset(
         "quarantined_count",
         "failed_count",
         "failure_categories",
-        "attempt_ids_sha256",
+        "attempt_ids_identity",
     }
 )
 _DEFECT_KEYS = frozenset(
@@ -89,8 +90,8 @@ _DEFECT_KEYS = frozenset(
         "tombstone",
     }
 )
-_DEFECT_SHARD_KEYS = frozenset({"shard_id", "episode_id", "path", "frame_start", "frame_end", "original_sha256"})
-_CORRECTION_KEYS = frozenset({"old_shard_id", "new_shard_id", "new_release_id", "new_dataset_version", "new_sha256"})
+_DEFECT_SHARD_KEYS = frozenset({"shard_id", "episode_id", "path", "frame_start", "frame_end", "original_identity"})
+_CORRECTION_KEYS = frozenset({"old_shard_id", "new_shard_id", "new_release_id", "new_dataset_version", "new_identity"})
 _DEPRECATION_KEYS = frozenset({"grace_releases", "replacement_required"})
 _TOMBSTONE_KEYS = frozenset({"kind", "reason", "replacement_release_id", "replacement_shard_ids"})
 _DEFECT_STATUSES = frozenset({"open", "resolved", "withdrawn"})
@@ -117,7 +118,7 @@ class DownloadResult:
     path: Path
     status: str
     size_bytes: int
-    sha256: str
+    identity: str
 
 
 class ReleaseManifestError(ValueError):
@@ -125,15 +126,15 @@ class ReleaseManifestError(ValueError):
 
 
 class DownloadError(RuntimeError):
-    """Raised when a shard cannot be downloaded and hash-verified."""
+    """Raised when a shard cannot be downloaded and identity-verified."""
 
 
 class ReleaseBuildError(ReleaseManifestError):
     """Raised when a public release manifest cannot be built safely."""
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -171,7 +172,7 @@ def _issue(issues: list[ReleaseManifestIssue], code: str, path: str, message: st
 
 
 def _valid_sha(value: Any) -> bool:
-    return isinstance(value, str) and bool(_SHA256.fullmatch(value))
+    return isinstance(value, str) and bool(_IDENTITY.fullmatch(value))
 
 
 def _validate_url(
@@ -252,12 +253,12 @@ def validate_release_manifest(
         not isinstance(source_revision, str) or not re.fullmatch(r"[0-9a-f]{7,64}", source_revision)
     ):
         _issue(issues, "source_revision", "$.source_revision", "must be a lowercase Git revision")
-    if "supply_chain_manifest_sha256" in payload and not _valid_sha(payload["supply_chain_manifest_sha256"]):
+    if "supply_chain_manifest_identity" in payload and not _valid_sha(payload["supply_chain_manifest_identity"]):
         _issue(
             issues,
-            "supply_chain_manifest_sha256",
-            "$.supply_chain_manifest_sha256",
-            "must be 64 lowercase hexadecimal characters",
+            "supply_chain_manifest_identity",
+            "$.supply_chain_manifest_identity",
+            "must be 16 lowercase hexadecimal characters",
         )
     defects = payload.get("defects")
     defect_records: list[Mapping[str, Any]] = []
@@ -305,7 +306,7 @@ def validate_release_manifest(
                             continue
                         for key in sorted(set(entry) - _DEFECT_SHARD_KEYS):
                             _issue(issues, "unknown_field", f"{entry_path}.{key}", "field is not part of defect shard reference v1")
-                        for key in ("shard_id", "episode_id", "path", "original_sha256"):
+                        for key in ("shard_id", "episode_id", "path", "original_identity"):
                             if key not in entry:
                                 _issue(issues, "required", f"{entry_path}.{key}", "field is required")
                         shard_id = entry.get("shard_id")
@@ -320,8 +321,8 @@ def validate_release_manifest(
                             _issue(issues, "episode_id", f"{entry_path}.episode_id", "invalid episode identifier")
                         if not _is_safe_relative_path(entry.get("path")) or any(token in str(entry.get("path", "")).lower() for token in _PRIVATE_TOKENS):
                             _issue(issues, "unsafe_path", f"{entry_path}.path", "must be a public safe relative path")
-                        if not _valid_sha(entry.get("original_sha256")):
-                            _issue(issues, "sha256", f"{entry_path}.original_sha256", "must be 64 lowercase hexadecimal characters")
+                        if not _valid_sha(entry.get("original_identity")):
+                            _issue(issues, "identity", f"{entry_path}.original_identity", "must be 16 lowercase hexadecimal characters")
                         start = entry.get("frame_start")
                         end = entry.get("frame_end")
                         if (start is None) != (end is None):
@@ -355,7 +356,7 @@ def validate_release_manifest(
                                 continue
                             for key in sorted(set(mapping) - _CORRECTION_KEYS):
                                 _issue(issues, "unknown_field", f"{mapping_path}.{key}", "field is not part of correction mapping v1")
-                            for key in ("old_shard_id", "new_release_id", "new_dataset_version", "new_sha256"):
+                            for key in ("old_shard_id", "new_release_id", "new_dataset_version", "new_identity"):
                                 if key not in mapping:
                                     _issue(issues, "required", f"{mapping_path}.{key}", "field is required")
                             if not isinstance(mapping.get("old_shard_id"), str) or not re.fullmatch(r"[a-z0-9][a-z0-9._-]{2,127}", str(mapping.get("old_shard_id", ""))):
@@ -364,8 +365,8 @@ def validate_release_manifest(
                                 _issue(issues, "release_id", f"{mapping_path}.new_release_id", "invalid release identifier")
                             if not isinstance(mapping.get("new_dataset_version"), str) or not _SEMVER.fullmatch(str(mapping.get("new_dataset_version", ""))):
                                 _issue(issues, "dataset_version", f"{mapping_path}.new_dataset_version", "must be a semantic version")
-                            if not _valid_sha(mapping.get("new_sha256")):
-                                _issue(issues, "sha256", f"{mapping_path}.new_sha256", "must be 64 lowercase hexadecimal characters")
+                            if not _valid_sha(mapping.get("new_identity")):
+                                _issue(issues, "identity", f"{mapping_path}.new_identity", "must be 16 lowercase hexadecimal characters")
                             new_shard_id = mapping.get("new_shard_id")
                             if new_shard_id is not None and (not isinstance(new_shard_id, str) or not re.fullmatch(r"[a-z0-9][a-z0-9._-]{2,127}", new_shard_id)):
                                 _issue(issues, "shard_id", f"{mapping_path}.new_shard_id", "invalid shard identifier")
@@ -414,7 +415,7 @@ def validate_release_manifest(
                         f"{accounting_path}.failure_ledger.{key}",
                         "field is not part of accounting ledger v1",
                     )
-                for key in ("path", "url", "size_bytes", "sha256", "schema", "media_type"):
+                for key in ("path", "url", "size_bytes", "identity", "schema", "media_type"):
                     if key not in ledger:
                         _issue(
                             issues,
@@ -443,12 +444,12 @@ def validate_release_manifest(
                         f"{accounting_path}.failure_ledger.size_bytes",
                         "must be a non-negative integer",
                     )
-                if not _valid_sha(ledger.get("sha256")):
+                if not _valid_sha(ledger.get("identity")):
                     _issue(
                         issues,
-                        "sha256",
-                        f"{accounting_path}.failure_ledger.sha256",
-                        "must be 64 lowercase hexadecimal characters",
+                        "identity",
+                        f"{accounting_path}.failure_ledger.identity",
+                        "must be 16 lowercase hexadecimal characters",
                     )
                 if ledger.get("schema") != _FAILURE_LEDGER_SCHEMA:
                     _issue(
@@ -499,7 +500,7 @@ def validate_release_manifest(
                     "quarantined_count",
                     "failed_count",
                     "failure_categories",
-                    "attempt_ids_sha256",
+                    "attempt_ids_identity",
                 ):
                     if key not in summary:
                         _issue(
@@ -557,12 +558,12 @@ def validate_release_manifest(
                                 f"{accounting_path}.failure_summary.failure_categories",
                                 "category names and counts must be public non-negative values",
                             )
-                if not _valid_sha(summary.get("attempt_ids_sha256")):
+                if not _valid_sha(summary.get("attempt_ids_identity")):
                     _issue(
                         issues,
-                        "sha256",
-                        f"{accounting_path}.failure_summary.attempt_ids_sha256",
-                        "must be 64 lowercase hexadecimal characters",
+                        "identity",
+                        f"{accounting_path}.failure_summary.attempt_ids_identity",
+                        "must be 16 lowercase hexadecimal characters",
                     )
     for key in ("created_at", "metadata_uri"):
         if key in payload:
@@ -594,8 +595,8 @@ def validate_release_manifest(
             "path",
             "url",
             "size_bytes",
-            "sha256",
-            "source_capture_sha256",
+            "identity",
+            "source_capture_identity",
         )
         for key in required:
             if key not in shard:
@@ -627,9 +628,9 @@ def validate_release_manifest(
         size = shard.get("size_bytes")
         if not isinstance(size, int) or isinstance(size, bool) or size < 0:
             _issue(issues, "size_bytes", f"{path}.size_bytes", "must be a non-negative integer")
-        for key in ("sha256", "source_capture_sha256"):
+        for key in ("identity", "source_capture_identity"):
             if not _valid_sha(shard.get(key)):
-                _issue(issues, "sha256", f"{path}.{key}", "must be 64 lowercase hexadecimal characters")
+                _issue(issues, "identity", f"{path}.{key}", "must be 16 lowercase hexadecimal characters")
         if "agent_id" in shard and (
             not isinstance(shard["agent_id"], int) or isinstance(shard["agent_id"], bool) or shard["agent_id"] < 0
         ):
@@ -679,8 +680,8 @@ def validate_release_manifest(
             for key in ("episode_id", "path"):
                 if reference.get(key) != actual.get(key):
                     _issue(issues, "defect_binding", f"{reference_path}.{key}", f"must match manifest shard {shard_id!r}")
-            if reference.get("original_sha256") != actual.get("sha256"):
-                _issue(issues, "defect_binding", f"{reference_path}.original_sha256", f"must match immutable shard hash for {shard_id!r}")
+            if reference.get("original_identity") != actual.get("identity"):
+                _issue(issues, "defect_binding", f"{reference_path}.original_identity", f"must match immutable shard identity for {shard_id!r}")
             for key in ("frame_start", "frame_end"):
                 if key in reference and reference.get(key) != actual.get(key):
                     _issue(issues, "defect_binding", f"{reference_path}.{key}", f"must match manifest shard {shard_id!r}")
@@ -693,8 +694,8 @@ def validate_release_manifest(
                 if old_id not in shard_by_id:
                     _issue(issues, "unknown_shard", f"$.defects[{defect_index}].correction_mapping[{correction_index}].old_shard_id", "correction must reference an affected shard in this manifest")
                 new_id = mapping.get("new_shard_id")
-                if new_id in shard_by_id and mapping.get("new_sha256") != shard_by_id[new_id].get("sha256"):
-                    _issue(issues, "correction_binding", f"$.defects[{defect_index}].correction_mapping[{correction_index}].new_sha256", "must match the replacement shard hash")
+                if new_id in shard_by_id and mapping.get("new_identity") != shard_by_id[new_id].get("identity"):
+                    _issue(issues, "correction_binding", f"$.defects[{defect_index}].correction_mapping[{correction_index}].new_identity", "must match the replacement shard identity")
     return tuple(issues)
 
 
@@ -739,7 +740,7 @@ def _add_release_shard(
     episode_root: Path,
     split: str,
     episode_id: str,
-    source_capture_sha256: str,
+    source_capture_identity: str,
     base_url: str,
     stream_id: str,
     modality: str,
@@ -761,7 +762,7 @@ def _add_release_shard(
     if agent_id is not None:
         shard_id += f"-agent-{agent_id}"
     if len(shard_id) > 128:
-        suffix = hashlib.sha256(shard_id.encode("utf-8")).hexdigest()[:16]
+        suffix = IdentityAccumulator(shard_id.encode("utf-8")).hexdigest()[:16]
         shard_id = shard_id[:111] + "-" + suffix
     if shard_id in shards:
         raise ReleaseBuildError(f"duplicate release shard id: {shard_id}")
@@ -776,8 +777,8 @@ def _add_release_shard(
         "path": path,
         "url": _release_url(base_url, path),
         "size_bytes": payload.stat().st_size,
-        "sha256": sha256_file(payload),
-        "source_capture_sha256": source_capture_sha256,
+        "identity": identity_file(payload),
+        "source_capture_identity": source_capture_identity,
     }
     # Frame ranges are emitted only when the source manifest explicitly
     # declares them.  The builder never infers a frame count from bytes.
@@ -809,14 +810,7 @@ def build_release_manifest(
     supply_chain_manifest: Path | None = None,
     require_https: bool = True,
 ) -> dict[str, Any]:
-    """Build a hash-bound manifest from an already verified public dataset.
-
-    This function does not admit captures or copy payloads.  It refuses an
-    empty/invalid dataset, reads only public stream bindings from each formal
-    release episode, and never infers frame ranges from file size or names.
-    ``base_url`` is explicit so a local path cannot accidentally be published
-    as a public download location.
-    """
+    """Build an identity-bound manifest from an already verified public dataset."""
 
     root = dataset_root.resolve()
     if not root.is_dir():
@@ -834,8 +828,7 @@ def build_release_manifest(
     if not episode_roots:
         raise ReleaseBuildError("refusing to build a release manifest from an empty formal dataset")
 
-    # Import lazily to keep the release downloader dependency-light and avoid
-    # importing dataset-admission code for ordinary manifest downloads.
+    # Import lazily to keep the downloader dependency-light.
     from .formal_dataset import verify_dataset_integrity
 
     integrity = verify_dataset_integrity(root)
@@ -862,7 +855,7 @@ def build_release_manifest(
             "path": "manifests/failure_ledger.jsonl",
             "url": _release_url(base_url, "manifests/failure_ledger.jsonl"),
             "size_bytes": ledger_path.stat().st_size,
-            "sha256": sha256_file(ledger_path),
+            "identity": identity_file(ledger_path),
             "schema": _FAILURE_LEDGER_SCHEMA,
             "media_type": "application/x-ndjson",
             "compression": "none",
@@ -877,7 +870,7 @@ def build_release_manifest(
         )
     from .supply_chain import (
         load_supply_chain_manifest,
-        supply_chain_sha256,
+        supply_chain_identity,
         verify_supply_chain_manifest,
     )
 
@@ -892,7 +885,7 @@ def build_release_manifest(
             "supply-chain manifest release_id does not match requested release_id"
         )
     supply_chain_payload = load_supply_chain_manifest(supply_chain_manifest)
-    if supply_chain_sha256(supply_chain_payload) != supply_chain_report["manifest_sha256"]:
+    if supply_chain_identity(supply_chain_payload) != supply_chain_report["manifest_identity"]:
         raise ReleaseBuildError("supply-chain manifest changed after release verification")
     supply_chain_assets = supply_chain_payload.get("assets")
     if not isinstance(supply_chain_assets, list):
@@ -908,8 +901,8 @@ def build_release_manifest(
         raise ReleaseBuildError(
             f"supply-chain manifest is missing dataset release surfaces: {missing_asset_kinds}"
         )
-    cleared_data_hashes = {
-        asset.get("sha256")
+    cleared_data_identities = {
+        asset.get("identity")
         for asset in supply_chain_assets
         if isinstance(asset, Mapping)
         and asset.get("kind") == "data"
@@ -928,14 +921,14 @@ def build_release_manifest(
             raise ReleaseBuildError(f"release episode has invalid split or episode_id: {episode_root}")
         if admission.get("formal_benchmark_admission") is not True:
             raise ReleaseBuildError(f"release episode is not formally admitted: {episode_root}")
-        if admission.get("supply_chain_manifest_sha256") != supply_chain_report["manifest_sha256"]:
+        if admission.get("supply_chain_manifest_identity") != supply_chain_report["manifest_identity"]:
             raise ReleaseBuildError(f"release admission binds a different supply-chain manifest: {episode_root}")
         if admission.get("supply_chain_release_id") != release_id:
             raise ReleaseBuildError(f"release admission binds a different supply-chain release_id: {episode_root}")
-        source_capture = admission.get("formal_capture_receipt_sha256")
+        source_capture = admission.get("formal_capture_receipt_identity")
         if not _valid_sha(source_capture):
-            raise ReleaseBuildError(f"release admission lacks a valid capture receipt hash: {episode_root}")
-        if source_capture not in cleared_data_hashes:
+            raise ReleaseBuildError(f"release admission lacks a valid capture receipt identity: {episode_root}")
+        if source_capture not in cleared_data_identities:
             raise ReleaseBuildError(f"supply-chain data assets do not bind release episode: {episode_root}")
         version = manifest.get("dataset_version")
         if not isinstance(version, str) or not _SEMVER.fullmatch(version):
@@ -956,7 +949,7 @@ def build_release_manifest(
                 episode_root=episode_root,
                 split=split,
                 episode_id=episode_id,
-                source_capture_sha256=source_capture,
+                source_capture_identity=source_capture,
                 base_url=base_url,
                 stream_id="metadata-" + metadata_name.removesuffix(".json").replace("_", "-"),
                 modality="metadata",
@@ -973,7 +966,7 @@ def build_release_manifest(
             episode_root=episode_root,
             split=split,
             episode_id=episode_id,
-            source_capture_sha256=source_capture,
+            source_capture_identity=source_capture,
             base_url=base_url,
             stream_id="metadata-observation-abi",
             modality="metadata",
@@ -1001,7 +994,7 @@ def build_release_manifest(
                     episode_root=episode_root,
                     split=split,
                     episode_id=episode_id,
-                    source_capture_sha256=source_capture,
+                    source_capture_identity=source_capture,
                     base_url=base_url,
                     stream_id=stream_id,
                     modality=modality,
@@ -1011,43 +1004,43 @@ def build_release_manifest(
                 )
                 continue
             template = stream.get("path_template")
-            index_relative = stream.get("content_hash_index_path")
+            index_relative = stream.get("content_identity_index_path")
             if not isinstance(template, str) or not isinstance(index_relative, str):
                 raise ReleaseBuildError(f"stream has no concrete payload binding: {episode_root}/{stream_id}")
-            index = _read_object(episode_root / index_relative, label="content-hash index")
+            index = _read_object(episode_root / index_relative, label="content-identity index")
             files = index.get("files")
             if not isinstance(files, list):
-                raise ReleaseBuildError(f"content-hash index files must be a list: {episode_root}/{index_relative}")
+                raise ReleaseBuildError(f"content-identity index files must be a list: {episode_root}/{index_relative}")
             _add_release_shard(
                 shards,
                 dataset_root=root,
                 episode_root=episode_root,
                 split=split,
                 episode_id=episode_id,
-                source_capture_sha256=source_capture,
+                source_capture_identity=source_capture,
                 base_url=base_url,
                 stream_id=stream_id + "-index",
                 modality=modality + "__index",
                 media_type="application/json",
-                schema="org.rivermark.benchmark.content-hash-index.v1",
+                schema="org.rivermark.benchmark.content-identity-index.v1",
                 relative=index_relative,
             )
             for entry in files:
                 if not isinstance(entry, Mapping) or not isinstance(entry.get("path"), str):
-                    raise ReleaseBuildError(f"malformed content-hash entry: {episode_root}/{index_relative}")
+                    raise ReleaseBuildError(f"malformed content-identity entry: {episode_root}/{index_relative}")
                 agent_id = entry.get("agent_id")
                 if not isinstance(agent_id, int) or isinstance(agent_id, bool) or agent_id < 0:
-                    raise ReleaseBuildError(f"invalid content-hash agent id: {episode_root}/{index_relative}")
+                    raise ReleaseBuildError(f"invalid content-identity agent id: {episode_root}/{index_relative}")
                 expected = template.replace("{agent_id}", str(agent_id))
                 if entry["path"] != expected:
-                    raise ReleaseBuildError(f"content-hash path does not match template: {episode_root}/{stream_id}")
+                    raise ReleaseBuildError(f"content-identity path does not match template: {episode_root}/{stream_id}")
                 _add_release_shard(
                     shards,
                     dataset_root=root,
                     episode_root=episode_root,
                     split=split,
                     episode_id=episode_id,
-                    source_capture_sha256=source_capture,
+                    source_capture_identity=source_capture,
                     base_url=base_url,
                     stream_id=stream_id,
                     modality=modality,
@@ -1067,7 +1060,7 @@ def build_release_manifest(
         "release_id": release_id,
         "license_status": "redistribution_cleared",
         "source_revision": source_revision,
-        "supply_chain_manifest_sha256": supply_chain_report["manifest_sha256"],
+        "supply_chain_manifest_identity": supply_chain_report["manifest_identity"],
         "accounting": accounting,
         "shards": sorted(shards.values(), key=lambda shard: shard["shard_id"]),
     }
@@ -1108,14 +1101,7 @@ def select_shards(
     frame_start: int | None = None,
     frame_end: int | None = None,
 ) -> tuple[Mapping[str, Any], ...]:
-    """Select complete pre-sharded frame ranges without changing ordering.
-
-    Frame bounds use the half-open interval ``[frame_start, frame_end)``.
-    A request only returns shards whose declared range is fully contained in
-    the request.  It never slices or rewrites a shard, so a request that cuts
-    through a shard fails closed in :func:`download_shards` rather than
-    silently downloading extra frames.
-    """
+    """Select complete pre-sharded frame ranges without changing ordering."""
 
     requested_frame_range = _normalise_requested_frame_range(frame_start, frame_end)
 
@@ -1229,12 +1215,7 @@ def plan_download(
     include_accounting: bool = False,
     require_https: bool = False,
 ) -> dict[str, Any]:
-    """Return a byte-level download plan without creating a cache or fetching data.
-
-    The plan uses only manifest-declared sizes and complete shard ranges. It is
-    intentionally separate from :func:`download_shards` so a researcher can
-    approve disk space before any network or local-file transfer begins.
-    """
+    """Return a byte-level download plan without creating a cache or fetching data."""
 
     episode_ids = tuple(episode_ids)
     splits = tuple(splits)
@@ -1261,7 +1242,7 @@ def plan_download(
         "frame_end",
         "path",
         "size_bytes",
-        "sha256",
+        "identity",
     )
     shards = [{field: shard[field] for field in public_fields if field in shard} for shard in targets]
     total_bytes = sum(int(shard["size_bytes"]) for shard in targets)
@@ -1286,7 +1267,7 @@ def plan_download(
 
 
 def verify_shard_file(shard: Mapping[str, Any], path: Path) -> None:
-    """Verify one downloaded shard against its declared size and SHA-256."""
+    """Verify one downloaded shard against its declared size and IDENTITY."""
 
     if not path.is_file():
         raise DownloadError(f"downloaded shard is missing: {path}")
@@ -1294,9 +1275,9 @@ def verify_shard_file(shard: Mapping[str, Any], path: Path) -> None:
     actual_size = path.stat().st_size
     if actual_size != expected_size:
         raise DownloadError(f"size mismatch for {shard['shard_id']}: expected {expected_size}, got {actual_size}")
-    actual_hash = sha256_file(path)
-    if actual_hash != shard["sha256"]:
-        raise DownloadError(f"SHA-256 mismatch for {shard['shard_id']}: expected {shard['sha256']}, got {actual_hash}")
+    actual_identity = identity_file(path)
+    if actual_identity != shard["identity"]:
+        raise DownloadError(f"IDENTITY mismatch for {shard['shard_id']}: expected {shard['identity']}, got {actual_identity}")
 
 
 def _open_download(url: str, offset: int):
@@ -1320,16 +1301,14 @@ def _range_response_starts_at(response: Any, offset: int, expected_size: int) ->
     start, end, total = match.groups()
     if int(start) != offset or int(end) != expected_size - 1:
         return False
-    if total != "*" and int(total) != expected_size:
-        return False
-    return True
+    return total == "*" or int(total) == expected_size
 
 
 def _download_one(shard: Mapping[str, Any], destination: Path) -> DownloadResult:
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         verify_shard_file(shard, destination)
-        return DownloadResult(shard["shard_id"], destination, "already_verified", destination.stat().st_size, shard["sha256"])
+        return DownloadResult(shard["shard_id"], destination, "already_verified", destination.stat().st_size, shard["identity"])
     partial = destination.with_name(destination.name + ".part")
     expected_size = int(shard["size_bytes"])
     offset = partial.stat().st_size if partial.exists() else 0
@@ -1344,7 +1323,7 @@ def _download_one(shard: Mapping[str, Any], destination: Path) -> DownloadResult
             offset = 0
         else:
             os.replace(partial, destination)
-            return DownloadResult(shard["shard_id"], destination, "resumed_verified", expected_size, shard["sha256"])
+            return DownloadResult(shard["shard_id"], destination, "resumed_verified", expected_size, shard["identity"])
     response = None
     try:
         response = _open_download(shard["url"], offset)
@@ -1364,7 +1343,7 @@ def _download_one(shard: Mapping[str, Any], destination: Path) -> DownloadResult
                 output.write(chunk)
         verify_shard_file(shard, partial)
         os.replace(partial, destination)
-        return DownloadResult(shard["shard_id"], destination, "downloaded", expected_size, shard["sha256"])
+        return DownloadResult(shard["shard_id"], destination, "downloaded", expected_size, shard["identity"])
     except (OSError, urllib.error.URLError, urllib.error.HTTPError, DownloadError) as exc:
         if isinstance(exc, DownloadError) and partial.exists():
             partial.unlink(missing_ok=True)
@@ -1387,11 +1366,7 @@ def download_shards(
     include_accounting: bool = False,
     require_https: bool = False,
 ) -> tuple[DownloadResult, ...]:
-    """Download selected public shards sequentially and verify atomically.
-
-    Frame selection operates on complete manifest-declared shards.  Arbitrary
-    frame extraction is intentionally outside this byte-level downloader.
-    """
+    """Download selected public shards sequentially and verify atomically."""
 
     payload = load_release_manifest(manifest_path, require_https=require_https)
     targets = _download_targets(
@@ -1421,7 +1396,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     verify = subparsers.add_parser("verify", help="validate a release manifest without downloading")
     verify.add_argument("manifest", type=Path)
     verify.add_argument("--require-https", action="store_true")
-    download = subparsers.add_parser("download", help="download and hash-verify selected shards")
+    download = subparsers.add_parser("download", help="download and identity-verify selected shards")
     download.add_argument("manifest", type=Path)
     download.add_argument("destination", type=Path)
     download.add_argument("--episode", action="append", default=[])
@@ -1433,7 +1408,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     download.add_argument(
         "--include-accounting",
         action="store_true",
-        help="also download the hash-bound public failure ledger",
+        help="also download the identity-bound public failure ledger",
     )
     download.add_argument(
         "--dry-run",

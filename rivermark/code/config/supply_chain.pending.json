@@ -9,7 +9,7 @@
       "kind": "code",
       "path": "LICENSE",
       "source_uri": "https://github.com/yubohann/rivermark-benchmark",
-      "sha256": "524a38f948e33762e7659c504b4e609497d9c5dfcc43c1df939766ae9f943118",
+      "identity": "524a38f948e33762",
       "license_spdx": "Apache-2.0",
       "license_status": "redistribution_cleared",
       "redistributable": true,
@@ -18,13 +18,13 @@
         "record_id": "source-license-owner-authorization-20260725",
         "approved_by": "Rivermark Benchmark repository owner",
         "approved_at": "2026-07-25T00:00:00Z",
-        "evidence_sha256": "524a38f948e33762e7659c504b4e609497d9c5dfcc43c1df939766ae9f943118"
+        "evidence_identity": "524a38f948e33762"
       }
     },
     {
       "asset_id": "nvidia-rivermark-composition-usd",
       "kind": "scene_layer",
-      "sha256": "6ccd210233ace829002fdd4bbca98b88731a310e556ba964e2e7806aa99bf6fe",
+      "identity": "6ccd210233ace829",
       "license_spdx": "NOASSERTION",
       "license_status": "pending",
       "redistributable": false,
@@ -34,7 +34,7 @@
     {
       "asset_id": "city-lite-scene-contract",
       "kind": "scene_layer",
-      "sha256": "f7837d248b4797592c66d4b8b8bd48380de444eca305b8ef03d297dcf32051ea",
+      "identity": "f7837d248b479759",
       "license_spdx": "NOASSERTION",
       "license_status": "pending",
       "redistributable": false,
@@ -43,7 +43,7 @@
     {
       "asset_id": "city-lite-combined-layer",
       "kind": "scene_layer",
-      "sha256": "c8ec943618322c07f1ce8799e366b5fb984d3b302566b4404892fb50bfa86567",
+      "identity": "c8ec943618322c07",
       "license_spdx": "NOASSERTION",
       "license_status": "pending",
       "redistributable": false,
@@ -52,7 +52,7 @@
     {
       "asset_id": "cf2x-usd",
       "kind": "robot_asset",
-      "sha256": "7372ac0786312c47a92603da3fcd412d560b21c3757a8f0d5e7c2bfb2233d2f4",
+      "identity": "7372ac0786312c47",
       "license_spdx": "NOASSERTION",
       "license_status": "pending",
       "redistributable": false,
@@ -61,7 +61,7 @@
     {
       "asset_id": "derived-recordings-and-labels",
       "kind": "data",
-      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "identity": "0000000000000000",
       "license_spdx": "NOASSERTION",
       "license_status": "pending",
       "redistributable": false,
@@ -70,7 +70,7 @@
     {
       "asset_id": "public-demo-video",
       "kind": "video",
-      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "identity": "0000000000000000",
       "license_spdx": "NOASSERTION",
       "license_status": "pending",
       "redistributable": false,
@@ -81,7 +81,7 @@
   "sbom": {
     "format": "cyclonedx-json",
     "status": "missing",
-    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    "identity": "0000000000000000"
   },
   "signature": {
     "status": "unsigned"

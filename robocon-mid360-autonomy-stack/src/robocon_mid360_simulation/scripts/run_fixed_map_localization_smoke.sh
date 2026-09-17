@@ -34,7 +34,6 @@ if pgrep -f 'gzserver .*robocon_mid360_simulation' >/dev/null 2>&1; then
   exit 1
 fi
 export ROS_DOMAIN_ID="$ros_domain_id"
-sha256sum "$map_file" > "$run_dir/map_input.sha256"
 
 setsid ros2 launch robocon_mid360_simulation gazebo_mid360_lio.launch.py \
   use_gui:=false lidar_samples:=30000 lidar_downsample:=1 \

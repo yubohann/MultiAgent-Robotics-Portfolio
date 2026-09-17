@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -25,7 +26,7 @@ from .constants import (
     ROUTE_CONTRACT_SCHEMA,
     ROUTE_GENERATION,
 )
-from .scene import CityLiteRouteError, aabb_geometry_sha256, canonical_payload_sha256
+from .scene import CityLiteRouteError, aabb_geometry_identity, canonical_payload_identity
 
 # These routes are target-free and were selected against the City-Lite static
 # structural/task-obstacle AABB contract.  Their first waypoint is also the
@@ -86,7 +87,7 @@ TARGET_REGIONS_W_M = {
 def resolve_public_route_family(
     route_family_id: str,
 ) -> tuple[tuple[tuple[float, float, float], ...], ...]:
-    """Return one frozen public route family or fail closed."""
+    """Return one frozen public route family or stop the run."""
 
     try:
         return PUBLIC_ROUTE_FAMILIES_W_M[route_family_id]
@@ -100,7 +101,7 @@ class RouteValidationReport:
     segment_count: int
     clearance_m: float
     aabb_count: int
-    aabb_geometry_sha256: str
+    aabb_geometry_identity: str
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -109,7 +110,7 @@ class RouteValidationReport:
             "segment_count": self.segment_count,
             "clearance_m": self.clearance_m,
             "aabb_count": self.aabb_count,
-            "aabb_geometry_sha256": self.aabb_geometry_sha256,
+            "aabb_geometry_identity": self.aabb_geometry_identity,
         }
 
 def segment_intersects_aabb(
@@ -219,7 +220,7 @@ def validate_public_routes(
                 raise CityLiteRouteError(
                     f"agent {agent_id} waypoint {waypoint_id} is outside the command volume"
                 )
-        for segment_id, (start, end) in enumerate(zip(points, points[1:])):
+        for segment_id, (start, end) in enumerate(itertools.pairwise(points)):
             if math.dist(start, end) <= _EPSILON:
                 raise CityLiteRouteError(
                     f"agent {agent_id} segment {segment_id} has zero length"
@@ -245,7 +246,7 @@ def validate_public_routes(
         segment_count=AGENT_COUNT * (waypoint_count - 1),
         clearance_m=clearance,
         aabb_count=len(boxes),
-        aabb_geometry_sha256=aabb_geometry_sha256(boxes),
+        aabb_geometry_identity=aabb_geometry_identity(boxes),
     )
 
 def make_public_route_contract(
@@ -262,7 +263,7 @@ def make_public_route_contract(
         if route_family_id is not None
         else PUBLIC_ROUTES_W_M
     )
-    if routes_w_m is not None and canonical_payload_sha256(routes_w_m) != canonical_payload_sha256(selected_routes):
+    if routes_w_m is not None and canonical_payload_identity(routes_w_m) != canonical_payload_identity(selected_routes):
         raise CityLiteRouteError("route contract routes do not match the selected route family")
     selected_starts = tuple(route[0] for route in selected_routes)
     payload = {
@@ -275,17 +276,17 @@ def make_public_route_contract(
         "legacy_mission_route_consumed": False,
         "clearance_m": ROUTE_CLEARANCE_M,
         "command_volume_w_m": CITY_LITE_COMMAND_VOLUME_W_M.as_dict(),
-        "target_free_safe_starts_sha256": canonical_payload_sha256(
+        "target_free_safe_starts_identity": canonical_payload_identity(
             selected_starts
         ),
         "aabb_count": len(boxes),
-        "aabb_geometry_sha256": aabb_geometry_sha256(boxes),
+        "aabb_geometry_identity": aabb_geometry_identity(boxes),
     }
     if route_family_id is not None:
         payload.update(
             {
                 "route_family_id": route_family_id,
-                "routes_sha256": canonical_payload_sha256(selected_routes),
+                "routes_identity": canonical_payload_identity(selected_routes),
                 "start_anchor_id": START_ANCHOR_IDS_BY_ROUTE_FAMILY[route_family_id],
             }
         )
@@ -332,11 +333,11 @@ def validate_public_route_contract(
     elif isinstance(route_family_id, str):
         selected_routes = resolve_public_route_family(route_family_id)
         selected_starts = TARGET_FREE_SAFE_STARTS_BY_ROUTE_FAMILY_W_M[route_family_id]
-        if contract.get("routes_sha256") != canonical_payload_sha256(selected_routes):
-            raise CityLiteRouteError("public route contract route-family hash is stale")
+        if contract.get("routes_identity") != canonical_payload_identity(selected_routes):
+            raise CityLiteRouteError("public route contract route-family identity is stale")
         if contract.get("start_anchor_id") != START_ANCHOR_IDS_BY_ROUTE_FAMILY[route_family_id]:
             raise CityLiteRouteError("public route contract start anchor is stale")
-        if canonical_payload_sha256(routes_w_m) != canonical_payload_sha256(selected_routes):
+        if canonical_payload_identity(routes_w_m) != canonical_payload_identity(selected_routes):
             raise CityLiteRouteError("public routes do not match their declared route family")
     else:
         raise CityLiteRouteError("public route contract route_family_id must be a string")
@@ -350,7 +351,7 @@ def validate_public_route_contract(
         "legacy_mission_route_consumed": False,
         "clearance_m": ROUTE_CLEARANCE_M,
         "command_volume_w_m": CITY_LITE_COMMAND_VOLUME_W_M.as_dict(),
-        "target_free_safe_starts_sha256": canonical_payload_sha256(
+        "target_free_safe_starts_identity": canonical_payload_identity(
             selected_starts
         ),
     }
@@ -369,9 +370,9 @@ def validate_public_route_contract(
     boxes = tuple(coerce_aabb(value) for value in obstacle_aabbs)
     if contract.get("aabb_count") != len(boxes):
         raise CityLiteRouteError("public route contract AABB count is stale")
-    geometry_sha256 = aabb_geometry_sha256(boxes)
-    if contract.get("aabb_geometry_sha256") != geometry_sha256:
-        raise CityLiteRouteError("public route contract AABB geometry hash is stale")
+    geometry_identity = aabb_geometry_identity(boxes)
+    if contract.get("aabb_geometry_identity") != geometry_identity:
+        raise CityLiteRouteError("public route contract AABB geometry identity is stale")
     return validate_public_routes(
         routes_w_m,
         boxes,

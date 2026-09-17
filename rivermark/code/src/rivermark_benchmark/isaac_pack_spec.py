@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -12,11 +11,12 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from .abi import observation_abi_sha256, validate_formal_observation_abi
+from ._identity import IdentityAccumulator
+from .abi import observation_abi_identity, validate_formal_observation_abi
 from .isaac_pack import PACK_SPEC_SCHEMA_V2, validate_isaac_pack_spec
 from .isaac_public_manifest import (
     build_public_scene_manifest,
-    public_manifest_sha256,
+    public_manifest_identity,
     validate_public_payload,
 )
 from .policy_projection import (
@@ -27,7 +27,7 @@ from .policy_projection import (
 
 _EPISODE_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
 _DATASET_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_IDENTITY = re.compile(r"^[0-9a-f]{16}$")
 _STREAM_IDS = frozenset(
     {"actions", "state", "task", "messages", "rgb", "depth", "lidar", "imu"}
 )
@@ -60,8 +60,8 @@ def _object(path: Path, *, label: str) -> Mapping[str, Any]:
     return value
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
+def _identity_file(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
@@ -80,9 +80,9 @@ def _require_text(value: object, *, label: str) -> str:
     return value
 
 
-def _require_sha256(value: object, *, label: str) -> str:
-    if not isinstance(value, str) or _SHA256.fullmatch(value) is None:
-        raise IsaacPackSpecError(f"{label} must be SHA-256")
+def _require_identity(value: object, *, label: str) -> str:
+    if not isinstance(value, str) or _IDENTITY.fullmatch(value) is None:
+        raise IsaacPackSpecError(f"{label} must be a short identity")
     return value
 
 
@@ -98,12 +98,12 @@ def _default_episode_id(
     split: str,
     cell_id: str,
     episode_index: int,
-    capture_receipt_sha256: str,
+    capture_receipt_identity: str,
 ) -> str:
     prefix = _slug(
         f"rivermark-{layout_id}-{split}-{cell_id}-{episode_index:04d}"
     )
-    suffix = capture_receipt_sha256[:12]
+    suffix = capture_receipt_identity[:12]
     available = 127 - len(suffix)
     return f"{prefix[:available].rstrip('-._')}-{suffix}"
 
@@ -172,7 +172,7 @@ def build_isaac_pack_spec(
     public_task: Mapping[str, Any],
     observation_abi: Mapping[str, Any],
     source_streams: Mapping[str, Any],
-    capture_receipt_sha256: str,
+    capture_receipt_identity: str,
     observation_abi_source: str,
     dataset_version: str,
     episode_id: str | None = None,
@@ -182,7 +182,7 @@ def build_isaac_pack_spec(
 
     if _DATASET_VERSION.fullmatch(dataset_version) is None:
         raise IsaacPackSpecError("dataset_version is not a semantic data version")
-    _require_sha256(capture_receipt_sha256, label="capture_receipt_sha256")
+    _require_identity(capture_receipt_identity, label="capture_receipt_identity")
     if scene_asset_license_status not in {
         "pending",
         "internal_only",
@@ -229,23 +229,23 @@ def build_isaac_pack_spec(
     if backend.get("kind") != "isaaclab":
         raise IsaacPackSpecError("capture_backend.kind must be isaaclab")
     backend_build = _require_text(backend.get("build"), label="capture_backend.build")
-    smoke_sha256 = _require_sha256(
-        backend.get("sensor_physics_smoke_receipt_sha256"),
-        label="capture_backend.sensor_physics_smoke_receipt_sha256",
+    smoke_identity = _require_identity(
+        backend.get("sensor_physics_smoke_receipt_identity"),
+        label="capture_backend.sensor_physics_smoke_receipt_identity",
     )
 
     scene_contract = _require_mapping(scene.get("scene_contract"), label="scene.scene_contract")
-    layout_lineage_hash = _require_sha256(
-        scene_contract.get("payload_sha256"),
-        label="scene.scene_contract.payload_sha256",
+    layout_lineage_identity = _require_identity(
+        scene_contract.get("payload_identity"),
+        label="scene.scene_contract.payload_identity",
     )
     inventory = _require_mapping(
         scene.get("rivermark_layer_inventory"),
         label="scene.rivermark_layer_inventory",
     )
-    asset_lineage = _require_sha256(
-        inventory.get("inventory_sha256"),
-        label="scene.rivermark_layer_inventory.inventory_sha256",
+    asset_lineage = _require_identity(
+        inventory.get("inventory_identity"),
+        label="scene.rivermark_layer_inventory.inventory_identity",
     )
     public_scene = build_public_scene_manifest(scene)
     validate_public_payload(public_task)
@@ -300,7 +300,7 @@ def build_isaac_pack_spec(
     )
 
     resolved_episode_id = episode_id or _default_episode_id(
-        layout_id, split, cell_id, episode_index, capture_receipt_sha256
+        layout_id, split, cell_id, episode_index, capture_receipt_identity
     )
     if _EPISODE_ID.fullmatch(resolved_episode_id) is None:
         raise IsaacPackSpecError("episode_id is not a safe formal identifier")
@@ -316,8 +316,8 @@ def build_isaac_pack_spec(
         "split": split,
         "layout": {
             "layout_id": layout_id,
-            "layout_hash": public_manifest_sha256(public_scene),
-            "layout_lineage_hash": layout_lineage_hash,
+            "layout_identity": public_manifest_identity(public_scene),
+            "layout_lineage_identity": layout_lineage_identity,
             "source": "scene.json",
         },
         "task": {
@@ -339,8 +339,8 @@ def build_isaac_pack_spec(
             "source": observation_abi_source.replace("\\", "/"),
             "source_scope": "pack_spec",
             "path": "metadata/observation_abi.json",
-            "sha256": observation_abi_sha256(observation_abi),
-            "capture_receipt_sha256": capture_receipt_sha256,
+            "identity": observation_abi_identity(observation_abi),
+            "capture_receipt_identity": capture_receipt_identity,
         },
         "streams": _stream_specs(source_streams),
         "provenance": {
@@ -367,7 +367,7 @@ def build_isaac_pack_spec(
         },
         "capture_backend": {
             "build": backend_build,
-            "sensor_physics_smoke_receipt_sha256": smoke_sha256,
+            "sensor_physics_smoke_receipt_identity": smoke_identity,
         },
     }
     structural = validate_isaac_pack_spec(payload)
@@ -400,7 +400,7 @@ def pack_spec_for_capture(
         public_task=_object(capture / "public_task.json", label="public_task.json"),
         observation_abi=_object(abi_path, label="observation ABI"),
         source_streams=inspect_candidate_pack_streams(capture),
-        capture_receipt_sha256=_sha256_file(receipt_path),
+        capture_receipt_identity=_identity_file(receipt_path),
         observation_abi_source=abi_source,
         dataset_version=dataset_version,
         episode_id=episode_id,
@@ -417,7 +417,7 @@ def write_pack_spec(
     episode_id: str | None = None,
     scene_asset_license_status: str = "pending",
 ) -> str:
-    """Atomically write a new external pack spec and return its file SHA-256."""
+    """Atomically write a new external pack spec and return its file IDENTITY."""
 
     destination = output_path.expanduser().resolve()
     if destination.exists():
@@ -455,7 +455,7 @@ def write_pack_spec(
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
-    return _sha256_file(destination)
+    return _identity_file(destination)
 
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -493,7 +493,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "status": "written",
                 "formal_benchmark_admission": False,
                 "output": str(args.output.expanduser().resolve()),
-                "pack_spec_sha256": digest,
+                "pack_spec_identity": digest,
             },
             indent=2,
             sort_keys=True,

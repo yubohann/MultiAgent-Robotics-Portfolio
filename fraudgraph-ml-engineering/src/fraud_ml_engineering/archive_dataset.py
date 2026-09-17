@@ -85,7 +85,7 @@ ARCHIVE_FEATURE_LEAKAGE_GUARD_COLUMNS = frozenset(
 def _maybe_import_pyarrow_parquet():
     try:
         import pyarrow.parquet as pq
-    except Exception:  # pragma: no cover - optional dependency
+    except (ImportError, OSError):  # pragma: no cover - optional dependency
         return None
     return pq
 
@@ -110,8 +110,7 @@ def _normalize_column_name(name: object) -> str:
 
 def _normalize_relation_name(raw: object) -> str | None:
     text = _normalize_column_name(raw)
-    if text.startswith("type_"):
-        text = text[5:]
+    text = text.removeprefix("type_")
     compact = text.replace("_", "")
     if compact in RELATION_NAME_MAP:
         return RELATION_NAME_MAP[compact]
@@ -130,7 +129,7 @@ def _safe_json_loads(value: Any) -> Any:
         return None
     try:
         return json.loads(text)
-    except Exception:
+    except (TypeError, ValueError):
         return None
 
 
@@ -223,7 +222,7 @@ def _load_archive_table(
                 "path": str(parquet_path),
                 "max_rows": None if max_rows is None else int(max_rows),
             }
-        except Exception as error:
+        except (ImportError, OSError, ValueError) as error:
             print(
                 f"[WARN] Failed to read archive parquet for {table_name}: {error}. "
                 f"Falling back to preview CSV: {preview_path}"
@@ -263,10 +262,10 @@ def _load_archive_users_for_transactions(
                     "source": "parquet_overlap",
                     "path": str(parquet_path),
                     "max_rows": None if max_rows is None else int(max_rows),
-                    "candidate_addresses": int(len(candidate_addresses)),
-                    "matched_rows": int(len(frame)),
+                    "candidate_addresses": len(candidate_addresses),
+                    "matched_rows": len(frame),
                 }
-        except Exception as error:
+        except (ImportError, OSError, ValueError) as error:
             print(
                 f"[WARN] Failed to load archive users by transaction overlap: {error}. "
                 f"Falling back to standard archive table loading."
@@ -384,11 +383,11 @@ def _prepare_users_frame(frame: pd.DataFrame) -> pd.DataFrame:
                     sent += 1.0 if bool(item.get("is_sender", False)) else 0.0
                     try:
                         values.append(abs(float(item.get("value (ETH)", item.get("value_eth", 0.0)) or 0.0)))
-                    except Exception:
+                    except (TypeError, ValueError):
                         values.append(0.0)
                     try:
                         gas_used_values.append(float(item.get("gas_used", 0.0) or 0.0))
-                    except Exception:
+                    except (TypeError, ValueError):
                         gas_used_values.append(0.0)
                     protocol_name = str(item.get("protocol_name", "")).strip().lower()
                     if protocol_name:
@@ -474,7 +473,7 @@ def _build_archive_event_tensors(
     transactions: pd.DataFrame,
     history_len: int = ARCHIVE_EVENT_SEQUENCE_LENGTH,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    num_nodes = int(len(users))
+    num_nodes = len(users)
     sequence_length = max(int(history_len), 1)
     event_dim = 5 + len(ARCHIVE_EVENT_RELATIONS)
     event_sequence = np.zeros((num_nodes, sequence_length, event_dim), dtype=np.float32)
@@ -610,7 +609,7 @@ def _select_user_sample(
             labels=False,
             duplicates="drop",
         ).astype(int)
-    except Exception:
+    except (TypeError, ValueError):
         selection["activity_bin"] = 0
 
     sampled_indices: list[int] = []
@@ -834,8 +833,8 @@ def _stratified_split_masks(labels: np.ndarray, seed: int) -> tuple[torch.Tensor
             test_mask[indices[2:]] = True
             continue
 
-        train_count = max(1, int(round(count * 0.70)))
-        valid_count = max(1, int(round(count * 0.15)))
+        train_count = max(1, round(count * 0.70))
+        valid_count = max(1, round(count * 0.15))
         if train_count + valid_count >= count:
             train_count = max(1, count - 2)
             valid_count = 1
@@ -913,7 +912,7 @@ def _build_synthetic_edge_dict(
             torch.from_numpy(homo_dst),
         )
     }
-    relation_edge_counts: dict[str, int] = {"homo": int(len(homo_src))}
+    relation_edge_counts: dict[str, int] = {"homo": len(homo_src)}
 
     for relation in SUPPORTED_RELATIONS:
         relation_nodes = np.flatnonzero(users[f"type_{relation}"].to_numpy(dtype=np.float64) > 0.0)
@@ -932,14 +931,14 @@ def _build_synthetic_edge_dict(
             torch.from_numpy(relation_src),
             torch.from_numpy(relation_dst),
         )
-        relation_edge_counts[relation] = int(len(relation_src))
+        relation_edge_counts[relation] = len(relation_src)
 
     if len(edge_dict) == 1:
         edge_dict[(NODE_TYPE, "transfer", NODE_TYPE)] = (
             torch.from_numpy(homo_src.copy()),
             torch.from_numpy(homo_dst.copy()),
         )
-        relation_edge_counts["transfer"] = int(len(homo_src))
+        relation_edge_counts["transfer"] = len(homo_src)
     return edge_dict, relation_edge_counts, "synthetic_user_graph"
 
 
@@ -1027,7 +1026,7 @@ def load_archive_dataset(
                 torch.from_numpy(dst_nodes.astype(np.int64)),
             )
         }
-        relation_edge_counts = {"homo": int(len(src_nodes))}
+        relation_edge_counts = {"homo": len(src_nodes)}
         for relation in SUPPORTED_RELATIONS:
             mask = transactions["relation_type"] == relation
             if not bool(mask.any()):
@@ -1036,8 +1035,8 @@ def load_archive_dataset(
             relation_dst = torch.from_numpy(dst_nodes[mask.to_numpy()].astype(np.int64))
             edge_dict[(NODE_TYPE, f"{relation}_out", NODE_TYPE)] = (relation_src, relation_dst)
             edge_dict[(NODE_TYPE, f"{relation}_in", NODE_TYPE)] = (relation_dst, relation_src)
-            relation_edge_counts[f"{relation}_out"] = int(len(relation_src))
-            relation_edge_counts[f"{relation}_in"] = int(len(relation_src))
+            relation_edge_counts[f"{relation}_out"] = len(relation_src)
+            relation_edge_counts[f"{relation}_in"] = len(relation_src)
 
         if len(edge_dict) == 1:
             edge_dict[(NODE_TYPE, "transfer_out", NODE_TYPE)] = (
@@ -1048,8 +1047,8 @@ def load_archive_dataset(
                 torch.from_numpy(dst_nodes.astype(np.int64)),
                 torch.from_numpy(src_nodes.astype(np.int64)),
             )
-            relation_edge_counts["transfer_out"] = int(len(src_nodes))
-            relation_edge_counts["transfer_in"] = int(len(src_nodes))
+            relation_edge_counts["transfer_out"] = len(src_nodes)
+            relation_edge_counts["transfer_in"] = len(src_nodes)
 
     graph = dgl.heterograph(edge_dict, num_nodes_dict={NODE_TYPE: len(users)})
     graph.nodes[NODE_TYPE].data["feature"] = torch.from_numpy(feature_matrix)
@@ -1125,7 +1124,6 @@ def load_archive_dataset(
         clients.append(
             ClientShard(
                 client_id=client_id,
-                owned_global_nodes=owned_nodes,
                 subgraph=subgraph,
                 train_nodes=local_train_nodes,
             )
@@ -1151,7 +1149,7 @@ def load_archive_dataset(
         "feature_columns": feature_columns,
         "feature_dim": int(feature_matrix.shape[1]),
         "num_nodes": int(graph.num_nodes(NODE_TYPE)),
-        "num_clients": int(len(clients)),
+        "num_clients": len(clients),
         "relation_edge_counts": relation_edge_counts,
         "graph_source": graph_source,
         "train_nodes": int(graph.nodes[NODE_TYPE].data["train_mask"].sum().item()),

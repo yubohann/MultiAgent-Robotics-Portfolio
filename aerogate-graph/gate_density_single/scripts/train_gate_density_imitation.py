@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import replace
 import json
-from pathlib import Path
 import random
 import sys
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -56,34 +56,34 @@ def _sample_minibatch(
 def main() -> None:
     _bootstrap_imports()
 
-    from gate_density_single.scripts.run_gate_density_eval import (
-        ALLOWED_GATE_COUNTS,
-        ALLOWED_GATE_LAYOUT_VERSIONS,
-        ALLOWED_SEEDS,
+    from gate_density_single.core.controller import GateDensityController
+    from gate_density_single.core.eval_support import (
         DRONE_RADIUS_M,
+        GOAL_RADIUS_M,
+        SAFETY_MARGIN_M,
+        build_gate_obstacle_map,
+    )
+    from gate_density_single.core.gate_layout import (
+        ALLOWED_GATE_LAYOUT_VERSIONS,
         GATE_HALF_WIDTH_M,
         GATE_POST_RADIUS_M,
-        GOAL_RADIUS_M,
-        GOAL_XYZ,
-        MAX_EPISODE_STEPS,
-        SAFETY_MARGIN_M,
-        START_XYZ,
-        WORLD_X_BOUNDS_M,
-        WORLD_Y_BOUNDS_M,
-        GateDensityController,
-        _build_gate_obstacle_map,
-        _density_adaptive_controller_profile,
         _generate_gate_layout,
         _layout_profile,
         _moving_gate_centers,
         _moving_gate_swept_clearance_m,
         _resolve_moving_gate_speed_hz,
     )
+    from gate_density_single.scripts.run_gate_density_eval import (
+        ALLOWED_GATE_COUNTS,
+        ALLOWED_SEEDS,
+        MAX_EPISODE_STEPS,
+        _density_adaptive_controller_profile,
+    )
+    from shared.core.dynamic_gate_density_2d import MAX_DRONE_COMMAND_ACCEL_MPS2, MAX_DRONE_COMMAND_SPEED_MPS
     from single_gate.configs.experiment_config import SINGLE_EXPERIMENT_CONFIG
     from single_gate.env.single_gate_env import SingleGate2DEnv
     from single_gate.graph_rl.graph_flashsac import GraphFlashSACAgent as GraphSACAgent
     from single_gate.training import validate_single_checkpoint_compatibility
-    from shared.core.dynamic_gate_density_2d import MAX_DRONE_COMMAND_ACCEL_MPS2, MAX_DRONE_COMMAND_SPEED_MPS
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-checkpoint", type=Path, required=True)
@@ -240,7 +240,7 @@ def main() -> None:
                 random_yaw=True,
                 layout_version=str(args.gate_layout_version),
             )
-            obstacle_map = _build_gate_obstacle_map(gate_centers_xy, gate_yaws)
+            obstacle_map = build_gate_obstacle_map(gate_centers_xy, gate_yaws)
             env_config = replace(
                 SINGLE_EXPERIMENT_CONFIG.environment,
                 fixed_height_m=layout_profile.start_xyz[2],
@@ -335,7 +335,7 @@ def main() -> None:
                             speed_hz=float(moving_gate_speed_hz),
                             layout_version=str(args.gate_layout_version),
                         )
-                        env.obstacle_map = _build_gate_obstacle_map(moved_centers, gate_yaws)
+                        env.obstacle_map = build_gate_obstacle_map(moved_centers, gate_yaws)
                         observation = env._build_observation()
                     action = controller.act(observation, step=step)
                     episode_observations.append({name: value.copy() for name, value in observation.items()})
@@ -364,7 +364,7 @@ def main() -> None:
                             gate_yaws=gate_yaws,
                             drone_radius_m=DRONE_RADIUS_M,
                         )
-                        endpoint_clearance_next_m = _build_gate_obstacle_map(
+                        endpoint_clearance_next_m = build_gate_obstacle_map(
                             next_moved_centers,
                             gate_yaws,
                         ).min_signed_distance(next_position_xy, drone_radius_m=DRONE_RADIUS_M)
@@ -513,7 +513,7 @@ def main() -> None:
     )
     probe_env = SingleGate2DEnv(
         env_config=probe_env_config,
-        obstacle_map=_build_gate_obstacle_map(probe_gate_centers_xy, probe_gate_yaws),
+        obstacle_map=build_gate_obstacle_map(probe_gate_centers_xy, probe_gate_yaws),
     )
     agent = GraphSACAgent.from_defaults(obs_shapes=probe_env.observation_shapes, device=args.device, seed=int(args.seed))
     base_metadata = agent.load_checkpoint(args.base_checkpoint)
@@ -522,7 +522,7 @@ def main() -> None:
 
     sample_count = len(observations)
     losses: list[float] = []
-    for update_idx in range(int(args.train_updates)):
+    for _update_idx in range(int(args.train_updates)):
         batch_size = min(int(args.batch_size), sample_count)
         batch_indices = np.random.randint(0, sample_count, size=(batch_size,), dtype=np.int64)
         batch_obs_np, batch_action_np = _sample_minibatch(

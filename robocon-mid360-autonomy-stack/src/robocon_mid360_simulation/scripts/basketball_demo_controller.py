@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic two-robot basketball demonstration controller.
-
-Robot motion goes through the normal chassis command topics, and the visible
-ball is scripted through the Gazebo SetEntityState service so the pass and shot
-stay repeatable.
-"""
+"""Deterministic two-robot basketball demonstration controller."""
 
 from __future__ import annotations
 
@@ -105,10 +100,8 @@ class BasketballDemoController(Node):
         request.state.reference_frame = "world"
         self.ball_state_future = self.set_state.call_async(request)
 
-    def _pose_xy(self, name: str, fallback: tuple[float, float]) -> tuple[float, float]:
-        pose = self.models.get(name)
-        if pose is None:
-            return fallback
+    def _pose_xy(self, name: str) -> tuple[float, float]:
+        pose = self.models[name]
         return pose.position.x, pose.position.y
 
     def _drive(self, publisher, x: float = 0.0, y: float = 0.0, yaw: float = 0.0) -> None:
@@ -168,9 +161,7 @@ class BasketballDemoController(Node):
         return "SHOT_SUCCESS"
 
     def _tick(self) -> None:
-        # The launch can outlast the shell's initial sleep under WSL, so the
-        # evidence timeline starts once both robots, the ball and the state
-        # service are live.
+        # The timeline starts once both robots, the ball and the state service are live.
         required = {"robocon25_robot1", "robocon25_robot2", "basketball"}
         if self.start_time is None:
             if not required.issubset(self.models) or not self.set_state.service_is_ready():
@@ -182,7 +173,7 @@ class BasketballDemoController(Node):
                 return
             self.start_time = time.monotonic()
             self.initial_robot_xy = {
-                name: self._pose_xy(name, (0.0, 0.0))
+                name: self._pose_xy(name)
                 for name in ("robocon25_robot1", "robocon25_robot2")
             }
             robot1_start = self.initial_robot_xy["robocon25_robot1"]
@@ -195,8 +186,8 @@ class BasketballDemoController(Node):
             self._emit(state, "state_entered")
             self.last_state = state
 
-        r1x, r1y = self._pose_xy("robocon25_robot1", (-3.0, -1.35))
-        r2x, r2y = self._pose_xy("robocon25_robot2", (2.2, 1.10))
+        r1x, r1y = self._pose_xy("robocon25_robot1")
+        r2x, r2y = self._pose_xy("robocon25_robot2")
         if state == "ROBOT1_DRIBBLE":
             target = self.robot1_dribble_target or (r1x + 2.40, r1y)
             self._drive_to_xy(self.robot1_cmd, r1x, r1y, target)
@@ -267,7 +258,7 @@ class BasketballDemoController(Node):
             )
             shot_t = flight_elapsed / max(1e-6, self.shot_flight_duration)
             sx, sy, sz = self.shot_start_xyz or (r2x + 0.44, r2y, 0.42)
-            ex, ey, ez = self.shot_target
+            ex, ey, _ez = self.shot_target
             gravity = 9.81
             rise_time = math.sqrt(2.0 * (self.shot_apex_z - sz) / gravity)
             launch_vz = gravity * rise_time
@@ -298,23 +289,21 @@ class BasketballDemoController(Node):
     def _finish(self) -> None:
         if self.final_hold_started is None or time.monotonic() - self.final_hold_started < 1.0:
             return
-        # A dense Gazebo ray workload can delay the final service response, so
-        # hold for a bounded grace period before the manifest records both the
-        # observed model pose and the commanded target.
+        # Hold for a bounded grace period while the final ball-state response arrives.
         if (self.ball_state_future is not None and not self.ball_state_future.done()
                 and time.monotonic() - self.final_hold_started < 5.0):
             return
         self._drive(self.robot1_cmd)
         self._drive(self.robot2_cmd)
         final_robot_xy = {
-            name: self._pose_xy(name, (0.0, 0.0))
+            name: self._pose_xy(name)
             for name in ("robocon25_robot1", "robocon25_robot2")
         }
         robot_motion = {
-            name: round(math.dist(self.initial_robot_xy.get(name, (0.0, 0.0)), final_robot_xy[name]), 3)
+            name: round(math.dist(self.initial_robot_xy[name], final_robot_xy[name]), 3)
             for name in final_robot_xy
         }
-        ball = self.models.get("basketball", self.ball_pose)
+        ball = self.models["basketball"]
         ball_error = math.dist(
             (ball.position.x, ball.position.y, ball.position.z), self.shot_target)
         commanded_ball_error = math.dist(

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import sys
 import tempfile
@@ -10,13 +9,13 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.isaac_smoke import (  # noqa: E402
+from rivermark_benchmark._identity import IdentityAccumulator
+from rivermark_benchmark.isaac_smoke import (
     ISAAC_SMOKE_SCHEMA,
     RUNTIME_AUDIT_SCHEMA,
     SMOKE_SENSOR_NAMES,
@@ -63,13 +62,13 @@ def _receipt() -> dict:
         "resource_probe_profile": "full",
         "search_target_prim_count": 0,
         "sensors": {name: True for name in ("rgb", "depth", "semantic", "lidar", "imu", "contact")},
-        "runtime_lock_sha256": "a" * 64,
+        "runtime_lock_identity": "a" * 16,
         "runtime_profile_id": "test-profile",
         "runtime_audit": {
             "schema": RUNTIME_AUDIT_SCHEMA,
             "status": "passed",
             "profile_id": "test-profile",
-            "runtime_lock_sha256": "a" * 64,
+            "runtime_lock_identity": "a" * 16,
             "configuration_observation": "public_runtime_environment_and_locked_assets",
             "observed": {
                 "configuration_observation": "public_runtime_environment_and_locked_assets",
@@ -85,7 +84,7 @@ def _receipt() -> dict:
             "xr": False,
             "distributed": False,
             "kit_args": "",
-            "experience": {"path": "apps/smoke.kit", "sha256": "b" * 64},
+            "experience": {"path": "apps/smoke.kit", "identity": "b" * 16},
         },
         "simulation": {
             "device": "cuda:0",
@@ -95,8 +94,8 @@ def _receipt() -> dict:
             "render_interval": 1,
             "use_fabric": True,
             "config_digests": {
-                name: {"settings": {}, "sha256": value}
-                for name, value in (("render", "c" * 64), ("fabric", "d" * 64), ("physx", "e" * 64))
+                name: {"settings": {}, "identity": value}
+                for name, value in (("render", "c" * 16), ("fabric", "d" * 16), ("physx", "e" * 16))
             },
         },
         "runtime_observed": {
@@ -108,11 +107,11 @@ def _receipt() -> dict:
             "render_interval": 1,
             "use_fabric": True,
             "rtx_sensors_active": True,
-            "config_digests": {"render": "c" * 64, "fabric": "d" * 64, "physx": "e" * 64},
+            "config_digests": {"render": "c" * 16, "fabric": "d" * 16, "physx": "e" * 16},
             "configuration_observation": "public_simulation_context_and_locked_cfg",
         },
-        "sensor_last_frame_sha256": {
-            name: "f" * 64
+        "sensor_last_frame_identity": {
+            name: "f" * 16
             for name in ("rgb", "depth", "semantic", "lidar", "imu", "contact")
         },
         "source": {"source_worktree_dirty": False},
@@ -284,7 +283,7 @@ class IsaacSmokeTests(unittest.TestCase):
                 receipt["physics_steps"] = 0
                 receipt["step_trace"] = []
                 receipt["sensors"] = sensors
-                receipt["sensor_last_frame_sha256"] = {}
+                receipt["sensor_last_frame_identity"] = {}
                 receipt["runtime_observed"]["rtx_sensors_active"] = rtx_active
                 implementations = {
                     "onboard": "tiled_camera" if profile == "onboard_tiled_only" else (
@@ -303,13 +302,13 @@ class IsaacSmokeTests(unittest.TestCase):
                 receipt["resource_probe_request"] = copy.deepcopy(receipt["resource_probe"])
                 self.assertEqual(validate_smoke_receipt(receipt), ())
 
-        receipt["sensor_last_frame_sha256"] = {"rgb": "f" * 64}
+        receipt["sensor_last_frame_identity"] = {"rgb": "f" * 16}
         self.assertIn(
             "reset-only resource probes must not retain sensor-frame digests",
             validate_smoke_receipt(receipt),
         )
 
-        receipt["sensor_last_frame_sha256"] = {}
+        receipt["sensor_last_frame_identity"] = {}
         receipt["resource_probe"]["camera_render_products"]["overview"] = False
         self.assertIn(
             "resource probe render-product contract is not bound",
@@ -328,7 +327,7 @@ class IsaacSmokeTests(unittest.TestCase):
         receipt["physics_steps"] = 0
         receipt["step_trace"] = []
         receipt["sensors"] = {name: True for name in SMOKE_SENSOR_NAMES}
-        receipt["sensor_last_frame_sha256"] = {}
+        receipt["sensor_last_frame_identity"] = {}
         receipt["runtime_observed"]["rtx_sensors_active"] = True
         receipt["resource_probe"] = {
             "kind": "reset_only",
@@ -356,7 +355,7 @@ class IsaacSmokeTests(unittest.TestCase):
             "imu": True,
             "contact": True,
         }
-        receipt["sensor_last_frame_sha256"] = {}
+        receipt["sensor_last_frame_identity"] = {}
         receipt["runtime_observed"]["rtx_sensors_active"] = False
         receipt["resource_probe"] = {
             "kind": "reset_only",
@@ -384,20 +383,20 @@ class IsaacSmokeTests(unittest.TestCase):
         errors = validate_smoke_receipt(receipt)
         self.assertIn("live simulation device is not bound", errors)
 
-    def test_runtime_audit_must_bind_schema_profile_and_lock_hash(self) -> None:
+    def test_runtime_audit_must_bind_schema_profile_and_lock_identity(self) -> None:
         receipt = _receipt()
         receipt["runtime_audit"]["schema"] = "wrong-schema"
         receipt["runtime_audit"]["profile_id"] = "other-profile"
-        receipt["runtime_audit"]["runtime_lock_sha256"] = "b" * 64
+        receipt["runtime_audit"]["runtime_lock_identity"] = "b" * 16
         errors = validate_smoke_receipt(receipt)
         self.assertIn("runtime lock audit schema is not bound", errors)
-        self.assertIn("runtime lock audit hash is not bound", errors)
+        self.assertIn("runtime lock audit identity is not bound", errors)
         self.assertIn("runtime lock audit profile is not bound", errors)
 
     def test_runtime_audit_and_sensor_digests_are_not_self_report_only(self) -> None:
         receipt = _receipt()
         receipt["runtime_audit"]["issues"] = [{"path": "$.assets", "message": "drift"}]
-        receipt["sensor_last_frame_sha256"].pop("lidar")
+        receipt["sensor_last_frame_identity"].pop("lidar")
         errors = validate_smoke_receipt(receipt)
         self.assertIn("runtime lock audit contains unresolved issues", errors)
         self.assertIn("last-frame sensor digests are incomplete or malformed", errors)
@@ -523,9 +522,8 @@ class IsaacSmokeTests(unittest.TestCase):
             with patch(
                 "rivermark_benchmark.isaac_smoke._run_target_free_smoke_checked",
                 side_effect=fail_after_reservation,
-            ):
-                with self.assertRaisesRegex(IsaacSmokeError, "pre-launch setup failed"):
-                    run_target_free_smoke(args)
+            ), self.assertRaisesRegex(IsaacSmokeError, "pre-launch setup failed"):
+                run_target_free_smoke(args)
 
             receipt_path = output_dir / "isaac_smoke_receipt.json"
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
@@ -533,8 +531,8 @@ class IsaacSmokeTests(unittest.TestCase):
             self.assertTrue(receipt["prelaunch_marker"])
             self.assertEqual(receipt["failure"]["type"], "IsaacSmokeError")
             self.assertEqual(
-                (output_dir / "isaac_smoke_receipt.sha256").read_text(encoding="ascii"),
-                f"{hashlib.sha256(receipt_path.read_bytes()).hexdigest()}  isaac_smoke_receipt.json\n",
+                (output_dir / "isaac_smoke_receipt.identity").read_text(encoding="ascii"),
+                f"{IdentityAccumulator(receipt_path.read_bytes()).hexdigest()}  isaac_smoke_receipt.json\n",
             )
 
     def test_system_exit_terminalizes_a_reserved_smoke_receipt(self) -> None:
@@ -555,9 +553,8 @@ class IsaacSmokeTests(unittest.TestCase):
             with patch(
                 "rivermark_benchmark.isaac_smoke._run_target_free_smoke_checked",
                 side_effect=exit_after_reservation,
-            ):
-                with self.assertRaises(SystemExit):
-                    run_target_free_smoke(args)
+            ), self.assertRaises(SystemExit):
+                run_target_free_smoke(args)
 
             receipt = json.loads(
                 (output_dir / "isaac_smoke_receipt.json").read_text(encoding="utf-8")
@@ -601,8 +598,8 @@ class IsaacSmokeTests(unittest.TestCase):
             )
             self.assertEqual(receipt["failure"]["type"], "RuntimeError")
             self.assertEqual(
-                (output_dir / "isaac_smoke_receipt.sha256").read_text(encoding="ascii"),
-                f"{hashlib.sha256(receipt_path.read_bytes()).hexdigest()}  isaac_smoke_receipt.json\n",
+                (output_dir / "isaac_smoke_receipt.identity").read_text(encoding="ascii"),
+                f"{IdentityAccumulator(receipt_path.read_bytes()).hexdigest()}  isaac_smoke_receipt.json\n",
             )
 
     def test_prelaunch_commit_rejection_binds_telemetry_and_blocks_source_activation(self) -> None:
@@ -679,29 +676,36 @@ class IsaacSmokeTests(unittest.TestCase):
                 ["smoke_start", "preflight", "before_app_launcher"],
             ),
         ):
-            with self.subTest(phase=expected_phase), tempfile.TemporaryDirectory() as temporary:
-                args.output_dir = Path(temporary) / "smoke"
-                rejected_snapshot = snapshots[expected_phase]
-                with patch("rivermark_benchmark.isaac_smoke.ResourceTelemetry", return_value=Telemetry(snapshots)), patch(
+            with (
+                self.subTest(phase=expected_phase),
+                tempfile.TemporaryDirectory() as temporary,
+                patch("rivermark_benchmark.isaac_smoke.ResourceTelemetry", return_value=Telemetry(snapshots)),
+                patch(
                     "rivermark_benchmark.isaac_smoke.detect_source_provenance",
                     return_value=source,
-                ), patch(
+                ),
+                patch(
                     "rivermark_benchmark.isaac_smoke.load_runtime_lock",
                     return_value=lock,
-                ), patch(
-                    "rivermark_benchmark.isaac_smoke.runtime_lock_sha256",
-                    return_value="a" * 64,
-                ), patch(
+                ),
+                patch(
+                    "rivermark_benchmark.isaac_smoke.runtime_lock_identity",
+                    return_value="a" * 16,
+                ),
+                patch(
                     "rivermark_benchmark.isaac_smoke.audit_runtime_lock",
                     return_value={"status": "passed"},
-                ), patch(
+                ),
+                patch(
                     "rivermark_benchmark.isaac_smoke._windows_system_commit_snapshot",
                     side_effect=AssertionError("provided telemetry snapshot must be used"),
-                ), patch(
-                    "rivermark_benchmark.isaac_smoke._activate_local_isaaclab_source"
-                ) as activate_source:
-                    with self.assertRaisesRegex(IsaacSmokeError, f"at {expected_phase}"):
-                        run_target_free_smoke(args)
+                ),
+                patch("rivermark_benchmark.isaac_smoke._activate_local_isaaclab_source") as activate_source,
+            ):
+                args.output_dir = Path(temporary) / "smoke"
+                rejected_snapshot = snapshots[expected_phase]
+                with self.assertRaisesRegex(IsaacSmokeError, f"at {expected_phase}"):
+                    run_target_free_smoke(args)
 
                 activate_source.assert_not_called()
                 receipt = json.loads(
@@ -743,13 +747,12 @@ class IsaacSmokeTests(unittest.TestCase):
         with patch(
             "rivermark_benchmark.isaac_smoke._windows_system_commit_snapshot",
             return_value=after_reset,
-        ):
-            with self.assertRaisesRegex(IsaacSmokeError, "at after_reset"):
-                _check_commit(
-                    threshold_percent=85.0,
-                    phase="after_reset",
-                    system_commit=system_commit,
-                )
+        ), self.assertRaisesRegex(IsaacSmokeError, "at after_reset"):
+            _check_commit(
+                threshold_percent=85.0,
+                phase="after_reset",
+                system_commit=system_commit,
+            )
 
         # The exception path expands the same receipt mapping, so a terminal
         # failure cannot regress to its lower preflight-only observation.

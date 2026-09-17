@@ -16,8 +16,8 @@ def _bootstrap_imports() -> None:
 
 def main() -> None:
     _bootstrap_imports()
-    from single_gate.training import evaluate_checkpoint
     from shared.runtime.artifacts import allocate_replay_artifacts, default_run_name, write_json
+    from single_gate.training import evaluate_checkpoint
 
     parser = argparse.ArgumentParser(description="Evaluate a Graph-FlashSAC checkpoint in the single-agent task.")
     parser.add_argument("--checkpoint", type=str, required=True)

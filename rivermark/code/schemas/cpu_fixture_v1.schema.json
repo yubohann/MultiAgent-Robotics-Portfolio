@@ -4,7 +4,7 @@
   "title": "Rivermark CPU Fixture v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "fixture_id", "dataset_version", "backend", "derived_sample", "formal_benchmark_admission", "episode_manifest", "episode_manifest_sha256", "agent_count", "frame_count", "seed", "claim_boundary", "source_revision", "source_tree_sha256", "source_worktree_dirty"],
+  "required": ["schema", "fixture_id", "dataset_version", "backend", "derived_sample", "formal_benchmark_admission", "episode_manifest", "episode_manifest_identity", "agent_count", "frame_count", "seed", "claim_boundary", "source_revision", "source_tree_identity", "source_worktree_dirty"],
   "properties": {
     "schema": {"const": "org.rivermark.benchmark.cpu-fixture.v1"},
     "fixture_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
@@ -13,13 +13,13 @@
     "derived_sample": {"const": true},
     "formal_benchmark_admission": {"const": false},
     "episode_manifest": {"type": "string", "minLength": 1},
-    "episode_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "episode_manifest_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
     "agent_count": {"type": "integer", "minimum": 1},
     "frame_count": {"type": "integer", "minimum": 1},
     "seed": {"type": "integer", "minimum": 0},
     "claim_boundary": {"const": "cpu_loader_smoke_only"},
     "source_revision": {"type": "string", "pattern": "^[0-9a-f]{7,64}$"},
-    "source_tree_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_tree_identity": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
     "source_worktree_dirty": {"type": "boolean"}
   }
 }

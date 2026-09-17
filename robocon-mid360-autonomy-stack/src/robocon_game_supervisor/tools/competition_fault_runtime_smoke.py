@@ -31,8 +31,6 @@ class CompetitionFaultSmoke(Node):
         self.target_statuses: list[dict[str, Any]] = []
         self.command_sent: set[str] = set()
         self.heartbeat_sequence = 0
-        self.heartbeat_enabled = mode == "protocol"
-        self.target_valid_commanded = mode == "protocol"
         self.failure_reason = ""
         self.events = (run_dir / "fault_telemetry.jsonl").open("w", encoding="utf-8")
 
@@ -59,11 +57,8 @@ class CompetitionFaultSmoke(Node):
         self.create_subscription(String, "/robocon/action/request", self._action_callback, 10)
         self.create_subscription(String, "/robocon/team/ack", self._ack_callback, 10)
         self.create_subscription(String, "/robocon/perception/target_status", self._target_status_callback, 10)
-        self.create_subscription(Bool, "/robocon/perception/target_valid", self._target_valid_callback, 10)
         self.latest_game_state = "BOOT"
-        self.latest_task_state: dict[str, Any] = {}
         self.first_game_state_at: float | None = None
-        self.latest_target_valid = False
         self.create_timer(0.05, self._tick)
 
     def _write(self, payload: dict[str, Any]) -> None:
@@ -77,7 +72,6 @@ class CompetitionFaultSmoke(Node):
         except (TypeError, json.JSONDecodeError):
             return
         self.latest_game_state = str(payload.get("state", "unknown"))
-        self.latest_task_state = dict(payload.get("task_state", {}))
         if self.first_game_state_at is None:
             self.first_game_state_at = time.monotonic()
         self.states.append(payload)
@@ -114,9 +108,6 @@ class CompetitionFaultSmoke(Node):
             return
         self.target_statuses.append(payload)
         self._write({"kind": "target_status", "payload": payload})
-
-    def _target_valid_callback(self, message: Bool) -> None:
-        self.latest_target_valid = bool(message.data)
 
     def _set_phase(self, phase: str) -> None:
         self.phase = phase
@@ -247,10 +238,12 @@ class CompetitionFaultSmoke(Node):
             self._finish("failed", f"timed out in phase {self.phase}")
             return
         self._publish_signals()
-        if self.mode == "mechanism":
-            if self.phase in {"WAITING_FOR_NODES", "ACTIVE", "TARGET_INVALID", "RESTORE_TARGET"}:
-                if self.phase != "TARGET_INVALID":
-                    self._publish_target(0.90)
+        if (
+            self.mode == "mechanism"
+            and self.phase in {"WAITING_FOR_NODES", "ACTIVE", "TARGET_INVALID", "RESTORE_TARGET"}
+            and self.phase != "TARGET_INVALID"
+        ):
+            self._publish_target(0.90)
 
         if self.phase == "WAITING_FOR_NODES":
             signal_subscriptions_ready = all(
@@ -288,7 +281,6 @@ class CompetitionFaultSmoke(Node):
                     return
                 self._publish_heartbeat(duplicate=True)
                 self._publish_heartbeat(expired=True)
-                self.heartbeat_enabled = False
                 self._set_phase("WAIT_HEARTBEAT_RECOVERY")
             else:
                 self._set_phase("TARGET_INVALID")
@@ -324,9 +316,8 @@ class CompetitionFaultSmoke(Node):
             if self._mechanism_passed():
                 self._finish("passed")
             return
-        if self.phase == "WAIT_HEARTBEAT_RECOVERY":
-            if self._protocol_passed():
-                self._finish("passed")
+        if self.phase == "WAIT_HEARTBEAT_RECOVERY" and self._protocol_passed():
+            self._finish("passed")
 
 
 def main() -> int:

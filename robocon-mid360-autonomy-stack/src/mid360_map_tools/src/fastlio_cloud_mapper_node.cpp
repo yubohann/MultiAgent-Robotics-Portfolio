@@ -38,7 +38,7 @@ struct VoxelKey
   }
 };
 
-struct VoxelKeyHash
+struct VoxelKeyTraits
 {
   std::size_t operator()(const VoxelKey & key) const
   {
@@ -263,7 +263,7 @@ private:
       return points;
     }
 
-    std::unordered_map<VoxelKey, Accumulator, VoxelKeyHash> grid;
+    std::unordered_map<VoxelKey, Accumulator, VoxelKeyTraits> grid;
     grid.reserve(points.size());
 
     for (const auto & point : points) {
@@ -312,7 +312,7 @@ private:
       return points;
     }
 
-    std::unordered_map<VoxelKey, std::vector<std::size_t>, VoxelKeyHash> grid;
+    std::unordered_map<VoxelKey, std::vector<std::size_t>, VoxelKeyTraits> grid;
     grid.reserve(points.size());
     for (std::size_t i = 0; i < points.size(); ++i) {
       grid[makeKey(points[i], radius_filter_)].push_back(i);
@@ -686,7 +686,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr reliable_scan_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_pub_;
   rclcpp::TimerBase::SharedPtr save_timer_;
-  std::unordered_map<VoxelKey, MapVoxel, VoxelKeyHash> map_;
+  std::unordered_map<VoxelKey, MapVoxel, VoxelKeyTraits> map_;
 
   std::string input_topic_;
   std::string odom_topic_;

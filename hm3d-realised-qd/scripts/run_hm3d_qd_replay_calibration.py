@@ -16,11 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from aerocity_method.contracts import FORMAL_FLEET_SIZE  # noqa: E402
-from aerocity_method.contracts.io import canonical_sha256  # noqa: E402
 from aerocity_method.runtime.hm3d_realised_qd import (  # noqa: E402
     HM3D_QD_CALIBRATION_INTENT_MODES,
-    RealisedQDDescriptor,
     OutcomeQDFeatureVector,
+    RealisedQDDescriptor,
     audit_pre_registered_qd_descriptor_families,
     audit_realised_qd_calibration_mode_contrasts,
     audit_realised_qd_reproducibility,
@@ -173,9 +172,9 @@ def _record_manifests(payload: dict[str, Any]) -> tuple[str, ...]:
         footprint = row.get("public_new_free_voxel_keys")
         if not isinstance(footprint, list) or not footprint:
             raise ValueError("QD replay calibration requires a non-empty public new-free footprint")
-        value = row.get("candidate_manifest_sha256")
+        value = row.get("candidate_manifest_id")
         if not isinstance(value, str) or len(value) != 64:
-            raise ValueError("QD replay calibration candidate manifest hash is invalid")
+            raise ValueError("QD replay calibration candidate manifest id is invalid")
         int(value, 16)
         manifests.append(value)
     return tuple(manifests)
@@ -194,7 +193,7 @@ def _record_descriptors(payload: dict[str, Any]) -> tuple[tuple[str, RealisedQDD
             raise ValueError("QD replay calibration outcome lacks a realised descriptor")
         descriptors.append(
             (
-                str(row["candidate_manifest_sha256"]),
+                str(row["candidate_manifest_id"]),
                 RealisedQDDescriptor(
                     vertical_motion_ratio=descriptor.get("vertical_motion_ratio"),
                     team_spatial_dispersion=descriptor.get("team_spatial_dispersion"),
@@ -308,7 +307,7 @@ def run_calibration(
     candidate_feature_scenes: list[str] = []
     public_footprints: list[tuple[tuple[int, int, int], ...]] = []
     scene_ids: list[str] = []
-    worker_hashes: list[str] = []
+    worker_ids: list[str] = []
     for key, records in outputs.items():
         first_sequence = _record_manifests(records[0])
         if any(_record_manifests(record) != first_sequence for record in records[1:]):
@@ -317,10 +316,10 @@ def run_calibration(
                 f"case={key[0]}, mode={key[1]}"
             )
         for record in records:
-            recorded_hash = record.get("runtime_record_sha256")
-            if not isinstance(recorded_hash, str) or len(recorded_hash) != 64:
-                raise ValueError("QD replay calibration worker record hash is invalid")
-            worker_hashes.append(recorded_hash)
+            recorded_id = record.get("runtime_record_id")
+            if not isinstance(recorded_id, str) or len(recorded_id) != 64:
+                raise ValueError("QD replay calibration worker record id is invalid")
+            worker_ids.append(recorded_id)
             for manifest, descriptor in _record_descriptors(record):
                 descriptors_by_manifest.setdefault(manifest, []).append(descriptor)
                 mode_labels.append(key[1])
@@ -355,21 +354,14 @@ def run_calibration(
             "a non-redundant pre-registered current descriptor family are required; "
             "it establishes neither a QD task gain nor a P08 or P09 result."
         ),
-        "worker_record_sha256s": sorted(worker_hashes),
+        "worker_record_file_ids": sorted(worker_ids),
         "replay_reproducibility_audit": replay.to_dict(),
         "mode_contrast_audit": mode_contrast.to_dict(),
         "descriptor_family_screen": descriptor_family_screen.to_dict(),
-        "plan_sha256": canonical_sha256(
-            [
-                {
-                    "case_id": plan.case.case_id,
-                    "scene_id": plan.case.scene_id,
-                    "random_key": plan.case.random_key,
-                    "intent_mode": plan.intent_mode,
-                    "repetition": plan.repetition,
-                }
-                for plan in plans
-            ]
+        "plan_file_id": "|".join(
+            f"{plan.case.case_id}:{plan.case.scene_id}:r{plan.case.random_key}:"
+            f"{plan.intent_mode}:{plan.repetition}"
+            for plan in plans
         ),
     }
 

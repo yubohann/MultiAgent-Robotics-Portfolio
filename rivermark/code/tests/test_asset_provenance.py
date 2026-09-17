@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rivermark_benchmark.asset_provenance import (  # noqa: E402
+from rivermark_benchmark._identity import IdentityAccumulator
+from rivermark_benchmark.asset_provenance import (
     LOCAL_ASSETS_SCHEMA,
     AssetProvenanceError,
     audit_local_assets_config,
@@ -24,8 +23,8 @@ from rivermark_benchmark.asset_provenance import (  # noqa: E402
 
 class AssetProvenanceTests(unittest.TestCase):
     @staticmethod
-    def _sha256(path: Path) -> str:
-        return hashlib.sha256(path.read_bytes()).hexdigest()
+    def _identity(path: Path) -> str:
+        return IdentityAccumulator(path.read_bytes()).hexdigest()
 
     def _local_assets_config(self, root: Path) -> tuple[Path, dict[str, object]]:
         assets = root / "installed-assets"
@@ -48,15 +47,15 @@ class AssetProvenanceTests(unittest.TestCase):
             "asset_package_id": "official_isaacsim_assets_5_1",
             "asset_package_version": "Isaac Sim 5.1.x",
             "asset_package_manifest": str(package_manifest),
-            "asset_package_sha256": self._sha256(package_manifest),
+            "asset_package_identity": self._identity(package_manifest),
             "isaaclab_root": str(isaaclab),
             "isaac_python": str(python),
             "city_lite_contract": str(contract),
-            "city_lite_contract_sha256": self._sha256(contract),
+            "city_lite_contract_identity": self._identity(contract),
             "city_lite_layer": str(layer),
-            "city_lite_layer_sha256": self._sha256(layer),
+            "city_lite_layer_identity": self._identity(layer),
             "cf2x_usd": str(cf2x),
-            "cf2x_usd_sha256": self._sha256(cf2x),
+            "cf2x_usd_identity": self._identity(cf2x),
             "cf2x_source_provenance": "Isaac Sim runtime asset; distribution unresolved",
             "license_status": "internal_only",
             "public_redistribution": {
@@ -94,11 +93,11 @@ class AssetProvenanceTests(unittest.TestCase):
                 0,
             )
 
-    def test_byoa_audit_rejects_hash_mismatch_and_public_redistribution(self) -> None:
+    def test_byoa_audit_rejects_identity_mismatch_and_public_redistribution(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config, payload = self._local_assets_config(root)
-            payload["cf2x_usd_sha256"] = "0" * 64
+            payload["cf2x_usd_identity"] = "0" * 16
             redistribution = payload["public_redistribution"]
             assert isinstance(redistribution, dict)
             redistribution["rendered_video"] = True
@@ -106,7 +105,7 @@ class AssetProvenanceTests(unittest.TestCase):
             report = audit_local_assets_config(config, repository_root=root / "repository")
             self.assertEqual(report["status"], "blocked")
             codes = {issue["code"] for issue in report["issues"]}
-            self.assertIn("hash_mismatch", codes)
+            self.assertIn("identity_mismatch", codes)
             self.assertIn("redistribution", codes)
 
     def test_byoa_audit_rejects_runtime_asset_in_repository(self) -> None:
@@ -118,13 +117,13 @@ class AssetProvenanceTests(unittest.TestCase):
             copied_asset = repository_root / "cf2x.usd"
             copied_asset.write_bytes(Path(str(payload["cf2x_usd"])).read_bytes())
             payload["cf2x_usd"] = str(copied_asset)
-            payload["cf2x_usd_sha256"] = self._sha256(copied_asset)
+            payload["cf2x_usd_identity"] = self._identity(copied_asset)
             config.write_text(json.dumps(payload), encoding="utf-8")
             report = audit_local_assets_config(config, repository_root=repository_root)
             self.assertEqual(report["status"], "blocked")
             self.assertIn("repository_asset", {issue["code"] for issue in report["issues"]})
 
-    def test_binary_usdc_marker_is_detected_and_hash_is_complete(self) -> None:
+    def test_binary_usdc_marker_is_detected_and_identity_is_complete(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "cf2x.usd"
             payload = b"PXR-USDC\x00metadata isaac-dev.ov.nvidia.com/I/Robots/Bitcraze/cf2x.usd\x00"
@@ -134,7 +133,7 @@ class AssetProvenanceTests(unittest.TestCase):
             self.assertTrue(report.has_external_references)
             self.assertEqual(report.classification, "nvidia_or_external_runtime_reference")
             self.assertEqual(report.license_status, "unresolved")
-            self.assertEqual(report.sha256, hashlib.sha256(payload).hexdigest())
+            self.assertEqual(report.identity, IdentityAccumulator(payload).hexdigest())
             self.assertEqual(report.references[0]["kind"], "nvidia_isaac_nucleus")
 
     def test_ascii_dsready_reference_is_detected(self) -> None:

@@ -10,22 +10,22 @@ SCENE_CONTRACT_FILENAME = "rivermark_city_lite_scene_contract_v1.json"
 SCENE_CONTRACT_SCHEMA = "md_qd_swarm_t32_rivermark_city_lite_scene_contract_v1"
 SCENE_CONTRACT_GATE_STATUS = "pass_city_lite_static_construction"
 
-SCENE_CONTRACT_SHA256 = "f7837d248b4797592c66d4b8b8bd48380de444eca305b8ef03d297dcf32051ea"
-SCENE_CONTRACT_PAYLOAD_SHA256 = (
-    "1d5838d90c9920a849fd68d4051c81ad519ce0b79fb3cb3ffa2bcb643ac8544d"
+SCENE_CONTRACT_IDENTITY = "f7837d248b479759"
+SCENE_CONTRACT_PAYLOAD_IDENTITY = (
+    "1d5838d90c9920a8"
 )
 
 # These are the exact outputs admitted by the md_qd_swarm v1_r2 static
 # composition contract. That contract is not runtime or dataset admission.
-AUTHORITY_SHA256: Mapping[str, str] = {
+AUTHORITY_IDENTITY: Mapping[str, str] = {
     "rivermark_city_lite_base_v1.usda": (
-        "162dfcf12e1a3f48257fab8c06e1de6b063e63559d3953fca22330750c63c6ad"
+        "162dfcf12e1a3f48"
     ),
     "rivermark_city_lite_structural_props_v1.usda": (
-        "a30874dc3ca4e3919ad0d6281879092cd4146b2a21b71bce269a8c20a5d76f5e"
+        "a30874dc3ca4e391"
     ),
     "hi_fi_search_rescue_rivermark_city_lite_v1.usda": (
-        "c8ec943618322c07f1ce8799e366b5fb984d3b302566b4404892fb50bfa86567"
+        "c8ec943618322c07"
     ),
 }
 

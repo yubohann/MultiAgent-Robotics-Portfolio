@@ -1,11 +1,11 @@
 ﻿from __future__ import annotations
 
-from contextlib import nullcontext
 import math
+from contextlib import nullcontext
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 from torch.utils.checkpoint import checkpoint as activation_checkpoint
 
 TRANSFORMER_BATCH_CHUNK_SIZE = 4_096
@@ -819,7 +819,7 @@ class RelationCapsuleSequenceEncoder(nn.Module):
             dtype=torch.bool,
             device=x.device,
         )
-        pooled_context, attention = _masked_attention_pool(
+        pooled_context, _attention = _masked_attention_pool(
             x,
             valid_mask,
             self.pool_score,
@@ -1031,7 +1031,7 @@ class EventTransformerEncoder(nn.Module):
             use_activation_checkpointing=self.activation_checkpointing,
         )
         x = self.norm(x)
-        pooled_context, attention = _masked_attention_pool(
+        _pooled_context, _attention = _masked_attention_pool(
             x,
             event_mask,
             self.pool_score,

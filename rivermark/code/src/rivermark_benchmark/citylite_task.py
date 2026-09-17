@@ -2,21 +2,22 @@
 
 from __future__ import annotations
 
+import itertools
 import math
-import hashlib
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
+from typing import Any
 
+from ._identity import IdentityAccumulator
 from .citylite_scene import (
     AABB,
     CITY_LITE_TARGET_REGION_A_ID,
     CITY_LITE_TARGET_REGION_B_ID,
     TARGET_REGIONS_W_M,
-    canonical_payload_sha256,
+    canonical_payload_identity,
     coerce_aabb,
     segment_intersects_aabb,
 )
-
 
 # ``v3`` remains the frozen fixed-initial-heading contract used by T1 and the
 # first native-T2 canary.  The yaw-aware v4 form below is deliberately opt-in:
@@ -74,12 +75,7 @@ CAMERA_HEADING_MODELS = frozenset(
 def route_timing_requirements(
     routes_w_m: Sequence[Sequence[Sequence[float]]], *, waypoint_segment_seconds: float
 ) -> dict[str, float | int]:
-    """Return the public velocity lower bounds imposed by a waypoint schedule.
-
-    This is deliberately kinematic: it checks whether a bounded velocity ABI
-    can even express the published route before Isaac allocates a stage.  It
-    does not claim physical trackability, which remains a native canary gate.
-    """
+    """Return the public velocity lower bounds imposed by a waypoint schedule."""
 
     duration = float(waypoint_segment_seconds)
     if not math.isfinite(duration) or duration <= 0.0:
@@ -88,7 +84,7 @@ def route_timing_requirements(
     vertical_required: list[float] = []
     segment_count = 0
     for route in routes_w_m:
-        for start, end in zip(route, route[1:]):
+        for start, end in itertools.pairwise(route):
             delta_x = float(end[0]) - float(start[0])
             delta_y = float(end[1]) - float(start[1])
             delta_z = float(end[2]) - float(start[2])
@@ -115,12 +111,7 @@ def validate_route_timing_feasibility(
     max_vertical_speed_mps: float,
     utilization_limit: float,
 ) -> dict[str, float | int]:
-    """Fail closed when a scheduled route exceeds bounded public actions.
-
-    ``utilization_limit`` reserves a declared fraction of command authority
-    for feedback.  The result is receipt-safe public geometry; callers record
-    it rather than inferring feasibility from a later successful video.
-    """
+    """Stop the run when a scheduled route exceeds bounded public actions."""
 
     values = {
         "max_horizontal_speed_mps": max_horizontal_speed_mps,
@@ -135,7 +126,7 @@ def validate_route_timing_feasibility(
     requirements = route_timing_requirements(
         routes_w_m, waypoint_segment_seconds=waypoint_segment_seconds
     )
-    # These values enter hash-bound public receipts.  Canonicalize the small
+    # These values enter identity-bound public receipts.  Canonicalize the small
     # binary multiplication residue at the contract boundary so equivalent
     # action envelopes do not serialize as different JSON numbers.
     horizontal_budget = round(float(max_horizontal_speed_mps) * float(utilization_limit), 12)
@@ -174,13 +165,7 @@ def target_visibility_execution_window(
     capture_stride: int = TARGET_VISIBILITY_PROTOCOL_CAPTURE_STRIDE,
     waypoint_segment_seconds: float = PUBLIC_ROUTE_WAYPOINT_SEGMENT_SECONDS,
 ) -> dict[str, float | int | str]:
-    """Describe the public route interval represented by retained sensor frames.
-
-    Sampling against every waypoint in a route that a short physical rollout
-    never reaches produces targets that are geometrically visible only in the
-    future.  This frozen window is part of the private-target geometry
-    contract and is checked again by the Isaac capture command.
-    """
+    """Describe the public route interval represented by retained sensor frames."""
 
     if not math.isfinite(float(dt_s)) or float(dt_s) <= 0.0:
         raise ValueError("dt_s must be finite and positive")
@@ -228,7 +213,7 @@ def _point_to_segment_distance_m(
 def _candidate_order_key(seed: int, index: int) -> bytes:
     """Use a documented digest order instead of implementation-dependent RNG."""
 
-    return hashlib.sha256(f"rivermark-private-target:{seed}:{index}".encode("ascii")).digest()
+    return IdentityAccumulator(f"rivermark-private-target:{seed}:{index}".encode("ascii")).digest()
 
 
 def _private_candidate_grid(
@@ -280,13 +265,7 @@ def sample_private_targets(
     yaw_stability_error_rad: float | None = None,
     yaw_settle_margin_s: float | None = None,
 ) -> tuple[dict[str, Any], ...]:
-    """Sample an evaluator-private target cohort under immutable geometry gates.
-
-    The returned coordinates and seed are private evaluator material.  This
-    helper intentionally has no public-task or policy-input side effects.  It
-    uses a digest-defined candidate order so a clean-room evaluator can replay
-    the selection without relying on Python's random implementation.
-    """
+    """Sample an evaluator-private target cohort under immutable geometry gates."""
 
     if isinstance(seed, bool) or not isinstance(seed, int):
         raise TargetSamplingError("seed must be an integer")
@@ -324,7 +303,7 @@ def sample_private_targets(
     segments = tuple(
         (start, end)
         for route in routes_w_m
-        for start, end in zip(route, route[1:])
+        for start, end in itertools.pairwise(route)
     )
     if not segments:
         raise TargetSamplingError("routes must contain at least one segment")
@@ -425,7 +404,7 @@ def target_visibility_geometry_contract(
     *,
     route_family_id: str,
     routes_w_m: Sequence[Sequence[Sequence[float]]],
-    aabb_geometry_sha256: str,
+    aabb_geometry_identity: str,
     target_region_id: str,
     visibility_bucket: str,
     tracking_envelope_m: float = TARGET_VISIBILITY_TRACKING_ENVELOPE_M,
@@ -459,8 +438,8 @@ def target_visibility_geometry_contract(
         "schema": TARGET_VISIBILITY_GEOMETRY_SCHEMA,
         "evidence": "public-route-execution-window-pinhole-projective-area-structural-aabb-los-tracking-envelope-v3",
         "route_family_id": route_family_id,
-        "routes_sha256": canonical_payload_sha256(routes_w_m),
-        "aabb_geometry_sha256": aabb_geometry_sha256,
+        "routes_identity": canonical_payload_identity(routes_w_m),
+        "aabb_geometry_identity": aabb_geometry_identity,
         "target_region_id": target_region_id,
         "visibility_bucket": visibility_bucket,
         "camera": {
@@ -516,7 +495,7 @@ def target_region_for_positions(
 
 
 def _initial_heading(route: Sequence[Sequence[float]]) -> float:
-    for start, end in zip(route, route[1:]):
+    for start, end in itertools.pairwise(route):
         dx = float(end[0]) - float(start[0])
         dy = float(end[1]) - float(start[1])
         if math.hypot(dx, dy) > 1.0e-6:
@@ -578,13 +557,7 @@ def _yaw_stable_after_s(
     yaw_stability_error_rad: float,
     yaw_settle_margin_s: float,
 ) -> float:
-    """Bound the ideal public yaw controller's transient after a route turn.
-
-    The route policy uses a proportional yaw command followed by a public yaw
-    rate clamp.  This is an analytic *sampling* exclusion window, not a claim
-    that the physical body has converged; the native semantic gate remains
-    authoritative after rollout.
-    """
+    """Bound the ideal public yaw controller's transient after a route turn."""
 
     error = abs(_wrap_angle_rad(target_yaw - initial_yaw))
     tolerance = float(yaw_stability_error_rad)
@@ -605,7 +578,7 @@ def _yaw_stable_after_s(
 
 def _validate_target_visibility_execution_window(window: Mapping[str, Any]) -> None:
     if not isinstance(window, Mapping):
-        raise ValueError("target visibility execution window must be an object")
+        raise TypeError("target visibility execution window must be an object")
     required = (
         "schema",
         "dt_s",
@@ -661,7 +634,7 @@ def _route_camera_witnesses(
     for route in routes_w_m:
         initial_yaw = _initial_heading(route)
         previous_yaw = initial_yaw
-        for segment_id, (start, end) in enumerate(zip(route, route[1:])):
+        for segment_id, (start, end) in enumerate(itertools.pairwise(route)):
             segment_yaw = (
                 initial_yaw
                 if camera_heading_model == CAMERA_HEADING_MODEL_FIXED_INITIAL

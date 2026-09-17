@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 import numpy as np
 
-from single_gate.configs.experiment_config import SingleGateEnvConfig, SingleGraphObservationConfig
 from shared.core.collision_2d import GateObstacleMap2D, GatePostObstacle2D
+from single_gate.configs.experiment_config import SingleGateEnvConfig, SingleGraphObservationConfig
 
 
 @dataclass(frozen=True)

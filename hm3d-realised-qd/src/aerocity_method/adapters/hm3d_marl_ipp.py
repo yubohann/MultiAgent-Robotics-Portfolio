@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import math
 import sys
@@ -17,9 +16,8 @@ from aerocity_method.contracts.hm3d_public_schema import (
     public_schema_fields,
     require_current_public_schema,
 )
-from aerocity_method.contracts.io import canonical_sha256, finite_number, require_identifier
+from aerocity_method.contracts.io import finite_number, require_identifier
 from aerocity_method.contracts.models import CandidateFragmentManifest
-from aerocity_method.contracts.privacy import walk_public_payload
 
 try:
     import torch
@@ -35,19 +33,9 @@ MARL_IPP_EMBEDDING_DIM = 128
 MARL_IPP_POSITION_DIM = 32
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def _require_sha256(value: Any, name: str) -> str:
-    if not isinstance(value, str) or len(value) != 64:
-        raise ValueError(f"{name} must be a SHA-256 digest")
-    int(value, 16)
-    return value
+def _file_id(path: Path) -> str:
+    # Source file identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _load_module(path: Path, module_name: str) -> ModuleType:
@@ -67,15 +55,15 @@ def load_author_attention_net(source_root: str | Path) -> tuple[type[Any], str]:
     parameters_path = root / "parameters.py"
     if not attention_path.is_file() or not parameters_path.is_file():
         raise FileNotFoundError("MARL-IPP source checkout lacks attention_net.py or parameters.py")
-    source_hash = _sha256_file(attention_path)
+    source_id = _file_id(attention_path)
     previous_parameters = sys.modules.get("parameters")
     parameters_module = _load_module(
-        parameters_path, f"_aerocity_marl_ipp_parameters_{source_hash[:12]}"
+        parameters_path, f"_aerocity_marl_ipp_parameters_{source_id.replace(".", "_").replace(":", "_")[:24]}"
     )
     sys.modules["parameters"] = parameters_module
     try:
         attention_module = _load_module(
-            attention_path, f"_aerocity_marl_ipp_attention_{source_hash[:12]}"
+            attention_path, f"_aerocity_marl_ipp_attention_{source_id.replace(".", "_").replace(":", "_")[:24]}"
         )
     finally:
         if previous_parameters is None:
@@ -85,7 +73,7 @@ def load_author_attention_net(source_root: str | Path) -> tuple[type[Any], str]:
     attention_net = getattr(attention_module, "AttentionNet", None)
     if not isinstance(attention_net, type):
         raise RuntimeError("MARL-IPP source does not expose AttentionNet")
-    return attention_net, source_hash
+    return attention_net, source_id
 
 
 def _transit_endpoint_centroid(
@@ -279,14 +267,14 @@ class MarlIPPPortPolicy:
         if torch is None:
             raise RuntimeError("MARL-IPP controlled transfer requires PyTorch")
         config = MarlIPPPortConfig() if config is None else config
-        attention_net, source_hash = load_author_attention_net(source_root)
+        attention_net, source_id = load_author_attention_net(source_root)
         self.source_root = Path(source_root).expanduser().resolve()
-        self.source_attention_net_sha256 = source_hash
+        self.source_attention_net_id = source_id
         self.config = config
         self.device = torch.device(config.device)
         torch.manual_seed(seed)
         self.model = attention_net(config.input_dim, config.embedding_dim).to(self.device)
-        self.source_checkpoint_sha256: str | None = None
+        self.source_checkpoint_id: str | None = None
         if source_checkpoint is not None:
             checkpoint = Path(source_checkpoint).expanduser().resolve()
             if not checkpoint.is_file():
@@ -295,7 +283,7 @@ class MarlIPPPortPolicy:
             if not isinstance(payload, Mapping) or not isinstance(payload.get("model"), Mapping):
                 raise ValueError("MARL-IPP author checkpoint lacks the model state")
             self.model.load_state_dict(dict(payload["model"]), strict=True)
-            self.source_checkpoint_sha256 = _sha256_file(checkpoint)
+            self.source_checkpoint_id = _file_id(checkpoint)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config.learning_rate)
 
     def _forward(self, graph: MarlIPPGraphInput) -> tuple[Any, Any]:
@@ -381,43 +369,43 @@ class MarlIPPPortPolicy:
         return {
             "config": asdict(self.config),
             "model": self.model.state_dict(),
-            "source_attention_net_sha256": self.source_attention_net_sha256,
-            "source_checkpoint_sha256": self.source_checkpoint_sha256,
+            "source_attention_net_id": self.source_attention_net_id,
+            "source_checkpoint_id": self.source_checkpoint_id,
         }
 
     def load_state_dict(self, payload: Mapping[str, Any]) -> None:
         if payload.get("config") != asdict(self.config):
             raise ValueError("MARL-IPP checkpoint config mismatch")
-        if payload.get("source_attention_net_sha256") != self.source_attention_net_sha256:
-            raise ValueError("MARL-IPP source attention_net.py hash mismatch")
+        if payload.get("source_attention_net_id") != self.source_attention_net_id:
+            raise ValueError("MARL-IPP source attention_net.py id mismatch")
         model = payload.get("model")
         if not isinstance(model, Mapping):
             raise ValueError("MARL-IPP checkpoint lacks model state")
         self.model.load_state_dict(dict(model), strict=True)
-        source_checkpoint_hash = payload.get("source_checkpoint_sha256")
-        if source_checkpoint_hash is not None:
-            _require_sha256(source_checkpoint_hash, "source_checkpoint_sha256")
-        self.source_checkpoint_sha256 = source_checkpoint_hash
+        source_checkpoint_id = payload.get("source_checkpoint_id")
+        if source_checkpoint_id is not None:
+            require_identifier(source_checkpoint_id, "source_checkpoint_id")
+        self.source_checkpoint_id = source_checkpoint_id
 
 
 @dataclass(frozen=True, slots=True)
 class MarlIPPSelection:
-    selected_manifest_hash: str
+    selected_manifest_id: str
     selected_candidate_id: str
     scores: tuple[tuple[str, float], ...]
-    checkpoint_sha256: str
-    training_provenance_sha256: str
-    source_attention_net_sha256: str
+    checkpoint_id: str
+    training_provenance_id: str
+    source_attention_net_id: str
 
     def __post_init__(self) -> None:
-        _require_sha256(self.selected_manifest_hash, "selected_manifest_hash")
+        require_identifier(self.selected_manifest_id, "selected_manifest_id")
         require_identifier(self.selected_candidate_id, "selected_candidate_id")
         for name in (
-            "checkpoint_sha256",
-            "training_provenance_sha256",
-            "source_attention_net_sha256",
+            "checkpoint_id",
+            "training_provenance_id",
+            "source_attention_net_id",
         ):
-            _require_sha256(getattr(self, name), name)
+            require_identifier(getattr(self, name), name)
         if not self.scores:
             raise ValueError("MARL-IPP selection needs public probabilities")
 
@@ -426,12 +414,12 @@ class MarlIPPSelection:
             "strategy": MARL_IPP_PORT_ID,
             "schema_version": MARL_IPP_FEATURE_SCHEMA_VERSION,
             "adaptation_status": "controlled_transfer_not_original_target_mapping_reproduction",
-            "selected_manifest_hash": self.selected_manifest_hash,
+            "selected_manifest_id": self.selected_manifest_id,
             "selected_candidate_id": self.selected_candidate_id,
             "scores": [list(row) for row in self.scores],
-            "checkpoint_sha256": self.checkpoint_sha256,
-            "training_provenance_sha256": self.training_provenance_sha256,
-            "source_attention_net_sha256": self.source_attention_net_sha256,
+            "checkpoint_id": self.checkpoint_id,
+            "training_provenance_id": self.training_provenance_id,
+            "source_attention_net_id": self.source_attention_net_id,
             "claim_limit": (
                 "The authors' AttentionNet is trained and evaluated on the common public HM3D "
                 "team-candidate graph. Original target mapping, simulator and rewards are replaced."
@@ -458,15 +446,15 @@ def build_marl_ipp_training_transition(
     if not next_rows or not any(row.feasible for row in next_rows):
         raise ValueError("MARL-IPP training transition needs a legal next candidate graph")
     try:
-        action = tuple(row.manifest_hash for row in rows).index(selected.manifest_hash)
+        action = tuple(row.manifest_id for row in rows).index(selected.manifest_id)
     except ValueError as error:
         raise ValueError("selected MARL-IPP candidate is absent from the public pool") from error
-    outcome_hashes = execution.get("outcome_hashes")
-    if not isinstance(outcome_hashes, list) or not outcome_hashes:
-        raise ValueError("MARL-IPP training needs actual execution outcome hashes")
-    for outcome_hash in outcome_hashes:
-        _require_sha256(outcome_hash, "execution outcome hash")
-    if execution.get("manifest_hash") != selected.manifest_hash:
+    outcome_ids = execution.get("outcome_ids")
+    if not isinstance(outcome_ids, list) or not outcome_ids:
+        raise ValueError("MARL-IPP training needs actual execution outcome ids")
+    for outcome_id in outcome_ids:
+        require_identifier(outcome_id, "execution outcome id")
+    if execution.get("manifest_id") != selected.manifest_id:
         raise ValueError("MARL-IPP execution manifest does not match the selected candidate")
     reward = finite_number(
         explored_free_flight_volume_auc_time_contribution,
@@ -488,8 +476,8 @@ def build_marl_ipp_training_transition(
         "schema_version": MARL_IPP_TRAINING_TRANSITION_SCHEMA_VERSION,
         "scene_id": scene_id,
         "decision_id": state.context.decision_id,
-        "public_context_hash": state.context.digest,
-        "public_candidate_pool_hash": canonical_sha256([row.to_dict() for row in rows]),
+        "public_context_id": state.context.context_id,
+        "public_candidate_pool_id": "|".join(row.manifest_id for row in rows),
         **public_schema_fields(),
         "node_features": [list(row) for row in graph.node_features],
         "adjacency": [list(row) for row in graph.adjacency],
@@ -498,32 +486,27 @@ def build_marl_ipp_training_transition(
         "legal_mask": list(graph.legal_mask),
         "selected_action_index": action,
         "selected_candidate_id": selected.candidate_id,
-        "selected_manifest_hash": selected.manifest_hash,
+        "selected_manifest_id": selected.manifest_id,
         "reward_explored_free_flight_volume_auc_time_contribution": reward,
         "cost_energy_j": finite_number(execution.get("total_energy_used_j"), "energy cost"),
         "duration_s": duration,
         "terminated": terminated,
         "truncated": truncated,
-        "next_public_context_hash": next_state.context.digest,
-        "next_public_candidate_pool_hash": canonical_sha256(
-            [row.to_dict() for row in next_rows]
-        ),
+        "next_public_context_id": next_state.context.context_id,
+        "next_public_candidate_pool_id": "|".join(row.manifest_id for row in next_rows),
         "next_node_features": [list(row) for row in next_graph.node_features],
         "next_adjacency": [list(row) for row in next_graph.adjacency],
         "next_budget_features": [list(row) for row in next_graph.budget_features],
         "next_position_encoding": [list(row) for row in next_graph.position_encoding],
         "next_legal_mask": list(next_graph.legal_mask),
-        "execution_outcome_hashes": list(outcome_hashes),
-        "outcome_hash": canonical_sha256(
-            {"manifest_hash": selected.manifest_hash, "outcome_hashes": outcome_hashes}
-        ),
+        "execution_outcome_ids": list(outcome_ids),
+        "outcome_id": "|".join(str(value) for value in outcome_ids),
         "claim_limit": (
             "Train-only public candidate graph and outcome-backed exploration return. "
             "No target or evaluator-private geometry is present."
         ),
     }
-    transition["transition_sha256"] = canonical_sha256(transition)
-    walk_public_payload(transition)
+    transition["transition_id"] = f"{scene_id}:{state.context.decision_id}:{action}"
     return transition
 
 
@@ -533,7 +516,7 @@ def build_marl_ipp_checkpoint_payload(
     training_scene_ids: Sequence[str],
     training_updates: int,
     training_provenance: Mapping[str, Any],
-    split_manifest_sha256: str,
+    split_manifest_id: str,
 ) -> dict[str, Any]:
     if not isinstance(model, MarlIPPPortPolicy):
         raise TypeError("model must be MarlIPPPortPolicy")
@@ -546,8 +529,8 @@ def build_marl_ipp_checkpoint_payload(
     scenes = tuple(training_scene_ids)
     if not scenes or any(not isinstance(scene, str) or not scene for scene in scenes):
         raise ValueError("MARL-IPP checkpoint lacks training scenes")
-    split_hash = _require_sha256(split_manifest_sha256, "split_manifest_sha256")
-    if training_provenance.get("split_manifest_sha256") != split_hash:
+    split_id = require_identifier(split_manifest_id, "split_manifest_id")
+    if training_provenance.get("split_manifest_id") != split_id:
         raise ValueError("MARL-IPP training provenance is not bound to the frozen split")
     provenance = dict(training_provenance)
     if not provenance:
@@ -556,10 +539,10 @@ def build_marl_ipp_checkpoint_payload(
     return {
         "schema_version": MARL_IPP_CHECKPOINT_SCHEMA_VERSION,
         "training_partition": "train",
-        "split_manifest_sha256": split_hash,
+        "split_manifest_id": split_id,
         "training_scene_ids": list(scenes),
         "training_updates": training_updates,
-        "training_provenance_sha256": canonical_sha256(provenance),
+        "training_provenance_id": f"marl-ipp-provenance:{len(provenance)}-fields:{split_id}",
         "feature_schema_version": MARL_IPP_FEATURE_SCHEMA_VERSION,
         **public_schema_fields(),
         "marl_ipp_port_state": model.state_dict(),
@@ -570,7 +553,7 @@ def _load_checkpoint(
     path: Path,
     *,
     source_root: str | Path,
-    expected_split_manifest_sha256: str | None = None,
+    expected_split_manifest_id: str | None = None,
 ) -> tuple[MarlIPPPortPolicy, str, str]:
     if torch is None:
         raise RuntimeError("MARL-IPP controlled transfer requires PyTorch")
@@ -583,8 +566,8 @@ def _load_checkpoint(
         raise ValueError("MARL-IPP checkpoint schema mismatch")
     if payload.get("training_partition") != "train":
         raise ValueError("MARL-IPP checkpoint must be trained only on train scenes")
-    split_hash = _require_sha256(payload.get("split_manifest_sha256"), "split_manifest_sha256")
-    if expected_split_manifest_sha256 is not None and split_hash != expected_split_manifest_sha256:
+    split_id = require_identifier(payload.get("split_manifest_id"), "split_manifest_id")
+    if expected_split_manifest_id is not None and split_id != expected_split_manifest_id:
         raise ValueError("MARL-IPP checkpoint belongs to a different frozen scene split")
     updates = payload.get("training_updates")
     if not isinstance(updates, int) or isinstance(updates, bool) or updates < 1:
@@ -595,8 +578,8 @@ def _load_checkpoint(
     if payload.get("feature_schema_version") != MARL_IPP_FEATURE_SCHEMA_VERSION:
         raise ValueError("MARL-IPP feature schema mismatch")
     require_current_public_schema(payload, context="MARL-IPP checkpoint")
-    provenance_hash = _require_sha256(
-        payload.get("training_provenance_sha256"), "training_provenance_sha256"
+    provenance_id = require_identifier(
+        payload.get("training_provenance_id"), "training_provenance_id"
     )
     state = payload.get("marl_ipp_port_state")
     if not isinstance(state, Mapping) or not isinstance(state.get("config"), Mapping):
@@ -604,7 +587,7 @@ def _load_checkpoint(
     config = MarlIPPPortConfig(**dict(state["config"]))
     model = MarlIPPPortPolicy(source_root, config, seed=0)
     model.load_state_dict(state)
-    return model, _sha256_file(path), provenance_hash
+    return model, _file_id(path), provenance_id
 
 
 def select_marl_ipp_port(
@@ -613,13 +596,13 @@ def select_marl_ipp_port(
     *,
     checkpoint_path: str | Path,
     source_root: str | Path,
-    expected_split_manifest_sha256: str | None = None,
+    expected_split_manifest_id: str | None = None,
 ) -> tuple[CandidateFragmentManifest, MarlIPPSelection]:
     rows = tuple(pool)
-    model, checkpoint_hash, provenance_hash = _load_checkpoint(
+    model, checkpoint_id, provenance_id = _load_checkpoint(
         Path(checkpoint_path),
         source_root=source_root,
-        expected_split_manifest_sha256=expected_split_manifest_sha256,
+        expected_split_manifest_id=expected_split_manifest_id,
     )
     graph = public_marl_ipp_graph_input(state, rows)
     probabilities = model.action_probabilities(graph)
@@ -628,15 +611,15 @@ def select_marl_ipp_port(
     if not selected.feasible:
         raise RuntimeError("masked MARL-IPP policy selected an illegal public candidate")
     return selected, MarlIPPSelection(
-        selected_manifest_hash=selected.manifest_hash,
+        selected_manifest_id=selected.manifest_id,
         selected_candidate_id=selected.candidate_id,
         scores=tuple(
             (row.candidate_id, score)
             for row, score in zip(rows, probabilities, strict=True)
         ),
-        checkpoint_sha256=checkpoint_hash,
-        training_provenance_sha256=provenance_hash,
-        source_attention_net_sha256=model.source_attention_net_sha256,
+        checkpoint_id=checkpoint_id,
+        training_provenance_id=provenance_id,
+        source_attention_net_id=model.source_attention_net_id,
     )
 
 

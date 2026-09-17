@@ -3,18 +3,25 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import shutil
 import time
 import traceback
+from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Mapping, MutableMapping, Sequence
+from typing import Any
 
-from .citylite_scene import PUBLIC_ROUTES_W_M, make_public_route_contract, resolve_city_lite_authority, validate_public_route_contract, validate_public_routes
+from ._identity import IdentityAccumulator
 from .capture_lease import repository_app_launcher_lease
+from .citylite_scene import (
+    PUBLIC_ROUTES_W_M,
+    make_public_route_contract,
+    resolve_city_lite_authority,
+    validate_public_route_contract,
+    validate_public_routes,
+)
 from .eight_cf2x_fleet import EightCF2XFleet
 from .isaac_capture import (
     AGENT_COUNT,
@@ -27,38 +34,38 @@ from .isaac_capture import (
     _activate_local_isaaclab_source,
     _camera_pose_closure,
     _camera_pose_closure_from_usd,
-    _compose_city_lite_stage,
-    _controller_target,
     _city_lite_initial_root_states,
     _city_lite_initial_thruster_rps,
+    _compose_city_lite_stage,
+    _controller_target,
+    _enforce_foreign_native_process_guard,
     _expected_onboard_camera_world_poses,
     _extract_structural_aabbs,
-    _enforce_foreign_native_process_guard,
     _make_multirotor_cfgs,
     _make_scene,
     _make_sensors,
     _module_path_is_under,
-    _onboard_camera_usd_pose_closure,
     _onboard_camera_fabric_pose_diagnostic,
+    _onboard_camera_frame_counter,
     _onboard_camera_mount_diagnostics,
+    _onboard_camera_usd_pose_closure,
     _onboard_scene_content_evidence,
     _onboard_semantic_metadata,
     _onboard_visual_intrusion_evidence,
-    _onboard_camera_frame_counter,
     _overview_city_content_evidence,
     _overview_semantic_metadata,
     _overview_tracked_agent_visibility_evidence,
+    _prepare_onboard_camera_local_mount,
     _require_onboard_camera_render_read_fence,
     _require_onboard_camera_usd_pose,
     _require_onboard_scene_content,
     _require_onboard_visual_integrity,
     _require_overview_city_content,
     _require_overview_tracked_agent_visibility,
-    _set_public_route_witness_overview_view,
     _SensorUpdateTimeline,
+    _set_public_route_witness_overview_view,
     _spawn_collision_proxies,
     _spawn_identity_markers,
-    _prepare_onboard_camera_local_mount,
     _to_numpy,
     _verify_literal_city_lite_spawn,
     _verify_literal_city_lite_usd_spawn,
@@ -73,8 +80,8 @@ from .resource_telemetry import (
     ResourceTelemetry,
 )
 from .runtime_lock import (
-    RUNTIME_AUDIT_SCHEMA,
     RUNTIME_AUDIT_OBSERVATION,
+    RUNTIME_AUDIT_SCHEMA,
     audit_runtime_lock,
     compare_live_simulation,
     configure_simulation_cfg,
@@ -82,10 +89,9 @@ from .runtime_lock import (
     load_runtime_lock,
     locked_launcher_kwargs,
     observe_live_simulation,
-    runtime_lock_sha256,
+    runtime_lock_identity,
     validate_locked_launcher_environment,
 )
-
 
 ISAAC_SMOKE_SCHEMA = "org.rivermark.benchmark.target-free-isaac-smoke.v1"
 STEP_ORDER = (
@@ -116,7 +122,7 @@ _SYSTEM_COMMIT_SNAPSHOT_UNSET = object()
 
 
 class IsaacSmokeError(RuntimeError):
-    """Raised when the public smoke fails closed."""
+    """Raised when the public smoke stops the run."""
 
 
 def _sensor_profile_status(profile: str) -> dict[str, bool]:
@@ -199,8 +205,8 @@ def _write_receipt(output_dir: Path, payload: Mapping[str, Any]) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / "isaac_smoke_receipt.json"
     path.write_bytes(_canonical_bytes(payload))
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    (output_dir / "isaac_smoke_receipt.sha256").write_text(f"{digest}  isaac_smoke_receipt.json\n", encoding="ascii")
+    digest = IdentityAccumulator(path.read_bytes()).hexdigest()
+    (output_dir / "isaac_smoke_receipt.identity").write_text(f"{digest}  isaac_smoke_receipt.json\n", encoding="ascii")
 
 
 def _terminalize_running_receipt(
@@ -208,14 +214,7 @@ def _terminalize_running_receipt(
     early_receipt: Mapping[str, Any],
     error: BaseException,
 ) -> None:
-    """Turn a reserved smoke receipt into durable failed evidence.
-
-    The smoke reserves and signs a ``running`` receipt before importing Kit so
-    a crash cannot leave an unaccounted output directory.  A pre-launch error
-    must replace that provisional receipt rather than leave it looking like an
-    active process.  Existing terminal evidence is deliberately never
-    rewritten.
-    """
+    """Turn a reserved smoke receipt into durable failed evidence."""
 
     path = output_dir / "isaac_smoke_receipt.json"
     receipt: dict[str, Any] = dict(early_receipt)
@@ -249,13 +248,13 @@ def _array_digest(value: Any) -> str:
         import numpy as np
 
         array = np.ascontiguousarray(np.asarray(value))
-    return hashlib.sha256(memoryview(array).cast("B")).hexdigest()
+    return IdentityAccumulator(memoryview(array).cast("B")).hexdigest()
 
 
-def _is_sha256(value: Any) -> bool:
+def _is_identity(value: Any) -> bool:
     return (
         isinstance(value, str)
-        and len(value) == 64
+        and len(value) == 16
         and all(character in _HEX_DIGITS for character in value)
     )
 
@@ -356,13 +355,7 @@ def _check_commit(
 
 
 def _close_smoke_app(app: Any) -> None:
-    """Exit a standalone smoke after its terminal receipt is durable.
-
-    A smoke retains no Replicator output or sensor payload.  Isaac Sim 5.1
-    documents this close mode as immediate exit without cleanup; using it here
-    prevents a failed bounded smoke from holding a large Kit allocation while
-    the process performs an irrelevant full teardown.
-    """
+    """Exit a standalone smoke after its terminal receipt is durable."""
 
     app.close(wait_for_replicator=False, skip_cleanup=True)
 
@@ -446,7 +439,7 @@ def _system_commit_receipt_is_coherent(value: Any, resource_telemetry: Any) -> b
             and last_phase is None
             and last_snapshot is None
         )
-    if (
+    return not (
         not isinstance(maximum, (int, float))
         or isinstance(maximum, bool)
         or not math.isfinite(float(maximum))
@@ -462,9 +455,7 @@ def _system_commit_receipt_is_coherent(value: Any, resource_telemetry: Any) -> b
         or not isinstance(last_phase, str)
         or not last_phase
         or not is_bound_snapshot(last_phase, last_snapshot)
-    ):
-        return False
-    return True
+    )
 
 
 def validate_smoke_receipt(
@@ -521,8 +512,8 @@ def validate_smoke_receipt(
                 errors.append("runtime lock audit did not pass")
             if runtime_audit.get("schema") != RUNTIME_AUDIT_SCHEMA:
                 errors.append("runtime lock audit schema is not bound")
-            if runtime_audit.get("runtime_lock_sha256") != payload.get("runtime_lock_sha256"):
-                errors.append("runtime lock audit hash is not bound")
+            if runtime_audit.get("runtime_lock_identity") != payload.get("runtime_lock_identity"):
+                errors.append("runtime lock audit identity is not bound")
             if runtime_audit.get("profile_id") != payload.get("runtime_profile_id"):
                 errors.append("runtime lock audit profile is not bound")
             if runtime_audit.get("configuration_observation") != RUNTIME_AUDIT_OBSERVATION:
@@ -581,14 +572,14 @@ def validate_smoke_receipt(
                 errors.append("simulation configuration digests are incomplete")
             else:
                 for name, value in config_digests.items():
-                    if not isinstance(value, Mapping) or not isinstance(value.get("settings"), Mapping) or not isinstance(value.get("sha256"), str) or len(value.get("sha256")) != 64:
+                    if not isinstance(value, Mapping) or not isinstance(value.get("settings"), Mapping) or not isinstance(value.get("identity"), str) or len(value.get("identity")) != 16:
                         errors.append(f"simulation {name} configuration digest is malformed")
-        sensor_digests = payload.get("sensor_last_frame_sha256")
+        sensor_digests = payload.get("sensor_last_frame_identity")
         if is_full_profile:
             if (
                 not isinstance(sensor_digests, Mapping)
                 or set(sensor_digests) != set(SMOKE_SENSOR_NAMES)
-                or any(not _is_sha256(sensor_digests.get(name)) for name in SMOKE_SENSOR_NAMES)
+                or any(not _is_identity(sensor_digests.get(name)) for name in SMOKE_SENSOR_NAMES)
             ):
                 errors.append("last-frame sensor digests are incomplete or malformed")
         elif sensor_digests != {}:
@@ -622,13 +613,17 @@ def validate_smoke_receipt(
                 errors.append("tiled resource probe implementation request is not bound")
         if runtime_lock is not None:
             try:
-                from .runtime_lock import compare_live_simulation, runtime_lock_sha256, validate_runtime_lock
+                from .runtime_lock import (
+                    compare_live_simulation,
+                    runtime_lock_identity,
+                    validate_runtime_lock,
+                )
 
                 lock_issues = validate_runtime_lock(runtime_lock)
                 if lock_issues:
                     errors.append("runtime lock object is invalid")
-                if payload.get("runtime_lock_sha256") != runtime_lock_sha256(runtime_lock):
-                    errors.append("runtime lock object hash is not bound")
+                if payload.get("runtime_lock_identity") != runtime_lock_identity(runtime_lock):
+                    errors.append("runtime lock object identity is not bound")
                 if payload.get("runtime_profile_id") != runtime_lock.get("profile_id"):
                     errors.append("runtime lock object profile is not bound")
                 if isinstance(launcher, Mapping) and dict(launcher) != dict(runtime_lock.get("launcher", {})):
@@ -644,9 +639,7 @@ def validate_smoke_receipt(
             except (KeyError, TypeError, ValueError):
                 errors.append("runtime lock object could not be compared")
         runtime_observed = payload.get("runtime_observed")
-        if not isinstance(runtime_observed, Mapping) or not isinstance(simulation, Mapping):
-            errors.append("live simulation device is not bound")
-        elif runtime_observed.get("device") != simulation.get("device"):
+        if not isinstance(runtime_observed, Mapping) or not isinstance(simulation, Mapping) or runtime_observed.get("device") != simulation.get("device"):
             errors.append("live simulation device is not bound")
         elif (
             runtime_observed.get("physics_dt_s") != simulation.get("dt_s")
@@ -663,7 +656,7 @@ def validate_smoke_receipt(
             or (camera_flags is not None and not any(camera_flags) and runtime_observed.get("rtx_sensors_active") is not False)
             or runtime_observed.get("config_digests")
             != {
-                name: value.get("sha256")
+                name: value.get("identity")
                 for name, value in simulation.get("config_digests", {}).items()
             }
         ):
@@ -786,7 +779,7 @@ def _run_target_free_smoke_checked(
     resource_telemetry: ResourceTelemetry,
     system_commit: dict[str, Any],
 ) -> dict[str, Any]:
-    """Run after the output has been reserved for fail-closed evidence."""
+    """Run after the output has been reserved for strict evidence."""
 
     profile = str(getattr(args, "resource_probe_profile", "full"))
     if profile not in SMOKE_RESOURCE_PROFILES:
@@ -821,7 +814,7 @@ def _run_target_free_smoke_checked(
     base_receipt: dict[str, Any] = {
         **early_receipt,
         "status": "running",
-        "runtime_lock_sha256": runtime_lock_sha256(lock),
+        "runtime_lock_identity": runtime_lock_identity(lock),
         "runtime_profile_id": lock["profile_id"],
         "runtime_audit": runtime_audit,
         "source": source.as_dict(),
@@ -918,10 +911,10 @@ def _run_target_free_smoke_checked(
         from isaaclab.app import AppLauncher
 
         app = AppLauncher(locked_launcher_kwargs(lock, isaaclab_source)).app
-        import omni.usd
-        import torch
         import isaaclab.sim as sim_utils
         import isaaclab.utils.math as math_utils
+        import omni.usd
+        import torch
         from isaaclab_contrib.actuators import ThrusterCfg
         from isaaclab_contrib.assets import Multirotor, MultirotorCfg
         _enforce_foreign_native_process_guard(
@@ -1050,14 +1043,14 @@ def _run_target_free_smoke_checked(
                 "step_trace": [],
                 "search_target_prim_count": 0,
                 "sensors": _sensor_profile_status(profile),
-                "sensor_last_frame_sha256": {},
+                "sensor_last_frame_identity": {},
                 "scene": {
                     "scene_id": "RIVERMARK_CITY_LITE_v1",
-                    "contract_sha256": authority.contract_sha256,
+                    "contract_identity": authority.contract_identity,
                     "active_static_prim_count": scene_evidence["active_static_prim_count"],
                     "structural_aabb_count": len(structural_aabbs),
                     "collision_proxy_count": len(proxies),
-                    "aabb_geometry_sha256": route_report.aabb_geometry_sha256,
+                    "aabb_geometry_identity": route_report.aabb_geometry_identity,
                 },
                 "cf2x": {
                     "literal_prim_paths": list(SWARM_AGENT_LITERAL_PRIM_PATHS),
@@ -1223,15 +1216,15 @@ def _run_target_free_smoke_checked(
             "step_trace": step_trace,
             "search_target_prim_count": 0,
             "sensors": {key: True for key in sensor_digests},
-            "sensor_last_frame_sha256": sensor_digests,
+            "sensor_last_frame_identity": sensor_digests,
             "onboard_camera_render_read_fences": onboard_camera_render_read_fences,
             "scene": {
                 "scene_id": "RIVERMARK_CITY_LITE_v1",
-                "contract_sha256": authority.contract_sha256,
+                "contract_identity": authority.contract_identity,
                 "active_static_prim_count": scene_evidence["active_static_prim_count"],
                 "structural_aabb_count": len(structural_aabbs),
                 "collision_proxy_count": len(proxies),
-                "aabb_geometry_sha256": route_report.aabb_geometry_sha256,
+                "aabb_geometry_identity": route_report.aabb_geometry_identity,
             },
             "cf2x": {
                 "literal_prim_paths": list(SWARM_AGENT_LITERAL_PRIM_PATHS),

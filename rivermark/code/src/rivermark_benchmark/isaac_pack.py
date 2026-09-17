@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import io
 import json
 import math
@@ -19,8 +18,9 @@ from typing import Any
 
 import numpy as np
 
+from ._identity import IdentityAccumulator
 from . import isaac_validate as _isaac_validate
-from .abi import observation_abi_sha256, validate_formal_observation_abi
+from .abi import observation_abi_identity, validate_formal_observation_abi
 from .collection_protocol import (
     CollectionProtocolError,
     load_collection_protocol,
@@ -35,7 +35,7 @@ from .formal_dataset import (
     FORMAL_CAPTURE_RECEIPT_SCHEMA,
     LINEAGE_AXES,
     LINEAGE_SCHEMA,
-    sha256_file,
+    identity_file,
     verify_candidate_episode,
 )
 from .isaac_public_manifest import (
@@ -53,7 +53,7 @@ from .schema import (
     forbidden_policy_key,
     forbidden_policy_value_token,
     is_safe_relative_path,
-    is_sha256,
+    is_identity,
     iter_tree,
 )
 
@@ -104,7 +104,7 @@ class IsaacPackIssue:
 @dataclass(frozen=True)
 class IsaacPackResult:
     candidate_root: Path | None
-    formal_receipt_sha256: str | None
+    formal_receipt_identity: str | None
     issues: tuple[IsaacPackIssue, ...]
 
     @property
@@ -126,7 +126,7 @@ def _canonical_bytes(value: Any) -> bytes:
 
 
 def _digest_value(value: Any) -> str:
-    return hashlib.sha256(_canonical_bytes(value)).hexdigest()
+    return IdentityAccumulator(_canonical_bytes(value)).hexdigest()
 
 
 def _write_json(path: Path, value: Any) -> None:
@@ -294,7 +294,7 @@ def _validation_contract(
     validation_path: Path,
     evaluator_manifest: Path,
 ) -> tuple[Mapping[str, Any], str, Mapping[str, Any]]:
-    evaluator_sha256 = sha256_file(evaluator_manifest)
+    evaluator_identity = identity_file(evaluator_manifest)
     validation = _read_object(validation_path, label="independent_validation")
     if validation.get("schema") != VALIDATION_SCHEMA or validation.get("status") != "passed":
         raise _PackError("validation_status", "independent_validation", "independent validation did not pass")
@@ -303,19 +303,19 @@ def _validation_contract(
     capture_receipt_path = capture_root / "capture_receipt.json"
     if not capture_receipt_path.is_file():
         raise _PackError("capture_receipt", "capture_receipt.json", "raw capture receipt is missing")
-    capture_sha256 = sha256_file(capture_receipt_path)
-    if validation.get("capture_receipt_sha256") != capture_sha256:
-        raise _PackError("validation_binding", "independent_validation.capture_receipt_sha256", "does not bind this capture")
+    capture_identity = identity_file(capture_receipt_path)
+    if validation.get("capture_receipt_identity") != capture_identity:
+        raise _PackError("validation_binding", "independent_validation.capture_receipt_identity", "does not bind this capture")
     validator_id = validation.get("validator_id")
     if not isinstance(validator_id, str) or not validator_id.strip():
         raise _PackError("validator_id", "independent_validation.validator_id", "must be non-empty")
-    validator_source = validation.get("validator_source_sha256")
-    if not is_sha256(validator_source):
-        raise _PackError("validator_source", "independent_validation.validator_source_sha256", "must be SHA-256")
-    if validator_source != sha256_file(Path(_isaac_validate.__file__).resolve()):
+    validator_source = validation.get("validator_source_identity")
+    if not is_identity(validator_source):
+        raise _PackError("validator_source", "independent_validation.validator_source_identity", "must be a short identity")
+    if validator_source != identity_file(Path(_isaac_validate.__file__).resolve()):
         raise _PackError(
             "validator_source",
-            "independent_validation.validator_source_sha256",
+            "independent_validation.validator_source_identity",
             "does not match the validator source used by this packer",
         )
     checks = validation.get("checks")
@@ -324,26 +324,26 @@ def _validation_contract(
     for key, expected in _REQUIRED_VALIDATION_CHECKS.items():
         if checks.get(key) is not expected:
             raise _PackError("validation_check", f"independent_validation.checks.{key}", f"must be {expected}")
-    if checks.get("evaluator_manifest_sha256") != evaluator_sha256:
-        raise _PackError("evaluator_binding", "independent_validation.checks.evaluator_manifest_sha256", "does not bind external evaluator truth")
+    if checks.get("evaluator_manifest_identity") != evaluator_identity:
+        raise _PackError("evaluator_binding", "independent_validation.checks.evaluator_manifest_identity", "does not bind external evaluator truth")
     report = validate_isaac_capture(
         capture_root,
         evaluator_manifest=evaluator_manifest,
         require_clean_source=True,
     )
-    if not report.valid or report.receipt_sha256 != capture_sha256:
+    if not report.valid or report.receipt_identity != capture_identity:
         detail = ", ".join(issue.code for issue in report.issues)
         raise _PackError("revalidation", str(capture_root), f"independent validator rerun failed: {detail}")
     for key, expected in _REQUIRED_VALIDATION_CHECKS.items():
         if report.checks.get(key) is not expected or report.checks.get(key) != checks.get(key):
             raise _PackError("revalidation_check", f"revalidation.checks.{key}", "does not reproduce validation receipt")
-    if report.checks.get("evaluator_manifest_sha256") != evaluator_sha256:
+    if report.checks.get("evaluator_manifest_identity") != evaluator_identity:
         raise _PackError(
             "revalidation_check",
-            "revalidation.checks.evaluator_manifest_sha256",
+            "revalidation.checks.evaluator_manifest_identity",
             "does not reproduce the evaluator commitment",
         )
-    return validation, sha256_file(validation_path), checks
+    return validation, identity_file(validation_path), checks
 
 
 def _validate_spec(spec: Mapping[str, Any]) -> None:
@@ -472,23 +472,23 @@ def pack_isaac_capture(
         evaluator_manifest = evaluator_manifest.resolve()
         if not evaluator_manifest.is_file():
             raise _PackError("evaluator_manifest", str(evaluator_manifest), "external evaluator manifest is missing")
-        evaluator_sha256 = sha256_file(evaluator_manifest)
-        validation, validation_sha256, checks = _validation_contract(
+        evaluator_identity = identity_file(evaluator_manifest)
+        validation, validation_identity, checks = _validation_contract(
             capture_root, validation_receipt.resolve(), evaluator_manifest
         )
         pack_spec_path = pack_spec.resolve()
         spec = _read_object(pack_spec_path, label="pack_spec")
         _validate_spec(spec)
         raw_receipt = _read_object(capture_root / "capture_receipt.json", label="capture_receipt.json")
-        raw_capture_sha256 = sha256_file(capture_root / "capture_receipt.json")
+        raw_capture_identity = identity_file(capture_root / "capture_receipt.json")
         if raw_receipt.get("task_kind") != "search3d":
             raise _PackError("task_kind", "capture_receipt.json.task_kind", "only a Search3D capture can be packed")
         if raw_receipt.get("source_worktree_dirty") is not False:
             raise _PackError("dirty_source", "capture_receipt.json.source_worktree_dirty", "formal candidates require a clean source revision")
-        if raw_receipt.get("evaluator_manifest_sha256") != evaluator_sha256:
+        if raw_receipt.get("evaluator_manifest_identity") != evaluator_identity:
             raise _PackError(
                 "evaluator_binding",
-                "capture_receipt.json.evaluator_manifest_sha256",
+                "capture_receipt.json.evaluator_manifest_identity",
                 "raw capture does not commit to the external evaluator manifest",
             )
         raw_collection_binding = raw_receipt.get("collection_binding")
@@ -527,7 +527,7 @@ def pack_isaac_capture(
                     expected_condition_request = condition_request_from_protocol(
                         protocol,
                         protocol_id=str(resolved_collection_binding["protocol_id"]),
-                        protocol_sha256=str(resolved_collection_binding["protocol_sha256"]),
+                        protocol_identity=str(resolved_collection_binding["protocol_identity"]),
                         cell_id=str(resolved_collection_binding["cell_id"]),
                     )
             except (OSError, CollectionProtocolError, ValueError, TypeError, KeyError) as exc:
@@ -536,7 +536,7 @@ def pack_isaac_capture(
                 raise _PackError(
                     "collection_binding",
                     "capture_receipt.json.collection_binding",
-                    "raw binding does not match the public protocol hash, split, or deterministic seed",
+                    "raw binding does not match the public protocol identity, split, or deterministic seed",
                 )
             if spec.get("split") != resolved_collection_binding["split"]:
                 raise _PackError(
@@ -586,7 +586,7 @@ def pack_isaac_capture(
             )
         _exact_keys(
             raw_backend,
-            {"kind", "build", "sensor_physics_smoke_receipt_sha256"},
+            {"kind", "build", "sensor_physics_smoke_receipt_identity"},
             path="capture_receipt.json.capture_backend",
         )
         if raw_backend.get("kind") != "isaaclab":
@@ -598,12 +598,12 @@ def pack_isaac_capture(
         if (
             not isinstance(raw_backend.get("build"), str)
             or not raw_backend["build"].strip()
-            or not is_sha256(raw_backend.get("sensor_physics_smoke_receipt_sha256"))
+            or not is_identity(raw_backend.get("sensor_physics_smoke_receipt_identity"))
         ):
             raise _PackError(
                 "capture_backend_commitment",
                 "capture_receipt.json.capture_backend",
-                "backend build and sensor-physics smoke SHA-256 must be capture-bound",
+                "backend build and sensor-physics smoke IDENTITY must be capture-bound",
             )
 
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -612,7 +612,7 @@ def pack_isaac_capture(
         task_spec = spec.get("task")
         if not isinstance(layout_spec, Mapping) or not isinstance(task_spec, Mapping):
             raise _PackError("spec_type", "$spec", "layout and task must be objects")
-        _exact_keys(layout_spec, {"layout_id", "layout_hash", "layout_lineage_hash", "source"}, path="$spec.layout")
+        _exact_keys(layout_spec, {"layout_id", "layout_identity", "layout_lineage_identity", "source"}, path="$spec.layout")
         _exact_keys(
             task_spec,
             {"task_id", "task_variant_id", "information_profile", "observation_scope", "agent_count", "source"},
@@ -635,8 +635,8 @@ def pack_isaac_capture(
                     "source",
                     "source_scope",
                     "path",
-                    "sha256",
-                    "capture_receipt_sha256",
+                    "identity",
+                    "capture_receipt_identity",
                 },
                 path="$spec.observation_abi",
             )
@@ -646,10 +646,10 @@ def pack_isaac_capture(
                     "$spec.observation_abi.source_scope",
                     "v2 external ABI must be relative to the pack-spec directory",
                 )
-            if abi_spec.get("capture_receipt_sha256") != raw_capture_sha256:
+            if abi_spec.get("capture_receipt_identity") != raw_capture_identity:
                 raise _PackError(
                     "observation_abi_capture_binding",
-                    "$spec.observation_abi.capture_receipt_sha256",
+                    "$spec.observation_abi.capture_receipt_identity",
                     "external ABI descriptor does not bind this capture receipt",
                 )
             abi_source = _safe_source(
@@ -667,13 +667,13 @@ def pack_isaac_capture(
         if abi_issues:
             detail = "; ".join(f"{item.code}:{item.path}" for item in abi_issues)
             raise _PackError("observation_abi", "$spec.observation_abi.source", detail)
-        abi_hash = observation_abi_sha256(abi_payload)
+        abi_identity = observation_abi_identity(abi_payload)
         if spec.get("schema") == PACK_SPEC_SCHEMA_V2:
-            if abi_spec.get("sha256") != abi_hash:
+            if abi_spec.get("identity") != abi_identity:
                 raise _PackError(
-                    "observation_abi_hash",
-                    "$spec.observation_abi.sha256",
-                    "external ABI canonical SHA-256 does not match the descriptor",
+                    "observation_abi_identity",
+                    "$spec.observation_abi.identity",
+                    "external ABI canonical IDENTITY does not match the descriptor",
                 )
             try:
                 candidate_streams = inspect_candidate_pack_streams(capture_root)
@@ -708,10 +708,10 @@ def pack_isaac_capture(
                     "public_scene_projection", "$spec.layout.source", str(exc)
                 ) from exc
             _write_json(scene_destination, public_scene)
-            if layout_spec.get("layout_hash") != sha256_file(scene_destination):
+            if layout_spec.get("layout_identity") != identity_file(scene_destination):
                 raise _PackError(
-                    "layout_hash",
-                    "$spec.layout.layout_hash",
+                    "layout_identity",
+                    "$spec.layout.layout_identity",
                     "must bind the deterministic public scene projection",
                 )
         else:
@@ -756,7 +756,7 @@ def pack_isaac_capture(
             previous = projected_outputs.get(relative)
             if previous is None:
                 count = _project_stream(source, temporary / relative, raw_stream, path=path)
-                projected_outputs[relative] = (*output_key, count, sha256_file(temporary / relative))
+                projected_outputs[relative] = (*output_key, count, identity_file(temporary / relative))
             else:
                 previous_source, previous_fields, count, _ = previous
                 if (previous_source, previous_fields) != output_key:
@@ -771,7 +771,7 @@ def pack_isaac_capture(
                     "sample_count": count,
                     "timestamp_field": raw_stream["timestamp_field"],
                     "path": relative,
-                    "sha256": digest,
+                    "identity": digest,
                 }
             )
 
@@ -790,16 +790,16 @@ def pack_isaac_capture(
             "split": spec["split"],
             "layout": {
                 "layout_id": layout_spec["layout_id"],
-                "layout_hash": layout_spec["layout_hash"],
-                "layout_lineage_hash": layout_spec["layout_lineage_hash"],
+                "layout_identity": layout_spec["layout_identity"],
+                "layout_lineage_identity": layout_spec["layout_lineage_identity"],
                 "scene_manifest_ref": "scenes/scene.json",
-                "scene_manifest_sha256": sha256_file(scene_destination),
+                "scene_manifest_identity": identity_file(scene_destination),
             },
             "task": {
                 "task_id": task_spec["task_id"],
                 "task_variant_id": task_spec["task_variant_id"],
                 "task_spec_ref": "tasks/task.json",
-                "task_spec_sha256": sha256_file(task_destination),
+                "task_spec_identity": identity_file(task_destination),
                 "information_profile": profile,
                 "observation_scope": task_spec["observation_scope"],
                 "agent_count": task_spec["agent_count"],
@@ -808,7 +808,7 @@ def pack_isaac_capture(
             "coordinate_frames": spec["coordinate_frames"],
             "observation_abi": {
                 "path": abi_relative,
-                "sha256": abi_hash,
+                "identity": abi_identity,
             },
             "streams": manifest_streams,
             "policy_visible": {
@@ -819,7 +819,7 @@ def pack_isaac_capture(
             "evaluator_private": {
                 "distributed": False,
                 "server_only": True,
-                "manifest_sha256": evaluator_sha256,
+                "manifest_identity": evaluator_identity,
             },
             "provenance": dict(provenance),
             "quality": {
@@ -838,12 +838,12 @@ def pack_isaac_capture(
 
         lineage_values = spec["lineage_values"]
         assert isinstance(lineage_values, Mapping)
-        capture_sha256 = raw_capture_sha256
+        capture_identity = raw_capture_identity
         axes = {
-            "layout_lineage": layout_spec["layout_lineage_hash"],
-            "task_manifest": sha256_file(task_destination),
-            "episode": hashlib.sha256(str(spec["episode_id"]).encode("utf-8")).hexdigest(),
-            "trajectory_lineage": capture_sha256,
+            "layout_lineage": layout_spec["layout_lineage_identity"],
+            "task_manifest": identity_file(task_destination),
+            "episode": IdentityAccumulator(str(spec["episode_id"]).encode("utf-8")).hexdigest(),
+            "trajectory_lineage": capture_identity,
         }
         axes.update(
             {
@@ -851,7 +851,7 @@ def pack_isaac_capture(
                 for axis in sorted(_LINEAGE_VALUE_AXES)
             }
         )
-        if set(axes) != set(LINEAGE_AXES) or not all(is_sha256(value) for value in axes.values()):
+        if set(axes) != set(LINEAGE_AXES) or not all(is_identity(value) for value in axes.values()):
             raise _PackError("lineage", "$spec.lineage_values", "could not construct all ten lineage commitments")
         lineage_path = temporary / "lineage.json"
         _write_json(lineage_path, {"schema": LINEAGE_SCHEMA, "episode_id": spec["episode_id"], "axes": axes})
@@ -859,17 +859,17 @@ def pack_isaac_capture(
         public_inventory = {
             relative: digest for relative, (_, _, _, digest) in sorted(projected_outputs.items())
         }
-        public_inventory[abi_relative] = sha256_file(abi_destination)
-        public_inventory["scenes/scene.json"] = sha256_file(scene_destination)
-        public_inventory["tasks/task.json"] = sha256_file(task_destination)
+        public_inventory[abi_relative] = identity_file(abi_destination)
+        public_inventory["scenes/scene.json"] = identity_file(scene_destination)
+        public_inventory["tasks/task.json"] = identity_file(task_destination)
         backend = spec.get("capture_backend")
         if not isinstance(backend, Mapping):
             raise _PackError("spec_type", "$spec.capture_backend", "must be an object")
-        _exact_keys(backend, {"build", "sensor_physics_smoke_receipt_sha256"}, path="$spec.capture_backend")
+        _exact_keys(backend, {"build", "sensor_physics_smoke_receipt_identity"}, path="$spec.capture_backend")
         if backend != {
             "build": raw_backend["build"],
-            "sensor_physics_smoke_receipt_sha256": raw_backend[
-                "sensor_physics_smoke_receipt_sha256"
+            "sensor_physics_smoke_receipt_identity": raw_backend[
+                "sensor_physics_smoke_receipt_identity"
             ],
         }:
             raise _PackError(
@@ -881,13 +881,13 @@ def pack_isaac_capture(
             "schema": FORMAL_CAPTURE_RECEIPT_SCHEMA,
             "status": "admitted",
             "formal_benchmark_admission": True,
-            "episode_manifest_sha256": sha256_file(manifest_path),
-            "lineage_sha256": sha256_file(lineage_path),
-            "observation_abi_sha256": abi_hash,
+            "episode_manifest_identity": identity_file(manifest_path),
+            "lineage_identity": identity_file(lineage_path),
+            "observation_abi_identity": abi_identity,
             "capture_backend": {
                 "kind": "isaaclab",
                 "build": backend["build"],
-                "sensor_physics_smoke_receipt_sha256": backend["sensor_physics_smoke_receipt_sha256"],
+                "sensor_physics_smoke_receipt_identity": backend["sensor_physics_smoke_receipt_identity"],
             },
             "integrity": {
                 "online_capture": True,
@@ -899,11 +899,11 @@ def pack_isaac_capture(
                 "sensor_decode_audit_passed": True,
                 "policy_leakage_audit_passed": True,
                 "independent_validator_id": validation["validator_id"],
-                "independent_validator_sha256": validation_sha256,
+                "independent_validator_identity": validation_identity,
                 "pose_closure_threshold_m": float(checks.get("pose_closure_threshold_m", 0.01)),
             },
             "partitions": {
-                "policy_visible_audit_sha256": _digest_value(public_inventory),
+                "policy_visible_audit_identity": _digest_value(public_inventory),
                 "learning_labels_release_allowed": False,
                 "evaluator_private_distributed": False,
                 "evaluator_private_server_only": True,
@@ -920,7 +920,7 @@ def pack_isaac_capture(
             raise _PackError("candidate_verification", str(temporary), detail)
         os.replace(temporary, destination)
         temporary = None
-        return IsaacPackResult(destination, sha256_file(destination / "formal_capture_receipt.json"), ())
+        return IsaacPackResult(destination, identity_file(destination / "formal_capture_receipt.json"), ())
     except _PackError as exc:
         return IsaacPackResult(None, None, (exc.issue,))
     except (OSError, ValueError, TypeError, KeyError) as exc:
@@ -960,7 +960,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "valid": result.valid,
                 "candidate_root": str(result.candidate_root) if result.candidate_root else None,
-                "formal_receipt_sha256": result.formal_receipt_sha256,
+                "formal_receipt_identity": result.formal_receipt_identity,
                 "issues": [asdict(issue) for issue in result.issues],
             },
             indent=2,

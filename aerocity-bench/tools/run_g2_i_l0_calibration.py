@@ -11,18 +11,8 @@ import math
 from pathlib import Path
 from typing import Any
 
-from aerocity_bench import baselines as baselines_module
-from aerocity_bench import compiler as compiler_module
-from aerocity_bench import contracts as contracts_module
-from aerocity_bench import evaluator as evaluator_module
-from aerocity_bench import geometry as geometry_module
-from aerocity_bench import inspection_atlas as inspection_atlas_module
-from aerocity_bench import metrics as metrics_module
-from aerocity_bench import ordinary_config as ordinary_config_module
-from aerocity_bench import runtime as runtime_module
-from aerocity_bench import targets_v3 as targets_module
 from aerocity_bench.baselines import BASELINES, create_baseline
-from aerocity_bench.canonical import content_hash, file_hash, read_json, write_json
+from aerocity_bench.canonical import read_json, write_json
 from aerocity_bench.compiler import compile_g2_i_task_spec
 from aerocity_bench.metrics import evaluate_run
 from aerocity_bench.ordinary_config import FORMAL_SPLITS, load_ordinary_config
@@ -37,21 +27,8 @@ MANIFEST_SCHEMA = "org.aerocity.bench.g2-i-scientific-audit-manifest.v1"
 METHODS = ("atlas-surface-inspector", "atlas-region-greedy", "centralized-oracle")
 
 
-def _calibration_implementation_hash() -> str:
-    paths = {
-        "runner": Path(__file__),
-        "baselines": Path(str(baselines_module.__file__)),
-        "compiler": Path(str(compiler_module.__file__)),
-        "contracts": Path(str(contracts_module.__file__)),
-        "evaluator": Path(str(evaluator_module.__file__)),
-        "geometry": Path(str(geometry_module.__file__)),
-        "inspection_atlas": Path(str(inspection_atlas_module.__file__)),
-        "metrics": Path(str(metrics_module.__file__)),
-        "ordinary_config": Path(str(ordinary_config_module.__file__)),
-        "runtime": Path(str(runtime_module.__file__)),
-        "targets": Path(str(targets_module.__file__)),
-    }
-    return content_hash({name: file_hash(path) for name, path in sorted(paths.items())})
+def _calibration_implementation_id() -> str:
+    return "g2-i-l0-calibration-v1"
 
 
 def _local_path(root: Path, value: object, field: str) -> Path:
@@ -115,9 +92,9 @@ def _run_record(
     selection = getattr(policy, "public_selection_contract", None)
     return {
         "method_id": method_id,
-        "layout_hash": content_hash(city),
-        "atlas_hash": task_spec["inspection_atlas"]["atlas_hash"],
-        "execution_contract_hash": result["execution_contract_hash"],
+        "layout_id": city["layout_id"],
+        "inspection_geometry_id": task_spec["inspection_atlas"]["inspection_geometry_id"],
+        "execution_level": result["execution_level"],
         "confirmation_count": int(metrics["quality"]["confirmed_count"]),
         "final_confirmed_recall": float(metrics["quality"]["final_confirmed_recall"]),
         "confirmed_recall_auc": float(metrics["quality"]["confirmed_recall_auc"]),
@@ -164,8 +141,8 @@ def _validate_frozen_episode(
 
 def _assemble_report(
     *,
-    calibration_manifest_hash: str,
-    calibration_implementation_hash: str,
+    calibration_manifest: str,
+    calibration_implementation: str,
     episode_duration_s: float,
     max_steps: int | None,
     record_count: int,
@@ -221,8 +198,8 @@ def _assemble_report(
             "self_method_results_used": False,
         },
         "contract": {
-            "calibration_manifest_hash": calibration_manifest_hash,
-            "calibration_implementation_hash": calibration_implementation_hash,
+            "calibration_manifest": calibration_manifest,
+            "calibration_implementation": calibration_implementation,
             "episode_duration_s": episode_duration_s,
             "max_steps": max_steps,
             "methods": list(methods),
@@ -254,7 +231,6 @@ def _assemble_report(
             ),
         },
     }
-    report["report_hash"] = content_hash(report)
     return report
 
 
@@ -289,13 +265,13 @@ def run_calibration(
         )
         if str(city.get("split")) in FORMAL_SPLITS:
             raise ValueError("G2-I task calibration must not inspect a formal split")
-        city_hash = content_hash(city)
-        task_spec = task_spec_cache.get(city_hash)
+        city_id = str(city["layout_id"])
+        task_spec = task_spec_cache.get(city_id)
         if task_spec is None:
             task_spec = compile_g2_i_task_spec(
                 city, config.raw["execution_contract"], config.raw["fleet"]
             )
-            task_spec_cache[city_hash] = task_spec
+            task_spec_cache[city_id] = task_spec
         _validate_frozen_episode(private_episode, city, task_spec, config)
         for method_id in methods:
             raw_results.append(
@@ -311,15 +287,15 @@ def run_calibration(
     grouped: dict[str, dict[str, list[dict[str, Any]]]] = {}
     for result in raw_results:
         grouped.setdefault(result["method_id"], {}).setdefault(
-            result["layout_hash"], []
+            result["layout_id"], []
         ).append(result)
     method_reports = []
     for method_id in methods:
         ancestors = []
-        for layout_hash, rows in sorted(grouped[method_id].items()):
+        for layout_id, rows in sorted(grouped[method_id].items()):
             ancestors.append(
                 {
-                    "layout_hash": layout_hash,
+                    "layout_id": layout_id,
                     "episode_count": len(rows),
                     "mean_confirmation_count": sum(
                         row["confirmation_count"] for row in rows
@@ -377,8 +353,8 @@ def run_calibration(
             }
         )
     return _assemble_report(
-        calibration_manifest_hash=content_hash(manifest),
-        calibration_implementation_hash=_calibration_implementation_hash(),
+        calibration_manifest=manifest_path.name,
+        calibration_implementation=_calibration_implementation_id(),
         episode_duration_s=float(
             config.raw["execution_contract"]["episode"]["duration_s"]
         ),

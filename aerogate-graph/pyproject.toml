@@ -39,6 +39,15 @@ target-version = "py310"
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+# Entry-point scripts under scripts/ bootstrap `sys.path` (or bind module globals at
+# import time) before importing first-party packages, because they are executed
+# directly from the repo instead of being installed. Module-level imports therefore
+# intentionally appear below executable statements; E402 is expected in this pattern.
+# In-package modules never get this exemption and keep all imports at the top.
+"scripts/*.py" = ["E402"]
+"**/scripts/*.py" = ["E402"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

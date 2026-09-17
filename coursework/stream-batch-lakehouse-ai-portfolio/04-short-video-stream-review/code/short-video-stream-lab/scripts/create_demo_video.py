@@ -12,7 +12,7 @@ from app.demo_assets import ensure_demo_videos  # noqa: E402
 
 def main() -> None:
     """Print the real demo videos used by the report screenshots."""
-    videos = ensure_demo_videos(overwrite=True)
+    videos = ensure_demo_videos()
     for item in videos:
         print(f"real-video-ready: {item['path']} ({item['title']}) source={item['source']}")
 

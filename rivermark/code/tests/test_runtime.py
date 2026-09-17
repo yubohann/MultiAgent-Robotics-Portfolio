@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
@@ -53,7 +52,7 @@ class PilotRuntimeTests(unittest.TestCase):
                 _, frame = runtime.step(actions)
                 self.assertEqual(frame.sensor_packets[0].rgb.shape, (72, 96, 3))
 
-    def test_recorder_writes_hash_bound_valid_episode(self) -> None:
+    def test_recorder_writes_identity_bound_valid_episode(self) -> None:
         method_id = "action_conditioned_world_model_mpc_pilot"
         descriptor = NATIVE_DESCRIPTORS[method_id]
         runtime = PilotSwarmRuntime(

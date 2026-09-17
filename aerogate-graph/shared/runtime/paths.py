@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 EXPERIMENT_ROOT = Path(__file__).resolve().parents[2]
 ASSETS_ROOT = EXPERIMENT_ROOT / "assets"

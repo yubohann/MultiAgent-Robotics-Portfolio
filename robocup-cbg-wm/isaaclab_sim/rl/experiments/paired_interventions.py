@@ -4,7 +4,6 @@ import copy
 from dataclasses import dataclass
 
 import numpy as np
-
 from expert_policy import compose_policy_action
 from robocup_visionrl_selfplay_env import AGENTS, RoboCupVisionRLSelfPlayEnv
 from world_model import BeliefTracker, extract_rule_risks
@@ -25,7 +24,6 @@ class InterventionBranch:
     pair_id: int
     branch: int
     exogenous_seed: int
-    mechanism: str
 
 
 @dataclass
@@ -58,7 +56,7 @@ def _raw_branch_actions(mechanism: str, intervention: bool) -> dict[str, np.ndar
 
 def _apply_registered_intervention(env: RoboCupVisionRLSelfPlayEnv, mechanism: str) -> None:
     if mechanism == "push_box":
-        name = sorted(env.pushable_obstacles)[0]
+        name = min(env.pushable_obstacles)
         moved = env.pushable_obstacles[name].copy()
         moved[1] = np.clip(moved[1] + (0.42 if moved[1] <= 0.0 else -0.42), -0.96, 0.96)
         env.pushable_obstacles[name] = moved.astype(np.float32)
@@ -133,7 +131,6 @@ def _run_branch(
         pair_id=int(pair_id),
         branch=int(intervention),
         exogenous_seed=int(seed),
-        mechanism=mechanism,
     )
 
 

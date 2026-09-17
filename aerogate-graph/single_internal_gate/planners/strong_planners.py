@@ -9,7 +9,6 @@ from single_internal_gate.configs.experiment_config import Exp2PlannerConfig
 from single_internal_gate.planners.classic_planners import AStarPlanner, ThetaStarPlanner
 from single_internal_gate.planners.interfaces import PlannerResult, PlannerTask2D, path_length
 
-
 _Point = tuple[float, float]
 
 
@@ -28,7 +27,7 @@ def _point_clearance(task: PlannerTask2D, point: _Point, margin_m: float) -> flo
 def _valid_path(task: PlannerTask2D, path: tuple[_Point, ...]) -> bool:
     return len(path) >= 2 and not any(
         task.obstacles_2d.segment_collides(a, b, drone_radius_m=task.drone_radius_m)
-        for a, b in zip(path[:-1], path[1:])
+        for a, b in zip(path[:-1], path[1:], strict=False)
     )
 
 
@@ -45,7 +44,7 @@ def _sample_polyline(path: tuple[_Point, ...], spacing_m: float) -> list[_Point]
     if len(path) <= 1:
         return list(path)
     points = [path[0]]
-    for a, b in zip(path[:-1], path[1:]):
+    for a, b in zip(path[:-1], path[1:], strict=False):
         seg = _distance(a, b)
         steps = max(1, int(math.ceil(seg / max(float(spacing_m), 1.0e-6))))
         for idx in range(1, steps + 1):
@@ -166,8 +165,5 @@ class FastPlanner:
         path = _shortcut(task, seed.path_xy, margin_m=self.safety_margin_m)
         path = _smooth(task, path, margin_m=self.safety_margin_m, iterations=5, obstacle_gain=0.22)
         return _finish(self.name, task, path, start, num_replans=seed.num_replans)
-
-
-
 
 

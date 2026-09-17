@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import math
 
-import numpy as np
 import torch
-import torch.nn as nn
+import torch.nn.functional as F
+from torch import nn
 
 from ._helpers import (
     _align_module_input,
     _resolve_attention_heads,
     _run_chunked_forward_with_backoff,
     _safe_transformer_forward,
-    _slice_optional_batch
+    _slice_optional_batch,
 )
+
+
 class SinusoidalPositionalEncoding(nn.Module):
     def __init__(self, model_dim: int, max_len: int = 32):
         super().__init__()

@@ -27,11 +27,7 @@ class Pose2D:
 
 
 class MotionDriftSimSource(Node):
-    """Publish repeatable motion and sensor topics so the recorder produces CSV samples.
-
-    The topics mirror the Mini robot contract from the original ROS1 workspaces
-    and stand in for hardware or Gazebo when no live source is available.
-    """
+    """Publish repeatable motion and sensor topics so the recorder produces CSV samples."""
 
     def __init__(self) -> None:
         super().__init__("motion_drift_sim_source")
@@ -62,15 +58,9 @@ class MotionDriftSimSource(Node):
         self.started_time_s = self.previous_time_s
         self.timer = self.create_timer(1.0 / max(self.rate_hz, 1.0), self._tick)
         self.get_logger().info(
-            "Publishing simulated drift topics for %.1fs on %s, %s, %s, %s, %s"
-            % (
-                self.duration_s,
-                self.cmd_vel_topic,
-                self.wheel_odom_topic,
-                self.filtered_odom_topic,
-                self.imu_topic,
-                self.scan_topic,
-            )
+            f"Publishing simulated drift topics for {self.duration_s:.1f}s on "
+            f"{self.cmd_vel_topic}, {self.wheel_odom_topic}, {self.filtered_odom_topic}, "
+            f"{self.imu_topic}, {self.scan_topic}"
         )
 
     def _tick(self) -> None:
@@ -183,7 +173,7 @@ class MotionDriftSimSource(Node):
         msg.angle_increment = math.radians(2.0)
         msg.range_min = 0.05
         msg.range_max = 6.0
-        count = int(round((msg.angle_max - msg.angle_min) / msg.angle_increment)) + 1
+        count = round((msg.angle_max - msg.angle_min) / msg.angle_increment) + 1
         front_clearance = max(0.18, 0.72 - 0.34 * max(0.0, math.sin(elapsed_s * 0.55)) - 0.08 * accel_risk)
         ranges = []
         angle = msg.angle_min

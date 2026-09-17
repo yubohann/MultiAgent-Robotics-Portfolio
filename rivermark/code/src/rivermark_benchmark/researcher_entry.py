@@ -8,8 +8,9 @@ import json
 import platform
 import time
 import tracemalloc
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -19,9 +20,8 @@ from .fixture import create_cpu_fixture, verify_cpu_fixture
 from .metrics import METRIC_VERSION
 from .provenance import detect_source_provenance
 
-
 RESEARCHER_SMOKE_SCHEMA = "org.rivermark.benchmark.researcher-smoke.v1"
-_SHA256 = "0" * 64
+_IDENTITY = "0" * 16
 
 
 class ResearcherEntryError(ValueError):
@@ -49,18 +49,18 @@ def _public_smoke_submission(source_revision: str) -> dict[str, Any]:
     return {
         "schema": SUBMISSION_SCHEMA,
         "dataset_version": "0.1.0",
-        "dataset_index_sha256": _SHA256,
+        "dataset_index_identity": _IDENTITY,
         "split": "validation",
         "evaluator": {
             "evaluator_id": "public-search3d",
             "evaluator_version": "1.0.0",
-            "evaluator_sha256": _SHA256,
+            "evaluator_identity": _IDENTITY,
             "metric_schema": METRIC_VERSION,
         },
         "policy": {
             "method_id": "researcher-entry-smoke",
             "code_revision": source_revision,
-            "checkpoint_sha256": _SHA256,
+            "checkpoint_identity": _IDENTITY,
             "seed": 7,
         },
         "episodes": [
@@ -141,11 +141,11 @@ def run_researcher_smoke(output_root: Path) -> dict[str, Any]:
                 "frame_count": episode.frame_count,
                 "agent_count": episode.agent_count,
                 "sample_count": episode.sample_count,
-                "episode_manifest_sha256": fixture.episode_manifest_sha256,
+                "episode_manifest_identity": fixture.episode_manifest_identity,
             },
             "checks": {
                 "fixture_manifest": "passed",
-                "payload_hashes": "passed",
+                "payload_identities": "passed",
                 "loader_shapes": "passed",
                 "selective_loader": "passed",
                 "public_evaluator": "passed",

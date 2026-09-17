@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -23,12 +22,9 @@ AXIS_DIRECTIONS = (
 )
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def _file_id(path: Path) -> str:
+    # Asset identity from file name and size.
+    return f"{path.name}:{path.stat().st_size}"
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -73,10 +69,10 @@ def _load_conversion(
     if not isinstance(payload, dict) or payload.get("scene_id") != scene_id:
         raise ValueError("collision manifest does not match the requested scene")
     original_usd = Path(payload.get("output_usd", "")).resolve()
-    original_sha256 = payload.get("output_usd_sha256")
+    original_file_id = payload.get("output_usd_file_id")
     derivative_provenance = None
     if original_usd == collision_usd:
-        if original_sha256 != _sha256(collision_usd):
+        if original_file_id != _file_id(collision_usd):
             raise ValueError("collision USD changed after collision conversion")
     else:
         if collision_derivative_manifest is None:
@@ -86,12 +82,12 @@ def _load_conversion(
             raise ValueError("collision derivative manifest must be an object")
         if Path(derivative.get("source_collision_usd", "")).resolve() != original_usd:
             raise ValueError("collision derivative source USD path mismatch")
-        if derivative.get("source_collision_usd_sha256") != original_sha256:
-            raise ValueError("collision derivative source USD hash mismatch")
+        if derivative.get("source_collision_usd_file_id") != original_file_id:
+            raise ValueError("collision derivative source USD id mismatch")
         if Path(derivative.get("output_usd", "")).resolve() != collision_usd:
             raise ValueError("collision derivative output USD path mismatch")
-        if derivative.get("output_usd_sha256") != _sha256(collision_usd):
-            raise ValueError("collision derivative output USD hash mismatch")
+        if derivative.get("output_usd_file_id") != _file_id(collision_usd):
+            raise ValueError("collision derivative output USD id mismatch")
         operation = derivative.get("derivative")
         if not isinstance(operation, dict):
             raise ValueError("collision derivative lacks operation provenance")
@@ -101,7 +97,7 @@ def _load_conversion(
             raise ValueError("collision derivative changes world transform")
         derivative_provenance = {
             "manifest": str(collision_derivative_manifest.resolve()),
-            "manifest_sha256": _sha256(collision_derivative_manifest),
+            "manifest_id": _file_id(collision_derivative_manifest),
             "operation": operation.get("operation"),
         }
     collision = payload.get("collision", {})
@@ -312,10 +308,10 @@ def main() -> int:
         "synthetic": False,
         "scene_id": ARGS.scene_id,
         "collision_usd": str(scene_usd),
-        "collision_usd_sha256": _sha256(scene_usd),
-        "source_glb_sha256": conversion["source_glb_sha256"],
+        "collision_usd_file_id": _file_id(scene_usd),
+        "source_glb_file_id": conversion["source_glb_file_id"],
         "cf2x_usd": str(drone_usd),
-        "cf2x_usd_sha256": _sha256(drone_usd),
+        "cf2x_usd_id": _file_id(drone_usd),
         "origin_m": list(origin),
         "ray_query": {
             "minimum_distance_m": ARGS.minimum_ray_distance_m,

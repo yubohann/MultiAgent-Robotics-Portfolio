@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
 import copy
 import json
 from pathlib import Path
@@ -9,8 +17,8 @@ import pytest
 from rivermark_benchmark.citylite_scene import (
     AABB,
     PUBLIC_ROUTE_FAMILIES_W_M,
-    SCENE_CONTRACT_PAYLOAD_SHA256,
-    SCENE_CONTRACT_SHA256,
+    SCENE_CONTRACT_PAYLOAD_IDENTITY,
+    SCENE_CONTRACT_IDENTITY,
 )
 from rivermark_benchmark.collection_protocol import (
     load_collection_protocol,
@@ -35,7 +43,7 @@ from rivermark_benchmark.private_evaluator_manifest import (
     build_private_evaluator_manifest,
     load_native_geometry_catalog,
     main,
-    native_geometry_scan_sha256,
+    native_geometry_scan_identity,
     retain_private_evaluator_manifest,
     write_private_evaluator_manifest,
 )
@@ -75,18 +83,18 @@ def _write_test_geometry_scan(path: Path) -> tuple[AABB, ...]:
         "generator": NATIVE_GEOMETRY_SCAN_GENERATOR,
         "geometry_evidence_kind": NATIVE_GEOMETRY_SCAN_EVIDENCE_KIND,
         "tool_path": NATIVE_GEOMETRY_SCAN_TOOL_PATH,
-        "tool_sha256": "b" * 64,
+        "tool_identity": "b" * 16,
         "source_revision": "c" * 40,
-        "source_tree_sha256": "d" * 64,
+        "source_tree_identity": "d" * 16,
         "source_worktree_dirty": False,
         "runtime_lock": {
-            "sha256": "e" * 64,
+            "identity": "e" * 16,
             "profile_id": "isaac-windows-5.1",
             "audit_status": "passed",
         },
         "scene_id": "RIVERMARK_CITY_LITE_v1",
-        "scene_contract_sha256": SCENE_CONTRACT_SHA256,
-        "scene_content_sha256": SCENE_CONTRACT_PAYLOAD_SHA256,
+        "scene_contract_identity": SCENE_CONTRACT_IDENTITY,
+        "scene_content_identity": SCENE_CONTRACT_PAYLOAD_IDENTITY,
         "domains": [
             {
                 "aabb": {
@@ -99,7 +107,7 @@ def _write_test_geometry_scan(path: Path) -> tuple[AABB, ...]:
             for box in boxes
         ],
     }
-    payload["scan_sha256"] = native_geometry_scan_sha256(payload)
+    payload["scan_identity"] = native_geometry_scan_identity(payload)
     path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
     return boxes
 
@@ -156,23 +164,23 @@ def test_generated_private_manifest_is_reproducible_and_geometry_bound(
     binding = resolve_collection_binding(protocol, cell_id=cell_id, episode_index=0)
     targets = validate_external_private_evaluator_manifest(
         first,
-        city_lite_scene_contract_sha256=first["city_lite_scene_contract_sha256"],
-        city_lite_scene_payload_sha256=first["city_lite_scene_payload_sha256"],
+        city_lite_scene_contract_identity=first["city_lite_scene_contract_identity"],
+        city_lite_scene_payload_identity=first["city_lite_scene_payload_identity"],
         expected_collection_binding=binding,
     )
     report = validate_private_target_geometry(
         first,
         structural_aabbs=boxes,
         public_routes_w_m=PUBLIC_ROUTE_FAMILIES_W_M[route_family_id],
-        city_lite_scene_contract_sha256=first["city_lite_scene_contract_sha256"],
-        city_lite_scene_payload_sha256=first["city_lite_scene_payload_sha256"],
+        city_lite_scene_contract_identity=first["city_lite_scene_contract_identity"],
+        city_lite_scene_payload_identity=first["city_lite_scene_payload_identity"],
     )
     assert len(targets) == report["target_count"] == 4
     assert report["target_region_id"] == target_region_id
     assert report["visibility_bucket"] == visibility_bucket
 
 
-def test_manifest_rejects_binding_and_geometry_tampering(tmp_path: Path) -> None:
+def test_manifest_rejects_binding_and_geometry_alteration(tmp_path: Path) -> None:
     scan_path = tmp_path / "native_scan.json"
     boxes = _write_test_geometry_scan(scan_path)
     manifest = build_private_evaluator_manifest(
@@ -187,22 +195,22 @@ def test_manifest_rejects_binding_and_geometry_tampering(tmp_path: Path) -> None
     with pytest.raises(PrivateEvaluatorManifestError, match="does not match the capture"):
         validate_external_private_evaluator_manifest(
             manifest,
-            city_lite_scene_contract_sha256=manifest["city_lite_scene_contract_sha256"],
-            city_lite_scene_payload_sha256=manifest["city_lite_scene_payload_sha256"],
+            city_lite_scene_contract_identity=manifest["city_lite_scene_contract_identity"],
+            city_lite_scene_payload_identity=manifest["city_lite_scene_payload_identity"],
             expected_collection_binding=wrong_binding,
         )
 
-    tampered = copy.deepcopy(manifest)
-    tampered["target_visibility_contract"]["aabb_geometry_sha256"] = "0" * 64
+    altered = copy.deepcopy(manifest)
+    altered["target_visibility_contract"]["aabb_geometry_identity"] = "0" * 16
     with pytest.raises(PrivateEvaluatorManifestError, match="runtime route/AABB geometry"):
         validate_private_target_geometry(
-            tampered,
+            altered,
             structural_aabbs=boxes,
             public_routes_w_m=PUBLIC_ROUTE_FAMILIES_W_M[
                 "citylite-route-family-a-v1"
             ],
-            city_lite_scene_contract_sha256=manifest["city_lite_scene_contract_sha256"],
-            city_lite_scene_payload_sha256=manifest["city_lite_scene_payload_sha256"],
+            city_lite_scene_contract_identity=manifest["city_lite_scene_contract_identity"],
+            city_lite_scene_payload_identity=manifest["city_lite_scene_payload_identity"],
         )
 
 
@@ -221,15 +229,15 @@ def test_native_t2_manifest_variant_is_explicit_and_not_t1_interchangeable(
     )
     validate_external_private_evaluator_manifest(
         manifest,
-        city_lite_scene_contract_sha256=manifest["city_lite_scene_contract_sha256"],
-        city_lite_scene_payload_sha256=manifest["city_lite_scene_payload_sha256"],
+        city_lite_scene_contract_identity=manifest["city_lite_scene_contract_identity"],
+        city_lite_scene_payload_identity=manifest["city_lite_scene_payload_identity"],
         expected_task_variant_id=NATIVE_T2_TASK_VARIANT_ID,
     )
     with pytest.raises(PrivateEvaluatorManifestError, match="task_variant_id"):
         validate_external_private_evaluator_manifest(
             manifest,
-            city_lite_scene_contract_sha256=manifest["city_lite_scene_contract_sha256"],
-            city_lite_scene_payload_sha256=manifest["city_lite_scene_payload_sha256"],
+            city_lite_scene_contract_identity=manifest["city_lite_scene_contract_identity"],
+            city_lite_scene_payload_identity=manifest["city_lite_scene_payload_identity"],
         )
 
     with pytest.raises(PrivateManifestGenerationError, match="dedicated native T2 canary protocol"):
@@ -270,18 +278,18 @@ def test_native_t2_v2_manifest_binds_yaw_aware_visibility_contract(tmp_path: Pat
     assert motion is not None
     validate_external_private_evaluator_manifest(
         manifest,
-        city_lite_scene_contract_sha256=manifest["city_lite_scene_contract_sha256"],
-        city_lite_scene_payload_sha256=manifest["city_lite_scene_payload_sha256"],
+        city_lite_scene_contract_identity=manifest["city_lite_scene_contract_identity"],
+        city_lite_scene_payload_identity=manifest["city_lite_scene_payload_identity"],
         expected_task_variant_id=NATIVE_T2_V2_TASK_VARIANT_ID,
         expected_native_t2_motion_contract=motion,
     )
-    tampered = copy.deepcopy(manifest)
-    tampered["target_visibility_contract"]["camera_heading_contract"]["yaw_settle_margin_s"] = 0.1
+    altered = copy.deepcopy(manifest)
+    altered["target_visibility_contract"]["camera_heading_contract"]["yaw_settle_margin_s"] = 0.1
     with pytest.raises(PrivateEvaluatorManifestError, match="frozen native T2 motion contract"):
         validate_external_private_evaluator_manifest(
-            tampered,
-            city_lite_scene_contract_sha256=manifest["city_lite_scene_contract_sha256"],
-            city_lite_scene_payload_sha256=manifest["city_lite_scene_payload_sha256"],
+            altered,
+            city_lite_scene_contract_identity=manifest["city_lite_scene_contract_identity"],
+            city_lite_scene_payload_identity=manifest["city_lite_scene_payload_identity"],
             expected_task_variant_id=NATIVE_T2_V2_TASK_VARIANT_ID,
             expected_native_t2_motion_contract=motion,
         )
@@ -304,8 +312,8 @@ def test_native_t2_v3_manifest_is_bound_to_the_time_scaled_contract(tmp_path: Pa
     assert visibility["execution_window"]["waypoint_segment_seconds"] == 12.0
     validate_external_private_evaluator_manifest(
         manifest,
-        city_lite_scene_contract_sha256=manifest["city_lite_scene_contract_sha256"],
-        city_lite_scene_payload_sha256=manifest["city_lite_scene_payload_sha256"],
+        city_lite_scene_contract_identity=manifest["city_lite_scene_contract_identity"],
+        city_lite_scene_payload_identity=manifest["city_lite_scene_payload_identity"],
         expected_task_variant_id=NATIVE_T2_V3_TASK_VARIANT_ID,
         expected_native_t2_motion_contract=motion,
     )
@@ -320,11 +328,11 @@ def test_native_t2_v3_manifest_is_bound_to_the_time_scaled_contract(tmp_path: Pa
         )
 
 
-def test_geometry_scan_and_private_output_fail_closed(tmp_path: Path) -> None:
+def test_geometry_scan_and_private_output_strict(tmp_path: Path) -> None:
     scan_path = tmp_path / "native_scan.json"
     _write_test_geometry_scan(scan_path)
     payload = json.loads(scan_path.read_text(encoding="utf-8"))
-    payload["scene_content_sha256"] = "0" * 64
+    payload["scene_content_identity"] = "0" * 16
     scan_path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(PrivateManifestGenerationError, match="payload does not match"):
         load_native_geometry_catalog(scan_path)
@@ -333,7 +341,7 @@ def test_geometry_scan_and_private_output_fail_closed(tmp_path: Path) -> None:
     payload = json.loads(scan_path.read_text(encoding="utf-8"))
     payload["domains"][0]["aabb"]["max"][0] += 0.1
     scan_path.write_text(json.dumps(payload), encoding="utf-8")
-    with pytest.raises(PrivateManifestGenerationError, match="SHA-256 does not match"):
+    with pytest.raises(PrivateManifestGenerationError, match="IDENTITY does not match"):
         load_native_geometry_catalog(scan_path)
 
     _write_test_geometry_scan(scan_path)
@@ -350,7 +358,7 @@ def test_geometry_scan_and_private_output_fail_closed(tmp_path: Path) -> None:
         )
     output = tmp_path / "private" / "manifest.json"
     digest = write_private_evaluator_manifest(output, manifest, repository_root=ROOT)
-    assert len(digest) == 64
+    assert len(digest) == 16
     assert output.is_file()
     assert "position_w_m" in output.read_text(encoding="utf-8")
     with pytest.raises(PrivateManifestGenerationError, match="refusing to overwrite"):
@@ -461,7 +469,7 @@ def test_content_addressed_retention_is_external_atomic_and_rejects_collision(
         forbidden_roots=(repository, capture),
     )
     assert first.path.parent == retention.resolve()
-    assert first.path.name == f"{first.sha256}.json"
+    assert first.path.name == f"{first.identity}.json"
     assert first.path.read_bytes() == source.read_bytes()
     assert first.byte_count == len(source.read_bytes())
     assert not tuple(retention.glob("*.tmp"))

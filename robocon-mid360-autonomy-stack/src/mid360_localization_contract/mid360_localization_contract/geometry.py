@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import math
-from typing import Sequence, Tuple
+from collections.abc import Sequence
 
-
-Vector3 = Tuple[float, float, float]
-Quaternion = Tuple[float, float, float, float]
-Transform = Tuple[Vector3, Quaternion]
+Vector3 = tuple[float, float, float]
+Quaternion = tuple[float, float, float, float]
+Transform = tuple[Vector3, Quaternion]
 
 
 def vector_add(left: Vector3, right: Vector3) -> Vector3:

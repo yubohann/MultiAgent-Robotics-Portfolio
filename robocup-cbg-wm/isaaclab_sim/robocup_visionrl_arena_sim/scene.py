@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 
-
 from ._bootstrap import (
     ARENA_SIZE,
     BASE_LINK_Z,
@@ -13,15 +12,12 @@ from ._bootstrap import (
     BLUE_ROUTE,
     BLUE_START_XY,
     CAMERA_POSE,
-    Camera,
-    CameraCfg,
     DEMO_FLOW_FIRE_EVENTS,
     DEMO_FLOW_PATH_CACHE,
     DEMO_FLOW_POSES,
     DEMO_FLOW_RECOVERY_WINDOWS,
     DEMO_FLOW_TRIGGERED_EVENTS,
     DEPTH_CAMERA_POSE,
-    Gf,
     IMU_POSE,
     LAST_FIRE_TIME,
     LIDAR_POSE,
@@ -36,15 +32,12 @@ from ._bootstrap import (
     ROBOT_COLLISION_RADIUS,
     ROBOT_LENGTH,
     ROBOT_WIDTH,
-    RayCaster,
-    RayCasterCfg,
     SHOOTER_POSE,
     SIDE_GATE_TARGET_Y,
     SOUTH_MIDDLE_TARGET_X,
     TARGET_REGISTRY,
     TARGET_WALL_INSET,
     TOF_FRONT_POSE,
-    UsdGeom,
     WALL_HEIGHT,
     WALL_THICKNESS,
     WHEEL_RADIUS,
@@ -56,10 +49,16 @@ from ._bootstrap import (
     YELLOW_ROUTE,
     YELLOW_START_XY,
     ZONE_SIZE,
+    Camera,
+    CameraCfg,
+    Gf,
+    RayCaster,
+    RayCasterCfg,
+    UsdGeom,
     args_cli,
     get_current_stage,
     patterns,
-    sim_utils
+    sim_utils,
 )
 from .controllers import initialize_demo_flow_controllers, initialize_match_controllers
 from .costmap import apply_costmap_recovery, plan_safe_path
@@ -68,7 +67,7 @@ from .replay import (
     apply_replay_box_positions,
     apply_trained_replay_events,
     replay_row_at,
-    trained_replay_pushable_pose
+    trained_replay_pushable_pose,
 )
 from .rules import inward_45deg_target_yaws
 from .spawn import (
@@ -81,14 +80,10 @@ from .spawn import (
     spawn_route_markers,
     spawn_target,
     target_path_from_name,
-    validate_route
+    validate_route,
 )
-from .transforms import (
-    create_xform,
-    quat_from_euler,
-    quat_rotate,
-    set_xform
-)
+from .transforms import create_xform, quat_from_euler, quat_rotate, set_xform
+
 
 def design_arena():
     create_xform("/World/Arena")
@@ -467,12 +462,7 @@ def design_robot(
 
 
 def create_lidar_proxy_mesh() -> str:
-    """Create one static mesh for the IsaacLab RayCaster.
-
-    This local IsaacLab build supports a single static mesh in RayCaster, so the
-    field collision boxes are mirrored into one invisible mesh while the visible
-    scene keeps separate physical parts.
-    """
+    """Create one static mesh for the IsaacLab RayCaster."""
     stage = get_current_stage()
     proxy_root = "/World/LidarProxy"
     proxy_mesh_path = f"{proxy_root}/static_arena_mesh"
@@ -572,16 +562,15 @@ def create_sensor_streams() -> dict[str, object]:
     sensors: dict[str, object] = {"camera": camera, "lidar": lidar}
     try:
         from isaaclab.sensors.imu import Imu, ImuCfg
-
-        imu_cfg = ImuCfg(
-            prim_path=f"{PRIMARY_ROBOT_PATH}/ImuFrame",
-            update_period=1.0 / 100.0,
-            offset=ImuCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0)),
-            gravity_bias=(0.0, 0.0, 9.81),
-        )
-        sensors["imu"] = Imu(imu_cfg)
-    except Exception as exc:
-        print(f"[WARN]: IsaacLab IMU stream unavailable ({exc}); visual/ROS IMU model is still present.")
+    except ImportError:
+        return sensors
+    imu_cfg = ImuCfg(
+        prim_path=f"{PRIMARY_ROBOT_PATH}/ImuFrame",
+        update_period=1.0 / 100.0,
+        offset=ImuCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0)),
+        gravity_bias=(0.0, 0.0, 9.81),
+    )
+    sensors["imu"] = Imu(imu_cfg)
     return sensors
 
 
@@ -634,11 +623,11 @@ def target_xy_for_name(target_name: str) -> tuple[float, float] | None:
 def finite_path_pose(
     path: list[tuple[float, float]],
     progress: float,
-    fallback_yaw: float,
+    default_yaw: float,
 ) -> tuple[tuple[float, float, float], float]:
     if len(path) < 2:
         x, y = path[0]
-        return (x, y, 0.0), fallback_yaw
+        return (x, y, 0.0), default_yaw
 
     segment_lengths = [
         math.hypot(path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1])
@@ -647,7 +636,7 @@ def finite_path_pose(
     total_length = sum(segment_lengths)
     if total_length <= 1e-9:
         x, y = path[-1]
-        return (x, y, 0.0), fallback_yaw
+        return (x, y, 0.0), default_yaw
 
     distance = max(0.0, min(1.0, progress)) * total_length
     walked = 0.0
@@ -658,11 +647,11 @@ def finite_path_pose(
             x1, y1 = path[index + 1]
             x = x0 + (x1 - x0) * local
             y = y0 + (y1 - y0) * local
-            yaw = math.atan2(y1 - y0, x1 - x0) if length > 1e-9 else fallback_yaw
+            yaw = math.atan2(y1 - y0, x1 - x0) if length > 1e-9 else default_yaw
             return (x, y, 0.0), yaw
 
     x, y = path[-1]
-    return (x, y, 0.0), fallback_yaw
+    return (x, y, 0.0), default_yaw
 
 
 def demo_segment_path(team: str, segment_index: int, start_xy: tuple[float, float], goal_xy: tuple[float, float]) -> list[tuple[float, float]]:

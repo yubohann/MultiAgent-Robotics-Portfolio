@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import importlib.metadata
+import itertools
 import math
 import platform
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from .citylite_scene import AGENT_COUNT, PUBLIC_ROUTES_W_M
-
 
 if TYPE_CHECKING:
     from .methods import StableBaselines3CheckpointPolicy
@@ -113,12 +114,7 @@ def _canonical_agent_ids(agent_ids: Iterable[int] | None, count: int) -> tuple[i
 
 
 def quaternion_wxyz_to_yaw(quaternion_wxyz: Any) -> np.ndarray:
-    """Return world yaw in ``[-pi, pi)`` from finite, nonzero WXYZ quaternions.
-
-    IsaacLab exposes root orientation as WXYZ.  The implementation normalizes
-    each input first so an otherwise valid scaled quaternion has the same
-    orientation, but rejects zero and non-finite quaternions.
-    """
+    """Return world yaw in ``[-pi, pi)`` from finite, nonzero WXYZ quaternions."""
 
     try:
         quaternions = np.asarray(quaternion_wxyz, dtype=np.float64)
@@ -167,11 +163,7 @@ def derive_physical_state_8d(
     *,
     agent_ids: Iterable[int] | None = None,
 ) -> PhysicalState8D:
-    """Derive ``[world xyz, world velocity xyz, yaw, body yaw rate]``.
-
-    Inputs are strictly batched CPU arrays with row ``i`` bound to Isaac agent
-    ``i``.  No sensor or evaluator object can enter this function's ABI.
-    """
+    """Derive ``[world xyz, world velocity xyz, yaw, body yaw rate]``."""
 
     try:
         count = int(np.asarray(position_w_m).shape[0])
@@ -207,7 +199,7 @@ def _route_anchor_headings() -> tuple[tuple[float, float, float], tuple[float, .
     headings: list[float] = []
     for route in PUBLIC_ROUTES_W_M:
         anchors.append(tuple(float(component) for component in route[0]))
-        for start, end in zip(route, route[1:]):
+        for start, end in itertools.pairwise(route):
             dx = float(end[0]) - float(start[0])
             dy = float(end[1]) - float(start[1])
             if math.hypot(dx, dy) > 1.0e-9:
@@ -247,7 +239,7 @@ class CityLiteRouteAnchorTransform:
         object.__setattr__(self, "pilot_base_origin_m", _readonly(base))
 
     @classmethod
-    def from_public_routes(cls) -> "CityLiteRouteAnchorTransform":
+    def from_public_routes(cls) -> CityLiteRouteAnchorTransform:
         anchors, headings = _route_anchor_headings()
         return cls(
             anchors_w_m=np.asarray(anchors, dtype=np.float64),
@@ -440,14 +432,14 @@ def _metadata_vector(metadata: Mapping[str, Any], key: str, *, shape: tuple[int,
     return vector
 
 
-def _is_sha256(value: Any) -> bool:
-    return isinstance(value, str) and len(value) == 64 and all(
+def _is_identity(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 16 and all(
         character in "0123456789abcdef" for character in value
     )
 
 
 def _require_matching_runtime_versions(runtime_versions: Mapping[str, Any]) -> None:
-    """Fail closed when the v2 checkpoint's declared runtime is not current."""
+    """Stop the run when the v2 checkpoint's declared runtime is not current."""
 
     if not isinstance(runtime_versions, Mapping) or any(
         not isinstance(runtime_versions.get(key), str) or not runtime_versions[key].strip()
@@ -472,10 +464,10 @@ def _require_matching_runtime_versions(runtime_versions: Mapping[str, Any]) -> N
         )
 
 
-def _require_policy_hash_provenance(
-    policy: "StableBaselines3CheckpointPolicy", metadata: Mapping[str, Any]
+def _require_policy_identity_provenance(
+    policy: StableBaselines3CheckpointPolicy, metadata: Mapping[str, Any]
 ) -> Mapping[str, Any]:
-    """Require fresh checkpoint and sidecar hashes from the loaded adapter."""
+    """Require fresh checkpoint and sidecar identities from the loaded adapter."""
 
     try:
         provenance = policy.provenance()
@@ -483,13 +475,13 @@ def _require_policy_hash_provenance(
         raise StateOnlyTransferError("unable to read fresh SB3 checkpoint provenance") from exc
     if not isinstance(provenance, Mapping):
         raise StateOnlyTransferError("SB3 checkpoint provenance must be an object")
-    checkpoint_hash = provenance.get("checkpoint_sha256")
-    metadata_hash = provenance.get("adapter_metadata_sha256")
-    if not _is_sha256(checkpoint_hash) or not _is_sha256(metadata_hash):
+    checkpoint_identity = provenance.get("checkpoint_identity")
+    metadata_identity = provenance.get("adapter_metadata_identity")
+    if not _is_identity(checkpoint_identity) or not _is_identity(metadata_identity):
         raise StateOnlyTransferError(
-            "SB3 policy provenance requires valid checkpoint and metadata SHA-256 hashes"
+            "SB3 policy provenance requires valid checkpoint and metadatan identity identities"
         )
-    if metadata.get("checkpoint_sha256") != checkpoint_hash:
+    if metadata.get("checkpoint_identity") != checkpoint_identity:
         raise StateOnlyTransferError(
             "SB3 checkpoint metadata commitment does not match loaded checkpoint provenance"
         )
@@ -497,15 +489,9 @@ def _require_policy_hash_provenance(
 
 
 def validate_state_only_sb3_policy(
-    policy: "StableBaselines3CheckpointPolicy",
+    policy: StableBaselines3CheckpointPolicy,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Validate a real v2 SB3 policy before it can command Isaac.
-
-    The nominal adapter validates the checkpoint hash and loads the actual SB3
-    PPO/SAC object.  This stricter transfer gate additionally checks that its
-    exact local state/action ABI and coordinate contract are appropriate for
-    the development-only City-Lite bridge.
-    """
+    """Validate a real v2 SB3 policy before it can command Isaac."""
 
     from .methods import StableBaselines3CheckpointPolicy
 
@@ -526,12 +512,12 @@ def validate_state_only_sb3_policy(
         raise StateOnlyTransferError("SB3 checkpoint training backend is not the declared pilot backend")
     if metadata.get("formal_benchmark_admission") is not False:
         raise StateOnlyTransferError("SB3 transfer metadata must explicitly deny formal benchmark admission")
-    checkpoint_sha256 = metadata.get("checkpoint_sha256")
-    if not _is_sha256(checkpoint_sha256):
-        raise StateOnlyTransferError("SB3 checkpoint requires a lowercase SHA-256 commitment")
+    checkpoint_identity = metadata.get("checkpoint_identity")
+    if not _is_identity(checkpoint_identity):
+        raise StateOnlyTransferError("SB3 checkpoint requires a lowercase IDENTITY commitment")
     runtime_versions = metadata.get("runtime_versions")
     _require_matching_runtime_versions(runtime_versions)
-    _require_policy_hash_provenance(policy, metadata)
+    _require_policy_identity_provenance(policy, metadata)
     transfer = metadata.get("isaac_control_transfer")
     if not isinstance(transfer, Mapping) or transfer.get("eligible") is not True:
         raise StateOnlyTransferError("SB3 checkpoint is not marked eligible for development transfer")
@@ -582,7 +568,7 @@ class StateOnlySB3IsaacTransfer:
 
     def __init__(
         self,
-        policy: "StableBaselines3CheckpointPolicy",
+        policy: StableBaselines3CheckpointPolicy,
         *,
         cadence: FixedDecisionCadence,
         transform: CityLiteRouteAnchorTransform | None = None,
@@ -601,7 +587,7 @@ class StateOnlySB3IsaacTransfer:
             raise StateOnlyTransferError("bounds must be WorldCommandBounds")
 
     @property
-    def policy(self) -> "StableBaselines3CheckpointPolicy":
+    def policy(self) -> StableBaselines3CheckpointPolicy:
         return self._policy
 
     def decide(

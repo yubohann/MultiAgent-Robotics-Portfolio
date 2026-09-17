@@ -4,16 +4,26 @@ import json
 import sys
 import tempfile
 import unittest
-from hashlib import sha256
 from pathlib import Path
 
 import numpy as np
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
+
+from _identity import IdentityAccumulator
+from rivermark_benchmark.isaac_transfer_validate import (
+    RUNTIME_SAFETY_PATH,
+    STATE_ACTION_PATH,
+    TRACE_FIELDS,
+    TRACE_PATH,
+    TRACE_PROVENANCE_PATH,
+    TRANSFER_VALIDATION_SCHEMA,
+    validate_isaac_state_only_transfer,
+    write_transfer_validation_receipt,
+)
 
 from rivermark_benchmark.citylite_scene import AGENT_COUNT
 from rivermark_benchmark.isaac_runtime_safety import (
@@ -34,20 +44,10 @@ from rivermark_benchmark.isaac_transfer import (
     WorldCommandBounds,
     derive_physical_state_8d,
 )
-from rivermark_benchmark.isaac_transfer_validate import (
-    RUNTIME_SAFETY_PATH,
-    STATE_ACTION_PATH,
-    TRACE_FIELDS,
-    TRACE_PATH,
-    TRACE_PROVENANCE_PATH,
-    TRANSFER_VALIDATION_SCHEMA,
-    validate_isaac_state_only_transfer,
-    write_transfer_validation_receipt,
-)
 
 
-def _sha256(path: Path) -> str:
-    digest = sha256()
+def _identity(path: Path) -> str:
+    digest = IdentityAccumulator()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
@@ -65,30 +65,30 @@ def _load_npz(path: Path) -> dict[str, np.ndarray]:
 
 
 def _refresh_capture_bindings(capture: Path) -> None:
-    """Rebind the synthetic evidence after deliberate semantic tampering."""
+    """Rebind the synthetic evidence after deliberate semantic alteration."""
 
     trace = capture / TRACE_PATH
     provenance_path = capture / TRACE_PROVENANCE_PATH
     scene_path = capture / "scene.json"
     receipt_path = capture / "capture_receipt.json"
     provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
-    provenance["state_action_sha256"] = _sha256(capture / STATE_ACTION_PATH)
-    provenance["trace_sha256"] = _sha256(trace)
+    provenance["state_action_identity"] = _identity(capture / STATE_ACTION_PATH)
+    provenance["trace_identity"] = _identity(trace)
     _write_json(provenance_path, provenance)
     scene = json.loads(scene_path.read_text(encoding="utf-8"))
-    scene["control_transfer_trace_sha256"] = _sha256(trace)
-    scene["control_transfer_provenance_sha256"] = _sha256(provenance_path)
+    scene["control_transfer_trace_identity"] = _identity(trace)
+    scene["control_transfer_provenance_identity"] = _identity(provenance_path)
     _write_json(scene_path, scene)
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    receipt["task"]["decision_trace_sha256"] = _sha256(trace)
+    receipt["task"]["decision_trace_identity"] = _identity(trace)
     artifacts = {}
     for relative in ("scene.json", STATE_ACTION_PATH, TRACE_PATH, TRACE_PROVENANCE_PATH, RUNTIME_SAFETY_PATH):
         path = capture / Path(*relative.split("/"))
-        artifacts[relative] = {"bytes": path.stat().st_size, "sha256": _sha256(path)}
-    receipt["artifact_hashes"] = artifacts
+        artifacts[relative] = {"bytes": path.stat().st_size, "identity": _identity(path)}
+    receipt["artifact_identities"] = artifacts
     _write_json(receipt_path, receipt)
-    (capture / "capture_receipt.sha256").write_text(
-        f"{_sha256(receipt_path)}  capture_receipt.json\n", encoding="ascii"
+    (capture / "capture_receipt.identity").write_text(
+        f"{_identity(receipt_path)}  capture_receipt.json\n", encoding="ascii"
     )
 
 
@@ -262,9 +262,9 @@ def _fixture(root: Path) -> Path:
             "implementation_kind": "trained_sb3_pilot_checkpoint",
             "external_dependency": "stable_baselines3",
             "checkpoint": "C:/external/pilot.zip",
-            "checkpoint_sha256": "a" * 64,
+            "checkpoint_identity": "a" * 16,
             "adapter_metadata": "C:/external/pilot.rivermark.json",
-            "adapter_metadata_sha256": "b" * 64,
+            "adapter_metadata_identity": "b" * 16,
             "algorithm": "ppo",
             "parameter_sharing": "independent_shared_policy_per_agent",
         },
@@ -280,9 +280,9 @@ def _fixture(root: Path) -> Path:
         "state_phase": "pre_sim_command_state",
         "state_action_state_phase": "pre_sim_command_state",
         "state_action_path": STATE_ACTION_PATH,
-        "state_action_sha256": _sha256(state_path),
+        "state_action_identity": _identity(state_path),
         "trace_path": TRACE_PATH,
-        "trace_sha256": _sha256(trace_path),
+        "trace_identity": _identity(trace_path),
         "trace_decision_count": len(decision_steps),
         "trace_fields": list(TRACE_FIELDS),
         "transfer": transfer,
@@ -297,8 +297,8 @@ def _fixture(root: Path) -> Path:
             "control_transfer_task_kind": "state_only_control_transfer_smoke",
             "control_transfer_state_phase": "pre_sim_command_state",
             "control_transfer_policy_input": "state_only_8d",
-            "control_transfer_trace_sha256": _sha256(trace_path),
-            "control_transfer_provenance_sha256": _sha256(provenance_path),
+            "control_transfer_trace_identity": _identity(trace_path),
+            "control_transfer_provenance_identity": _identity(provenance_path),
         },
     )
     receipt = {
@@ -329,7 +329,7 @@ def _fixture(root: Path) -> Path:
             "evaluation": "not_a_search_result",
             "private_targets_present": False,
             "decision_trace": TRACE_PATH,
-            "decision_trace_sha256": _sha256(trace_path),
+            "decision_trace_identity": _identity(trace_path),
         },
         "claim_boundary": {
             "formal_benchmark_admission": False,
@@ -351,12 +351,12 @@ def _fixture(root: Path) -> Path:
         "runtime_safety_guard": {
             "schema": RUNTIME_SAFETY_SCHEMA,
             "enabled": True,
-            "fail_closed": True,
+            "strict": True,
             "status": "passed",
             "evidence": {
                 "schema": RUNTIME_SAFETY_TRACE_SCHEMA,
                 "path": RUNTIME_SAFETY_PATH,
-                "sha256": _sha256(runtime_path),
+                "identity": _identity(runtime_path),
                 "physics_frame_count": frame_count,
             },
             "checks": {
@@ -425,7 +425,7 @@ class IsaacTransferValidateTests(unittest.TestCase):
             self.assertFalse(report.valid)
             self.assertIn("claim_boundary", {issue.code for issue in report.issues})
 
-    def test_rejects_artifact_tamper_before_receipt_rebinding(self) -> None:
+    def test_rejects_artifact_alter_before_receipt_rebinding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             capture = _fixture(Path(temporary))
             trace_path = capture / TRACE_PATH
@@ -434,7 +434,7 @@ class IsaacTransferValidateTests(unittest.TestCase):
             np.savez_compressed(trace_path, **trace)
             report = validate_isaac_state_only_transfer(capture)
             self.assertFalse(report.valid)
-            self.assertIn("artifact_hash", {issue.code for issue in report.issues})
+            self.assertIn("artifact_identity", {issue.code for issue in report.issues})
 
 
 if __name__ == "__main__":

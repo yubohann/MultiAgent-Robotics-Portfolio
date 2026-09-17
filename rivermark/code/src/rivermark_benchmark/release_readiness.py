@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from .formal_dataset import verify_dataset_integrity
 from .release_manifest import (
@@ -16,7 +17,6 @@ from .release_manifest import (
 )
 from .repository_audit import audit_repository
 from .supply_chain import SupplyChainError, verify_supply_chain_manifest
-
 
 READINESS_SCHEMA = "org.rivermark.benchmark.release-readiness.v1"
 
@@ -115,8 +115,8 @@ def _verify_local_release_bytes(
                 {"shard_id": entry.get("shard_id", path), **dict(entry)},
                 candidate,
             )
-        except Exception as exc:  # keep the report complete and fail closed
-            _issue(issues, "local_payload_hash", f"{path}.path", str(exc))
+        except Exception as exc:  # keep the report complete and stop the run
+            _issue(issues, "local_payload_identity", f"{path}.path", str(exc))
     return shard_count
 
 
@@ -129,7 +129,7 @@ def audit_release_readiness(
     minimum_episodes: int = 1,
     require_https: bool = True,
 ) -> ReleaseReadinessReport:
-    """Return one fail-closed report for the public-release boundary."""
+    """Return one strict report for the public-release boundary."""
 
     if minimum_episodes < 1:
         raise ValueError("minimum_episodes must be at least one")
@@ -174,24 +174,27 @@ def audit_release_readiness(
     if release_payload is not None:
         if not isinstance(release_payload.get("source_revision"), str) or not release_payload.get("source_revision"):
             _issue(issues, "source_revision_required", "$.source_revision", "public release must bind a source revision")
-        expected_supply_hash = release_payload.get("supply_chain_manifest_sha256")
-        actual_supply_hash = supply_report.get("manifest_sha256")
-        if expected_supply_hash != actual_supply_hash:
+        expected_supply_identity = release_payload.get("supply_chain_manifest_identity")
+        actual_supply_identity = supply_report.get("manifest_identity")
+        if expected_supply_identity != actual_supply_identity:
             _issue(
                 issues,
                 "supply_chain_binding",
-                "$.supply_chain_manifest_sha256",
+                "$.supply_chain_manifest_identity",
                 "release manifest does not bind the supplied supply-chain manifest",
             )
         if release_payload.get("release_id") != supply_report.get("release_id"):
             _issue(issues, "release_id_binding", "$.release_id", "release and supply-chain release IDs differ")
         index = _read_json(root / "manifests" / "dataset_index.json", issues=issues, label="dataset_index")
-        if isinstance(index, Mapping) and index.get("episode_count", 0) > 0:
-            if release_payload.get("dataset_version") != index.get("dataset_version"):
-                _issue(issues, "dataset_version_binding", "$.dataset_version", "release version differs from formal dataset index")
+        if (
+            isinstance(index, Mapping)
+            and index.get("episode_count", 0) > 0
+            and release_payload.get("dataset_version") != index.get("dataset_version")
+        ):
+            _issue(issues, "dataset_version_binding", "$.dataset_version", "release version differs from formal dataset index")
         shard_count = _verify_local_release_bytes(root, release_payload, issues=issues)
     checks["release_bindings"] = "passed" if release_payload is not None and not any(
-        issue.code in {"source_revision_required", "supply_chain_binding", "release_id_binding", "dataset_version_binding", "local_payload_path", "local_payload_escape", "local_payload_missing", "local_payload_hash"}
+        issue.code in {"source_revision_required", "supply_chain_binding", "release_id_binding", "dataset_version_binding", "local_payload_path", "local_payload_escape", "local_payload_missing", "local_payload_identity"}
         for issue in issues
     ) else "failed"
 

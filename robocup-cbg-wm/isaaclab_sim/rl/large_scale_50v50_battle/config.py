@@ -6,8 +6,6 @@ from pathlib import Path
 
 import numpy as np
 
-
-
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "docs" / "rl_data" / "large_scale_50v50"
 FIG_DIR = ROOT / "docs" / "figures" / "large_scale_50v50"
