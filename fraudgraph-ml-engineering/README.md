@@ -96,6 +96,10 @@ GitHub Actions runs the validator, structural tests, compilation, package build 
 - [docs/experiment-manifest.md](docs/experiment-manifest.md) and [docs/comparison-report-schema.md](docs/comparison-report-schema.md), run provenance and report schemas.
 - [docs/data-and-reproduction.md](docs/data-and-reproduction.md), dataset layout and determinism scope.
 
+## My Role
+
+Sole author of the repository: the dataset adapters, the hybrid SplitGNN and Transformer pipeline, the shared caching layer, the experiment protocols, the CLI tooling exercised in CI, and the dataset and protocol documentation.
+
 ## License and attribution
 
 Source-available under the terms in [LICENSE](LICENSE). The SplitGNN integration and external datasets carry separate provenance and usage notes in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

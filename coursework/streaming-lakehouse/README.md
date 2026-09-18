@@ -1,4 +1,4 @@
-# Stream-Batch Lakehouse AI Portfolio
+# Streaming Lakehouse Labs
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 

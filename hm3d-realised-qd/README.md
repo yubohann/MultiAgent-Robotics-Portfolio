@@ -8,7 +8,7 @@
 
 Four CF2X quadrotors explore an unknown indoor scan with public sparse-range sensing. The fleet fuses a shared belief, picks team plans from a common candidate pool, and executes them under real Isaac and PhysX dynamics. Behavioral diversity comes only from execution receipts, so the archive records what flew, and every method faces the same observations, safety contracts and physical time budget.
 
-**Status.** `v0.1.0` research snapshot, 2026-08-08. The realised-QD selector holds a verified P10 component result across 42 real episodes, and the RB-SF-SAC policy and RFG fragment reuse are the next integration steps onto the formal selection path.
+**Status.** v0.1.0 research snapshot, 2026-08-08. The realised-QD selector holds a verified P10 component result across 42 real episodes, with RB-SF-SAC and RFG integration in progress.
 
 ## My Role
 

@@ -50,7 +50,6 @@ cd <gate_graph_2d_minimal>
 python -m pytest tests
 ```
 
-Expected result, `8 passed`.
 
 The import smoke test parses every Python file as `utf-8-sig` with expected output `parsed=183 failures=0`.
 

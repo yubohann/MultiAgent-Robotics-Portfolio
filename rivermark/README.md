@@ -8,7 +8,7 @@
 
 Cities hide targets. A quadrotor can pass a building and miss a courtyard, lose a target behind an obstacle edge, or cross the visible window too fast to confirm anything. Rivermark records those cases as synchronized multi-sensor episodes. Every step writes the control command first and then advances the simulation, so the causal chain from observation to action stays intact. Scene, protocol, runtime, and source revision are bound to identity contracts, and an episode enters the formal dataset after independent validation passes. Hidden target truth stays on the scorer side, and a search method earns credit through real observations in flight.
 
-**Status.** Protocol `citylite-t1-expert-coverage-v2` is frozen. The 4 train + 4 validation unique-candidate sequence is complete. No further collection binding is permitted under active protocol v2. The native capture path targets Isaac Sim 5.1 with Isaac Lab 2.3.2, and the CPU toolchain verifies from a clean checkout.
+**Status.** Protocol citylite-t1-expert-coverage-v2 is frozen. The train and validation capture sequence is complete across eight unique candidates, and the CPU toolchain verifies from a clean checkout.
 
 ## My Role
 

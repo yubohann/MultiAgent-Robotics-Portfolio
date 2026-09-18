@@ -1,4 +1,4 @@
-# 流批一体湖仓 AI 课程项目
+# 流式湖仓实验合集
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 

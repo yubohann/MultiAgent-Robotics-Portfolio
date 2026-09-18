@@ -9,7 +9,7 @@
 
 Coverage is the standard proxy for search quality, and it breaks in cities. A quadrotor can pass a building and miss the roof, inspect the wrong facade, lose line of sight behind geometry, or cross the observation window too fast to score. AeroCityBench turns those cases into a measurable task: procedurally generated 3D cities, a public task contract, scorer-private target truth, and confirmation that requires a legal observation in flight.
 
-**Status.** `v0.2.0.dev0` pilot. Generator, contracts, scorer, calibration tooling and release builders are implemented. Formal blind scoring opens after validation in [docs/research-notes.md](docs/research-notes.md).
+**Status.** v0.2.0.dev0 pilot. Generator, contracts, scoring, calibration tooling and release builders ship in this repository. Formal blind scoring is the next stage.
 
 ## What It Tests
 

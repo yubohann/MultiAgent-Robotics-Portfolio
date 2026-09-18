@@ -11,7 +11,7 @@
 
 The system covers products, inventory, checkout, sales, finance, announcements, business analysis and an intelligent assistant, plus second-phase modules for members, employees, suppliers and system parameters. The engineering side uses uv-managed dependencies, a pytest suite with a 100 percent coverage gate on the backend models and second-phase services, and a complete analysis package with reports, diagrams and the defense deck.
 
-**Status.** Course design complete. 11 automated tests pass, and the coverage report shows 530 statements at 100 percent.
+**Status.** Course design complete, with automated tests and a coverage report in the repository.
 
 ## My Role
 

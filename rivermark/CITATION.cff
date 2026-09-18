@@ -3,8 +3,8 @@ message: "If you use Rivermark Benchmark, please cite the release recorded in th
 title: "Rivermark Benchmark"
 type: software
 authors:
-  - family-names: "Han"
-    given-names: "Yubo"
+  - family-names: "Yu"
+    given-names: "Bohan"
 repository-code: "https://github.com/yubohann/rivermark-benchmark"
 license: "Apache-2.0"
 version: "0.1.0-dev"

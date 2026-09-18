@@ -77,7 +77,6 @@ docs/rl_data/world_model_sacflow_final/training_summary.json
 docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.json
 docs/rl_data/world_model_sacflow_final/contract_eval_multiseed.csv
 docs/rl_data/world_model_sacflow_final/strict_replay_summary.json
-docs/rl_data/world_model_sacflow_final/strict_replay_audit.md
 ```
 
 ## 4. Policy Export

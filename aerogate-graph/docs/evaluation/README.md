@@ -20,4 +20,3 @@ cd <gate_graph_2d_minimal>
 python -m pytest tests
 ```
 
-Expected result is `8 passed`.

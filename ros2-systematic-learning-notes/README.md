@@ -8,6 +8,10 @@ The notes follow the work of a ROS 2 development engineer across 18 chapters and
 
 **Status.** Maintained as a living handbook, with the full PDF and the chapter map retained in this directory.
 
+## My Role
+
+Author and maintainer of the handbook: the 18-chapter structure, the technical write-ups on ROS 2 communication, TF2, Nav2, MoveIt 2 and deployment, and the PDF and chapter map shipped in this directory.
+
 ## Contents
 
 - ROS 2 workspaces, nodes, topics, services, actions, parameters and lifecycle

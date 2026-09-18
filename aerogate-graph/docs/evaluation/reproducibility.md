@@ -32,7 +32,6 @@ python -m pytest tests
 Expected output,
 
 ```text
-8 passed
 ```
 
 ## Import Smoke Command

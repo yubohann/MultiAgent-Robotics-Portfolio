@@ -21,7 +21,6 @@ These documents cover what the benchmark does, how data is captured and checked,
 | [Governance](governance.md) | Asset provenance, licensing, and API stability |
 | [API and Schema Stability](api-schema-stability.md) | Support levels, compatibility rules, and deprecation |
 | [Asset Policy](asset-policy.md) | Asset provenance, licensing, and redistribution terms |
-| [Security and Integrity](security-and-integrity.md) | Integrity reports, private data, and disclosure |
 | [Limitations](limitations.md) | Current scope and the development roadmap |
 
 ## Repository Scopes

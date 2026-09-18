@@ -36,7 +36,7 @@ I authored this package end to end. The list below maps each workstream to the c
 
 ## Recorded Evidence
 
-- The CPU test suite passes at `8 passed`, and the import smoke check parses every Python file, both recorded in `docs/evaluation/reproducibility.md`.
+- The CPU test suite and the import smoke check run from a clean checkout, with commands in docs/evaluation/reproducibility.md.
 - The recorded single-agent dynamic 42-gate baseline table puts the mainline method at success rate 1.0 and A* at 0.1 across 10 seeds.
 - The recorded multi-agent static and dynamic demos hold 100.0 success rate and 0.0 collision rate at the 60 and 36 gate scenes, in `docs/evaluation/gate_graph_2d_evaluation_report.md`.
 

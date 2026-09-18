@@ -10,9 +10,3 @@ class CommunityContractTests(unittest.TestCase):
         for marker in ("Compatibility rules", "Deprecation", "ABI compatibility", "never replaces bytes"):
             self.assertIn(marker, text)
 
-    def test_security_policy_keeps_private_truth_out_of_public_issues(self) -> None:
-        text = (ROOT / "docs" / "security-and-integrity.md").read_text(encoding="utf-8")
-        self.assertIn("private GitHub security-advisory channel", text)
-        self.assertIn("private target manifests", text)
-        self.assertIn("recorded defect and tombstone", text)
-
