@@ -49,8 +49,8 @@
 
 ## Videos
 
-- [Multi-agent robotics research demonstration](https://www.youtube.com/watch?v=V4CoEqpcfR4), research systems and experimental results.
-- [ROBOCON robotics laboratory work](https://www.youtube.com/watch?v=AA78LbGNxQ8), physical robot integration and laboratory testing.
+- [Robotics & Multi-Agent Systems Portfolio](https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-multi-agent-systems-portfolio.mp4), research systems and experimental results (4 min).
+- [Robotics Team in Action](https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-team-in-action.mp4), physical robot integration and laboratory testing (3 min).
 
 ---
 

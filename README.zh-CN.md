@@ -49,8 +49,8 @@
 
 ## 视频演示
 
-- [多智能体机器人研究演示](https://www.youtube.com/watch?v=V4CoEqpcfR4) 展示研究系统与实验结果。
-- [ROBOCON 实验室工作](https://www.youtube.com/watch?v=AA78LbGNxQ8) 展示实体机器人集成与实验室测试。
+- [多智能体机器人系统演示](https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-multi-agent-systems-portfolio.mp4) 展示研究系统与实验结果（约 4 分钟）。
+- [ROBOCON 实验室工作](https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-team-in-action.mp4) 展示实体机器人集成与实验室测试（约 3 分钟）。
 
 ---
 
