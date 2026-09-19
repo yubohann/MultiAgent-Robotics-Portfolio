@@ -1,11 +1,6 @@
 <h1 align="center">Bohan Yu</h1>
 
-<p align="center"><b>Multi-Agent Robotics and Embodied AI</b></p>
-
-<p align="center">
-  Research engineering for multi-UAV search benchmarks, graph reinforcement learning,<br>
-  ROS 2 autonomy and deterministic ML pipelines.
-</p>
+<p align="center"><b>Multi-Agent Systems, Visual-Semantic Navigation, and Reinforcement Learning</b></p>
 
 <p align="center">
   <a href="assets/cv/Bohan_Yu_CV.pdf">CV</a> &nbsp;|&nbsp;
@@ -21,7 +16,18 @@
 
 ---
 
-**B.Eng. candidate in Computer Science and Technology, Hubei University of Technology, June 2027.** Open to PhD and research-engineering roles.
+**B.Eng. candidate in Computer Science and Technology, June 2027.** Open to PhD and research-engineering roles.
+
+---
+
+## Videos
+
+<table>
+  <tr>
+    <td align="center" width="50%"><a href="https://www.youtube.com/watch?v=V4CoEqpcfR4"><img src="assets/videos/portfolio-cover.jpg" width="100%" alt="Multi-agent robotics research demonstration" /></a><br><sub><b>Multi-agent robotics research demonstration</b>, research systems and experimental results</sub></td>
+    <td align="center" width="50%"><a href="https://www.youtube.com/watch?v=AA78LbGNxQ8"><img src="assets/videos/team-cover.jpg" width="100%" alt="ROBOCON robotics laboratory work" /></a><br><sub><b>ROBOCON robotics laboratory work</b>, physical robot integration and laboratory testing</sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -44,13 +50,6 @@
     <td align="center" width="33%"><a href="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg"><img src="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg" width="100%" alt="Hubei engineering practice and innovation contest 2025, second prize" /></a><br><sub>Hubei engineering practice 2025, second prize</sub></td>
   </tr>
 </table>
-
----
-
-## Videos
-
-- [Multi-agent robotics research demonstration](https://www.youtube.com/watch?v=V4CoEqpcfR4), research systems and experimental results.
-- [ROBOCON robotics laboratory work](https://www.youtube.com/watch?v=AA78LbGNxQ8), physical robot integration and laboratory testing.
 
 ---
 
