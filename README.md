@@ -21,7 +21,7 @@
 
 ---
 
-**B.Eng. candidate in Computer Science and Technology, Hubei University of Technology, June 2027.** Open to PhD and research-engineering roles.
+**B.Eng. candidate in Computer Science and Technology, Hubei University of Technology, June 2027.** Research directions: multi-agent systems, visual-semantic navigation, and reinforcement learning; seeking internship and research-engineering roles in robotics and embodied AI.
 
 ---
 
