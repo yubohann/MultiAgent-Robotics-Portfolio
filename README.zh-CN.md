@@ -20,6 +20,17 @@
 
 ---
 
+## 视频演示
+
+<table>
+  <tr>
+    <td align="center" width="50%"><a href="https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-multi-agent-systems-portfolio.mp4"><img src="assets/videos/portfolio-cover.jpg" width="100%" alt="多智能体机器人系统演示" /></a><br><sub><b>多智能体机器人系统演示</b>（约 4 分钟）</sub></td>
+    <td align="center" width="50%"><a href="https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-team-in-action.mp4"><img src="assets/videos/team-cover.jpg" width="100%" alt="ROBOCON 实验室工作" /></a><br><sub><b>ROBOCON 实验室工作</b>（约 3 分钟）</sub></td>
+  </tr>
+</table>
+
+---
+
 ## 获奖证书
 
 <table>
@@ -39,13 +50,6 @@
     <td align="center" width="33%"><a href="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg"><img src="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg" width="100%" alt="2025 湖北省工程实践与创新能力大赛，二等奖" /></a><br><sub>2025 湖北省工程实践与创新能力大赛，二等奖</sub></td>
   </tr>
 </table>
-
----
-
-## 视频演示
-
-- [多智能体机器人系统演示](https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-multi-agent-systems-portfolio.mp4) 展示研究系统与实验结果（约 4 分钟）。
-- [ROBOCON 实验室工作](https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-team-in-action.mp4) 展示实体机器人集成与实验室测试（约 3 分钟）。
 
 ---
 

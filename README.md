@@ -20,6 +20,17 @@
 
 ---
 
+## Videos
+
+<table>
+  <tr>
+    <td align="center" width="50%"><a href="https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-multi-agent-systems-portfolio.mp4"><img src="assets/videos/portfolio-cover.jpg" width="100%" alt="Robotics & Multi-Agent Systems Portfolio" /></a><br><sub><b>Robotics & Multi-Agent Systems Portfolio</b> (4 min)</sub></td>
+    <td align="center" width="50%"><a href="https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-team-in-action.mp4"><img src="assets/videos/team-cover.jpg" width="100%" alt="Robotics Team in Action" /></a><br><sub><b>Robotics Team in Action</b> (3 min)</sub></td>
+  </tr>
+</table>
+
+---
+
 ## Certificates
 
 <table>
@@ -39,13 +50,6 @@
     <td align="center" width="33%"><a href="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg"><img src="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg" width="100%" alt="Hubei engineering practice and innovation contest 2025, second prize" /></a><br><sub>Hubei engineering practice 2025, second prize</sub></td>
   </tr>
 </table>
-
----
-
-## Videos
-
-- [Robotics & Multi-Agent Systems Portfolio](https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-multi-agent-systems-portfolio.mp4), research systems and experimental results (4 min).
-- [Robotics Team in Action](https://gitee.com/yubohann/MultiAgent-Robotics-Portfolio/raw/main/assets/videos/robotics-team-in-action.mp4), physical robot integration and laboratory testing (3 min).
 
 ---
 
