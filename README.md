@@ -3,11 +3,6 @@
 <p align="center"><b>Multi-Agent Robotics and Embodied AI</b></p>
 
 <p align="center">
-  Research engineering for multi-UAV search benchmarks, graph reinforcement learning,<br>
-  ROS 2 autonomy and deterministic ML pipelines.
-</p>
-
-<p align="center">
   <a href="assets/cv/Bohan_Yu_CV.pdf">CV</a> &nbsp;|&nbsp;
   <a href="mailto:2311311120@hbut.edu.cn">Email</a> &nbsp;|&nbsp;
   <a href="#certificates">Certificates</a> &nbsp;|&nbsp;
@@ -21,7 +16,7 @@
 
 ---
 
-**B.Eng. candidate in Computer Science and Technology, Hubei University of Technology, June 2027.** Research directions: multi-agent systems, visual-semantic navigation, and reinforcement learning; seeking internship and research-engineering roles in robotics and embodied AI.
+**B.Eng. candidate in Computer Science and Technology, June 2027.** Research directions: multi-agent systems, visual-semantic navigation, and reinforcement learning; seeking internship and research-engineering roles in robotics and embodied AI.
 
 ---
 
