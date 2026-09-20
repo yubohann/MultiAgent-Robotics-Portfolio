@@ -71,7 +71,7 @@
 ## Experience and Education
 
 - **Independent Research Lead**, multi-robot cooperative exploration and target search, October 2025 to present. Designed and built the benchmark, graph reinforcement learning, world-model and quality-diversity projects in this portfolio, with a first-author manuscript in preparation on multi-robot exploration and geometry-constrained semantic allocation.
-- **B.Eng. candidate in Computer Science and Technology**, Hubei University of Technology, June 2027. GPA 86.7 out of 100, merit rank 1 of 33.
+- Comprehensive ranking: 1st in the major for 3 consecutive years; academic rank: top 10%. Honors: First-Class Academic Scholarship (3×), Outstanding Student of the Year (2024, 2025, 2026). Relevant coursework: Artificial Intelligence, Linear Algebra, Advanced Mathematics, C Programming, Database Systems, Operating Systems, Computer Vision.
 - **Algorithm Engineering Intern**, Wuhan Yawei Electronic Technology Co., Ltd., May to July 2026. Isaac Lab environments, PPO training, formation-aware observations and obstacle-avoidance experiments.
 - **LiDAR and Perception Lead**, ROBOCON Robotics Team, 2023 to 2025. LiDAR-inertial localization, ROS 2 integration, navigation interfaces and embedded-control handoff.
 - **Team Lead**, Mathematical Modeling Laboratory, 2024 to 2025. Python, MATLAB and linear-algebra training for student teams.
