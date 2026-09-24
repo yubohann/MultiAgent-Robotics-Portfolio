@@ -45,7 +45,7 @@
     <td align="center" width="33%"><a href="assets/certificates/robocon-24th-bionic-crosscountry-team1.jpg"><img src="assets/certificates/robocon-24th-bionic-crosscountry-team1.jpg" width="100%" alt="第二十四届 ROBOCON 仿生足式越野赛，全国二等奖，一队" /></a><br><sub>第二十四届 ROBOCON，仿生足式越野赛，全国二等奖，一队</sub></td>
   </tr>
   <tr>
-    <td align="center" width="33%"><a href="assets/certificates/robocon-24th-bionic-crosscountry-team2.jpg"><img src="assets/certificates/robocon-24th-bionic-crosscountry-team2.jpg" width="100%" alt="第二十四届 ROBOCON 仿生足式越野赛，全国二等奖，二队" /></a><br><sub>第二十四届 ROBOCON，仿生足式越野赛，全国二等奖，二队</sub></td>
+    <td align="center" width="33%"><a href="assets/certificates/robocon-24th-bionic-crosscountry-team2.jpg"><img src="assets/certificates/robocon-24th-bionic-crosscountry-team2.jpg" width="100%" alt="第二十四届 ROBOCON 仿生足式越野赛，全国一等奖，二队" /></a><br><sub>第二十四届 ROBOCON，仿生足式越野赛，全国一等奖，二队</sub></td>
     <td align="center" width="33%"><a href="assets/certificates/hubei-mechanical-innovation-2024-third-prize.jpg"><img src="assets/certificates/hubei-mechanical-innovation-2024-third-prize.jpg" width="100%" alt="2024 湖北省机械创新设计大赛，三等奖" /></a><br><sub>2024 湖北省机械创新设计大赛，三等奖</sub></td>
     <td align="center" width="33%"><a href="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg"><img src="assets/certificates/hubei-engineering-practice-2025-second-prize.jpg" width="100%" alt="2025 湖北省工程实践与创新能力大赛，二等奖" /></a><br><sub>2025 湖北省工程实践与创新能力大赛，二等奖</sub></td>
   </tr>
