@@ -1,6 +1,6 @@
 # Coursework
 
-Five course projects, each keeping its own sources, datasets, reports and run commands.
+Six course projects, each keeping its own sources, datasets, reports and run commands.
 
 | Project | Focus | Entry |
 |---|---|---|
@@ -9,6 +9,7 @@ Five course projects, each keeping its own sources, datasets, reports and run co
 | [Streaming Lakehouse Labs](streaming-lakehouse/) | Modern lakehouse, seven streaming challenges, a real-time recommender and a short-video review lab | [README](streaming-lakehouse/README.md), [简体中文](streaming-lakehouse/README.zh-CN.md) |
 | [Supermarket Management System](supermarket-management-system/) | Flask store-management application with tests, analysis reports and defense material | [README](supermarket-management-system/README.md), [简体中文](supermarket-management-system/README.zh-CN.md) |
 | [SmartCity GIS Labs](SmartCity-GIS-Labs/) | Smart city modeling in ArcGIS: scan vectorization, rubbersheet adjustment, topology repair, vector spatial analysis and gas network emergency tracing | [README](SmartCity-GIS-Labs/README.md), [简体中文](SmartCity-GIS-Labs/README.zh-CN.md) |
+| [Spatiotemporal HPC Labs](spatiotemporal-bigdata-hpc/) | Four labs: integral computation, matrix algebra with least squares fitting, distributed memory MPI versions, and OpenMP image warping, with animated demos | [README](spatiotemporal-bigdata-hpc/README.md), [中文](spatiotemporal-bigdata-hpc/README.zh-CN.md) |
 
 Each project README carries its own quick start, test commands and license notes.
 

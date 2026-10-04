@@ -99,6 +99,7 @@
 | [Streaming Lakehouse Labs](coursework/streaming-lakehouse/) | Lakehouse, seven streaming challenges, recommender and short-video review labs | Kafka, Flink, MinIO, Paimon, Spark |
 | [Supermarket System](coursework/supermarket-management-system/) | Flask store-management application with tests and defense material | Flask, SQLAlchemy, SQLite, pytest |
 | [KernelVision](coursework/KernelVision/) | Four computer vision experiments from spatial filtering to a CIFAR-10 CNN, with animated demos | OpenCV, NumPy, PyTorch, Matplotlib |
+| [Spatiotemporal HPC Labs](coursework/spatiotemporal-bigdata-hpc/) | Four labs: integral computation, matrix algebra with least squares fitting, distributed memory MPI versions, and OpenMP image warping, with animated demos | C++17, OpenMPI, OpenMP, Linux |
 | [Embodied AI Roadmap](embodied-ai-learning-roadmap.md) | Twelve-week project-driven route from LLMs to robot learning | PyTorch, robot learning, ROS 2 |
 
 ---
