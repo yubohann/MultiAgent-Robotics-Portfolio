@@ -99,7 +99,7 @@
 | [流式湖仓实验](coursework/streaming-lakehouse/) | 湖仓，七个流处理挑战，推荐系统与短视频审核实验 | Kafka，Flink，MinIO，Paimon，Spark |
 | [超市管理系统](coursework/supermarket-management-system/) | 带测试与答辩材料的 Flask 门店管理应用 | Flask，SQLAlchemy，SQLite，pytest |
 | [KernelVision 内核视觉](coursework/KernelVision/) | 从空域滤波到 CIFAR-10 卷积网络的四个视觉实验，附动图演示 | OpenCV，NumPy，PyTorch，Matplotlib |
-| [时空大数据高性能处理](coursework/spatiotemporal-bigdata-hpc/) | 四次上机实验，定积分、矩阵运算与最小二乘拟合、MPI 分布式内存编程、OpenMP 图像仿射重采样，含动画演示 | C++17、MPI（OpenMPI）、OpenMP、Linux |
+| [时空大数据高性能处理](coursework/Spatiotemporal-HPC-Labs/) | 四次上机实验，定积分、矩阵运算与最小二乘拟合、MPI 分布式内存编程、OpenMP 图像仿射重采样，含动画演示 | C++17、MPI（OpenMPI）、OpenMP、Linux |
 | [具身智能路线图](embodied-ai-learning-roadmap.md) | 十二周从大模型到机器人学习的项目制路线 | PyTorch，机器人学习，ROS 2 |
 
 ---

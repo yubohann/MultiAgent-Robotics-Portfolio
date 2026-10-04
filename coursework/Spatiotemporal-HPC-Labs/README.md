@@ -1,16 +1,20 @@
-# Spatiotemporal Big Data HPC Labs
+# Spatiotemporal HPC Labs
 
 [English](README.md) | [中文](README.zh-CN.md)
 
 <p align="center">
-  <a href="figures/lab1_float_crash.gif"><img src="figures/lab1_float_crash.gif" alt="Single precision accumulator failure" width="49%" /></a>
   <a href="figures/lab4_warp_morph.gif"><img src="figures/lab4_warp_morph.gif" alt="Affine warp with bilinear resampling" width="49%" /></a>
+  <a href="figures/lab1_float_crash.gif"><img src="figures/lab1_float_crash.gif" alt="Single precision accumulator failure" width="49%" /></a>
 </p>
 <p align="center">
-  <a href="figures/lab2_fit_stream.gif"><img src="figures/lab2_fit_stream.gif" alt="Streaming least squares fit" width="49%" /></a>
   <a href="figures/lab3_mpi_partition.gif"><img src="figures/lab3_mpi_partition.gif" alt="MPI interval split and reduction" width="49%" /></a>
+  <a href="figures/lab2_fit_stream.gif"><img src="figures/lab2_fit_stream.gif" alt="Streaming least squares fit" width="49%" /></a>
 </p>
-<p align="center"><b>Four animated demos: float crash → streaming fit → MPI split-reduce → affine warp</b></p>
+<p align="center">
+  <a href="figures/lab1_error_convergence.gif"><img src="figures/lab1_error_convergence.gif" alt="Error convergence animation" width="49%" /></a>
+  <a href="figures/lab3_scaling.gif"><img src="figures/lab3_scaling.gif" alt="Process scaling animation" width="49%" /></a>
+</p>
+<p align="center"><b>Six animated demos: affine warp, float crash, MPI split-reduce, streaming fit, error convergence, process scaling</b></p>
 
 **Four labs on high performance processing: numerical integration with a float accumulation failure study, matrix algebra from scratch with least squares fitting, distributed memory MPI versions, and shared memory OpenMP affine image warping. All programs are C++17, built with g++ and OpenMPI and measured on the same machine.**
 
@@ -48,10 +52,14 @@ Time grows in proportion to the interval count across six orders of magnitude. T
 Rectangle error follows O(h) and trapezoid error follows O(h²); the double curves stop improving near machine precision, and the float curves diverge after n = 10⁴.
 
 <p align="center">
+  <a href="figures/lab1_error_convergence.gif"><img src="figures/lab1_error_convergence.gif" alt="Error convergence animation" width="72%" /></a>
+</p>
+
+<p align="center">
   <a href="figures/lab1_float_accumulator.png"><img src="figures/lab1_float_accumulator.png" alt="Float accumulator mechanism" width="78%" /></a>
 </p>
 
-The accumulator becomes an integer counter once ulp reaches 0.5, pins the result at 1.0 (error 5.4e-2), then freezes at 2²⁴ and decays as 2²⁴/n. The diagnostic counts of ineffective additions match n − 2²⁴ exactly.
+The accumulator becomes an integer counter once ulp reaches 0.5, fixes the result at 1.0 (error 5.4e-2), then freezes at 2²⁴ and decays as 2²⁴/n. The diagnostic counts of ineffective additions match n − 2²⁴ exactly.
 
 ### 2 Matrix algebra with least squares fitting
 
@@ -70,6 +78,10 @@ The fit runs in a single pass through the normal equations. The three scales lan
 
 Both programs scale close to linear up to 4 processes. The fit keeps its communication at five doubles per reduction, so its parallel overhead tracks the process count rather than the point count.
 
+<p align="center">
+  <a href="figures/lab3_scaling.gif"><img src="figures/lab3_scaling.gif" alt="Process scaling animation" width="72%" /></a>
+</p>
+
 ### 4 OpenMP shared memory programming
 
 <p align="center">
@@ -83,35 +95,33 @@ The affine model rotates and shears the diagonal stripe pattern; pixels outside 
 
 ```bash
 # Lab 1  integral, diagnostics
-g++ -O2 -std=c++17 lab1-integral/integral_lab.cpp -o integral_lab -lm
+g++ -O2 -std=c++17 src/integral_lab.cpp -o integral_lab -lm
 ./integral_lab --full
-g++ -O2 -std=c++17 lab1-integral/diag4.cpp  -o diag4  -lm && ./diag4
-g++ -O2 -std=c++17 lab1-integral/diag12.cpp -o diag12 -lm && ./diag12
+g++ -O2 -std=c++17 src/diag4.cpp  -o diag4  -lm && ./diag4
+g++ -O2 -std=c++17 src/diag12.cpp -o diag12 -lm && ./diag12
 
 # Lab 2  matrix operations and least squares
-g++ -O2 -std=c++17 lab2-matrix-lstsq/lab2_matrix_ls.cpp -o lab2 -lm
+g++ -O2 -std=c++17 src/lab2_matrix_ls.cpp -o lab2 -lm
 taskset -c 2 ./lab2
 
 # Lab 3  MPI versions
-mpicxx -O2 -std=c++17 lab3-mpi/mpi_integral.cpp -o mpi_integral -lm
-mpicxx -O2 -std=c++17 lab3-mpi/mpi_lsfit.cpp    -o mpi_lsfit    -lm
+mpicxx -O2 -std=c++17 src/mpi_integral.cpp -o mpi_integral -lm
+mpicxx -O2 -std=c++17 src/mpi_lsfit.cpp    -o mpi_lsfit    -lm
 for p in 1 2 4 8; do mpirun -np $p ./mpi_integral; done
 for p in 1 2 4 8; do mpirun -np $p ./mpi_lsfit;    done
 
 # Lab 4  OpenMP affine warp
-g++ -O2 -std=c++17 -fopenmp lab4-openmp/warp_affine.cpp -o warp -lm
+g++ -O2 -std=c++17 -fopenmp src/warp_affine.cpp -o warp -lm
 ./warp
 ```
 
 ## Layout
 
 ```
-spatiotemporal-bigdata-hpc/
-├─ lab1-integral/      integral_lab.cpp, diag4.cpp, diag12.cpp, diag13.cpp
-├─ lab2-matrix-lstsq/  lab2_matrix_ls.cpp
-├─ lab3-mpi/           mpi_integral.cpp, mpi_lsfit.cpp
-├─ lab4-openmp/        warp_affine.cpp
-└─ figures/            charts, result images and four animated demos
+Spatiotemporal-HPC-Labs/
+├─ src/       integral_lab.cpp, diag4.cpp, diag12.cpp, diag13.cpp, lab2_matrix_ls.cpp,
+│            mpi_integral.cpp, mpi_lsfit.cpp, warp_affine.cpp
+└─ figures/   charts, result images and six animated demos
 ```
 
 ## Notes
