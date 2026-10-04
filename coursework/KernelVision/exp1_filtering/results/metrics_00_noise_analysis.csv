@@ -1,0 +1,4 @@
+﻿image,kind,size,mean,std,pixel_eq_0,pixel_eq_255,pixel_extreme_total,sp_density_est,gauss_sigma_est
+image_fft,干净参考图,512x512,118.667,61.16,0.0,0.0,0.0,0.0,0.0
+noised1,椒盐噪声,1024x768,84.406,57.319,0.035,0.036,0.071,0.042,0.741
+noised2,高斯噪声,1024x768,96.156,50.735,0.0,0.01,0.01,0.003,20.015

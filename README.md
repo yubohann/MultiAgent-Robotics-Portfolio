@@ -98,6 +98,7 @@
 | [YOLO26 + VisDrone](coursework/yolo26-visdrone-detection/) | Drone detection from subset preparation to training, validation and ONNX export | Ultralytics YOLO, VisDrone, ONNX |
 | [Streaming Lakehouse Labs](coursework/streaming-lakehouse/) | Lakehouse, seven streaming challenges, recommender and short-video review labs | Kafka, Flink, MinIO, Paimon, Spark |
 | [Supermarket System](coursework/supermarket-management-system/) | Flask store-management application with tests and defense material | Flask, SQLAlchemy, SQLite, pytest |
+| [KernelVision](coursework/KernelVision/) | Four computer vision experiments from spatial filtering to a CIFAR-10 CNN, with animated demos | OpenCV, NumPy, PyTorch, Matplotlib |
 | [Embodied AI Roadmap](embodied-ai-learning-roadmap.md) | Twelve-week project-driven route from LLMs to robot learning | PyTorch, robot learning, ROS 2 |
 
 ---

@@ -1,0 +1,20 @@
+﻿group,value,n_corners
+阈值比例 tau,0.001,6454
+阈值比例 tau,0.002,4419
+阈值比例 tau,0.005,2805
+阈值比例 tau,0.01,2024
+阈值比例 tau,0.02,1460
+阈值比例 tau,0.05,743
+窗口 blockSize,2,2024
+窗口 blockSize,3,3877
+窗口 blockSize,4,5613
+窗口 blockSize,5,7104
+窗口 blockSize,7,10650
+Sobel ksize,3,2024
+Sobel ksize,5,2277
+Sobel ksize,7,2187
+常数 k,0.02,2938
+常数 k,0.04,2024
+常数 k,0.06,1492
+常数 k,0.08,1132
+常数 k,0.1,881

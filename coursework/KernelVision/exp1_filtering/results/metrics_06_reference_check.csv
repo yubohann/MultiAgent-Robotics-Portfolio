@@ -1,0 +1,2 @@
+﻿case,ref_psnr,ref_ssim,noisy_sp_psnr,noisy_gauss_psnr
+合成数据 真值已知,28.396,0.641,18.157,22.439

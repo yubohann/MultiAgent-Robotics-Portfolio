@@ -1,0 +1,2 @@
+﻿name,epochs,best_test_acc,final_test_acc,time_s
+baseline,20,0.7693,0.7693,581.1

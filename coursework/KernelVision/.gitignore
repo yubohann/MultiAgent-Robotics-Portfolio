@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.cache/
+exp4_cnn/data/
+.DS_Store

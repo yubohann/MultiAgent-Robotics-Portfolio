@@ -1,0 +1,6 @@
+﻿layer,type,out_shape,params
+features.0,Conv2d,"torch.Size([32, 3, 3, 3])",896
+features.3,Conv2d,"torch.Size([64, 32, 3, 3])",18496
+classifier.1,Linear,"torch.Size([256, 4096])",1048832
+classifier.4,Linear,"torch.Size([10, 256])",2570
+total,-,-,1070794

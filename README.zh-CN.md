@@ -98,6 +98,7 @@
 | [YOLO26 与 VisDrone](coursework/yolo26-visdrone-detection/) | 从数据子集准备到训练，验证与 ONNX 导出的无人机检测 | Ultralytics YOLO，VisDrone，ONNX |
 | [流式湖仓实验](coursework/streaming-lakehouse/) | 湖仓，七个流处理挑战，推荐系统与短视频审核实验 | Kafka，Flink，MinIO，Paimon，Spark |
 | [超市管理系统](coursework/supermarket-management-system/) | 带测试与答辩材料的 Flask 门店管理应用 | Flask，SQLAlchemy，SQLite，pytest |
+| [KernelVision 内核视觉](coursework/KernelVision/) | 从空域滤波到 CIFAR-10 卷积网络的四个视觉实验，附动图演示 | OpenCV，NumPy，PyTorch，Matplotlib |
 | [具身智能路线图](embodied-ai-learning-roadmap.md) | 十二周从大模型到机器人学习的项目制路线 | PyTorch，机器人学习，ROS 2 |
 
 ---
