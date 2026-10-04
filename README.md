@@ -102,6 +102,12 @@
 | [Spatiotemporal HPC Labs](coursework/Spatiotemporal-HPC-Labs/) | Four labs: integral computation, matrix algebra with least squares fitting, distributed memory MPI versions, and OpenMP image warping, with animated demos | C++17, OpenMPI, OpenMP, Linux |
 | [Embodied AI Roadmap](embodied-ai-learning-roadmap.md) | Twelve-week project-driven route from LLMs to robot learning | PyTorch, robot learning, ROS 2 |
 
+<p align="center">
+  <a href="coursework/Spatiotemporal-HPC-Labs/README.md"><img src="coursework/Spatiotemporal-HPC-Labs/figures/lab4_warp_morph.gif" alt="OpenMP affine warp demo" width="40%" /></a>
+  <a href="coursework/Spatiotemporal-HPC-Labs/README.md"><img src="coursework/Spatiotemporal-HPC-Labs/figures/lab3_mpi_partition.gif" alt="MPI split and reduce demo" width="40%" /></a>
+</p>
+<p align="center"><sub>Coursework highlight: OpenMP affine warp and MPI interval split-reduce demos, from <a href="coursework/Spatiotemporal-HPC-Labs/">Spatiotemporal HPC Labs</a></sub></p>
+
 ---
 
 Contact 2311311120@hbut.edu.cn. Navigation and local checks live in the [Portfolio Guide](docs/PORTFOLIO_GUIDE.md) and [Integrated Project Sources](docs/INTEGRATED_PROJECTS.md). Each subproject ships its own license and third-party notices.

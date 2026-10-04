@@ -102,6 +102,12 @@
 | [时空大数据高性能处理](coursework/Spatiotemporal-HPC-Labs/) | 四次上机实验，定积分、矩阵运算与最小二乘拟合、MPI 分布式内存编程、OpenMP 图像仿射重采样，含动画演示 | C++17、MPI（OpenMPI）、OpenMP、Linux |
 | [具身智能路线图](embodied-ai-learning-roadmap.md) | 十二周从大模型到机器人学习的项目制路线 | PyTorch，机器人学习，ROS 2 |
 
+<p align="center">
+  <a href="coursework/Spatiotemporal-HPC-Labs/README.zh-CN.md"><img src="coursework/Spatiotemporal-HPC-Labs/figures/lab4_warp_morph.gif" alt="OpenMP 仿射重采样演示" width="40%" /></a>
+  <a href="coursework/Spatiotemporal-HPC-Labs/README.zh-CN.md"><img src="coursework/Spatiotemporal-HPC-Labs/figures/lab3_mpi_partition.gif" alt="MPI 划分与归约演示" width="40%" /></a>
+</p>
+<p align="center"><sub>课程亮点：OpenMP 仿射重采样与 MPI 区间划分归约演示，来自 <a href="coursework/Spatiotemporal-HPC-Labs/">时空大数据高性能实验</a></sub></p>
+
 ---
 
 联系方式 2311311120@hbut.edu.cn。导航与本地检查见[作品集指南](docs/PORTFOLIO_GUIDE.zh-CN.md)与[项目来源说明](docs/INTEGRATED_PROJECTS.md)。各子项目自带许可证与第三方声明。
