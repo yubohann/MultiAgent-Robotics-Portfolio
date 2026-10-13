@@ -1,0 +1,643 @@
+<mujoco model="arm_lattice">
+<compiler angle="radian" meshdir="meshes"/>
+<option timestep="0.001" gravity="0 0 -9.81" integrator="implicitfast" iterations="150" ls_iterations="80"/>
+
+  <asset>
+    <texture type="2d" name="tex_fabric" file="textures/fabric.png"/>
+    <texture type="2d" name="tex_brushed" file="textures/brushed.png"/>
+    <texture type="2d" name="tex_speckle" file="textures/speckle.png"/>
+    <texture type="skybox" builtin="gradient" rgb1="0.62 0.65 0.70" rgb2="0.10 0.10 0.11" width="512" height="3072"/>
+    <material name="mat_truss" texture="tex_brushed" rgba="0.44 0.46 0.49 1" roughness="0.62" metallic="0.10" specular="0.28" shininess="0.36"/>
+    <material name="mat_truss2" texture="tex_brushed" rgba="0.40 0.42 0.45 1" roughness="0.64" metallic="0.09" specular="0.26" shininess="0.34"/>
+    <material name="mat_rubber" texture="tex_speckle" rgba="0.16 0.16 0.18 1" roughness="0.90" metallic="0.0" specular="0.10" shininess="0.20"/>
+    <material name="mat_carbon" texture="tex_speckle" rgba="0.13 0.13 0.15 1" roughness="0.55" metallic="0.15" specular="0.25" shininess="0.30"/>
+    <material name="mat_aluminum" texture="tex_brushed" rgba="0.62 0.64 0.68 1" roughness="0.34" metallic="0.85" specular="0.45" shininess="0.50"/>
+    <material name="mat_brass" rgba="0.78 0.62 0.30 1" roughness="0.30" metallic="0.90" specular="0.60" shininess="0.60"/>
+    <material name="mat_pcb" rgba="0.06 0.22 0.12 1" roughness="0.50" metallic="0.0" specular="0.35" shininess="0.40"/>
+    <material name="mat_red" rgba="0.72 0.10 0.09 1" roughness="0.38" metallic="0.55" specular="0.50" shininess="0.50"/>
+    <material name="mat_blue" rgba="0.10 0.24 0.60 1" roughness="0.38" metallic="0.55" specular="0.50" shininess="0.50"/>
+    <material name="mat_black_plast" rgba="0.11 0.11 0.12 1" roughness="0.55" metallic="0.0" specular="0.30" shininess="0.35"/>
+    <material name="mat_sheath" rgba="0.09 0.09 0.10 1" roughness="0.88" metallic="0.0" specular="0.05" shininess="0.16"/>
+    <material name="mat_silicone" rgba="0.82 0.83 0.85 1" roughness="0.62" metallic="0.0" specular="0.22" shininess="0.28"/>
+    <material name="mat_steel" texture="tex_brushed" rgba="0.72 0.74 0.77 1" roughness="0.28" metallic="0.90" specular="0.55" shininess="0.55"/>
+    <material name="mat_orange" rgba="0.90 0.44 0.10 1" roughness="0.42" metallic="0.0" specular="0.45" shininess="0.50"/>
+    <material name="mat_table" texture="tex_speckle" rgba="0.37 0.37 0.38 1" roughness="0.72" metallic="0.0" specular="0.25" shininess="0.30"/>
+    <material name="mat_floor" texture="tex_speckle" rgba="0.28 0.28 0.29 1" roughness="0.90" metallic="0.0" specular="0.10" shininess="0.20"/>
+    <material name="mat_wall" rgba="0.21 0.22 0.24 1" roughness="0.95" metallic="0.0" specular="0.05" shininess="0.20"/>
+    <material name="mat_shadow1" rgba="0.0 0.0 0.0 0.30" roughness="0.9" metallic="0.0" specular="0.0" shininess="0.1"/>
+    <material name="mat_shadow2" rgba="0.0 0.0 0.0 0.18" roughness="0.9" metallic="0.0" specular="0.0" shininess="0.1"/>
+    <material name="mat_shadow3" rgba="0.0 0.0 0.0 0.08" roughness="0.9" metallic="0.0" specular="0.0" shininess="0.1"/>
+
+<mesh name="lattice_v00" file="lattice_v00.obj" smoothnormal="false"/>
+<mesh name="lattice_v01" file="lattice_v01.obj" smoothnormal="false"/>
+<mesh name="lattice_v02" file="lattice_v02.obj" smoothnormal="false"/>
+<mesh name="lattice_v03" file="lattice_v03.obj" smoothnormal="false"/>
+<mesh name="lattice_v04" file="lattice_v04.obj" smoothnormal="false"/>
+<mesh name="lattice_v05" file="lattice_v05.obj" smoothnormal="false"/>
+<mesh name="lattice_v06" file="lattice_v06.obj" smoothnormal="false"/>
+<mesh name="lattice_v07" file="lattice_v07.obj" smoothnormal="false"/>
+<mesh name="lattice_v08" file="lattice_v08.obj" smoothnormal="false"/>
+<mesh name="lattice_v09" file="lattice_v09.obj" smoothnormal="false"/>
+<mesh name="lattice_v10" file="lattice_v10.obj" smoothnormal="false"/>
+<mesh name="bundle_v00" file="bundle_v00.obj" smoothnormal="false"/>
+<mesh name="bundle_v01" file="bundle_v01.obj" smoothnormal="false"/>
+<mesh name="bundle_v02" file="bundle_v02.obj" smoothnormal="false"/>
+<mesh name="bundle_v03" file="bundle_v03.obj" smoothnormal="false"/>
+<mesh name="bundle_v04" file="bundle_v04.obj" smoothnormal="false"/>
+<mesh name="bundle_v05" file="bundle_v05.obj" smoothnormal="false"/>
+<mesh name="bundle_v06" file="bundle_v06.obj" smoothnormal="false"/>
+<mesh name="bundle_v07" file="bundle_v07.obj" smoothnormal="false"/>
+<mesh name="bundle_v08" file="bundle_v08.obj" smoothnormal="false"/>
+<mesh name="bundle_v09" file="bundle_v09.obj" smoothnormal="false"/>
+<mesh name="bundle_v10" file="bundle_v10.obj" smoothnormal="false"/>
+<mesh name="sheath_v00" file="sheath_v00.obj" smoothnormal="false"/>
+<mesh name="sheath_v01" file="sheath_v01.obj" smoothnormal="false"/>
+<mesh name="sheath_v02" file="sheath_v02.obj" smoothnormal="false"/>
+<mesh name="sheath_v03" file="sheath_v03.obj" smoothnormal="false"/>
+<mesh name="sheath_v04" file="sheath_v04.obj" smoothnormal="false"/>
+<mesh name="sheath_v05" file="sheath_v05.obj" smoothnormal="false"/>
+<mesh name="sheath_v06" file="sheath_v06.obj" smoothnormal="false"/>
+<mesh name="sheath_v07" file="sheath_v07.obj" smoothnormal="false"/>
+<mesh name="sheath_v08" file="sheath_v08.obj" smoothnormal="false"/>
+<mesh name="sheath_v09" file="sheath_v09.obj" smoothnormal="false"/>
+<mesh name="sheath_v10" file="sheath_v10.obj" smoothnormal="false"/>
+<mesh name="tether_hose" file="tether_hose.obj" smoothnormal="false"/>
+<mesh name="grip_base" file="grip_base.obj" smoothnormal="false"/>
+<mesh name="finger_prox" file="finger_prox.obj" smoothnormal="false"/>
+<mesh name="finger_dist" file="finger_dist.obj" smoothnormal="false"/>
+<mesh name="finger_flat" file="finger_flat.obj" smoothnormal="false"/>
+<mesh name="finger_soft" file="finger_soft.obj" smoothnormal="false"/>
+<mesh name="finger_knuckle" file="finger_knuckle.obj" smoothnormal="false"/>
+<mesh name="grip_links" file="grip_links.obj" smoothnormal="false"/>
+<mesh name="truss_clamp" file="truss_clamp.obj" smoothnormal="false"/>
+<mesh name="truss_base_ring" file="truss_base_ring.obj" smoothnormal="false"/>
+<mesh name="truss_tensioners" file="truss_tensioners.obj" smoothnormal="false"/>
+<mesh name="drone_plate" file="drone_plate.obj" smoothnormal="false"/>
+<mesh name="drone_arm" file="drone_arm.obj" smoothnormal="false"/>
+<mesh name="drone_motor" file="drone_motor.obj" smoothnormal="false"/>
+<mesh name="drone_prop" file="drone_prop.obj" smoothnormal="false"/>
+<mesh name="drone_skid" file="drone_skid.obj" smoothnormal="false"/>
+<mesh name="base_flange" file="base_flange.obj" smoothnormal="false"/>
+<mesh name="base_bolts" file="base_bolts.obj" smoothnormal="false"/>
+<mesh name="pcb" file="pcb.obj" smoothnormal="false"/>
+<mesh name="pump_body" file="pump_body.obj" smoothnormal="false"/>
+<mesh name="tank_body" file="tank_body.obj" smoothnormal="false"/>
+<mesh name="valve_block" file="valve_block.obj" smoothnormal="false"/>
+<mesh name="fittings" file="fittings.obj" smoothnormal="false"/>
+<mesh name="gauge_dial" file="gauge_dial.obj" smoothnormal="false"/>
+<mesh name="gauge_needle" file="gauge_needle.obj" smoothnormal="false"/>
+<mesh name="kettle_handle" file="kettle_handle.obj" smoothnormal="false"/>
+<mesh name="shadow_a" file="shadow_disc.obj" scale="0.1600 0.1600 1" inertia="shell"/>
+<mesh name="shadow_b" file="shadow_disc.obj" scale="0.1350 0.1350 1" inertia="shell"/>
+<mesh name="shadow_c" file="shadow_disc.obj" scale="0.0580 0.0580 1" inertia="shell"/>
+  </asset>
+  <visual>
+    <quality shadowsize="8192" offsamples="16"/>
+    <headlight ambient="0.38 0.39 0.42" diffuse="0.30 0.30 0.32" specular="0.05 0.05 0.05"/>
+    <global offwidth="1920" offheight="1080"/>
+  </visual>
+
+<worldbody>
+<geom name="floor" type="plane" size="8 8 0.1" material="mat_floor"/>
+<geom name="backwall" type="box" pos="0 3.2 1.5" size="7.0 0.05 1.6" material="mat_wall"/>
+<geom name="sidewall" type="box" pos="-4.2 0.5 1.5" size="0.05 3.8 1.6" material="mat_wall"/>
+<light name="key" directional="true" pos="1.7 -1.8 2.8" dir="-0.50 0.55 -1" diffuse="1.05 1.02 0.98" specular="0.45 0.45 0.45" castshadow="false"/>
+<light name="fill" directional="true" pos="-2.2 -0.8 1.5" dir="0.85 0.35 -0.50" diffuse="0.72 0.78 0.90" specular="0.18 0.18 0.18"/>
+<light name="rim" directional="true" pos="-0.6 2.5 1.9" dir="0.20 -1.0 -0.50" diffuse="0.95 0.97 1.02" specular="0.38 0.38 0.38"/>
+<geom name="table_top" type="box" pos="0 0 0.72" size="0.62 0.42 0.02" material="mat_table"/>
+<geom name="leg_1_1" type="box" pos="0.550 0.360 0.36" size="0.022 0.022 0.36" material="mat_carbon"/>
+<geom name="leg_1_-1" type="box" pos="0.550 -0.360 0.36" size="0.022 0.022 0.36" material="mat_carbon"/>
+<geom name="leg_-1_1" type="box" pos="-0.550 0.360 0.36" size="0.022 0.022 0.36" material="mat_carbon"/>
+<geom name="leg_-1_-1" type="box" pos="-0.550 -0.360 0.36" size="0.022 0.022 0.36" material="mat_carbon"/>
+<geom name="shadow_arm_0" type="cylinder" pos="0.000 0.000 0.7404" size="0.0720 0.0003" material="mat_shadow1" contype="0" conaffinity="0"/>
+<geom name="shadow_arm_1" type="cylinder" pos="0.000 0.000 0.7408" size="0.1200 0.0003" material="mat_shadow2" contype="0" conaffinity="0"/>
+<geom name="shadow_arm_2" type="cylinder" pos="0.000 0.000 0.7412" size="0.1600 0.0003" material="mat_shadow3" contype="0" conaffinity="0"/>
+<geom name="shadow_station_0" type="cylinder" pos="-0.080 0.300 0.7404" size="0.0608 0.0003" material="mat_shadow1" contype="0" conaffinity="0"/>
+<geom name="shadow_station_1" type="cylinder" pos="-0.080 0.300 0.7408" size="0.1013 0.0003" material="mat_shadow2" contype="0" conaffinity="0"/>
+<geom name="shadow_station_2" type="cylinder" pos="-0.080 0.300 0.7412" size="0.1350 0.0003" material="mat_shadow3" contype="0" conaffinity="0"/>
+<geom name="shadow_kettle_0" type="cylinder" pos="0.420 0.270 0.7404" size="0.0261 0.0003" material="mat_shadow1" contype="0" conaffinity="0"/>
+<geom name="shadow_kettle_1" type="cylinder" pos="0.420 0.270 0.7408" size="0.0435 0.0003" material="mat_shadow2" contype="0" conaffinity="0"/>
+<geom name="shadow_kettle_2" type="cylinder" pos="0.420 0.270 0.7412" size="0.0580 0.0003" material="mat_shadow3" contype="0" conaffinity="0"/>
+<body name="pneu_station" pos="-0.08 0.30 0.74">
+<geom name="g_pump" type="mesh" mesh="pump_body" material="mat_carbon"/>
+<geom name="g_tank" type="mesh" mesh="tank_body" material="mat_steel" euler="0 1.5708 0" pos="0.10 0.03 0.024"/>
+<geom name="g_valves" type="mesh" mesh="valve_block" material="mat_black_plast" pos="0 -0.06 0"/>
+<geom name="g_fittings" type="mesh" mesh="fittings" material="mat_brass" pos="0 -0.06 0"/>
+<geom name="g_gauge_post" type="cylinder" pos="-0.055 -0.075 0.038" size="0.004 0.038" material="mat_black_plast"/>
+<geom name="g_gauge" type="mesh" mesh="gauge_dial" material="mat_aluminum" pos="-0.055 -0.075 0.076" euler="1.5708 0 0"/>
+<body name="gauge_needle_body" pos="-0.055 -0.088 0.076">
+<joint name="gauge_j" type="hinge" axis="0 1 0" pos="0 0 0" range="-1.1 1.1" armature="0.00005" damping="0.6"/>
+<geom name="g_needle" type="mesh" mesh="gauge_needle" material="mat_orange"/>
+</body>
+</body>
+<body name="kettle" pos="0.42 0.27 0.74">
+<geom name="k_body" type="cylinder" pos="0 0 0.048" size="0.036 0.048" material="mat_carbon"/>
+<geom name="k_lid" type="cylinder" pos="0 0 0.099" size="0.023 0.004" material="mat_steel"/>
+<geom name="k_knob" type="cylinder" pos="0 0 0.108" size="0.008 0.005" material="mat_black_plast"/>
+<geom name="k_handle" type="mesh" mesh="kettle_handle" euler="1.5708 0 0" pos="0 0 0.122" material="mat_black_plast"/>
+<geom name="k_spout" type="cylinder" pos="0.032 0 0.072" euler="0 0.45 0" size="0.008 0.030" material="mat_steel"/>
+</body>
+<body name="grasp_stand" pos="0 0.30 0.74">
+<geom name="gs_post" type="cylinder" pos="0 0 0.39" size="0.012 0.39" material="mat_aluminum"/>
+<geom name="gs_plate" type="cylinder" pos="0 0 0.785" size="0.050 0.008" material="mat_black_plast"/>
+</body>
+<body name="part" pos="0 0.30 1.565">
+<freejoint name="part_free"/>
+<geom name="p_body" type="cylinder" pos="0 0 0" size="0.014 0.030" material="mat_orange" friction="1.4 0.02 0.001"/>
+</body>
+<body name="drone" pos="0 0 2.020">
+<geom name="d_plate" type="mesh" mesh="drone_plate" material="mat_carbon" contype="0" conaffinity="0"/>
+<geom name="d_arm_0" type="mesh" mesh="drone_arm" material="mat_carbon" euler="0 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="d_motor_0" type="mesh" mesh="drone_motor" material="mat_black_plast" pos="0.0884 0.0884 0.010" contype="0" conaffinity="0"/>
+<geom name="d_prop_0" type="mesh" mesh="drone_prop" material="mat_black_plast" pos="0.0884 0.0884 0.042" euler="0 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="d_arm_1" type="mesh" mesh="drone_arm" material="mat_carbon" euler="0 0 2.3562" contype="0" conaffinity="0"/>
+<geom name="d_motor_1" type="mesh" mesh="drone_motor" material="mat_black_plast" pos="-0.0884 0.0884 0.010" contype="0" conaffinity="0"/>
+<geom name="d_prop_1" type="mesh" mesh="drone_prop" material="mat_black_plast" pos="-0.0884 0.0884 0.042" euler="0 0 2.6562" contype="0" conaffinity="0"/>
+<geom name="d_arm_2" type="mesh" mesh="drone_arm" material="mat_carbon" euler="0 0 3.9270" contype="0" conaffinity="0"/>
+<geom name="d_motor_2" type="mesh" mesh="drone_motor" material="mat_black_plast" pos="-0.0884 -0.0884 0.010" contype="0" conaffinity="0"/>
+<geom name="d_prop_2" type="mesh" mesh="drone_prop" material="mat_black_plast" pos="-0.0884 -0.0884 0.042" euler="0 0 4.5270" contype="0" conaffinity="0"/>
+<geom name="d_arm_3" type="mesh" mesh="drone_arm" material="mat_carbon" euler="0 0 5.4978" contype="0" conaffinity="0"/>
+<geom name="d_motor_3" type="mesh" mesh="drone_motor" material="mat_black_plast" pos="0.0884 -0.0884 0.010" contype="0" conaffinity="0"/>
+<geom name="d_prop_3" type="mesh" mesh="drone_prop" material="mat_black_plast" pos="0.0884 -0.0884 0.042" euler="0 0 6.3978" contype="0" conaffinity="0"/>
+<geom name="d_skid_1" type="mesh" mesh="drone_skid" material="mat_carbon" pos="0 0.050 -0.030" contype="0" conaffinity="0"/>
+<geom name="d_skid_-1" type="mesh" mesh="drone_skid" material="mat_carbon" pos="0 -0.050 -0.030" contype="0" conaffinity="0"/>
+<body name="arm_mount" pos="0 0 -0.016">
+<geom name="m_flange" type="mesh" mesh="base_flange" material="mat_aluminum" pos="0 0 -0.0055" euler="3.1416 0 0" contype="0" conaffinity="0"/>
+<geom name="m_bolts" type="mesh" mesh="base_bolts" material="mat_brass" pos="0 0 -0.0245" contype="0" conaffinity="0"/>
+<geom name="m_pcb" type="mesh" mesh="pcb" material="mat_pcb" pos="0 0 0.0103" euler="3.1416 0 0" contype="0" conaffinity="0"/>
+<geom name="m_tring" type="mesh" mesh="truss_base_ring" material="mat_aluminum" pos="0 0 -0.0125" euler="3.1416 0 0" contype="0" conaffinity="0"/>
+<geom name="m_tens" type="mesh" mesh="truss_tensioners" material="mat_brass" pos="0 0 -0.0155" euler="3.1416 0 0" contype="0" conaffinity="0"/>
+<body name="seg_0" pos="0 0 -0.0155">
+<joint name="bx_0" type="hinge" axis="1 0 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<joint name="by_0" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<geom name="g_lat_v00_0" type="mesh" mesh="lattice_v00" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v00_0" type="mesh" mesh="bundle_v00" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v00_0" type="mesh" mesh="sheath_v00" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v01_0" type="mesh" mesh="lattice_v01" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v01_0" type="mesh" mesh="bundle_v01" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v01_0" type="mesh" mesh="sheath_v01" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v02_0" type="mesh" mesh="lattice_v02" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v02_0" type="mesh" mesh="bundle_v02" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v02_0" type="mesh" mesh="sheath_v02" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v03_0" type="mesh" mesh="lattice_v03" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v03_0" type="mesh" mesh="bundle_v03" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v03_0" type="mesh" mesh="sheath_v03" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v04_0" type="mesh" mesh="lattice_v04" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v04_0" type="mesh" mesh="bundle_v04" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v04_0" type="mesh" mesh="sheath_v04" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v05_0" type="mesh" mesh="lattice_v05" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v05_0" type="mesh" mesh="bundle_v05" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v05_0" type="mesh" mesh="sheath_v05" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v06_0" type="mesh" mesh="lattice_v06" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v06_0" type="mesh" mesh="bundle_v06" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v06_0" type="mesh" mesh="sheath_v06" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v07_0" type="mesh" mesh="lattice_v07" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v07_0" type="mesh" mesh="bundle_v07" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v07_0" type="mesh" mesh="sheath_v07" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v08_0" type="mesh" mesh="lattice_v08" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v08_0" type="mesh" mesh="bundle_v08" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v08_0" type="mesh" mesh="sheath_v08" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v09_0" type="mesh" mesh="lattice_v09" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v09_0" type="mesh" mesh="bundle_v09" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v09_0" type="mesh" mesh="sheath_v09" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v10_0" type="mesh" mesh="lattice_v10" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v10_0" type="mesh" mesh="bundle_v10" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v10_0" type="mesh" mesh="sheath_v10" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_clamp_0" type="mesh" mesh="truss_clamp" material="mat_steel" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<site name="ts_0_0" pos="0.0000 0.0314 -0.005" size="0.0012"/>
+<site name="ts_0_1" pos="-0.0272 -0.0157 -0.005" size="0.0012"/>
+<site name="ts_0_2" pos="0.0272 -0.0157 -0.005" size="0.0012"/>
+<body name="seg_1" pos="0 0 -0.0100">
+<joint name="slide_1" type="slide" axis="0 0 1" pos="0 0 0" range="-0.040 0" armature="0.002"/>
+<joint name="bx_1" type="hinge" axis="1 0 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<joint name="by_1" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<geom name="g_lat_v00_1" type="mesh" mesh="lattice_v00" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v00_1" type="mesh" mesh="bundle_v00" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v00_1" type="mesh" mesh="sheath_v00" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v01_1" type="mesh" mesh="lattice_v01" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v01_1" type="mesh" mesh="bundle_v01" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v01_1" type="mesh" mesh="sheath_v01" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v02_1" type="mesh" mesh="lattice_v02" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v02_1" type="mesh" mesh="bundle_v02" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v02_1" type="mesh" mesh="sheath_v02" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v03_1" type="mesh" mesh="lattice_v03" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v03_1" type="mesh" mesh="bundle_v03" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v03_1" type="mesh" mesh="sheath_v03" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v04_1" type="mesh" mesh="lattice_v04" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v04_1" type="mesh" mesh="bundle_v04" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v04_1" type="mesh" mesh="sheath_v04" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v05_1" type="mesh" mesh="lattice_v05" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v05_1" type="mesh" mesh="bundle_v05" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v05_1" type="mesh" mesh="sheath_v05" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v06_1" type="mesh" mesh="lattice_v06" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v06_1" type="mesh" mesh="bundle_v06" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v06_1" type="mesh" mesh="sheath_v06" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v07_1" type="mesh" mesh="lattice_v07" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v07_1" type="mesh" mesh="bundle_v07" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v07_1" type="mesh" mesh="sheath_v07" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v08_1" type="mesh" mesh="lattice_v08" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v08_1" type="mesh" mesh="bundle_v08" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v08_1" type="mesh" mesh="sheath_v08" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v09_1" type="mesh" mesh="lattice_v09" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v09_1" type="mesh" mesh="bundle_v09" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v09_1" type="mesh" mesh="sheath_v09" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v10_1" type="mesh" mesh="lattice_v10" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v10_1" type="mesh" mesh="bundle_v10" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v10_1" type="mesh" mesh="sheath_v10" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_clamp_1" type="mesh" mesh="truss_clamp" material="mat_steel" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<site name="ts_1_0" pos="0.0000 0.0314 -0.005" size="0.0012"/>
+<site name="ts_1_1" pos="-0.0272 -0.0157 -0.005" size="0.0012"/>
+<site name="ts_1_2" pos="0.0272 -0.0157 -0.005" size="0.0012"/>
+<body name="seg_2" pos="0 0 -0.0100">
+<joint name="slide_2" type="slide" axis="0 0 1" pos="0 0 0" range="-0.040 0" armature="0.002"/>
+<joint name="bx_2" type="hinge" axis="1 0 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<joint name="by_2" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<geom name="g_lat_v00_2" type="mesh" mesh="lattice_v00" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v00_2" type="mesh" mesh="bundle_v00" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v00_2" type="mesh" mesh="sheath_v00" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v01_2" type="mesh" mesh="lattice_v01" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v01_2" type="mesh" mesh="bundle_v01" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v01_2" type="mesh" mesh="sheath_v01" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v02_2" type="mesh" mesh="lattice_v02" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v02_2" type="mesh" mesh="bundle_v02" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v02_2" type="mesh" mesh="sheath_v02" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v03_2" type="mesh" mesh="lattice_v03" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v03_2" type="mesh" mesh="bundle_v03" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v03_2" type="mesh" mesh="sheath_v03" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v04_2" type="mesh" mesh="lattice_v04" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v04_2" type="mesh" mesh="bundle_v04" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v04_2" type="mesh" mesh="sheath_v04" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v05_2" type="mesh" mesh="lattice_v05" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v05_2" type="mesh" mesh="bundle_v05" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v05_2" type="mesh" mesh="sheath_v05" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v06_2" type="mesh" mesh="lattice_v06" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v06_2" type="mesh" mesh="bundle_v06" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v06_2" type="mesh" mesh="sheath_v06" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v07_2" type="mesh" mesh="lattice_v07" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v07_2" type="mesh" mesh="bundle_v07" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v07_2" type="mesh" mesh="sheath_v07" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v08_2" type="mesh" mesh="lattice_v08" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v08_2" type="mesh" mesh="bundle_v08" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v08_2" type="mesh" mesh="sheath_v08" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v09_2" type="mesh" mesh="lattice_v09" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v09_2" type="mesh" mesh="bundle_v09" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v09_2" type="mesh" mesh="sheath_v09" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v10_2" type="mesh" mesh="lattice_v10" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v10_2" type="mesh" mesh="bundle_v10" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v10_2" type="mesh" mesh="sheath_v10" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_clamp_2" type="mesh" mesh="truss_clamp" material="mat_steel" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<site name="ts_2_0" pos="0.0000 0.0314 -0.005" size="0.0012"/>
+<site name="ts_2_1" pos="-0.0272 -0.0157 -0.005" size="0.0012"/>
+<site name="ts_2_2" pos="0.0272 -0.0157 -0.005" size="0.0012"/>
+<body name="seg_3" pos="0 0 -0.0100">
+<joint name="slide_3" type="slide" axis="0 0 1" pos="0 0 0" range="-0.040 0" armature="0.002"/>
+<joint name="bx_3" type="hinge" axis="1 0 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<joint name="by_3" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<geom name="g_lat_v00_3" type="mesh" mesh="lattice_v00" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v00_3" type="mesh" mesh="bundle_v00" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v00_3" type="mesh" mesh="sheath_v00" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v01_3" type="mesh" mesh="lattice_v01" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v01_3" type="mesh" mesh="bundle_v01" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v01_3" type="mesh" mesh="sheath_v01" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v02_3" type="mesh" mesh="lattice_v02" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v02_3" type="mesh" mesh="bundle_v02" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v02_3" type="mesh" mesh="sheath_v02" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v03_3" type="mesh" mesh="lattice_v03" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v03_3" type="mesh" mesh="bundle_v03" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v03_3" type="mesh" mesh="sheath_v03" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v04_3" type="mesh" mesh="lattice_v04" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v04_3" type="mesh" mesh="bundle_v04" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v04_3" type="mesh" mesh="sheath_v04" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v05_3" type="mesh" mesh="lattice_v05" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v05_3" type="mesh" mesh="bundle_v05" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v05_3" type="mesh" mesh="sheath_v05" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v06_3" type="mesh" mesh="lattice_v06" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v06_3" type="mesh" mesh="bundle_v06" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v06_3" type="mesh" mesh="sheath_v06" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v07_3" type="mesh" mesh="lattice_v07" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v07_3" type="mesh" mesh="bundle_v07" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v07_3" type="mesh" mesh="sheath_v07" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v08_3" type="mesh" mesh="lattice_v08" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v08_3" type="mesh" mesh="bundle_v08" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v08_3" type="mesh" mesh="sheath_v08" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v09_3" type="mesh" mesh="lattice_v09" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v09_3" type="mesh" mesh="bundle_v09" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v09_3" type="mesh" mesh="sheath_v09" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v10_3" type="mesh" mesh="lattice_v10" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v10_3" type="mesh" mesh="bundle_v10" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v10_3" type="mesh" mesh="sheath_v10" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_clamp_3" type="mesh" mesh="truss_clamp" material="mat_steel" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<site name="ts_3_0" pos="0.0000 0.0314 -0.005" size="0.0012"/>
+<site name="ts_3_1" pos="-0.0272 -0.0157 -0.005" size="0.0012"/>
+<site name="ts_3_2" pos="0.0272 -0.0157 -0.005" size="0.0012"/>
+<body name="seg_4" pos="0 0 -0.0100">
+<joint name="slide_4" type="slide" axis="0 0 1" pos="0 0 0" range="-0.040 0" armature="0.002"/>
+<joint name="bx_4" type="hinge" axis="1 0 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<joint name="by_4" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<geom name="g_lat_v00_4" type="mesh" mesh="lattice_v00" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v00_4" type="mesh" mesh="bundle_v00" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v00_4" type="mesh" mesh="sheath_v00" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v01_4" type="mesh" mesh="lattice_v01" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v01_4" type="mesh" mesh="bundle_v01" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v01_4" type="mesh" mesh="sheath_v01" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v02_4" type="mesh" mesh="lattice_v02" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v02_4" type="mesh" mesh="bundle_v02" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v02_4" type="mesh" mesh="sheath_v02" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v03_4" type="mesh" mesh="lattice_v03" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v03_4" type="mesh" mesh="bundle_v03" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v03_4" type="mesh" mesh="sheath_v03" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v04_4" type="mesh" mesh="lattice_v04" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v04_4" type="mesh" mesh="bundle_v04" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v04_4" type="mesh" mesh="sheath_v04" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v05_4" type="mesh" mesh="lattice_v05" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v05_4" type="mesh" mesh="bundle_v05" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v05_4" type="mesh" mesh="sheath_v05" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v06_4" type="mesh" mesh="lattice_v06" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v06_4" type="mesh" mesh="bundle_v06" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v06_4" type="mesh" mesh="sheath_v06" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v07_4" type="mesh" mesh="lattice_v07" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v07_4" type="mesh" mesh="bundle_v07" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v07_4" type="mesh" mesh="sheath_v07" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v08_4" type="mesh" mesh="lattice_v08" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v08_4" type="mesh" mesh="bundle_v08" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v08_4" type="mesh" mesh="sheath_v08" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v09_4" type="mesh" mesh="lattice_v09" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v09_4" type="mesh" mesh="bundle_v09" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v09_4" type="mesh" mesh="sheath_v09" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v10_4" type="mesh" mesh="lattice_v10" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v10_4" type="mesh" mesh="bundle_v10" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v10_4" type="mesh" mesh="sheath_v10" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_clamp_4" type="mesh" mesh="truss_clamp" material="mat_steel" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<site name="ts_4_0" pos="0.0000 0.0314 -0.005" size="0.0012"/>
+<site name="ts_4_1" pos="-0.0272 -0.0157 -0.005" size="0.0012"/>
+<site name="ts_4_2" pos="0.0272 -0.0157 -0.005" size="0.0012"/>
+<body name="seg_5" pos="0 0 -0.0100">
+<joint name="slide_5" type="slide" axis="0 0 1" pos="0 0 0" range="-0.040 0" armature="0.002"/>
+<joint name="bx_5" type="hinge" axis="1 0 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<joint name="by_5" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<geom name="g_lat_v00_5" type="mesh" mesh="lattice_v00" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v00_5" type="mesh" mesh="bundle_v00" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v00_5" type="mesh" mesh="sheath_v00" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v01_5" type="mesh" mesh="lattice_v01" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v01_5" type="mesh" mesh="bundle_v01" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v01_5" type="mesh" mesh="sheath_v01" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v02_5" type="mesh" mesh="lattice_v02" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v02_5" type="mesh" mesh="bundle_v02" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v02_5" type="mesh" mesh="sheath_v02" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v03_5" type="mesh" mesh="lattice_v03" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v03_5" type="mesh" mesh="bundle_v03" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v03_5" type="mesh" mesh="sheath_v03" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v04_5" type="mesh" mesh="lattice_v04" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v04_5" type="mesh" mesh="bundle_v04" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v04_5" type="mesh" mesh="sheath_v04" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v05_5" type="mesh" mesh="lattice_v05" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v05_5" type="mesh" mesh="bundle_v05" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v05_5" type="mesh" mesh="sheath_v05" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v06_5" type="mesh" mesh="lattice_v06" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v06_5" type="mesh" mesh="bundle_v06" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v06_5" type="mesh" mesh="sheath_v06" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v07_5" type="mesh" mesh="lattice_v07" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v07_5" type="mesh" mesh="bundle_v07" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v07_5" type="mesh" mesh="sheath_v07" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v08_5" type="mesh" mesh="lattice_v08" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v08_5" type="mesh" mesh="bundle_v08" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v08_5" type="mesh" mesh="sheath_v08" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v09_5" type="mesh" mesh="lattice_v09" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v09_5" type="mesh" mesh="bundle_v09" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v09_5" type="mesh" mesh="sheath_v09" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v10_5" type="mesh" mesh="lattice_v10" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v10_5" type="mesh" mesh="bundle_v10" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v10_5" type="mesh" mesh="sheath_v10" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_clamp_5" type="mesh" mesh="truss_clamp" material="mat_steel" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<site name="ts_5_0" pos="0.0000 0.0314 -0.005" size="0.0012"/>
+<site name="ts_5_1" pos="-0.0272 -0.0157 -0.005" size="0.0012"/>
+<site name="ts_5_2" pos="0.0272 -0.0157 -0.005" size="0.0012"/>
+<body name="seg_6" pos="0 0 -0.0100">
+<joint name="slide_6" type="slide" axis="0 0 1" pos="0 0 0" range="-0.040 0" armature="0.002"/>
+<joint name="bx_6" type="hinge" axis="1 0 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<joint name="by_6" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<geom name="g_lat_v00_6" type="mesh" mesh="lattice_v00" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v00_6" type="mesh" mesh="bundle_v00" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v00_6" type="mesh" mesh="sheath_v00" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v01_6" type="mesh" mesh="lattice_v01" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v01_6" type="mesh" mesh="bundle_v01" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v01_6" type="mesh" mesh="sheath_v01" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v02_6" type="mesh" mesh="lattice_v02" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v02_6" type="mesh" mesh="bundle_v02" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v02_6" type="mesh" mesh="sheath_v02" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v03_6" type="mesh" mesh="lattice_v03" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v03_6" type="mesh" mesh="bundle_v03" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v03_6" type="mesh" mesh="sheath_v03" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v04_6" type="mesh" mesh="lattice_v04" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v04_6" type="mesh" mesh="bundle_v04" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v04_6" type="mesh" mesh="sheath_v04" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v05_6" type="mesh" mesh="lattice_v05" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v05_6" type="mesh" mesh="bundle_v05" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v05_6" type="mesh" mesh="sheath_v05" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v06_6" type="mesh" mesh="lattice_v06" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v06_6" type="mesh" mesh="bundle_v06" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v06_6" type="mesh" mesh="sheath_v06" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v07_6" type="mesh" mesh="lattice_v07" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v07_6" type="mesh" mesh="bundle_v07" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v07_6" type="mesh" mesh="sheath_v07" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v08_6" type="mesh" mesh="lattice_v08" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v08_6" type="mesh" mesh="bundle_v08" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v08_6" type="mesh" mesh="sheath_v08" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v09_6" type="mesh" mesh="lattice_v09" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v09_6" type="mesh" mesh="bundle_v09" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v09_6" type="mesh" mesh="sheath_v09" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_lat_v10_6" type="mesh" mesh="lattice_v10" material="mat_truss" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v10_6" type="mesh" mesh="bundle_v10" material="mat_rubber" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v10_6" type="mesh" mesh="sheath_v10" material="mat_sheath" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<geom name="g_clamp_6" type="mesh" mesh="truss_clamp" material="mat_steel" euler="3.1416 0 0.0000" contype="0" conaffinity="0"/>
+<site name="ts_6_0" pos="0.0000 0.0314 -0.005" size="0.0012"/>
+<site name="ts_6_1" pos="-0.0272 -0.0157 -0.005" size="0.0012"/>
+<site name="ts_6_2" pos="0.0272 -0.0157 -0.005" size="0.0012"/>
+<body name="seg_7" pos="0 0 -0.0100">
+<joint name="slide_7" type="slide" axis="0 0 1" pos="0 0 0" range="-0.040 0" armature="0.002"/>
+<joint name="bx_7" type="hinge" axis="1 0 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<joint name="by_7" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.9 0.9" armature="0.002" limited="true" stiffness="1.100" damping="0.100"/>
+<geom name="g_lat_v00_7" type="mesh" mesh="lattice_v00" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v00_7" type="mesh" mesh="bundle_v00" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v00_7" type="mesh" mesh="sheath_v00" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v01_7" type="mesh" mesh="lattice_v01" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v01_7" type="mesh" mesh="bundle_v01" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v01_7" type="mesh" mesh="sheath_v01" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v02_7" type="mesh" mesh="lattice_v02" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v02_7" type="mesh" mesh="bundle_v02" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v02_7" type="mesh" mesh="sheath_v02" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v03_7" type="mesh" mesh="lattice_v03" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v03_7" type="mesh" mesh="bundle_v03" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v03_7" type="mesh" mesh="sheath_v03" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v04_7" type="mesh" mesh="lattice_v04" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v04_7" type="mesh" mesh="bundle_v04" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v04_7" type="mesh" mesh="sheath_v04" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v05_7" type="mesh" mesh="lattice_v05" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v05_7" type="mesh" mesh="bundle_v05" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v05_7" type="mesh" mesh="sheath_v05" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v06_7" type="mesh" mesh="lattice_v06" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v06_7" type="mesh" mesh="bundle_v06" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v06_7" type="mesh" mesh="sheath_v06" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v07_7" type="mesh" mesh="lattice_v07" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v07_7" type="mesh" mesh="bundle_v07" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v07_7" type="mesh" mesh="sheath_v07" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v08_7" type="mesh" mesh="lattice_v08" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v08_7" type="mesh" mesh="bundle_v08" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v08_7" type="mesh" mesh="sheath_v08" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v09_7" type="mesh" mesh="lattice_v09" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v09_7" type="mesh" mesh="bundle_v09" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v09_7" type="mesh" mesh="sheath_v09" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_lat_v10_7" type="mesh" mesh="lattice_v10" material="mat_truss" euler="3.1416 0 0.7854" contype="0" conaffinity="0"/>
+<geom name="g_bundle_v10_7" type="mesh" mesh="bundle_v10" material="mat_rubber" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_sheath_v10_7" type="mesh" mesh="sheath_v10" material="mat_sheath" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<geom name="g_clamp_7" type="mesh" mesh="truss_clamp" material="mat_steel" euler="3.1416 0 0.0698" contype="0" conaffinity="0"/>
+<site name="ts_7_0" pos="0.0000 0.0314 -0.005" size="0.0012"/>
+<site name="ts_7_1" pos="-0.0272 -0.0157 -0.005" size="0.0012"/>
+<site name="ts_7_2" pos="0.0272 -0.0157 -0.005" size="0.0012"/>
+<body name="wrist" pos="0 0 -0.0100">
+<joint name="slide_wrist" type="slide" axis="0 0 1" pos="0 0 0" range="-0.040 0" armature="0.002"/>
+<geom name="g_grip_base" type="mesh" mesh="grip_base" material="mat_black_plast"/>
+<geom name="g_grip_links" type="mesh" mesh="grip_links" material="mat_black_plast" contype="0" conaffinity="0"/>
+<body name="finger0_0" pos="0.0240 0.0000 -0.036" euler="0 0 0.0000">
+<joint name="grip0_0" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.45 0.20" armature="0.0005" limited="true" stiffness="0.3" damping="0.03"/>
+<geom name="g_f0_0_p" type="mesh" mesh="finger_prox" material="mat_blue" contype="0" conaffinity="0"/>
+<geom name="g_f0_0_d" type="mesh" mesh="finger_dist" material="mat_red" contype="0" conaffinity="0"/>
+<geom name="g_f0_0_c" type="box" group="3" size="0.0013 0.0075 0.0400" pos="-0.0062 0 -0.0500" friction="2.0 0.02 0.001" solref="0.002 1" solimp="0.98 0.99 0.001"/>
+<geom name="g_f0_0_k" type="mesh" mesh="finger_knuckle" material="mat_steel" contype="0" conaffinity="0"/>
+</body>
+<body name="finger0_1" pos="-0.0240 -0.0000 -0.036" euler="0 0 3.1416">
+<joint name="grip0_1" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.45 0.20" armature="0.0005" limited="true" stiffness="0.3" damping="0.03"/>
+<geom name="g_f0_1_p" type="mesh" mesh="finger_prox" material="mat_red" contype="0" conaffinity="0"/>
+<geom name="g_f0_1_d" type="mesh" mesh="finger_dist" material="mat_blue" contype="0" conaffinity="0"/>
+<geom name="g_f0_1_c" type="box" group="3" size="0.0013 0.0075 0.0400" pos="-0.0062 0 -0.0500" friction="2.0 0.02 0.001" solref="0.002 1" solimp="0.98 0.99 0.001"/>
+<geom name="g_f0_1_k" type="mesh" mesh="finger_knuckle" material="mat_steel" contype="0" conaffinity="0"/>
+</body>
+<body name="finger1_0" pos="0.0240 0.0000 -0.036" euler="0 0 0.0000">
+<joint name="grip1_0" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.45 0.20" armature="0.0005" limited="true" stiffness="0.3" damping="0.03"/>
+<geom name="g_f1_0_p" type="mesh" mesh="finger_flat" material="mat_steel" contype="0" conaffinity="0"/>
+<geom name="g_f1_0_c" type="box" group="3" size="0.0013 0.0075 0.0420" pos="-0.0062 0 -0.0420" friction="2.0 0.02 0.001" solref="0.002 1" solimp="0.98 0.99 0.001"/>
+<geom name="g_f1_0_k" type="mesh" mesh="finger_knuckle" material="mat_steel" contype="0" conaffinity="0"/>
+</body>
+<body name="finger1_1" pos="-0.0240 -0.0000 -0.036" euler="0 0 3.1416">
+<joint name="grip1_1" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.45 0.20" armature="0.0005" limited="true" stiffness="0.3" damping="0.03"/>
+<geom name="g_f1_1_p" type="mesh" mesh="finger_flat" material="mat_steel" contype="0" conaffinity="0"/>
+<geom name="g_f1_1_c" type="box" group="3" size="0.0013 0.0075 0.0420" pos="-0.0062 0 -0.0420" friction="2.0 0.02 0.001" solref="0.002 1" solimp="0.98 0.99 0.001"/>
+<geom name="g_f1_1_k" type="mesh" mesh="finger_knuckle" material="mat_steel" contype="0" conaffinity="0"/>
+</body>
+<body name="finger2_0" pos="-0.0000 0.0240 -0.036" euler="0 0 1.5708">
+<joint name="grip2_0" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.45 0.20" armature="0.0005" limited="true" stiffness="0.3" damping="0.03"/>
+<geom name="g_f2_0_p" type="mesh" mesh="finger_prox" material="mat_blue" contype="0" conaffinity="0"/>
+<geom name="g_f2_0_d" type="mesh" mesh="finger_dist" material="mat_red" contype="0" conaffinity="0"/>
+<geom name="g_f2_0_c" type="box" group="3" size="0.0013 0.0075 0.0400" pos="-0.0062 0 -0.0500" friction="2.0 0.02 0.001" solref="0.002 1" solimp="0.98 0.99 0.001"/>
+<geom name="g_f2_0_k" type="mesh" mesh="finger_knuckle" material="mat_steel" contype="0" conaffinity="0"/>
+</body>
+<body name="finger2_1" pos="-0.0208 -0.0120 -0.036" euler="0 0 3.6652">
+<joint name="grip2_1" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.45 0.20" armature="0.0005" limited="true" stiffness="0.3" damping="0.03"/>
+<geom name="g_f2_1_p" type="mesh" mesh="finger_prox" material="mat_red" contype="0" conaffinity="0"/>
+<geom name="g_f2_1_d" type="mesh" mesh="finger_dist" material="mat_blue" contype="0" conaffinity="0"/>
+<geom name="g_f2_1_c" type="box" group="3" size="0.0013 0.0075 0.0400" pos="-0.0062 0 -0.0500" friction="2.0 0.02 0.001" solref="0.002 1" solimp="0.98 0.99 0.001"/>
+<geom name="g_f2_1_k" type="mesh" mesh="finger_knuckle" material="mat_steel" contype="0" conaffinity="0"/>
+</body>
+<body name="finger2_2" pos="0.0208 -0.0120 -0.036" euler="0 0 5.7596">
+<joint name="grip2_2" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.45 0.20" armature="0.0005" limited="true" stiffness="0.3" damping="0.03"/>
+<geom name="g_f2_2_p" type="mesh" mesh="finger_prox" material="mat_blue" contype="0" conaffinity="0"/>
+<geom name="g_f2_2_d" type="mesh" mesh="finger_dist" material="mat_red" contype="0" conaffinity="0"/>
+<geom name="g_f2_2_c" type="box" group="3" size="0.0013 0.0075 0.0400" pos="-0.0062 0 -0.0500" friction="2.0 0.02 0.001" solref="0.002 1" solimp="0.98 0.99 0.001"/>
+<geom name="g_f2_2_k" type="mesh" mesh="finger_knuckle" material="mat_steel" contype="0" conaffinity="0"/>
+</body>
+<body name="finger3_0" pos="0.0240 0.0000 -0.036" euler="0 0 0.0000">
+<joint name="grip3_0" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.45 0.20" armature="0.0005" limited="true" stiffness="0.3" damping="0.03"/>
+<geom name="g_f3_0_p" type="mesh" mesh="finger_soft" material="mat_silicone" contype="0" conaffinity="0"/>
+<geom name="g_f3_0_c" type="box" group="3" size="0.0012 0.0060 0.0360" pos="-0.0093 0 -0.0360" friction="2.0 0.02 0.001" solref="0.002 1" solimp="0.98 0.99 0.001"/>
+<geom name="g_f3_0_k" type="mesh" mesh="finger_knuckle" material="mat_steel" contype="0" conaffinity="0"/>
+</body>
+<body name="finger3_1" pos="-0.0240 -0.0000 -0.036" euler="0 0 3.1416">
+<joint name="grip3_1" type="hinge" axis="0 1 0" pos="0 0 0" range="-0.45 0.20" armature="0.0005" limited="true" stiffness="0.3" damping="0.03"/>
+<geom name="g_f3_1_p" type="mesh" mesh="finger_soft" material="mat_silicone" contype="0" conaffinity="0"/>
+<geom name="g_f3_1_c" type="box" group="3" size="0.0012 0.0060 0.0360" pos="-0.0093 0 -0.0360" friction="2.0 0.02 0.001" solref="0.002 1" solimp="0.98 0.99 0.001"/>
+<geom name="g_f3_1_k" type="mesh" mesh="finger_knuckle" material="mat_steel" contype="0" conaffinity="0"/>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</worldbody>
+<tendon>
+<spatial name="tendon_0" width="0.0008" frictionloss="0.01">
+<site site="ts_0_0"/>
+<site site="ts_1_0"/>
+<site site="ts_2_0"/>
+<site site="ts_3_0"/>
+<site site="ts_4_0"/>
+<site site="ts_5_0"/>
+<site site="ts_6_0"/>
+<site site="ts_7_0"/>
+</spatial>
+<spatial name="tendon_1" width="0.0008" frictionloss="0.01">
+<site site="ts_0_1"/>
+<site site="ts_1_1"/>
+<site site="ts_2_1"/>
+<site site="ts_3_1"/>
+<site site="ts_4_1"/>
+<site site="ts_5_1"/>
+<site site="ts_6_1"/>
+<site site="ts_7_1"/>
+</spatial>
+<spatial name="tendon_2" width="0.0008" frictionloss="0.01">
+<site site="ts_0_2"/>
+<site site="ts_1_2"/>
+<site site="ts_2_2"/>
+<site site="ts_3_2"/>
+<site site="ts_4_2"/>
+<site site="ts_5_2"/>
+<site site="ts_6_2"/>
+<site site="ts_7_2"/>
+</spatial>
+</tendon>
+<actuator>
+<muscle name="tendon_m0" tendon="tendon_0" ctrlrange="0 1" force="22.0" lengthrange="0.2 1.2"/>
+<muscle name="tendon_m1" tendon="tendon_1" ctrlrange="0 1" force="22.0" lengthrange="0.2 1.2"/>
+<muscle name="tendon_m2" tendon="tendon_2" ctrlrange="0 1" force="22.0" lengthrange="0.2 1.2"/>
+<position name="grip0_0_pos" joint="grip0_0" kp="6" kv="0.3" ctrlrange="-0.45 0.30"/>
+<position name="grip0_1_pos" joint="grip0_1" kp="6" kv="0.3" ctrlrange="-0.45 0.30"/>
+<position name="grip1_0_pos" joint="grip1_0" kp="6" kv="0.3" ctrlrange="-0.45 0.30"/>
+<position name="grip1_1_pos" joint="grip1_1" kp="6" kv="0.3" ctrlrange="-0.45 0.30"/>
+<position name="grip2_0_pos" joint="grip2_0" kp="6" kv="0.3" ctrlrange="-0.45 0.30"/>
+<position name="grip2_1_pos" joint="grip2_1" kp="6" kv="0.3" ctrlrange="-0.45 0.30"/>
+<position name="grip2_2_pos" joint="grip2_2" kp="6" kv="0.3" ctrlrange="-0.45 0.30"/>
+<position name="grip3_0_pos" joint="grip3_0" kp="6" kv="0.3" ctrlrange="-0.45 0.30"/>
+<position name="grip3_1_pos" joint="grip3_1" kp="6" kv="0.3" ctrlrange="-0.45 0.30"/>
+<position name="slide_1_pos" joint="slide_1" kp="20000" kv="200" ctrlrange="-0.040 0"/>
+<position name="slide_2_pos" joint="slide_2" kp="20000" kv="200" ctrlrange="-0.040 0"/>
+<position name="slide_3_pos" joint="slide_3" kp="20000" kv="200" ctrlrange="-0.040 0"/>
+<position name="slide_4_pos" joint="slide_4" kp="20000" kv="200" ctrlrange="-0.040 0"/>
+<position name="slide_5_pos" joint="slide_5" kp="20000" kv="200" ctrlrange="-0.040 0"/>
+<position name="slide_6_pos" joint="slide_6" kp="20000" kv="200" ctrlrange="-0.040 0"/>
+<position name="slide_7_pos" joint="slide_7" kp="20000" kv="200" ctrlrange="-0.040 0"/>
+<position name="slide_wrist_pos" joint="slide_wrist" kp="20000" kv="200" ctrlrange="-0.040 0"/>
+<position name="gauge_pos" joint="gauge_j" kp="4" kv="0.4" ctrlrange="-1.0 1.0"/>
+<position name="j_bx_0" joint="bx_0" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_by_0" joint="by_0" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_bx_1" joint="bx_1" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_by_1" joint="by_1" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_bx_2" joint="bx_2" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_by_2" joint="by_2" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_bx_3" joint="bx_3" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_by_3" joint="by_3" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_bx_4" joint="bx_4" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_by_4" joint="by_4" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_bx_5" joint="bx_5" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_by_5" joint="by_5" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_bx_6" joint="bx_6" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_by_6" joint="by_6" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_bx_7" joint="bx_7" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+<position name="j_by_7" joint="by_7" kp="14.0" kv="2.0" ctrlrange="-0.9 0.9"/>
+  </actuator>
+</mujoco>

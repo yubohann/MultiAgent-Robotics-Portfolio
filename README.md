@@ -16,7 +16,7 @@
 
 ---
 
-**B.Eng. candidate in Computer Science and Technology, June 2027.** Research directions: multi-agent systems, visual-semantic navigation, and reinforcement learning; seeking internship and research-engineering roles in robotics and embodied AI.
+**B.Eng. candidate in Computer Science and Technology, June 2027.** Research directions: multi-agent systems, visual-semantic navigation, reinforcement learning, and sim-to-real aerial manipulation; seeking internship and research-engineering roles in robotics and embodied AI.
 
 ---
 
@@ -58,6 +58,7 @@
 | Project | Focus | Details |
 |---|---|---|
 | [Rivermark](rivermark/) | Multi-agent 3D search benchmark on native Isaac Sim, eight-drone captures. | [Overview](rivermark/README.md) |
+| [AerialSoftArm](aerial-soft-arm/) | Sim-to-real rigid-soft aerial manipulator: aligns by bending, captures on hover, hands off between drones. | [Overview](aerial-soft-arm/README.md) |
 | [RoboCup CBG-WM](robocup-cbg-wm/) | World models and risk-aware control for adversarial multi-robot navigation. | [Overview](robocup-cbg-wm/README.md), [Brief](robocup-cbg-wm/docs/admissions_project_brief.md) |
 | [Robocon MID-360](robocon-mid360-autonomy-stack/) | Livox MID-360 and FAST-LIO2 localization with a ROS 2 competition stack. | [Overview](robocon-mid360-autonomy-stack/README.md) |
 | [AeroCityBench](aerocity-bench/) | Procedural 3D multi-UAV search benchmark with public and private scoring splits. | [Overview](aerocity-bench/README.md) |
@@ -65,6 +66,12 @@
 | [AeroGate Graph](aerogate-graph/) | Graph reinforcement learning for dense gate traversal, single agent and 8-drone formation. | [Overview](aerogate-graph/README.md) |
 | [FraudGraph](fraudgraph-ml-engineering/) | Graph-and-sequence fraud detection across eight financial datasets. | [Overview](fraudgraph-ml-engineering/README.md) |
 | [ROS 2 Notes](ros2-systematic-learning-notes/) | A structured ROS 2 engineering handbook, 18 chapters. | [Overview](ros2-systematic-learning-notes/README.md) |
+
+<p align="center">
+  <a href="aerial-soft-arm/README.md"><img src="aerial-soft-arm/media/demo_task_grasp.gif" alt="Autonomous aerial grasp: vision lock, bend alignment, capture and lift in Isaac Lab" width="48%" /></a>
+  <a href="aerial-soft-arm/README.md"><img src="aerial-soft-arm/media/demo_lattice_arm.gif" alt="Truss soft arm articulating bend and grip on hardware" width="32%" /></a>
+</p>
+<p align="center"><sub>Highlight: autonomous grasp in Isaac Lab and the truss soft arm on hardware, from <a href="aerial-soft-arm/">AerialSoftArm</a></sub></p>
 
 ---
 
@@ -84,7 +91,7 @@
 |---|---|
 | Languages | Python, C++, MATLAB |
 | Learning | PyTorch, Stable-Baselines3, PPO, SAC, MAP-Elites |
-| Robotics | ROS 2, Isaac Sim and Isaac Lab, PhysX, Habitat-Sim and Habitat-Lab, Gazebo, Nav2, MoveIt 2 |
+| Robotics | ROS 2, Isaac Sim and Isaac Lab, PhysX, MuJoCo, Habitat-Sim and Habitat-Lab, Gazebo, Nav2, MoveIt 2 |
 | Perception | LiDAR, RGB-D, IMU, YOLO, AprilTag, PCL |
 | Infrastructure | Linux, Docker, Git, CI |
 
@@ -98,6 +105,7 @@
 | [YOLO26 + VisDrone](coursework/yolo26-visdrone-detection/) | Drone detection from subset preparation to training, validation and ONNX export | Ultralytics YOLO, VisDrone, ONNX |
 | [Streaming Lakehouse Labs](coursework/streaming-lakehouse/) | Lakehouse, seven streaming challenges, recommender and short-video review labs | Kafka, Flink, MinIO, Paimon, Spark |
 | [Supermarket System](coursework/supermarket-management-system/) | Flask store-management application with tests and defense material | Flask, SQLAlchemy, SQLite, pytest |
+| [SmartCity GIS Labs](coursework/SmartCity-GIS-Labs/) | Smart city modeling in ArcGIS: scan vectorization, rubbersheet adjustment, topology repair, vector spatial analysis and gas network emergency tracing, with animated demos | ArcGIS, spatial analysis |
 | [KernelVision](coursework/KernelVision/) | Four computer vision experiments from spatial filtering to a CIFAR-10 CNN, with animated demos | OpenCV, NumPy, PyTorch, Matplotlib |
 | [Spatiotemporal HPC Labs](coursework/Spatiotemporal-HPC-Labs/) | Four labs: integral computation, matrix algebra with least squares fitting, distributed memory MPI versions, and OpenMP image warping, with animated demos | C++17, OpenMPI, OpenMP, Linux |
 | [Embodied AI Roadmap](embodied-ai-learning-roadmap.md) | Twelve-week project-driven route from LLMs to robot learning | PyTorch, robot learning, ROS 2 |

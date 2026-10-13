@@ -4,7 +4,7 @@
 
 ## How to Read This Repository
 
-The root README is an index for the curated project set. The machine-readable [project registry](../tools/portfolio_registry.json) defines its entry documents and root-level check keys.
+The root README is an index for the curated project set. The machine-readable [project registry](../tools/portfolio_registry.json) defines its entry documents and root-level check keys. The [Project Technical Guides](PROJECT_TECHNICAL_GUIDES.md) index pairs each project with a compact summary and a deep technical guide.
 
 | Evidence label | Meaning |
 |---|---|
@@ -18,6 +18,7 @@ The root README is an index for the curated project set. The machine-readable [p
 | Goal | Project | First document |
 |---|---|---|
 | Inspect a benchmark contract and audit scope | Rivermark | [README](../rivermark/README.md) |
+| Inspect a rigid-soft aerial manipulator and sim-to-real grasping evidence | AerialSoftArm | [README](../aerial-soft-arm/README.md) |
 | Inspect visual robotics and replay evidence | RoboCup CBG-WM | [README](../robocup-cbg-wm/README.md) |
 | Inspect ROS 2 localization and competition control | Robocon MID-360 Autonomy Stack | [README](../robocon-mid360-autonomy-stack/README.md) |
 | Inspect procedural 3D multi-UAV search benchmarking | AeroCityBench | [README](../aerocity-bench/README.md) |

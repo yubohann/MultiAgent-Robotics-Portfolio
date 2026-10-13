@@ -2,7 +2,7 @@
 
 英文版 [PORTFOLIO_GUIDE.md](PORTFOLIO_GUIDE.md) 是默认技术导航，本文件提供中文说明。
 
-根 README 是项目索引，各子项目的证据等级以对应项目 README 为准。请先阅读对应项目 README，再核对代码，结果，数据与硬件范围。
+根 README 是项目索引，各子项目的证据等级以对应项目 README 为准。请先阅读对应项目 README，再核对代码，结果，数据与硬件范围。每个项目的 300 字概括与深度技术文档见[项目技术导览索引](PROJECT_TECHNICAL_GUIDES.zh-CN.md)。
 
 ## 证据标签
 

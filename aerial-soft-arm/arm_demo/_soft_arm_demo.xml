@@ -1,0 +1,173 @@
+<mujoco model="soft_arm_demo">
+<compiler angle="radian"/>
+<option timestep="0.001" gravity="0 0 -9.81"/>
+
+  <asset>
+    <material name="drone_mat" rgba="0.12 0.16 0.20 1"/>
+    <material name="tube_mat" rgba="0.35 0.40 0.48 1"/>
+    <material name="seg_mat0" rgba="0.16 0.32 0.62 1" specular="0.6" shininess="0.5" roughness="0.35"/>
+    <material name="seg_mat1" rgba="0.25 0.62 0.85 1" specular="0.6" shininess="0.5" roughness="0.35"/>
+    <material name="tip_mat" rgba="0.95 0.55 0.15 1" specular="0.7" shininess="0.6" roughness="0.3"/>
+    <texture name="texplane" type="2d" builtin="checker" rgb1=".205 .215 .235" rgb2=".125 .132 .145"
+             width="512" height="512" mark="cross" markrgb=".55 .57 .6"/>
+    <material name="matplane" reflectance="0.24" shininess="0.25" roughness="0.60"
+              texture="texplane" texrepeat="4 4" texuniform="true"/>
+    <texture type="skybox" builtin="gradient" rgb1="0.42 0.46 0.53" rgb2="0.02 0.03 0.05"
+             width="512" height="3072"/>
+  </asset>
+  <visual>
+    <quality shadowsize="8192" offsamples="16"/>
+    <headlight ambient="0.18 0.19 0.22" diffuse="0.30 0.30 0.32" specular="0.06 0.06 0.06"/>
+    <global offwidth="1920" offheight="1080"/>
+  </visual>
+
+<worldbody>
+<geom name="ground" type="plane" size="10 10 1" pos="0 0 0" material="matplane" condim="1"/>
+<light name="key" directional="true" pos="0.9 -0.6 2.4" dir="-0.35 0.25 -1" diffuse="0.80 0.78 0.74" specular="0.55 0.55 0.55" castshadow="true"/>
+<light name="fill" directional="true" pos="-1.2 0.6 1.6" dir="0.6 -0.3 -1" diffuse="0.25 0.28 0.34" specular="0.05 0.05 0.05"/>
+<body name="drone" pos="0 0 1.7">
+<freejoint name="drone_free"/>
+<site name="imu_site" pos="0 0 0" size="0.008"/>
+<site name="manipulator_mount" pos="0 0 -0.05" size="0.01"/>
+<geom name="drone_panel_1" type="box" pos="0 0 0" size="0.155 0.090 0.04" material="drone_mat" mass="0.50"/>
+<geom name="drone_panel_2" type="box" pos="0 0 0" euler="0 0 1.0471975512" size="0.155 0.090 0.04" material="drone_mat" mass="0.50"/>
+<geom name="drone_panel_3" type="box" pos="0 0 0" euler="0 0 -1.0471975512" size="0.155 0.090 0.04" material="drone_mat" mass="0.50"/>
+<geom name="rotor1_arm" type="capsule" fromto="0 0 0 0.340 0.000 0" size="0.015" material="drone_mat" mass="0.03"/>
+<geom name="rotor2_arm" type="capsule" fromto="0 0 0 0.170 0.294 0" size="0.015" material="drone_mat" mass="0.03"/>
+<geom name="rotor3_arm" type="capsule" fromto="0 0 0 -0.170 0.294 0" size="0.015" material="drone_mat" mass="0.03"/>
+<geom name="rotor4_arm" type="capsule" fromto="0 0 0 -0.340 0.000 0" size="0.015" material="drone_mat" mass="0.03"/>
+<geom name="rotor5_arm" type="capsule" fromto="0 0 0 -0.170 -0.294 0" size="0.015" material="drone_mat" mass="0.03"/>
+<geom name="rotor6_arm" type="capsule" fromto="0 0 0 0.170 -0.294 0" size="0.015" material="drone_mat" mass="0.03"/>
+<body name="rotor1_body" pos="0.340 0.000 0">
+<site name="rotor1_site" pos="0 0 0" size="0.01"/>
+<geom type="cylinder" size="0.07 0.005" rgba="0.08 0.08 0.08 1" mass="0.01"/>
+</body>
+<body name="rotor2_body" pos="0.170 0.294 0">
+<site name="rotor2_site" pos="0 0 0" size="0.01"/>
+<geom type="cylinder" size="0.07 0.005" rgba="0.08 0.08 0.08 1" mass="0.01"/>
+</body>
+<body name="rotor3_body" pos="-0.170 0.294 0">
+<site name="rotor3_site" pos="0 0 0" size="0.01"/>
+<geom type="cylinder" size="0.07 0.005" rgba="0.08 0.08 0.08 1" mass="0.01"/>
+</body>
+<body name="rotor4_body" pos="-0.340 0.000 0">
+<site name="rotor4_site" pos="0 0 0" size="0.01"/>
+<geom type="cylinder" size="0.07 0.005" rgba="0.08 0.08 0.08 1" mass="0.01"/>
+</body>
+<body name="rotor5_body" pos="-0.170 -0.294 0">
+<site name="rotor5_site" pos="0 0 0" size="0.01"/>
+<geom type="cylinder" size="0.07 0.005" rgba="0.08 0.08 0.08 1" mass="0.01"/>
+</body>
+<body name="rotor6_body" pos="0.170 -0.294 0">
+<site name="rotor6_site" pos="0 0 0" size="0.01"/>
+<geom type="cylinder" size="0.07 0.005" rgba="0.08 0.08 0.08 1" mass="0.01"/>
+</body>
+<body name="arm_base" pos="0 0 -0.07">
+<geom name="arm_base_geom" type="cylinder" size="0.024 0.022" material="tube_mat" mass="0.06"/>
+<body name="tele1" pos="0 0 -0.0220">
+<joint name="tele_slide1" type="slide" axis="0 0 -1" range="0 0.1000" limited="true" stiffness="0" damping="0.02"/>
+<geom name="tele1_geom" type="cylinder" pos="0 0 -0.0500" size="0.0200 0.0700" material="tube_mat" mass="0.03"/>
+</body>
+<body name="tele2" pos="0 0 -0.1200">
+<joint name="tele_slide2" type="slide" axis="0 0 -1" range="0 0.1000" limited="true" stiffness="0" damping="0.02"/>
+<geom name="tele2_geom" type="cylinder" pos="0 0 -0.0500" size="0.0160 0.0700" material="tube_mat" mass="0.03"/>
+</body>
+<body name="tele3" pos="0 0 -0.1200">
+<joint name="tele_slide3" type="slide" axis="0 0 -1" range="0 0.1000" limited="true" stiffness="0" damping="0.02"/>
+<geom name="tele3_geom" type="cylinder" pos="0 0 -0.0500" size="0.0120 0.0700" material="tube_mat" mass="0.03"/>
+<site name="tendon_base" pos="0 0 -0.02" size="0.002"/>
+</body>
+<body name="seg_1" pos="0 0 -0.0200">
+<joint name="bend_1" type="hinge" axis="0 1 0" pos="0 0 0" range="-1.2 1.2" limited="true" stiffness="0.0600" damping="0.0040"/>
+<geom name="seg_1_geom" type="capsule" fromto="0 0 0 0 0 -0.0500" size="0.0180" material="seg_mat0" mass="0.012"/>
+<site name="tsite_1_p" pos="0.0180 0 -0.0250" size="0.002"/>
+<site name="tsite_1_n" pos="-0.0180 0 -0.0250" size="0.002"/>
+<body name="seg_2" pos="0 0 -0.0500">
+<joint name="bend_2" type="hinge" axis="0 1 0" pos="0 0 0" range="-1.2 1.2" limited="true" stiffness="0.0600" damping="0.0040"/>
+<geom name="seg_2_geom" type="capsule" fromto="0 0 0 0 0 -0.0500" size="0.0169" material="seg_mat0" mass="0.012"/>
+<site name="tsite_2_p" pos="0.0169 0 -0.0250" size="0.002"/>
+<site name="tsite_2_n" pos="-0.0169 0 -0.0250" size="0.002"/>
+<body name="seg_3" pos="0 0 -0.0500">
+<joint name="bend_3" type="hinge" axis="0 1 0" pos="0 0 0" range="-1.2 1.2" limited="true" stiffness="0.0600" damping="0.0040"/>
+<geom name="seg_3_geom" type="capsule" fromto="0 0 0 0 0 -0.0500" size="0.0157" material="seg_mat0" mass="0.012"/>
+<site name="tsite_3_p" pos="0.0157 0 -0.0250" size="0.002"/>
+<site name="tsite_3_n" pos="-0.0157 0 -0.0250" size="0.002"/>
+<body name="seg_4" pos="0 0 -0.0500">
+<joint name="bend_4" type="hinge" axis="0 1 0" pos="0 0 0" range="-1.2 1.2" limited="true" stiffness="0.0600" damping="0.0040"/>
+<geom name="seg_4_geom" type="capsule" fromto="0 0 0 0 0 -0.0500" size="0.0146" material="seg_mat0" mass="0.012"/>
+<site name="tsite_4_p" pos="0.0146 0 -0.0250" size="0.002"/>
+<site name="tsite_4_n" pos="-0.0146 0 -0.0250" size="0.002"/>
+<body name="seg_5" pos="0 0 -0.0500">
+<joint name="bend_5" type="hinge" axis="0 1 0" pos="0 0 0" range="-1.2 1.2" limited="true" stiffness="0.0600" damping="0.0040"/>
+<geom name="seg_5_geom" type="capsule" fromto="0 0 0 0 0 -0.0500" size="0.0134" material="seg_mat1" mass="0.012"/>
+<site name="tsite_5_p" pos="0.0134 0 -0.0250" size="0.002"/>
+<site name="tsite_5_n" pos="-0.0134 0 -0.0250" size="0.002"/>
+<body name="seg_6" pos="0 0 -0.0500">
+<joint name="bend_6" type="hinge" axis="0 1 0" pos="0 0 0" range="-1.2 1.2" limited="true" stiffness="0.0600" damping="0.0040"/>
+<geom name="seg_6_geom" type="capsule" fromto="0 0 0 0 0 -0.0500" size="0.0123" material="seg_mat1" mass="0.012"/>
+<site name="tsite_6_p" pos="0.0123 0 -0.0250" size="0.002"/>
+<site name="tsite_6_n" pos="-0.0123 0 -0.0250" size="0.002"/>
+<body name="seg_7" pos="0 0 -0.0500">
+<joint name="bend_7" type="hinge" axis="0 1 0" pos="0 0 0" range="-1.2 1.2" limited="true" stiffness="0.0600" damping="0.0040"/>
+<geom name="seg_7_geom" type="capsule" fromto="0 0 0 0 0 -0.0500" size="0.0111" material="seg_mat1" mass="0.012"/>
+<site name="tsite_7_p" pos="0.0111 0 -0.0250" size="0.002"/>
+<site name="tsite_7_n" pos="-0.0111 0 -0.0250" size="0.002"/>
+<body name="seg_8" pos="0 0 -0.0500">
+<joint name="bend_8" type="hinge" axis="0 1 0" pos="0 0 0" range="-1.2 1.2" limited="true" stiffness="0.0600" damping="0.0040"/>
+<geom name="seg_8_geom" type="capsule" fromto="0 0 0 0 0 -0.0500" size="0.0100" material="seg_mat1" mass="0.012"/>
+<site name="tsite_8_p" pos="0.0100 0 -0.0250" size="0.002"/>
+<site name="tsite_8_n" pos="-0.0100 0 -0.0250" size="0.002"/>
+<geom name="tip_geom" type="sphere" size="0.016" pos="0 0 -0.05" material="tip_mat" mass="0.02"/>
+<site name="tip_site" pos="0 0 -0.05" size="0.004"/>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</body>
+</worldbody>
+<tendon>
+<spatial name="t_p" width="0.001" frictionloss="0.02" rgba="0.9 0.3 0.3 1">
+<site site="tendon_base"/>
+<site site="tsite_1_p"/>
+<site site="tsite_2_p"/>
+<site site="tsite_3_p"/>
+<site site="tsite_4_p"/>
+<site site="tsite_5_p"/>
+<site site="tsite_6_p"/>
+<site site="tsite_7_p"/>
+<site site="tsite_8_p"/>
+<site site="tip_site"/>
+</spatial>
+<spatial name="t_n" width="0.001" frictionloss="0.02" rgba="0.9 0.3 0.3 1">
+<site site="tendon_base"/>
+<site site="tsite_1_n"/>
+<site site="tsite_2_n"/>
+<site site="tsite_3_n"/>
+<site site="tsite_4_n"/>
+<site site="tsite_5_n"/>
+<site site="tsite_6_n"/>
+<site site="tsite_7_n"/>
+<site site="tsite_8_n"/>
+<site site="tip_site"/>
+</spatial>
+</tendon>
+<actuator>
+<motor name="rotor1" site="rotor1_site" gear="0 0 1 0 0 0.020" ctrlrange="0 12"/>
+<motor name="rotor2" site="rotor2_site" gear="0 0 1 0 0 -0.020" ctrlrange="0 12"/>
+<motor name="rotor3" site="rotor3_site" gear="0 0 1 0 0 0.020" ctrlrange="0 12"/>
+<motor name="rotor4" site="rotor4_site" gear="0 0 1 0 0 -0.020" ctrlrange="0 12"/>
+<motor name="rotor5" site="rotor5_site" gear="0 0 1 0 0 0.020" ctrlrange="0 12"/>
+<motor name="rotor6" site="rotor6_site" gear="0 0 1 0 0 -0.020" ctrlrange="0 12"/>
+<muscle name="tendon_p" tendon="t_p" ctrlrange="0 1" force="120.0" lengthrange="0.2 1.0"/>
+<muscle name="tendon_n" tendon="t_n" ctrlrange="0 1" force="120.0" lengthrange="0.2 1.0"/>
+<position name="tele_pos1" joint="tele_slide1" kp="300" kv="30" ctrlrange="0 0.1000"/>
+<position name="tele_pos2" joint="tele_slide2" kp="300" kv="30" ctrlrange="0 0.1000"/>
+<position name="tele_pos3" joint="tele_slide3" kp="300" kv="30" ctrlrange="0 0.1000"/>
+</actuator>
+</mujoco>

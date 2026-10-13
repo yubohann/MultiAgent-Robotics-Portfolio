@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<robot name="as01_truss">
+  <material name="steel"><color rgba="0.62 0.64 0.68 1"/></material>
+  <material name="dark"><color rgba="0.09 0.09 0.10 1"/></material>
+  <material name="blue"><color rgba="0.10 0.24 0.60 1"/></material>
+  <material name="red"><color rgba="0.72 0.10 0.09 1"/></material>
+  <material name="silicone"><color rgba="0.82 0.83 0.85 1"/></material>
+  <link name="base_link">
+    <inertial><origin xyz="0.0010 0.0037 0.0491"/><mass value="0.66172"/><inertia ixx="2.378368e-03" ixy="0" ixz="0" iyy="2.854419e-03" iyz="0" izz="3.492636e-03"/></inertial>
+    <visual><origin xyz="0 0 0.0012" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_plate.obj"/></geometry><material name="m_q_plate_0"><color rgba="0.160 0.160 0.170 1"/></material></visual>
+    <visual><origin xyz="0 0 0.036" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_plate.obj"/></geometry><material name="m_q_plate_0"><color rgba="0.160 0.160 0.170 1"/></material></visual>
+    <visual><origin xyz="0.0813 0.0813 0.018" rpy="0 0 0.7854"/><geometry><mesh filename="../../arm_real/meshes/q_arm_boom.obj"/></geometry><material name="m_q_arm_boom_0"><color rgba="0.130 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="0.1308 0.1308 0.020" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_motor.obj"/></geometry><material name="m_q_motor_0"><color rgba="0.300 0.300 0.320 1"/></material></visual>
+    <visual><origin xyz="-0.0813 0.0813 0.018" rpy="0 0 2.3562"/><geometry><mesh filename="../../arm_real/meshes/q_arm_boom.obj"/></geometry><material name="m_q_arm_boom_0"><color rgba="0.130 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="-0.1308 0.1308 0.020" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_motor.obj"/></geometry><material name="m_q_motor_0"><color rgba="0.300 0.300 0.320 1"/></material></visual>
+    <visual><origin xyz="-0.0813 -0.0813 0.018" rpy="0 0 3.9270"/><geometry><mesh filename="../../arm_real/meshes/q_arm_boom.obj"/></geometry><material name="m_q_arm_boom_0"><color rgba="0.130 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="-0.1308 -0.1308 0.020" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_motor.obj"/></geometry><material name="m_q_motor_0"><color rgba="0.300 0.300 0.320 1"/></material></visual>
+    <visual><origin xyz="0.0813 -0.0813 0.018" rpy="0 0 5.4978"/><geometry><mesh filename="../../arm_real/meshes/q_arm_boom.obj"/></geometry><material name="m_q_arm_boom_0"><color rgba="0.130 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="0.1308 -0.1308 0.020" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_motor.obj"/></geometry><material name="m_q_motor_0"><color rgba="0.300 0.300 0.320 1"/></material></visual>
+    <visual><origin xyz="-0.0360 -0.0360 0.004" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_standoff.obj"/></geometry><material name="m_q_standoff_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="-0.0360 0.0360 0.004" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_standoff.obj"/></geometry><material name="m_q_standoff_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="0.0360 -0.0360 0.004" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_standoff.obj"/></geometry><material name="m_q_standoff_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="0.0360 0.0360 0.004" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_standoff.obj"/></geometry><material name="m_q_standoff_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="0 0.006 0.038" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_battery.obj"/></geometry><material name="m_q_battery_0"><color rgba="0.100 0.100 0.120 1"/></material></visual>
+    <visual><origin xyz="0 -0.024 0.002" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_pdb.obj"/></geometry><material name="m_q_pdb_0"><color rgba="0.120 0.300 0.160 1"/></material></visual>
+    <visual><origin xyz="0 0.004 0.009" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_fc.obj"/></geometry><material name="m_q_fc_0"><color rgba="0.120 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="0 0.020 0.038" rpy="0 0 3.1416"/><geometry><mesh filename="../../arm_real/meshes/q_obc.obj"/></geometry><material name="m_q_obc_0"><color rgba="0.240 0.250 0.270 1"/></material></visual>
+    <visual><origin xyz="-0.030 -0.030 0.038" rpy="0 0 0.7854"/><geometry><mesh filename="../../arm_real/meshes/q_vtx.obj"/></geometry><material name="m_q_vtx_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0.030 0.030 0.038" rpy="0 0 2.36"/><geometry><mesh filename="../../arm_real/meshes/q_rx.obj"/></geometry><material name="m_q_rx_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+    <visual><origin xyz="-0.030 0.032 0.036" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_mast.obj"/></geometry><material name="m_q_mast_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="-0.030 0.032 0.076" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_gnss.obj"/></geometry><material name="m_q_gnss_0"><color rgba="0.800 0.800 0.820 1"/></material></visual>
+    <visual><origin xyz="0.046 0.0 0.024" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_cam_front.obj"/></geometry><material name="m_q_cam_front_0"><color rgba="0.100 0.100 0.120 1"/></material></visual>
+    <visual><origin xyz="0 0 0.0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_landing.obj"/></geometry><material name="m_q_landing_0"><color rgba="0.120 0.120 0.130 1"/></material></visual>
+    <visual><origin xyz="0 0 0.082" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_tray.obj"/></geometry><material name="m_q_tray_0"><color rgba="0.300 0.320 0.340 1"/></material></visual>
+  </link>
+  <link name="prop_0">
+    <inertial><origin xyz="0.0000 0.0000 0.0058"/><mass value="0.01276"/><inertia ixx="9.747868e-07" ixy="0" ixz="0" iyy="6.875292e-05" iyz="0" izz="6.944568e-05"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 76.5000"/><geometry><mesh filename="../../arm_real/meshes/q_prop.obj"/></geometry><material name="m_q_prop_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+  </link>
+  <joint name="prop_0" type="continuous"><origin xyz="0.1308 0.1308 0.047" rpy="0 0 0"/><parent link="base_link"/><child link="prop_0"/><axis xyz="0 0 1"/><limit effort="0.5" velocity="250"/></joint>
+  <link name="prop_1">
+    <inertial><origin xyz="0.0000 0.0000 0.0058"/><mass value="0.01276"/><inertia ixx="9.747868e-07" ixy="0" ixz="0" iyy="6.875292e-05" iyz="0" izz="6.944568e-05"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 229.5000"/><geometry><mesh filename="../../arm_real/meshes/q_prop.obj"/></geometry><material name="m_q_prop_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+  </link>
+  <joint name="prop_1" type="continuous"><origin xyz="-0.1308 0.1308 0.047" rpy="0 0 0"/><parent link="base_link"/><child link="prop_1"/><axis xyz="0 0 1"/><limit effort="0.5" velocity="250"/></joint>
+  <link name="prop_2">
+    <inertial><origin xyz="0.0000 0.0000 0.0058"/><mass value="0.01276"/><inertia ixx="9.747868e-07" ixy="0" ixz="0" iyy="6.875292e-05" iyz="0" izz="6.944568e-05"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 382.5000"/><geometry><mesh filename="../../arm_real/meshes/q_prop.obj"/></geometry><material name="m_q_prop_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+  </link>
+  <joint name="prop_2" type="continuous"><origin xyz="-0.1308 -0.1308 0.047" rpy="0 0 0"/><parent link="base_link"/><child link="prop_2"/><axis xyz="0 0 1"/><limit effort="0.5" velocity="250"/></joint>
+  <link name="prop_3">
+    <inertial><origin xyz="0.0000 0.0000 0.0058"/><mass value="0.01276"/><inertia ixx="9.747868e-07" ixy="0" ixz="0" iyy="6.875292e-05" iyz="0" izz="6.944568e-05"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 535.5000"/><geometry><mesh filename="../../arm_real/meshes/q_prop.obj"/></geometry><material name="m_q_prop_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+  </link>
+  <joint name="prop_3" type="continuous"><origin xyz="0.1308 -0.1308 0.047" rpy="0 0 0"/><parent link="base_link"/><child link="prop_3"/><axis xyz="0 0 1"/><limit effort="0.5" velocity="250"/></joint>
+  <link name="b_mast">
+    <inertial><origin xyz="0.0000 0.0000 0.0180"/><mass value="0.00130"/><inertia ixx="1.552301e-07" ixy="0" ixz="0" iyy="1.560003e-07" iyz="0" izz="3.042981e-08"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_mast.obj"/></geometry><material name="m_q_mast_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+  </link>
+  <link name="b_tray_c"><inertial><origin xyz="0 0 0"/><mass value="0.001"/><inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/></inertial><collision><origin xyz="0 0 0.084"/><geometry><box size="0.110 0.090 0.010"/></geometry></collision></link>
+  <joint name="mount_tray" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="base_link"/><child link="b_tray_c"/></joint>
+  <joint name="mast_j" type="revolute"><origin xyz="-0.030 0.032 0.112" rpy="0 0 0"/><parent link="base_link"/><child link="b_mast"/><axis xyz="0 1 0"/><limit lower="-0.05" upper="0.05" effort="0.5" velocity="1.0"/></joint>
+</robot>

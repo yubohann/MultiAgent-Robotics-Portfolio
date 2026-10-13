@@ -5,7 +5,9 @@
     "README.zh-CN.md",
     "docs/PORTFOLIO_GUIDE.md",
     "docs/PORTFOLIO_GUIDE.zh-CN.md",
-    "docs/INTEGRATED_PROJECTS.md"
+    "docs/INTEGRATED_PROJECTS.md",
+    "docs/PROJECT_TECHNICAL_GUIDES.md",
+    "docs/PROJECT_TECHNICAL_GUIDES.zh-CN.md"
   ],
   "projects": [
     {
@@ -18,6 +20,18 @@
       "documents": [
         "rivermark/README.md",
         "rivermark/README.zh-CN.md"
+      ]
+    },
+    {
+      "id": "aerial-soft-arm",
+      "title": "AerialSoftArm",
+      "directory": "aerial-soft-arm",
+      "readme": "aerial-soft-arm/README.md",
+      "category": "sim-to-real aerial manipulation",
+      "verification": null,
+      "documents": [
+        "aerial-soft-arm/README.md",
+        "aerial-soft-arm/README.zh-CN.md"
       ]
     },
     {

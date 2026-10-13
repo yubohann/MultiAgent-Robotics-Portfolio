@@ -16,7 +16,7 @@
 
 ---
 
-**计算机科学与技术本科生，2027 年 6 月毕业。** 研究方向：多智能体、视觉语义导航与强化学习；求职意向：机器人算法与具身智能方向的实习 / 研究工程岗位。
+**计算机科学与技术本科生，2027 年 6 月毕业。** 研究方向：多智能体、视觉语义导航、强化学习与面向真机的空中操作；求职意向：机器人算法与具身智能方向的实习 / 研究工程岗位。
 
 ---
 
@@ -58,6 +58,7 @@
 | 项目 | 内容 | 详情 |
 |---|---|---|
 | [Rivermark](rivermark/) | Isaac Sim 原生采集的多智能体三维搜索基准。 | [中文说明](rivermark/README.zh-CN.md) |
+| [AerialSoftArm](aerial-soft-arm/) | 刚柔耦合空中机械臂：靠弯曲对位、悬停中抓取，并支持双机空中间交接。 | [中文说明](aerial-soft-arm/README.zh-CN.md) |
 | [RoboCup CBG-WM](robocup-cbg-wm/) | 面向对抗式多机器人导航的世界模型与风险感知控制。 | [中文说明](robocup-cbg-wm/README.zh-CN.md) |
 | [Robocon MID-360](robocon-mid360-autonomy-stack/) | Livox MID-360 与 FAST-LIO2 定位以及 ROS 2 竞赛自主系统。 | [中文说明](robocon-mid360-autonomy-stack/README.zh-CN.md) |
 | [AeroCityBench](aerocity-bench/) | 程序化三维多无人机搜索基准，公开与私有计分划分。 | [中文说明](aerocity-bench/README.zh-CN.md) |
@@ -65,6 +66,12 @@
 | [AeroGate Graph](aerogate-graph/) | 图强化学习穿越密集闸门，单机与八机编队。 | [Overview](aerogate-graph/README.md) |
 | [FraudGraph](fraudgraph-ml-engineering/) | 覆盖八个金融数据集的图与序列欺诈检测。 | [Overview](fraudgraph-ml-engineering/README.md) |
 | [ROS 2 笔记](ros2-systematic-learning-notes/) | 18 章 ROS 2 系统手册。 | [中文说明](ros2-systematic-learning-notes/README.zh-CN.md) |
+
+<p align="center">
+  <a href="aerial-soft-arm/README.zh-CN.md"><img src="aerial-soft-arm/media/demo_task_grasp.gif" alt="Isaac Lab 全自主空中抓取：视觉锁定、弯曲对位、捕获与提升" width="48%" /></a>
+  <a href="aerial-soft-arm/README.zh-CN.md"><img src="aerial-soft-arm/media/demo_lattice_arm.gif" alt="真机桁架软臂的弯曲与夹持" width="32%" /></a>
+</p>
+<p align="center"><sub>项目亮点：Isaac Lab 中的全自主抓取与真机桁架软臂，来自 <a href="aerial-soft-arm/">AerialSoftArm</a></sub></p>
 
 ---
 
@@ -84,7 +91,7 @@
 |---|---|
 | 语言 | Python，C++，MATLAB |
 | 学习 | PyTorch，Stable-Baselines3，PPO，SAC，MAP-Elites |
-| 机器人 | ROS 2，Isaac Sim 与 Isaac Lab，PhysX，Habitat-Sim 与 Habitat-Lab，Gazebo，Nav2，MoveIt 2 |
+| 机器人 | ROS 2，Isaac Sim 与 Isaac Lab，PhysX，MuJoCo，Habitat-Sim 与 Habitat-Lab，Gazebo，Nav2，MoveIt 2 |
 | 感知 | LiDAR，RGB-D，IMU，YOLO，AprilTag，PCL |
 | 工程 | Linux，Docker，Git，CI |
 
@@ -98,6 +105,7 @@
 | [YOLO26 与 VisDrone](coursework/yolo26-visdrone-detection/) | 从数据子集准备到训练，验证与 ONNX 导出的无人机检测 | Ultralytics YOLO，VisDrone，ONNX |
 | [流式湖仓实验](coursework/streaming-lakehouse/) | 湖仓，七个流处理挑战，推荐系统与短视频审核实验 | Kafka，Flink，MinIO，Paimon，Spark |
 | [超市管理系统](coursework/supermarket-management-system/) | 带测试与答辩材料的 Flask 门店管理应用 | Flask，SQLAlchemy，SQLite，pytest |
+| [智慧城市 GIS 实验](coursework/SmartCity-GIS-Labs/) | ArcGIS 智慧城市建模：扫描矢量化、橡皮页变换、拓扑修复、矢量空间分析与燃气管网应急追踪，含动态演示 | ArcGIS，空间分析 |
 | [KernelVision 内核视觉](coursework/KernelVision/) | 从空域滤波到 CIFAR-10 卷积网络的四个视觉实验，附动图演示 | OpenCV，NumPy，PyTorch，Matplotlib |
 | [时空大数据高性能处理](coursework/Spatiotemporal-HPC-Labs/) | 四次上机实验，定积分、矩阵运算与最小二乘拟合、MPI 分布式内存编程、OpenMP 图像仿射重采样，含动画演示 | C++17、MPI（OpenMPI）、OpenMP、Linux |
 | [具身智能路线图](embodied-ai-learning-roadmap.md) | 十二周从大模型到机器人学习的项目制路线 | PyTorch，机器人学习，ROS 2 |

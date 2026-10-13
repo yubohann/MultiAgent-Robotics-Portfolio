@@ -1,0 +1,329 @@
+<?xml version="1.0"?>
+<robot name="as01_truss">
+  <material name="steel"><color rgba="0.62 0.64 0.68 1"/></material>
+  <material name="dark"><color rgba="0.09 0.09 0.10 1"/></material>
+  <material name="blue"><color rgba="0.10 0.24 0.60 1"/></material>
+  <material name="red"><color rgba="0.72 0.10 0.09 1"/></material>
+  <material name="silicone"><color rgba="0.82 0.83 0.85 1"/></material>
+  <link name="base_link">
+    <inertial><origin xyz="0.0018 0.0044 0.0350"/><mass value="0.65997"/><inertia ixx="2.258747e-03" ixy="0" ixz="0" iyy="2.714333e-03" iyz="0" izz="3.441655e-03"/></inertial>
+    <visual><origin xyz="0 0 0.0012" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_plate.obj"/></geometry><material name="m_q_plate_0"><color rgba="0.160 0.160 0.170 1"/></material></visual>
+    <visual><origin xyz="0 0 0.036" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_plate.obj"/></geometry><material name="m_q_plate_0"><color rgba="0.160 0.160 0.170 1"/></material></visual>
+    <visual><origin xyz="0.0813 0.0813 0.018" rpy="0 0 0.7854"/><geometry><mesh filename="../../arm_real/meshes/q_arm_boom.obj"/></geometry><material name="m_q_arm_boom_0"><color rgba="0.130 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="0.1308 0.1308 0.020" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_motor.obj"/></geometry><material name="m_q_motor_0"><color rgba="0.300 0.300 0.320 1"/></material></visual>
+    <visual><origin xyz="-0.0813 0.0813 0.018" rpy="0 0 2.3562"/><geometry><mesh filename="../../arm_real/meshes/q_arm_boom.obj"/></geometry><material name="m_q_arm_boom_0"><color rgba="0.130 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="-0.1308 0.1308 0.020" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_motor.obj"/></geometry><material name="m_q_motor_0"><color rgba="0.300 0.300 0.320 1"/></material></visual>
+    <visual><origin xyz="-0.0813 -0.0813 0.018" rpy="0 0 3.9270"/><geometry><mesh filename="../../arm_real/meshes/q_arm_boom.obj"/></geometry><material name="m_q_arm_boom_0"><color rgba="0.130 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="-0.1308 -0.1308 0.020" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_motor.obj"/></geometry><material name="m_q_motor_0"><color rgba="0.300 0.300 0.320 1"/></material></visual>
+    <visual><origin xyz="0.0813 -0.0813 0.018" rpy="0 0 5.4978"/><geometry><mesh filename="../../arm_real/meshes/q_arm_boom.obj"/></geometry><material name="m_q_arm_boom_0"><color rgba="0.130 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="0.1308 -0.1308 0.020" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_motor.obj"/></geometry><material name="m_q_motor_0"><color rgba="0.300 0.300 0.320 1"/></material></visual>
+    <visual><origin xyz="-0.0360 -0.0360 0.004" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_standoff.obj"/></geometry><material name="m_q_standoff_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="-0.0360 0.0360 0.004" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_standoff.obj"/></geometry><material name="m_q_standoff_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="0.0360 -0.0360 0.004" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_standoff.obj"/></geometry><material name="m_q_standoff_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="0.0360 0.0360 0.004" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_standoff.obj"/></geometry><material name="m_q_standoff_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="0 0.006 0.038" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_battery.obj"/></geometry><material name="m_q_battery_0"><color rgba="0.100 0.100 0.120 1"/></material></visual>
+    <visual><origin xyz="0 -0.024 0.002" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_pdb.obj"/></geometry><material name="m_q_pdb_0"><color rgba="0.120 0.300 0.160 1"/></material></visual>
+    <visual><origin xyz="0 0.004 0.009" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_fc.obj"/></geometry><material name="m_q_fc_0"><color rgba="0.120 0.130 0.140 1"/></material></visual>
+    <visual><origin xyz="0 0.020 0.038" rpy="0 0 3.1416"/><geometry><mesh filename="../../arm_real/meshes/q_obc.obj"/></geometry><material name="m_q_obc_0"><color rgba="0.240 0.250 0.270 1"/></material></visual>
+    <visual><origin xyz="-0.030 -0.030 0.038" rpy="0 0 0.7854"/><geometry><mesh filename="../../arm_real/meshes/q_vtx.obj"/></geometry><material name="m_q_vtx_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0.030 0.030 0.038" rpy="0 0 2.36"/><geometry><mesh filename="../../arm_real/meshes/q_rx.obj"/></geometry><material name="m_q_rx_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+    <visual><origin xyz="-0.030 0.032 0.036" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_mast.obj"/></geometry><material name="m_q_mast_0"><color rgba="0.550 0.560 0.580 1"/></material></visual>
+    <visual><origin xyz="-0.030 0.032 0.076" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_gnss.obj"/></geometry><material name="m_q_gnss_0"><color rgba="0.800 0.800 0.820 1"/></material></visual>
+    <visual><origin xyz="0.046 0.0 0.024" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_cam_front.obj"/></geometry><material name="m_q_cam_front_0"><color rgba="0.100 0.100 0.120 1"/></material></visual>
+    <visual><origin xyz="0 0 0.0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/q_landing.obj"/></geometry><material name="m_q_landing_0"><color rgba="0.120 0.120 0.130 1"/></material></visual>
+    <visual><origin xyz="0.020 0.020 -0.010" rpy="0 0 3.1416"/><geometry><mesh filename="../../arm_real/meshes/q_cam_down.obj"/></geometry><material name="m_q_cam_down_0"><color rgba="0.100 0.100 0.120 1"/></material></visual>
+    <visual><origin xyz="0 0 -0.008" rpy="3.1416 0 0"/><geometry><mesh filename="../../arm_real/meshes/base_flange.obj"/></geometry><material name="m_base_flange_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+    <visual><origin xyz="0 0 -0.015" rpy="3.1416 0 0"/><geometry><mesh filename="../../arm_real/meshes/truss_base_ring.obj"/></geometry><material name="m_truss_base_ring_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+    <visual><origin xyz="0 0 -0.018" rpy="3.1416 0 0"/><geometry><mesh filename="../../arm_real/meshes/truss_tensioners.obj"/></geometry><material name="m_truss_tensioners_0"><color rgba="0.780 0.620 0.300 1"/></material></visual>
+  </link>
+  <link name="prop_0">
+    <inertial><origin xyz="0.0000 0.0000 0.0058"/><mass value="0.01276"/><inertia ixx="9.747868e-07" ixy="0" ixz="0" iyy="6.875292e-05" iyz="0" izz="6.944568e-05"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 76.5000"/><geometry><mesh filename="../../arm_real/meshes/q_prop.obj"/></geometry><material name="m_q_prop_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+  </link>
+  <joint name="prop_0" type="continuous"><origin xyz="0.1308 0.1308 0.047" rpy="0 0 0"/><parent link="base_link"/><child link="prop_0"/><axis xyz="0 0 1"/><limit effort="0.5" velocity="250"/></joint>
+  <link name="prop_1">
+    <inertial><origin xyz="0.0000 0.0000 0.0058"/><mass value="0.01276"/><inertia ixx="9.747868e-07" ixy="0" ixz="0" iyy="6.875292e-05" iyz="0" izz="6.944568e-05"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 229.5000"/><geometry><mesh filename="../../arm_real/meshes/q_prop.obj"/></geometry><material name="m_q_prop_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+  </link>
+  <joint name="prop_1" type="continuous"><origin xyz="-0.1308 0.1308 0.047" rpy="0 0 0"/><parent link="base_link"/><child link="prop_1"/><axis xyz="0 0 1"/><limit effort="0.5" velocity="250"/></joint>
+  <link name="prop_2">
+    <inertial><origin xyz="0.0000 0.0000 0.0058"/><mass value="0.01276"/><inertia ixx="9.747868e-07" ixy="0" ixz="0" iyy="6.875292e-05" iyz="0" izz="6.944568e-05"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 382.5000"/><geometry><mesh filename="../../arm_real/meshes/q_prop.obj"/></geometry><material name="m_q_prop_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+  </link>
+  <joint name="prop_2" type="continuous"><origin xyz="-0.1308 -0.1308 0.047" rpy="0 0 0"/><parent link="base_link"/><child link="prop_2"/><axis xyz="0 0 1"/><limit effort="0.5" velocity="250"/></joint>
+  <link name="prop_3">
+    <inertial><origin xyz="0.0000 0.0000 0.0058"/><mass value="0.01276"/><inertia ixx="9.747868e-07" ixy="0" ixz="0" iyy="6.875292e-05" iyz="0" izz="6.944568e-05"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 535.5000"/><geometry><mesh filename="../../arm_real/meshes/q_prop.obj"/></geometry><material name="m_q_prop_0"><color rgba="0.140 0.140 0.150 1"/></material></visual>
+  </link>
+  <joint name="prop_3" type="continuous"><origin xyz="0.1308 -0.1308 0.047" rpy="0 0 0"/><parent link="base_link"/><child link="prop_3"/><axis xyz="0 0 1"/><limit effort="0.5" velocity="250"/></joint>
+  <link name="bx_0">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="bx_0" type="revolute">
+    <origin xyz="0 0 -0.0255" rpy="0 0 0"/>
+    <parent link="base_link"/><child link="bx_0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="by_0">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="by_0" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="bx_0"/><child link="by_0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="seg_0">
+    <inertial><origin xyz="0.0022 0.0021 0.0122"/><mass value="0.00884"/><inertia ixx="3.132782e-06" ixy="0" ixz="0" iyy="3.473547e-06" iyz="0" izz="5.264165e-06"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/lattice_v10.obj"/></geometry><material name="m_lattice_v10_0"><color rgba="0.440 0.460 0.490 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/sheath_v10.obj"/></geometry><material name="m_sheath_v10_0"><color rgba="0.090 0.090 0.100 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/bundle_v10.obj"/></geometry><material name="m_bundle_v10_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/truss_clamp.obj"/></geometry><material name="m_truss_clamp_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+  </link>
+  <joint name="mount_0" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="by_0"/><child link="seg_0"/></joint>
+  <link name="slide_1">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="slide_1" type="prismatic"><origin xyz="0 0 -0.0100" rpy="0 0 0"/><parent link="seg_0"/><child link="slide_1"/><axis xyz="0 0 1"/><limit lower="-0.0400" upper="0.0000" effort="400.0" velocity="0.5"/></joint>
+  <link name="bx_1">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="bx_1" type="revolute">
+    <origin xyz="0 0 -0.0000" rpy="0 0 0"/>
+    <parent link="slide_1"/><child link="bx_1"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="by_1">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="by_1" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="bx_1"/><child link="by_1"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="seg_1">
+    <inertial><origin xyz="0.0022 0.0021 0.0122"/><mass value="0.00884"/><inertia ixx="3.132782e-06" ixy="0" ixz="0" iyy="3.473547e-06" iyz="0" izz="5.264165e-06"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.7854"/><geometry><mesh filename="../../arm_real/meshes/lattice_v10.obj"/></geometry><material name="m_lattice_v10_0"><color rgba="0.440 0.460 0.490 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/sheath_v10.obj"/></geometry><material name="m_sheath_v10_0"><color rgba="0.090 0.090 0.100 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/bundle_v10.obj"/></geometry><material name="m_bundle_v10_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/truss_clamp.obj"/></geometry><material name="m_truss_clamp_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+  </link>
+  <joint name="mount_1" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="by_1"/><child link="seg_1"/></joint>
+  <link name="slide_2">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="slide_2" type="prismatic"><origin xyz="0 0 -0.0100" rpy="0 0 0"/><parent link="seg_1"/><child link="slide_2"/><axis xyz="0 0 1"/><limit lower="-0.0400" upper="0.0000" effort="400.0" velocity="0.5"/></joint>
+  <link name="bx_2">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="bx_2" type="revolute">
+    <origin xyz="0 0 -0.0000" rpy="0 0 0"/>
+    <parent link="slide_2"/><child link="bx_2"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="by_2">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="by_2" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="bx_2"/><child link="by_2"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="seg_2">
+    <inertial><origin xyz="0.0022 0.0021 0.0122"/><mass value="0.00884"/><inertia ixx="3.132782e-06" ixy="0" ixz="0" iyy="3.473547e-06" iyz="0" izz="5.264165e-06"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/lattice_v10.obj"/></geometry><material name="m_lattice_v10_0"><color rgba="0.440 0.460 0.490 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/sheath_v10.obj"/></geometry><material name="m_sheath_v10_0"><color rgba="0.090 0.090 0.100 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/bundle_v10.obj"/></geometry><material name="m_bundle_v10_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/truss_clamp.obj"/></geometry><material name="m_truss_clamp_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+  </link>
+  <joint name="mount_2" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="by_2"/><child link="seg_2"/></joint>
+  <link name="slide_3">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="slide_3" type="prismatic"><origin xyz="0 0 -0.0100" rpy="0 0 0"/><parent link="seg_2"/><child link="slide_3"/><axis xyz="0 0 1"/><limit lower="-0.0400" upper="0.0000" effort="400.0" velocity="0.5"/></joint>
+  <link name="bx_3">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="bx_3" type="revolute">
+    <origin xyz="0 0 -0.0000" rpy="0 0 0"/>
+    <parent link="slide_3"/><child link="bx_3"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="by_3">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="by_3" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="bx_3"/><child link="by_3"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="seg_3">
+    <inertial><origin xyz="0.0022 0.0021 0.0122"/><mass value="0.00884"/><inertia ixx="3.132782e-06" ixy="0" ixz="0" iyy="3.473547e-06" iyz="0" izz="5.264165e-06"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.7854"/><geometry><mesh filename="../../arm_real/meshes/lattice_v10.obj"/></geometry><material name="m_lattice_v10_0"><color rgba="0.440 0.460 0.490 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/sheath_v10.obj"/></geometry><material name="m_sheath_v10_0"><color rgba="0.090 0.090 0.100 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/bundle_v10.obj"/></geometry><material name="m_bundle_v10_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/truss_clamp.obj"/></geometry><material name="m_truss_clamp_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+  </link>
+  <joint name="mount_3" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="by_3"/><child link="seg_3"/></joint>
+  <link name="slide_4">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="slide_4" type="prismatic"><origin xyz="0 0 -0.0100" rpy="0 0 0"/><parent link="seg_3"/><child link="slide_4"/><axis xyz="0 0 1"/><limit lower="-0.0400" upper="0.0000" effort="400.0" velocity="0.5"/></joint>
+  <link name="bx_4">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="bx_4" type="revolute">
+    <origin xyz="0 0 -0.0000" rpy="0 0 0"/>
+    <parent link="slide_4"/><child link="bx_4"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="by_4">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="by_4" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="bx_4"/><child link="by_4"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="seg_4">
+    <inertial><origin xyz="0.0022 0.0021 0.0122"/><mass value="0.00884"/><inertia ixx="3.132782e-06" ixy="0" ixz="0" iyy="3.473547e-06" iyz="0" izz="5.264165e-06"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/lattice_v10.obj"/></geometry><material name="m_lattice_v10_0"><color rgba="0.440 0.460 0.490 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/sheath_v10.obj"/></geometry><material name="m_sheath_v10_0"><color rgba="0.090 0.090 0.100 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/bundle_v10.obj"/></geometry><material name="m_bundle_v10_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/truss_clamp.obj"/></geometry><material name="m_truss_clamp_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+  </link>
+  <joint name="mount_4" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="by_4"/><child link="seg_4"/></joint>
+  <link name="slide_5">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="slide_5" type="prismatic"><origin xyz="0 0 -0.0100" rpy="0 0 0"/><parent link="seg_4"/><child link="slide_5"/><axis xyz="0 0 1"/><limit lower="-0.0400" upper="0.0000" effort="400.0" velocity="0.5"/></joint>
+  <link name="bx_5">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="bx_5" type="revolute">
+    <origin xyz="0 0 -0.0000" rpy="0 0 0"/>
+    <parent link="slide_5"/><child link="bx_5"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="by_5">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="by_5" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="bx_5"/><child link="by_5"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="seg_5">
+    <inertial><origin xyz="0.0022 0.0021 0.0122"/><mass value="0.00884"/><inertia ixx="3.132782e-06" ixy="0" ixz="0" iyy="3.473547e-06" iyz="0" izz="5.264165e-06"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.7854"/><geometry><mesh filename="../../arm_real/meshes/lattice_v10.obj"/></geometry><material name="m_lattice_v10_0"><color rgba="0.440 0.460 0.490 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/sheath_v10.obj"/></geometry><material name="m_sheath_v10_0"><color rgba="0.090 0.090 0.100 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/bundle_v10.obj"/></geometry><material name="m_bundle_v10_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/truss_clamp.obj"/></geometry><material name="m_truss_clamp_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+  </link>
+  <joint name="mount_5" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="by_5"/><child link="seg_5"/></joint>
+  <link name="slide_6">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="slide_6" type="prismatic"><origin xyz="0 0 -0.0100" rpy="0 0 0"/><parent link="seg_5"/><child link="slide_6"/><axis xyz="0 0 1"/><limit lower="-0.0400" upper="0.0000" effort="400.0" velocity="0.5"/></joint>
+  <link name="bx_6">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="bx_6" type="revolute">
+    <origin xyz="0 0 -0.0000" rpy="0 0 0"/>
+    <parent link="slide_6"/><child link="bx_6"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="by_6">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="by_6" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="bx_6"/><child link="by_6"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="seg_6">
+    <inertial><origin xyz="0.0022 0.0021 0.0122"/><mass value="0.00884"/><inertia ixx="3.132782e-06" ixy="0" ixz="0" iyy="3.473547e-06" iyz="0" izz="5.264165e-06"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/lattice_v10.obj"/></geometry><material name="m_lattice_v10_0"><color rgba="0.440 0.460 0.490 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/sheath_v10.obj"/></geometry><material name="m_sheath_v10_0"><color rgba="0.090 0.090 0.100 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/bundle_v10.obj"/></geometry><material name="m_bundle_v10_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0000"/><geometry><mesh filename="../../arm_real/meshes/truss_clamp.obj"/></geometry><material name="m_truss_clamp_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+  </link>
+  <joint name="mount_6" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="by_6"/><child link="seg_6"/></joint>
+  <link name="slide_7">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="slide_7" type="prismatic"><origin xyz="0 0 -0.0100" rpy="0 0 0"/><parent link="seg_6"/><child link="slide_7"/><axis xyz="0 0 1"/><limit lower="-0.0400" upper="0.0000" effort="400.0" velocity="0.5"/></joint>
+  <link name="bx_7">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="bx_7" type="revolute">
+    <origin xyz="0 0 -0.0000" rpy="0 0 0"/>
+    <parent link="slide_7"/><child link="bx_7"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="by_7">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="by_7" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="bx_7"/><child link="by_7"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.9000" upper="0.9000" effort="8.0" velocity="2.0"/>
+  </joint>
+  <link name="seg_7">
+    <inertial><origin xyz="0.0022 0.0021 0.0122"/><mass value="0.00884"/><inertia ixx="3.132782e-06" ixy="0" ixz="0" iyy="3.473547e-06" iyz="0" izz="5.264165e-06"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.7854"/><geometry><mesh filename="../../arm_real/meshes/lattice_v10.obj"/></geometry><material name="m_lattice_v10_0"><color rgba="0.440 0.460 0.490 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/sheath_v10.obj"/></geometry><material name="m_sheath_v10_0"><color rgba="0.090 0.090 0.100 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/bundle_v10.obj"/></geometry><material name="m_bundle_v10_0"><color rgba="0.160 0.160 0.180 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="3.1416 0 0.0698"/><geometry><mesh filename="../../arm_real/meshes/truss_clamp.obj"/></geometry><material name="m_truss_clamp_0"><color rgba="0.620 0.640 0.680 1"/></material></visual>
+  </link>
+  <joint name="mount_7" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="by_7"/><child link="seg_7"/></joint>
+  <link name="wrist_slide">
+    <inertial><origin xyz="0.0000 0.0000 0.0000"/><mass value="0.00010"/><inertia ixx="4.000000e-06" ixy="0" ixz="0" iyy="4.000000e-06" iyz="0" izz="4.000000e-06"/></inertial>
+  </link>
+  <joint name="slide_wrist" type="prismatic"><origin xyz="0 0 -0.0100" rpy="0 0 0"/><parent link="seg_7"/><child link="wrist_slide"/><axis xyz="0 0 1"/><limit lower="-0.0400" upper="0.0000" effort="400.0" velocity="0.5"/></joint>
+  <link name="wrist">
+    <inertial><origin xyz="0.0000 0.0004 -0.0110"/><mass value="0.06959"/><inertia ixx="2.365021e-05" ixy="0" ixz="0" iyy="3.052488e-05" iyz="0" izz="2.962451e-05"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/grip_base.obj"/></geometry><material name="m_grip_base_0"><color rgba="0.110 0.110 0.120 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/grip_links.obj"/></geometry><material name="m_grip_links_0"><color rgba="0.110 0.110 0.120 1"/></material></visual>
+  </link>
+  <joint name="mount_wrist" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="wrist_slide"/><child link="wrist"/></joint>
+  <link name="finger_0">
+    <inertial><origin xyz="-0.0022 0.0000 -0.0278"/><mass value="0.00758"/><inertia ixx="2.271271e-06" ixy="0" ixz="0" iyy="2.492937e-06" iyz="0" izz="3.123225e-07"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/finger_prox.obj"/></geometry><material name="m_finger_prox_0"><color rgba="0.100 0.240 0.600 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/finger_dist.obj"/></geometry><material name="m_finger_dist_0"><color rgba="0.720 0.100 0.090 1"/></material></visual>
+  </link>
+  <joint name="grip_0" type="revolute"><origin xyz="-0.0000 0.0240 -0.0360" rpy="0 0 1.5708"/><parent link="wrist"/><child link="finger_0"/><axis xyz="0 1 0"/><limit lower="-0.4500" upper="0.2000" effort="4.0" velocity="3.0"/></joint>
+  <link name="pad_0"><collision><origin xyz="-0.0062 0 -0.0500"/><geometry><box size="0.0026 0.0150 0.0800"/></geometry></collision></link>
+  <joint name="mount_pad_0" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="finger_0"/><child link="pad_0"/></joint>
+  <link name="finger_1">
+    <inertial><origin xyz="-0.0022 0.0000 -0.0278"/><mass value="0.00758"/><inertia ixx="2.271271e-06" ixy="0" ixz="0" iyy="2.492937e-06" iyz="0" izz="3.123225e-07"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/finger_prox.obj"/></geometry><material name="m_finger_prox_0"><color rgba="0.720 0.100 0.090 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/finger_dist.obj"/></geometry><material name="m_finger_dist_0"><color rgba="0.100 0.240 0.600 1"/></material></visual>
+  </link>
+  <joint name="grip_1" type="revolute"><origin xyz="-0.0208 -0.0120 -0.0360" rpy="0 0 3.6652"/><parent link="wrist"/><child link="finger_1"/><axis xyz="0 1 0"/><limit lower="-0.4500" upper="0.2000" effort="4.0" velocity="3.0"/></joint>
+  <link name="pad_1"><collision><origin xyz="-0.0062 0 -0.0500"/><geometry><box size="0.0026 0.0150 0.0800"/></geometry></collision></link>
+  <joint name="mount_pad_1" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="finger_1"/><child link="pad_1"/></joint>
+  <link name="finger_2">
+    <inertial><origin xyz="-0.0022 0.0000 -0.0278"/><mass value="0.00758"/><inertia ixx="2.271271e-06" ixy="0" ixz="0" iyy="2.492937e-06" iyz="0" izz="3.123225e-07"/></inertial>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/finger_prox.obj"/></geometry><material name="m_finger_prox_0"><color rgba="0.100 0.240 0.600 1"/></material></visual>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/><geometry><mesh filename="../../arm_real/meshes/finger_dist.obj"/></geometry><material name="m_finger_dist_0"><color rgba="0.720 0.100 0.090 1"/></material></visual>
+  </link>
+  <joint name="grip_2" type="revolute"><origin xyz="0.0208 -0.0120 -0.0360" rpy="0 0 5.7596"/><parent link="wrist"/><child link="finger_2"/><axis xyz="0 1 0"/><limit lower="-0.4500" upper="0.2000" effort="4.0" velocity="3.0"/></joint>
+  <link name="pad_2"><collision><origin xyz="-0.0062 0 -0.0500"/><geometry><box size="0.0026 0.0150 0.0800"/></geometry></collision></link>
+  <joint name="mount_pad_2" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="finger_2"/><child link="pad_2"/></joint>
+</robot>
