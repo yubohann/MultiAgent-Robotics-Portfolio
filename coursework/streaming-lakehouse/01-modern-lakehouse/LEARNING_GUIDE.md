@@ -30,9 +30,9 @@
 - [docker-compose.yml](./docker-compose.yml)：一键启动 Kafka、MinIO、Flink、Dinky、Spark。
 - [order_stream_producer.py](./order_stream_producer.py)：往 Kafka 里持续发订单数据。
 - [dinky_dual_stream_job.sql](./dinky_dual_stream_job.sql)：Flink SQL 版本的作业，适合在 Dinky 里跑。
-- [flink-dual-stream-job/](./flink-dual-stream-job/README.md)：Java 版本 Flink 作业，核心逻辑在这里。
+- [flink-dual-stream-job/](./flink-dual-stream-job/)：Java 版本 Flink 作业，核心逻辑在这里。
 - [lakehouse_batch_analysis.py](./lakehouse_batch_analysis.py)：Spark 离线分析脚本，用来核对 Flink 的结果。
-- [lib/flink-connectors/](./lib/flink-connectors/)：Flink、Kafka、Paimon、S3、Hadoop 依赖 JAR。
+- [lib/](./lib/)：Flink、Kafka、Paimon、S3、Hadoop 依赖 JAR 的放置目录（JAR 不入库，按 `lib/README.md` 下载到 `lib/flink-connectors/`）。
 - [docker/spark-local/](./docker/spark-local/)：本地构建 Spark 镜像的上下文。
 - [SCREENSHOT_GUIDE.md](./SCREENSHOT_GUIDE.md)：截图顺序和命令。
 - [report.md](./report.md)：实验报告正文。
