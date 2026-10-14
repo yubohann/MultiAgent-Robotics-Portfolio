@@ -16,6 +16,7 @@
 | AeroGate Graph | [概括](project-summaries/aerogate-graph.md) | [深度文档](project-deep-dives/aerogate-graph.md) |
 | FraudGraph ML Engineering | [概括](project-summaries/fraudgraph-ml-engineering.md) | [深度文档](project-deep-dives/fraudgraph-ml-engineering.md) |
 | ROS 2 Learning Notes | [概括](project-summaries/ros2-systematic-learning-notes.md) | [深度文档](project-deep-dives/ros2-systematic-learning-notes.md) |
+| ROBOCON 从入门到精通 | [概括](project-summaries/robocon-handbook.md) | [手册正文](../robocon-handbook/README.md) |
 | Machine Learning Coursework | [概括](project-summaries/machine-learning-coursework.md) | [深度文档](project-deep-dives/machine-learning-coursework.md) |
 | AeroCityBench | [概括](project-summaries/aerocity-bench.md) | [深度文档](project-deep-dives/aerocity-bench.md) |
 | HM3D Realised-QD | [概括](project-summaries/hm3d-realised-qd.md) | [深度文档](project-deep-dives/hm3d-realised-qd.md) |

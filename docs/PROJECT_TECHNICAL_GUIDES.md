@@ -16,6 +16,7 @@ The deep guides are written from the current local checkout. They distinguish so
 | AeroGate Graph | [summary](project-summaries/aerogate-graph.md) | [deep dive](project-deep-dives/aerogate-graph.md) |
 | FraudGraph ML Engineering | [summary](project-summaries/fraudgraph-ml-engineering.md) | [deep dive](project-deep-dives/fraudgraph-ml-engineering.md) |
 | ROS 2 Learning Notes | [summary](project-summaries/ros2-systematic-learning-notes.md) | [deep dive](project-deep-dives/ros2-systematic-learning-notes.md) |
+| ROBOCON Handbook | [summary](project-summaries/robocon-handbook.md) | [handbook](../robocon-handbook/README.md) |
 | Machine Learning Coursework | [summary](project-summaries/machine-learning-coursework.md) | [deep dive](project-deep-dives/machine-learning-coursework.md) |
 | AeroCityBench | [summary](project-summaries/aerocity-bench.md) | [deep dive](project-deep-dives/aerocity-bench.md) |
 | HM3D Realised-QD | [summary](project-summaries/hm3d-realised-qd.md) | [deep dive](project-deep-dives/hm3d-realised-qd.md) |

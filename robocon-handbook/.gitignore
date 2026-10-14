@@ -1,0 +1,16 @@
+# 内部资料（事实基线 / 发布策划 / 素材库 / 行文规范）：不公开
+docs/
+
+# 本地密钥与同步状态：严禁提交
+.env
+tools/feishu_sync/.env
+tools/feishu_sync/state.json
+
+# Python
+__pycache__/
+*.pyc
+
+# 系统文件
+Thumbs.db
+Desktop.ini
+.DS_Store

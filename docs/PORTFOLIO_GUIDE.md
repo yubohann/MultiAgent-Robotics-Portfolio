@@ -21,6 +21,7 @@ The root README is an index for the curated project set. The machine-readable [p
 | Inspect a rigid-soft aerial manipulator and sim-to-real grasping evidence | AerialSoftArm | [README](../aerial-soft-arm/README.md) |
 | Inspect visual robotics and replay evidence | RoboCup CBG-WM | [README](../robocup-cbg-wm/README.md) |
 | Inspect ROS 2 localization and competition control | Robocon MID-360 Autonomy Stack | [README](../robocon-mid360-autonomy-stack/README.md) |
+| Survey team engineering practice end to end | ROBOCON Handbook | [README](../robocon-handbook/README.md) |
 | Inspect procedural 3D multi-UAV search benchmarking | AeroCityBench | [README](../aerocity-bench/README.md) |
 | Inspect outcome-grounded HM3D exploration and realised-QD | HM3D Realised-QD | [README](../hm3d-realised-qd/README.md) |
 | Inspect graph-based drone racing, formation, and safety tooling | AeroGate Graph | [Overview](../aerogate-graph/README.md) |

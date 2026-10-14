@@ -66,12 +66,9 @@
 | [AeroGate Graph](aerogate-graph/) | 图强化学习穿越密集闸门，单机与八机编队。 | [Overview](aerogate-graph/README.md) |
 | [FraudGraph](fraudgraph-ml-engineering/) | 覆盖八个金融数据集的图与序列欺诈检测。 | [Overview](fraudgraph-ml-engineering/README.md) |
 | [ROS 2 笔记](ros2-systematic-learning-notes/) | 18 章 ROS 2 系统手册。 | [中文说明](ros2-systematic-learning-notes/README.zh-CN.md) |
+| [ROBOCON 从入门到精通](robocon-handbook/) | 37 章战队长篇手册：选型，调试，25 张案例卡，感知定位与从基础到进阶的代码讲解。 | [中文说明](robocon-handbook/README.md) |
 
 <p align="center">
-  <a href="aerial-soft-arm/README.zh-CN.md"><img src="aerial-soft-arm/media/demo_task_grasp.gif" alt="Isaac Lab 全自主空中抓取：视觉锁定、弯曲对位、捕获与提升" width="48%" /></a>
-  <a href="aerial-soft-arm/README.zh-CN.md"><img src="aerial-soft-arm/media/demo_lattice_arm.gif" alt="真机桁架软臂的弯曲与夹持" width="32%" /></a>
-</p>
-<p align="center"><sub>项目亮点：Isaac Lab 中的全自主抓取与真机桁架软臂，来自 <a href="aerial-soft-arm/">AerialSoftArm</a></sub></p>
 
 ---
 

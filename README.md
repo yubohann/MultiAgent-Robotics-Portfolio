@@ -66,12 +66,9 @@
 | [AeroGate Graph](aerogate-graph/) | Graph reinforcement learning for dense gate traversal, single agent and 8-drone formation. | [Overview](aerogate-graph/README.md) |
 | [FraudGraph](fraudgraph-ml-engineering/) | Graph-and-sequence fraud detection across eight financial datasets. | [Overview](fraudgraph-ml-engineering/README.md) |
 | [ROS 2 Notes](ros2-systematic-learning-notes/) | A structured ROS 2 engineering handbook, 18 chapters. | [Overview](ros2-systematic-learning-notes/README.md) |
+| [ROBOCON Handbook](robocon-handbook/) | A 37-chapter team engineering handbook: hardware selection, debugging, a 25-card failure case library, perception, and staged code walkthroughs. | [Overview](robocon-handbook/README.md) |
 
 <p align="center">
-  <a href="aerial-soft-arm/README.md"><img src="aerial-soft-arm/media/demo_task_grasp.gif" alt="Autonomous aerial grasp: vision lock, bend alignment, capture and lift in Isaac Lab" width="48%" /></a>
-  <a href="aerial-soft-arm/README.md"><img src="aerial-soft-arm/media/demo_lattice_arm.gif" alt="Truss soft arm articulating bend and grip on hardware" width="32%" /></a>
-</p>
-<p align="center"><sub>Highlight: autonomous grasp in Isaac Lab and the truss soft arm on hardware, from <a href="aerial-soft-arm/">AerialSoftArm</a></sub></p>
 
 ---
 

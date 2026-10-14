@@ -96,6 +96,19 @@
       ]
     },
     {
+      "id": "robocon-handbook",
+      "title": "ROBOCON Handbook",
+      "directory": "robocon-handbook",
+      "readme": "robocon-handbook/README.md",
+      "category": "engineering handbook",
+      "verification": null,
+      "documents": [
+        "robocon-handbook/README.md",
+        "robocon-handbook/CONTRIBUTING.md",
+        "robocon-handbook/LICENSE.md"
+      ]
+    },
+    {
       "id": "machine-learning-coursework",
       "title": "Machine Learning Coursework",
       "directory": "coursework/machine-learning",
